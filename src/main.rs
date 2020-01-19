@@ -4,7 +4,6 @@
 
 pub mod database;
 pub mod routes;
-pub mod email;
 pub mod auth;
 
 use dotenv;
@@ -12,8 +11,6 @@ use dotenv;
 fn main() {
 	dotenv::dotenv().ok();
 	database::connect();
-	email::connect();
-	email::send("me@insrt.uk", "test", "test email");
 
-	//routes::mount(rocket::ignite()).launch();
+	routes::mount(rocket::ignite()).launch();
 }
