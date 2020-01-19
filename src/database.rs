@@ -1,4 +1,4 @@
-use mongodb::Client;
+use mongodb::{ Client, Database };
 use std::env;
 
 use once_cell::sync::OnceCell;
@@ -14,4 +14,8 @@ pub fn connect() {
 
 pub fn get_connection() -> &'static Client {
 	DBCONN.get().unwrap()
+}
+
+pub fn get_db() -> Database {
+	get_connection().database("revolt")
 }

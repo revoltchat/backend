@@ -1,22 +1,40 @@
+use crate::auth::User;
 use crate::database;
-use bson::{ bson, doc, ordered::OrderedDocument };
+
+use serde::{Serialize, Deserialize};
+use rocket_contrib::json::{ Json, JsonValue };
+use bson::{ bson, doc };
 
 #[get("/")]
-pub fn root() -> String {
-	let client = database::get_connection();
-	let cursor = client.database("revolt").collection("users").find(None, None).unwrap();
+pub fn root(user: User) -> String {
+	let User ( id, username, _doc ) = user;
 
-	let results: Vec<Result<OrderedDocument, mongodb::error::Error>> = cursor.collect();
-
-	format!("ok boomer, users: {}", results.len())
+	format!("hello, {}! [id: {}]", username, id)
 }
 
-#[get("/reg")]
-pub fn reg() -> String {
-	let client = database::get_connection();
-	let col = client.database("revolt").collection("users");
+#[derive(Serialize, Deserialize)]
+pub struct Create {
+	username: String,
+	password: String,
+	email: String,
+}
 
-	col.insert_one(doc! { "username": "test" }, None).unwrap();
+#[post("/create", data = "<info>")]
+pub fn create(info: Json<Create>) -> JsonValue {
+	let col = database::get_db().collection("users");
 
-	format!("inserted")
+	if let Some(_) =
+			col.find_one(Some(
+				doc! { "email": info.email.clone() }
+			), None).unwrap() {
+
+		return json!({
+			"success": false,
+			"error": "Email already in use!"
+		})
+	}
+
+	json!({
+		"success": true
+	})
 }
