@@ -11,6 +11,13 @@ use bcrypt::{ hash, verify };
 use chrono::prelude::*;
 use ulid::Ulid;
 
+fn gen_token(l: usize) -> String {
+	rand::thread_rng()
+		.sample_iter(&Alphanumeric)
+		.take(l)
+		.collect::<String>()
+}
+
 #[get("/")]
 pub fn root(user: User) -> String {
 	let User ( id, username, _doc ) = user;
@@ -65,16 +72,15 @@ pub fn create(info: Json<Create>) -> JsonValue {
 	}
 
 	if let Ok(hashed) = hash(info.password.clone(), 10) {
-		let code = rand::thread_rng()
-			.sample_iter(&Alphanumeric)
-			.take(48)
-			.collect::<String>();
+		let access_token = gen_token(64);
+		let code = gen_token(48);
 
 		match col.insert_one(doc! {
 			"_id": Ulid::new().to_string(),
 			"email": info.email.clone(),
 			"username": info.username.clone(),
 			"password": hashed,
+			"access_token": access_token,
 			"email_verification": {
 				"verified": false,
 				"target": info.email.clone(),
@@ -182,11 +188,7 @@ pub fn resend_email(info: Json<Resend>) -> JsonValue {
 					"error": "Hit rate limit! Please try again in a minute or so."
 				})
 			} else {
-				let code = rand::thread_rng()
-					.sample_iter(&Alphanumeric)
-					.take(48)
-					.collect::<String>();
-
+				let code = gen_token(48);
 				col.update_one(
 					doc! { "_id": u.get_str("_id").expect("Failed to retrieve user id.") },
 					doc! {
@@ -216,6 +218,57 @@ pub fn resend_email(info: Json<Resend>) -> JsonValue {
 			json!({
 				"success": false,
 				"error": "Email not pending verification!",
+			})
+		}
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Login {
+	email: String,
+	password: String,
+}
+
+/// login to a Revolt account
+/// (1) find user by email
+/// (2) verify password
+/// (3) return access token
+#[post("/login", data = "<info>")]
+pub fn login(info: Json<Login>) -> JsonValue {
+	let col = database::get_db().collection("users");
+
+	if let Some(u) =
+		col.find_one(doc! { "email": info.email.clone() }, None).expect("Failed user lookup") {
+			match verify(info.password.clone(), u.get_str("password").expect("Missing password in user object!"))
+				.expect("Failed to check hash of password.") {
+					true => {
+						let token =
+							match u.get_str("access_token") {
+								Ok(t) => t.to_string(),
+								Err(_) => {
+									let token = gen_token(64);
+									col.update_one(
+										doc! { "_id": u.get_str("_id").expect("Missing id in user object!") },
+										doc! { "$set": { "access_token": token.clone() } },
+										None
+									).expect("Failed to update user object");
+									token
+								}
+							};
+
+						json!({
+							"success": true,
+							"access_token": token
+						})
+					},
+					false => json!({
+						"success": false,
+						"error": "Invalid password."
+					})
+				}
+		} else {
+			json!({
+				"success": false,
+				"error": "Email is not registered.",
 			})
 		}
 }
