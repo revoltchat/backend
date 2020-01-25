@@ -22,4 +22,5 @@ validator = "0.10.0"
 bcrypt = "0.6.1"
 chrono = "0.4.10"
 rand = "0.7.3"
-time = "0.2.3"
+time = "0.2.4"
+reqwest = { version = "0.10.1", features = ["blocking", "json"] }

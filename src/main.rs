@@ -4,6 +4,7 @@
 
 pub mod database;
 pub mod routes;
+pub mod email;
 pub mod auth;
 
 use dotenv;

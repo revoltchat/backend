@@ -1,5 +1,6 @@
 use crate::auth::User;
 use crate::database;
+use crate::email;
 
 use rand::{ Rng, distributions::Alphanumeric };
 use rocket_contrib::json::{ Json, JsonValue };
@@ -56,11 +57,7 @@ pub fn create(info: Json<Create>) -> JsonValue {
 		})
 	}
 
-	if let Some(_) =
-			col.find_one(Some(
-				doc! { "email": info.email.clone() }
-			), None).unwrap() {
-
+	if let Some(_) = col.find_one(doc! { "email": info.email.clone() }, None).expect("Failed user lookup") {
 		return json!({
 			"success": false,
 			"error": "Email already in use!",
@@ -81,13 +78,29 @@ pub fn create(info: Json<Create>) -> JsonValue {
 			"email_verification": {
 				"verified": false,
 				"target": info.email.clone(),
-				"expiry": UtcDatetime(Utc::now() + chrono::Duration::days(1)),
-				"code": code,
+				"expiry": UtcDatetime(Utc::now() + chrono::Duration::seconds(1)),
+				"rate_limit": UtcDatetime(Utc::now() + chrono::Duration::minutes(1)),
+				"code": code.clone(),
 			}
 		}, None) {
-			Ok(_) => json!({
-				"success": true,
-			}),
+			Ok(_) => {
+				let url = format!("http://192.168.0.10:5500/api/account/verify/{}", code);
+				let sent =
+					match email::send_email(
+						info.email.clone(),
+						"Verify your email!".to_string(),
+						format!("Verify your email here: {}", url).to_string(),
+						format!("<a href=\"{}\">Click to verify your email!</a>", url).to_string()
+					) {
+						Ok(_) => true,
+						Err(_) => false,
+					};
+
+				json!({
+					"success": true,
+					"email_sent": sent,
+				})
+			},
 			Err(_) => json!({
 				"success": false,
 				"error": "Failed to create account!",
@@ -99,4 +112,53 @@ pub fn create(info: Json<Create>) -> JsonValue {
 			"error": "Failed to hash password!",
 		})
 	}
+}
+
+/// verify an email for a Revolt account
+/// (1) check if code is valid
+/// (2) check if it expired yet
+/// (3) set account as verified
+#[get("/verify/<code>")]
+pub fn verify_email(code: String) -> JsonValue {
+	let col = database::get_db().collection("users");
+
+	if let Some(u) =
+		col.find_one(doc! { "email_verification.code": code.clone() }, None).expect("Failed user lookup") {
+			let ev = u.get_document("email_verification").expect("Missing email_verification on user object!");
+			let expiry = ev.get_utc_datetime("expiry").expect("Missing expiry date on email_verification!");
+
+			if Utc::now() > *expiry {
+				json!({
+					"success": false,
+					"error": "Token has expired!",
+				})
+			} else {
+				let target = ev.get_str("target").expect("Missing target email on email_verification!");
+				col.update_one(
+					doc! { "_id": u.get_str("_id").expect("Failed to retrieve user id.") },
+					doc! {
+						"$unset": {
+							"email_verification.code": "",
+							"email_verification.expiry": "",
+							"email_verification.target": "",
+							"email_verification.rate_limit": "",
+						},
+						"$set": {
+							"email_verification.verified": true,
+							"email": target,
+						},
+					},
+					None,
+				).expect("Failed to update user!");
+
+				json!({
+					"success": true
+				})
+			}
+		} else {
+			json!({
+				"success": false,
+				"error": "Invalid code!",
+			})
+		}
 }
