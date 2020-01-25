@@ -18,13 +18,6 @@ fn gen_token(l: usize) -> String {
 		.collect::<String>()
 }
 
-#[get("/")]
-pub fn root(user: User) -> String {
-	let User ( id, username, _doc ) = user;
-
-	format!("hello, {}! [id: {}]", username, id)
-}
-
 #[derive(Serialize, Deserialize)]
 pub struct Create {
 	username: String,
@@ -72,7 +65,7 @@ pub fn create(info: Json<Create>) -> JsonValue {
 	}
 
 	if let Ok(hashed) = hash(info.password.clone(), 10) {
-		let access_token = gen_token(64);
+		let access_token = gen_token(92);
 		let code = gen_token(48);
 
 		match col.insert_one(doc! {
@@ -120,8 +113,8 @@ pub fn verify_email(code: String) -> JsonValue {
 
 	if let Some(u) =
 		col.find_one(doc! { "email_verification.code": code.clone() }, None).expect("Failed user lookup") {
-			let ev = u.get_document("email_verification").expect("Missing email_verification on user object!");
-			let expiry = ev.get_utc_datetime("expiry").expect("Missing expiry date on email_verification!");
+			let ev = u.get_document("email_verification").expect("DOC[email_verification]");
+			let expiry = ev.get_utc_datetime("expiry").expect("DOC[expiry]");
 
 			if Utc::now() > *expiry {
 				json!({
@@ -129,7 +122,7 @@ pub fn verify_email(code: String) -> JsonValue {
 					"error": "Token has expired!",
 				})
 			} else {
-				let target = ev.get_str("target").expect("Missing target email on email_verification!");
+				let target = ev.get_str("target").expect("DOC[target]");
 				col.update_one(
 					doc! { "_id": u.get_str("_id").expect("Failed to retrieve user id.") },
 					doc! {
@@ -179,22 +172,35 @@ pub fn resend_email(info: Json<Resend>) -> JsonValue {
 
 	if let Some(u) =
 		col.find_one(doc! { "email_verification.target": info.email.clone() }, None).expect("Failed user lookup") {
-			let ev = u.get_document("email_verification").expect("Missing email_verification on user object!");
-			let rate_limit = ev.get_utc_datetime("rate_limit").expect("Missing rate_limit on email_verification!");
+			let ev = u.get_document("email_verification").expect("DOC[email_verification]");
+			let expiry = ev.get_utc_datetime("expiry").expect("DOC[expiry]");
+			let rate_limit = ev.get_utc_datetime("rate_limit").expect("DOC[rate_limit]");
 
 			if Utc::now() < *rate_limit {
 				json!({
 					"success": false,
-					"error": "Hit rate limit! Please try again in a minute or so."
+					"error": "Hit rate limit! Please try again in a minute or so.",
 				})
 			} else {
+				let mut new_expiry = UtcDatetime(Utc::now() + chrono::Duration::days(1));
+				if info.email.clone() != u.get_str("email").expect("DOC[email]") {
+					if Utc::now() > *expiry {
+						return json!({
+							"success": "false",
+							"error": "For security reasons, please login and change your email again.",
+						})
+					}
+
+					new_expiry = UtcDatetime(*expiry);
+				}
+
 				let code = gen_token(48);
 				col.update_one(
 					doc! { "_id": u.get_str("_id").expect("Failed to retrieve user id.") },
 					doc! {
 						"$set": {
 							"email_verification.code": code.clone(),
-							"email_verification.expiry": UtcDatetime(Utc::now() + chrono::Duration::days(1)),
+							"email_verification.expiry": new_expiry,
 							"email_verification.rate_limit": UtcDatetime(Utc::now() + chrono::Duration::minutes(1)),
 						},
 					},
@@ -210,7 +216,7 @@ pub fn resend_email(info: Json<Resend>) -> JsonValue {
 					}),
 					false => json!({
 						"success": false,
-						"error": "Failed to send email! Likely an issue with the backend API."
+						"error": "Failed to send email! Likely an issue with the backend API.",
 					})
 				}
 			}
@@ -238,16 +244,16 @@ pub fn login(info: Json<Login>) -> JsonValue {
 
 	if let Some(u) =
 		col.find_one(doc! { "email": info.email.clone() }, None).expect("Failed user lookup") {
-			match verify(info.password.clone(), u.get_str("password").expect("Missing password in user object!"))
+			match verify(info.password.clone(), u.get_str("password").expect("DOC[password]"))
 				.expect("Failed to check hash of password.") {
 					true => {
 						let token =
 							match u.get_str("access_token") {
 								Ok(t) => t.to_string(),
 								Err(_) => {
-									let token = gen_token(64);
+									let token = gen_token(92);
 									col.update_one(
-										doc! { "_id": u.get_str("_id").expect("Missing id in user object!") },
+										doc! { "_id": u.get_str("_id").expect("DOC[id]") },
 										doc! { "$set": { "access_token": token.clone() } },
 										None
 									).expect("Failed to update user object");
