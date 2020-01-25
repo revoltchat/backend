@@ -78,23 +78,13 @@ pub fn create(info: Json<Create>) -> JsonValue {
 			"email_verification": {
 				"verified": false,
 				"target": info.email.clone(),
-				"expiry": UtcDatetime(Utc::now() + chrono::Duration::seconds(1)),
+				"expiry": UtcDatetime(Utc::now() + chrono::Duration::days(1)),
 				"rate_limit": UtcDatetime(Utc::now() + chrono::Duration::minutes(1)),
 				"code": code.clone(),
 			}
 		}, None) {
 			Ok(_) => {
-				let url = format!("http://192.168.0.10:5500/api/account/verify/{}", code);
-				let sent =
-					match email::send_email(
-						info.email.clone(),
-						"Verify your email!".to_string(),
-						format!("Verify your email here: {}", url).to_string(),
-						format!("<a href=\"{}\">Click to verify your email!</a>", url).to_string()
-					) {
-						Ok(_) => true,
-						Err(_) => false,
-					};
+				let sent = email::send_verification_email(info.email.clone(), code);
 
 				json!({
 					"success": true,
@@ -145,11 +135,16 @@ pub fn verify_email(code: String) -> JsonValue {
 						},
 						"$set": {
 							"email_verification.verified": true,
-							"email": target,
+							"email": target.clone(),
 						},
 					},
 					None,
 				).expect("Failed to update user!");
+
+				email::send_welcome_email(
+					target.to_string(),
+					u.get_str("username").expect("Failed to retrieve username.").to_string()
+				);
 
 				json!({
 					"success": true
@@ -159,6 +154,68 @@ pub fn verify_email(code: String) -> JsonValue {
 			json!({
 				"success": false,
 				"error": "Invalid code!",
+			})
+		}
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Resend {
+	email: String,
+}
+
+/// resend a verification email
+/// (1) check if verification is pending for x email
+/// (2) check for rate limit
+/// (3) resend the email
+#[post("/resend", data = "<info>")]
+pub fn resend_email(info: Json<Resend>) -> JsonValue { 
+	let col = database::get_db().collection("users");
+
+	if let Some(u) =
+		col.find_one(doc! { "email_verification.target": info.email.clone() }, None).expect("Failed user lookup") {
+			let ev = u.get_document("email_verification").expect("Missing email_verification on user object!");
+			let rate_limit = ev.get_utc_datetime("rate_limit").expect("Missing rate_limit on email_verification!");
+
+			if Utc::now() < *rate_limit {
+				json!({
+					"success": false,
+					"error": "Hit rate limit! Please try again in a minute or so."
+				})
+			} else {
+				let code = rand::thread_rng()
+					.sample_iter(&Alphanumeric)
+					.take(48)
+					.collect::<String>();
+
+				col.update_one(
+					doc! { "_id": u.get_str("_id").expect("Failed to retrieve user id.") },
+					doc! {
+						"$set": {
+							"email_verification.code": code.clone(),
+							"email_verification.expiry": UtcDatetime(Utc::now() + chrono::Duration::days(1)),
+							"email_verification.rate_limit": UtcDatetime(Utc::now() + chrono::Duration::minutes(1)),
+						},
+					},
+					None,
+				).expect("Failed to update user!");
+
+				match email::send_verification_email(
+					info.email.to_string(),
+					code,
+				) {
+					true => json!({
+						"success": true,
+					}),
+					false => json!({
+						"success": false,
+						"error": "Failed to send email! Likely an issue with the backend API."
+					})
+				}
+			}
+		} else {
+			json!({
+				"success": false,
+				"error": "Email not pending verification!",
 			})
 		}
 }

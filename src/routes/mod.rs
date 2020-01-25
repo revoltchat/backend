@@ -4,5 +4,5 @@ mod account;
 
 pub fn mount(rocket: Rocket) -> Rocket {
 	rocket
-		.mount("/api/account", routes![ account::root, account::create, account::verify_email ])
+		.mount("/api/account", routes![ account::root, account::create, account::verify_email, account::resend_email ])
 }
