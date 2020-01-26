@@ -1,4 +1,4 @@
-use crate::guards::auth::User;
+use crate::guards::{ auth::User, channel::Channel };
 use crate::database;
 
 use rocket_contrib::json::{ Json, JsonValue };
@@ -14,4 +14,36 @@ pub enum ChannelType {
 	DM = 0,
 	GROUP_DM = 1,
 	GUILD_CHANNEL = 2,
+}
+
+fn has_permission(user: &User, target: &Channel) -> bool {
+	let id = user.0.to_string();
+	match target.1 {
+		ChannelType::DM |
+		ChannelType::GROUP_DM => {
+			for user in target.2.get_array("recipients").expect("DB[recipients]") {
+				if user.as_str().expect("Expected string id.") == id {
+					return true;
+				}
+			}
+
+			false
+		},
+		ChannelType::GUILD_CHANNEL =>
+			false
+	}
+}
+
+/// fetch channel information
+#[get("/<target>")]
+pub fn channel(user: User, target: Channel) -> Option<JsonValue> {
+	if !has_permission(&user, &target) {
+		return None
+	}
+
+	Some(
+		json!({
+			"aa": "b"
+		}
+	))
 }

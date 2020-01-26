@@ -30,7 +30,7 @@ impl<'r> FromParam<'r> for Channel {
 		if let Some(channel) = result {
 			Ok(Channel (
 				Ulid::from_string(channel.get_str("_id").unwrap()).unwrap(),
-				ChannelType::try_from(channel.get_i32("username").unwrap() as usize).unwrap(),
+				ChannelType::try_from(channel.get_i32("type").unwrap() as usize).unwrap(),
 				channel
 			))
 		} else {
