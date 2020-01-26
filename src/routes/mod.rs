@@ -1,7 +1,8 @@
 use rocket::Rocket;
 
-mod account;
-mod user;
+pub mod account;
+pub mod user;
+pub mod channel;
 
 pub fn mount(rocket: Rocket) -> Rocket {
 	rocket

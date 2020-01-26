@@ -1,10 +1,12 @@
 use crate::auth::User;
 use crate::database;
+use crate::routes::channel;
 
 use rocket_contrib::json::{ Json, JsonValue };
 use serde::{ Serialize, Deserialize };
 use mongodb::options::FindOptions;
 use bson::{ bson, doc };
+use ulid::Ulid;
 
 /// retrieve your user information
 #[get("/@me")]
@@ -60,13 +62,85 @@ pub fn lookup(_user: User, query: Json<Query>) -> JsonValue {
 /// retrieve all of your DMs
 #[get("/@me/dms")]
 pub fn dms(user: User) -> JsonValue {
-	json!([])
+	let col = database::get_collection("channels");
+
+	let results = col.find(
+		doc! {
+			"$or": [
+				{
+					"type": channel::ChannelType::DM as i32
+				},
+				{
+					"type": channel::ChannelType::GROUP_DM as i32
+				}
+			],
+			"recipients": user.0.to_string()
+		},
+		None
+	).expect("Failed channel lookup");
+
+	let mut channels = Vec::new();
+	for res in results {
+		let doc = res.expect("Failed to unwrap document");
+
+		let mut recipients = Vec::new();
+		for user in doc.get_array("recipients").expect("DB[recipients]") {
+			recipients.push(
+				user.as_str()
+					.expect("Should be a string.")
+			);
+		}
+
+		let active =
+			match doc.get_bool("active") {
+				Ok(x) => x,
+				Err(_) => true
+			};
+		
+		channels.push(
+			json!({
+				"id": doc.get_str("_id").expect("DB[id]"),
+				"type": doc.get_i32("type").expect("DB[type]"),
+				"recipients": recipients,
+				"active": active
+			})
+		);
+	}
+
+	json!(channels)
 }
 
 /// open a DM with a user
 #[get("/<target>/dm")]
 pub fn dm(user: User, target: User) -> JsonValue {
-	json!([])
+	let col = database::get_collection("channels");
+
+	match col.find_one(
+		doc! { "type": channel::ChannelType::DM as i32, "recipients": [ user.0.to_string(), target.0.to_string() ] },
+		None
+	).expect("Failed channel lookup") {
+		Some(channel) =>
+			json!({
+				"id": channel.get_str("_id").expect("DB[id]")
+			}),
+		None => {
+			let id = Ulid::new();
+
+			col.insert_one(
+				doc! {
+					"_id": id.to_string(),
+					"type": channel::ChannelType::DM as i32,
+					"recipients": [ user.0.to_string(), target.0.to_string() ],
+					"active": false
+				},
+				None
+			).expect("Failed insert query.");
+
+			json!({
+				"id": id.to_string()
+			})
+		}
+	}
 }
 
 enum Relationship {
