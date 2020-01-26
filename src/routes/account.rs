@@ -1,4 +1,3 @@
-use crate::auth::User;
 use crate::database;
 use crate::email;
 
