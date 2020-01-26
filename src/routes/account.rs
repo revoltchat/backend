@@ -33,7 +33,7 @@ pub struct Create {
 /// (3) add user and send email verification
 #[post("/create", data = "<info>")]
 pub fn create(info: Json<Create>) -> JsonValue {
-	let col = database::get_db().collection("users");
+	let col = database::get_collection("users");
 
 	if info.username.len() < 2 || info.username.len() > 32 {
 		return json!({
@@ -108,7 +108,7 @@ pub fn create(info: Json<Create>) -> JsonValue {
 /// (3) set account as verified
 #[get("/verify/<code>")]
 pub fn verify_email(code: String) -> JsonValue {
-	let col = database::get_db().collection("users");
+	let col = database::get_collection("users");
 
 	if let Some(u) =
 		col.find_one(doc! { "email_verification.code": code.clone() }, None).expect("Failed user lookup") {
@@ -166,8 +166,8 @@ pub struct Resend {
 /// (2) check for rate limit
 /// (3) resend the email
 #[post("/resend", data = "<info>")]
-pub fn resend_email(info: Json<Resend>) -> JsonValue { 
-	let col = database::get_db().collection("users");
+pub fn resend_email(info: Json<Resend>) -> JsonValue {
+	let col = database::get_collection("users");
 
 	if let Some(u) =
 		col.find_one(doc! { "email_verification.target": info.email.clone() }, None).expect("Failed user lookup") {
@@ -239,7 +239,7 @@ pub struct Login {
 /// (3) return access token
 #[post("/login", data = "<info>")]
 pub fn login(info: Json<Login>) -> JsonValue {
-	let col = database::get_db().collection("users");
+	let col = database::get_collection("users");
 
 	if let Some(u) =
 		col.find_one(doc! { "email": info.email.clone() }, None).expect("Failed user lookup") {

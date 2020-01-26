@@ -1,4 +1,4 @@
-use mongodb::{ Client, Database };
+use mongodb::{ Client, Collection, Database };
 use std::env;
 
 use once_cell::sync::OnceCell;
@@ -18,4 +18,8 @@ pub fn get_connection() -> &'static Client {
 
 pub fn get_db() -> Database {
 	get_connection().database("revolt")
+}
+
+pub fn get_collection(collection: &str) -> Collection {
+	get_db().collection(collection)
 }

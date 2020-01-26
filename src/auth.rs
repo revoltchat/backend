@@ -1,6 +1,6 @@
 use rocket::Outcome;
-use rocket::http::Status;
-use rocket::request::{self, Request, FromRequest};
+use rocket::http::{ Status, RawStr };
+use rocket::request::{ self, Request, FromRequest, FromParam };
 
 use bson::{ bson, doc, ordered::OrderedDocument };
 use ulid::Ulid;
@@ -44,5 +44,24 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
 			},
             _ => Outcome::Failure((Status::BadRequest, AuthError::BadCount)),
         }
+    }
+}
+
+impl<'r> FromParam<'r> for User {
+    type Error = &'r RawStr;
+
+    fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
+		let col = database::get_db().collection("users");
+		let result = col.find_one(doc! { "_id": param.to_string() }, None).unwrap();
+
+		if let Some(user) = result {
+			Ok(User(
+				Ulid::from_string(user.get_str("_id").unwrap()).unwrap(),
+				user.get_str("username").unwrap().to_string(),
+				user
+			))
+		} else {
+			Err(param)
+		}
     }
 }

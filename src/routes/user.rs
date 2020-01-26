@@ -22,8 +22,8 @@ pub fn me(user: User) -> JsonValue {
 }
 
 /// retrieve another user's information
-#[get("/<id>")]
-pub fn user(user: User, id: String) -> JsonValue {
+#[get("/<target>")]
+pub fn user(user: User, target: User) -> JsonValue {
 	json!([])
 }
 
@@ -36,7 +36,7 @@ pub struct Query {
 /// currently only supports exact username searches
 #[post("/lookup", data = "<query>")]
 pub fn lookup(_user: User, query: Json<Query>) -> JsonValue {
-	let col = database::get_db().collection("users");
+	let col = database::get_collection("users");
 
 	let users = col.find(
 		doc! { "username": query.username.clone() },
@@ -64,31 +64,245 @@ pub fn dms(user: User) -> JsonValue {
 }
 
 /// open a DM with a user
-#[get("/<id>/dm")]
-pub fn dm(user: User, id: String) -> JsonValue {
+#[get("/<target>/dm")]
+pub fn dm(user: User, target: User) -> JsonValue {
 	json!([])
+}
+
+enum Relationship {
+	FRIEND = 0,
+	OUTGOING = 1,
+	INCOMING = 2,
+	BLOCKED = 3,
+	BLOCKED_OTHER = 4,
+	NONE = 5,
+	SELF = 6,
+}
+
+fn get_relationship(a: &User, b: &User) -> Relationship {
+	if a.0.to_string() == b.0.to_string() {
+		return Relationship::SELF
+	}
+
+	if let Ok(arr) = b.2.get_array("relations") {
+		let id = a.0.to_string();
+		
+		for entry in arr {
+			let relation = entry.as_document().expect("Expected document in relations array.");
+
+			if relation.get_str("id").expect("DB[id]") == id {
+
+				match relation.get_i32("status").expect("DB[status]") {
+					0 => {
+						return Relationship::FRIEND
+					},
+					1 => {
+						return Relationship::INCOMING
+					},
+					2 => {
+						return Relationship::OUTGOING
+					},
+					3 => {
+						return Relationship::BLOCKED_OTHER
+					}
+					_ => {
+						return Relationship::NONE
+					}
+				}
+
+			}
+		}
+	}
+
+	Relationship::NONE
 }
 
 /// retrieve all of your friends
 #[get("/@me/friend")]
 pub fn get_friends(user: User) -> JsonValue {
-	json!([])
+	let mut results = Vec::new();
+	if let Ok(arr) = user.2.get_array("relations") {
+		for item in arr {
+			let doc = item.as_document().expect("Expected document in relations array.");
+			results.push(
+				json!({
+					"id": doc.get_str("id").expect("DB[id]"),
+					"status": doc.get_i32("status").expect("DB[status]")
+				})
+			)
+		}
+	}
+	
+	json!(results)
 }
 
 /// retrieve friend status with user
-#[get("/<id>/friend")]
-pub fn get_friend(user: User, id: String) -> JsonValue {
-	json!([])
+#[get("/<target>/friend")]
+pub fn get_friend(user: User, target: User) -> JsonValue {
+	let relationship = get_relationship(&user, &target);
+
+	json!({
+		"id": target.0.to_string(),
+		"status": relationship as u8
+	})
 }
 
 /// create or accept a friend request
-#[put("/<id>/friend")]
-pub fn add_friend(user: User, id: String) -> JsonValue {
-	json!([])
+#[put("/<target>/friend")]
+pub fn add_friend(user: User, target: User) -> JsonValue {
+	let col = database::get_collection("users");
+
+	let relationship = get_relationship(&user, &target);
+	let User ( id, _, _ ) = user;
+	let User ( tid, _, _ ) = target;
+
+	match relationship {
+		Relationship::FRIEND =>
+			json!({
+				"success": false,
+				"error": "Already friends."
+			}),
+		Relationship::OUTGOING =>
+			json!({
+				"success": false,
+				"error": "Already sent a friend request."
+			}),
+		Relationship::INCOMING => {
+			col.update_one(
+				doc! {
+					"_id": id.to_string(),
+					"relations.id": tid.to_string()
+				},
+				doc! {
+					"$set": {
+						"relations.$.status": Relationship::FRIEND as i32
+					}
+				},
+				None
+			).expect("Failed update query.");
+			
+			col.update_one(
+				doc! {
+					"_id": tid.to_string(),
+					"relations.id": id.to_string()
+				},
+				doc! {
+					"$set": {
+						"relations.$.status": Relationship::FRIEND as i32
+					}
+				},
+				None
+			).expect("Failed update query.");
+
+			json!({
+				"success": true
+			})
+		},
+		Relationship::BLOCKED =>
+			json!({
+				"success": false,
+				"error": "You have blocked this person."
+			}),
+		Relationship::BLOCKED_OTHER =>
+			json!({
+				"success": false,
+				"error": "You have been blocked by this person."
+			}),
+		Relationship::NONE => {
+			col.update_one(
+				doc! {
+					"_id": id.to_string()
+				},
+				doc! {
+					"$push": {
+						"relations": {
+							"id": tid.to_string(),
+							"status": Relationship::OUTGOING as i32
+						}
+					}
+				},
+				None
+			).expect("Failed update query.");
+			
+			col.update_one(
+				doc! {
+					"_id": tid.to_string()
+				},
+				doc! {
+					"$push": {
+						"relations": {
+							"id": id.to_string(),
+							"status": Relationship::INCOMING as i32
+						}
+					}
+				},
+				None
+			).expect("Failed update query.");
+
+			json!({
+				"success": true
+			})
+		},
+		Relationship::SELF =>
+			json!({
+				"success": false,
+				"error": "Cannot add yourself as a friend."
+			})
+	}
 }
 
 /// remove a friend or deny a request
-#[delete("/<id>/friend")]
-pub fn remove_friend(user: User, id: String) -> JsonValue {
-	json!([])
+#[delete("/<target>/friend")]
+pub fn remove_friend(user: User, target: User) -> JsonValue {
+	let col = database::get_collection("users");
+
+	let relationship = get_relationship(&user, &target);
+	let User ( id, _, _ ) = user;
+	let User ( tid, _, _ ) = target;
+
+	match relationship {
+		Relationship::FRIEND |
+		Relationship::OUTGOING |
+		Relationship::INCOMING => {
+			col.update_one(
+				doc! {
+					"_id": id.to_string()
+				},
+				doc! {
+					"$pull": {
+						"relations": {
+							"id": tid.to_string()
+						}
+					}
+				},
+				None
+			).expect("Failed update query.");
+
+			col.update_one(
+				doc! {
+					"_id": tid.to_string()
+				},
+				doc! {
+					"$pull": {
+						"relations": {
+							"id": id.to_string()
+						}
+					}
+				},
+				None
+			).expect("Failed update query.");
+
+			json!({
+				"success": true
+			})
+		},
+		Relationship::BLOCKED |
+		Relationship::BLOCKED_OTHER |
+		Relationship::NONE |
+		Relationship::SELF =>
+			json!({
+				"success": false,
+				"error": "This has no effect."
+			})
+	}
 }
