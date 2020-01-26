@@ -33,7 +33,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
 				let result = col.find_one(doc! { "access_token": key }, None).unwrap();
 
 				if let Some(user) = result {
-					Outcome::Success(User(
+					Outcome::Success(User (
 						Ulid::from_string(user.get_str("_id").unwrap()).unwrap(),
 						user.get_str("username").unwrap().to_string(),
 						user
@@ -55,7 +55,7 @@ impl<'r> FromParam<'r> for User {
 		let result = col.find_one(doc! { "_id": param.to_string() }, None).unwrap();
 
 		if let Some(user) = result {
-			Ok(User(
+			Ok(User (
 				Ulid::from_string(user.get_str("_id").unwrap()).unwrap(),
 				user.get_str("username").unwrap().to_string(),
 				user

@@ -3,9 +3,9 @@
 #[macro_use] extern crate rocket_contrib;
 
 pub mod database;
+pub mod guards;
 pub mod routes;
 pub mod email;
-pub mod auth;
 
 use dotenv;
 

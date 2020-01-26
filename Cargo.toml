@@ -24,3 +24,4 @@ chrono = "0.4.10"
 rand = "0.7.3"
 time = "0.2.4"
 reqwest = { version = "0.10.1", features = ["blocking", "json"] }
+num_enum = "0.4.2"

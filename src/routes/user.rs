@@ -1,4 +1,4 @@
-use crate::auth::User;
+use crate::guards::auth::User;
 use crate::database;
 use crate::routes::channel;
 
