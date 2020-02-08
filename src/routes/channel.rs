@@ -1,4 +1,5 @@
 use crate::database::{ self, user::User, channel::Channel, message::Message };
+use crate::websocket;
 
 use bson::{ bson, doc, from_bson, Bson::UtcDatetime };
 use rocket_contrib::json::{ JsonValue, Json };
@@ -32,6 +33,13 @@ fn has_permission(user: &User, target: &Channel) -> bool {
 			false,
 		_ =>
 			false
+	}
+}
+
+fn get_recipients(target: &Channel) -> Vec<String> {
+	match target.channel_type {
+		0..=1 => target.recipients.clone().unwrap(),
+		_ => vec![]
 	}
 }
 
@@ -139,17 +147,29 @@ pub fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> 
 	Some(match col.insert_one(
 		doc! {
 			"_id": id.clone(),
-			"channel": target.id,
-			"author": user.id,
+			"channel": target.id.clone(),
+			"author": user.id.clone(),
 			"content": message.content.clone(),
 		},
 		None
 	) {
-		Ok(_) =>
+		Ok(_) => {
+			websocket::queue_message(
+				get_recipients(&target),
+				json!({
+					"type": "message",
+					"id": id.clone(),
+					"channel": target.id,
+					"author": user.id,
+					"content": message.content.clone(),
+				}).to_string()
+			);
+
 			json!({
 				"success": true,
 				"id": id
-			}),
+			})
+		},
 		Err(_) =>
 			json!({
 				"success": false,
@@ -179,20 +199,33 @@ pub fn edit_message(user: User, target: Channel, message: Message, edit: Json<Se
 		} else {
 			let col = database::get_collection("messages");
 
+			let edited = UtcDatetime(Utc::now());
 			match col.update_one(
-				doc! { "_id": message.id },
+				doc! { "_id": message.id.clone() },
 				doc! {
 					"$set": {
 						"content": edit.content.clone(),
-						"edited": UtcDatetime(Utc::now())
+						"edited": edited.clone()
 					}
 				},
 				None
 			) {
-				Ok(_) =>
+				Ok(_) => {
+					websocket::queue_message(
+						get_recipients(&target),
+						json!({
+							"type": "message_update",
+							"id": message.id,
+							"channel": target.id,
+							"content": message.content.clone(),
+							"edited": edited
+						}).to_string()
+					);
+
 					json!({
 						"success": true
-					}),
+					})
+				},
 				Err(_) =>
 					json!({
 						"success": false,
@@ -220,13 +253,23 @@ pub fn delete_message(user: User, target: Channel, message: Message) -> Option<J
 			let col = database::get_collection("messages");
 
 			match col.delete_one(
-				doc! { "_id": message.id },
+				doc! { "_id": message.id.clone() },
 				None
 			) {
-				Ok(_) =>
+				Ok(_) => {
+					websocket::queue_message(
+						get_recipients(&target),
+						json!({
+							"type": "message_delete",
+							"id": message.id,
+							"channel": target.id
+						}).to_string()
+					);
+
 					json!({
 						"success": true
-					}),
+					})
+				},
 				Err(_) =>
 					json!({
 						"success": false,

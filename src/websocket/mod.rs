@@ -147,15 +147,25 @@ pub fn launch_server() {
 pub fn send_message(id: String, message: String) -> std::result::Result<(), ()> {
 	unsafe {
 		let map = CLIENTS.get().unwrap().read().unwrap();
-		let arr = map.get(&id).unwrap();
+		if map.contains_key(&id) {
+			let arr = map.get(&id).unwrap();
 
-		Ok(for item in arr {
-			match item.out.send(message.clone()) {
-				Ok(_) => (),
-				Err(_) => {
+			for item in arr {
+				if let Err(_) = item.out.send(message.clone()) {
 					return Err(());
 				}
 			}
-		})
+		}
+
+		Ok(())
+	}
+}
+
+// ! TODO: WRITE THREADED QUEUE SYSTEM
+// ! FETCH RECIPIENTS HERE INSTEAD OF IN METHOD
+
+pub fn queue_message(ids: Vec<String>, message: String) {
+	for id in ids {
+		send_message(id, message.clone()).expect("uhhhhhhhhhh can i get uhhhhhhhhhhhhhhhhhh mcdonald cheese burger with fries");
 	}
 }
