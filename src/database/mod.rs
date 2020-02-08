@@ -23,3 +23,5 @@ pub fn get_db() -> Database {
 pub fn get_collection(collection: &str) -> Collection {
 	get_db().collection(collection)
 }
+
+pub mod user;

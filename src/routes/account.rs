@@ -1,9 +1,9 @@
 use crate::database;
 use crate::email;
 
+use bson::{ bson, doc, Bson::UtcDatetime, from_bson};
 use rand::{ Rng, distributions::Alphanumeric };
 use rocket_contrib::json::{ Json, JsonValue };
-use bson::{ bson, doc, Bson::UtcDatetime };
 use serde::{ Serialize, Deserialize };
 use validator::validate_email;
 use bcrypt::{ hash, verify };
@@ -243,16 +243,18 @@ pub fn login(info: Json<Login>) -> JsonValue {
 
 	if let Some(u) =
 		col.find_one(doc! { "email": info.email.clone() }, None).expect("Failed user lookup") {
-			match verify(info.password.clone(), u.get_str("password").expect("DOC[password]"))
+			let user: database::user::User = from_bson(bson::Bson::Document(u)).expect("Failed to unwrap user.");
+
+			match verify(info.password.clone(), &user.password)
 				.expect("Failed to check hash of password.") {
 					true => {
 						let token =
-							match u.get_str("access_token") {
-								Ok(t) => t.to_string(),
-								Err(_) => {
+							match user.access_token {
+								Some(t) => t.to_string(),
+								None => {
 									let token = gen_token(92);
 									col.update_one(
-										doc! { "_id": u.get_str("_id").expect("DOC[id]") },
+										doc! { "_id": &user.id },
 										doc! { "$set": { "access_token": token.clone() } },
 										None
 									).expect("Failed to update user object");

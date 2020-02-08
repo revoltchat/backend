@@ -41,9 +41,12 @@ pub fn channel(user: User, target: Channel) -> Option<JsonValue> {
 		return None
 	}
 
+	let Channel ( id, channel_type, doc ) = target;
+
 	Some(
 		json!({
-			"aa": "b"
+			"id": id.to_string(),
+			"type": channel_type as u8
 		}
 	))
 }
