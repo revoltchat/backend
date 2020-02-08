@@ -2,7 +2,7 @@ use rocket::http::{ RawStr };
 use rocket::request::{ FromParam };
 use bson::{ bson, doc, from_bson };
 
-use crate::database;
+use crate::database::{ self, user::User };
 
 use database::channel::Channel;
 use database::message::Message;
