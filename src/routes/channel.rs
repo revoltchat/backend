@@ -199,13 +199,13 @@ pub fn edit_message(user: User, target: Channel, message: Message, edit: Json<Se
 		} else {
 			let col = database::get_collection("messages");
 
-			let edited = UtcDatetime(Utc::now());
+			let edited = Utc::now();
 			match col.update_one(
 				doc! { "_id": message.id.clone() },
 				doc! {
 					"$set": {
 						"content": edit.content.clone(),
-						"edited": edited.clone()
+						"edited": UtcDatetime(edited.clone())
 					}
 				},
 				None
@@ -218,7 +218,7 @@ pub fn edit_message(user: User, target: Channel, message: Message, edit: Json<Se
 							"id": message.id,
 							"channel": target.id,
 							"content": message.content.clone(),
-							"edited": edited
+							"edited": edited.timestamp()
 						}).to_string()
 					);
 
