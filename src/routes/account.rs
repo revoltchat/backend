@@ -7,6 +7,7 @@ use rocket_contrib::json::{ Json, JsonValue };
 use serde::{ Serialize, Deserialize };
 use validator::validate_email;
 use bcrypt::{ hash, verify };
+use database::user::User;
 use chrono::prelude::*;
 use ulid::Ulid;
 
@@ -112,18 +113,18 @@ pub fn verify_email(code: String) -> JsonValue {
 
 	if let Some(u) =
 		col.find_one(doc! { "email_verification.code": code.clone() }, None).expect("Failed user lookup") {
-			let ev = u.get_document("email_verification").expect("DOC[email_verification]");
-			let expiry = ev.get_utc_datetime("expiry").expect("DOC[expiry]");
+			let user: User = from_bson(bson::Bson::Document(u)).expect("Failed to unwrap user.");
+			let ev = user.email_verification;
 
-			if Utc::now() > *expiry {
+			if Utc::now() > *ev.expiry.unwrap() {
 				json!({
 					"success": false,
 					"error": "Token has expired!",
 				})
 			} else {
-				let target = ev.get_str("target").expect("DOC[target]");
+				let target = ev.target.unwrap();
 				col.update_one(
-					doc! { "_id": u.get_str("_id").expect("Failed to retrieve user id.") },
+					doc! { "_id": user.id },
 					doc! {
 						"$unset": {
 							"email_verification.code": "",
@@ -141,7 +142,7 @@ pub fn verify_email(code: String) -> JsonValue {
 
 				email::send_welcome_email(
 					target.to_string(),
-					u.get_str("username").expect("Failed to retrieve username.").to_string()
+					user.username
 				);
 
 				json!({
@@ -171,9 +172,11 @@ pub fn resend_email(info: Json<Resend>) -> JsonValue {
 
 	if let Some(u) =
 		col.find_one(doc! { "email_verification.target": info.email.clone() }, None).expect("Failed user lookup") {
-			let ev = u.get_document("email_verification").expect("DOC[email_verification]");
-			let expiry = ev.get_utc_datetime("expiry").expect("DOC[expiry]");
-			let rate_limit = ev.get_utc_datetime("rate_limit").expect("DOC[rate_limit]");
+			let user: User = from_bson(bson::Bson::Document(u)).expect("Failed to unwrap user.");
+			let ev = user.email_verification;
+
+			let expiry = ev.expiry.unwrap();
+			let rate_limit = ev.rate_limit.unwrap();
 
 			if Utc::now() < *rate_limit {
 				json!({
@@ -182,7 +185,7 @@ pub fn resend_email(info: Json<Resend>) -> JsonValue {
 				})
 			} else {
 				let mut new_expiry = UtcDatetime(Utc::now() + chrono::Duration::days(1));
-				if info.email.clone() != u.get_str("email").expect("DOC[email]") {
+				if info.email.clone() != user.email {
 					if Utc::now() > *expiry {
 						return json!({
 							"success": "false",
@@ -195,7 +198,7 @@ pub fn resend_email(info: Json<Resend>) -> JsonValue {
 
 				let code = gen_token(48);
 				col.update_one(
-					doc! { "_id": u.get_str("_id").expect("Failed to retrieve user id.") },
+					doc! { "_id": user.id },
 					doc! {
 						"$set": {
 							"email_verification.code": code.clone(),
@@ -243,7 +246,7 @@ pub fn login(info: Json<Login>) -> JsonValue {
 
 	if let Some(u) =
 		col.find_one(doc! { "email": info.email.clone() }, None).expect("Failed user lookup") {
-			let user: database::user::User = from_bson(bson::Bson::Document(u)).expect("Failed to unwrap user.");
+			let user: User = from_bson(bson::Bson::Document(u)).expect("Failed to unwrap user.");
 
 			match verify(info.password.clone(), &user.password)
 				.expect("Failed to check hash of password.") {

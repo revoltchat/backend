@@ -2,7 +2,7 @@ use rocket::Outcome;
 use rocket::http::{ Status, RawStr };
 use rocket::request::{ self, Request, FromRequest, FromParam };
 
-use bson::{ bson, doc, ordered::OrderedDocument };
+use bson::{ bson, doc, from_bson };
 use ulid::Ulid;
 
 use crate::database;
@@ -10,7 +10,7 @@ use crate::database;
 pub struct User(
 	pub Ulid,
 	pub String,
-	pub OrderedDocument,
+	pub database::user::User,
 );
 
 #[derive(Debug)]
@@ -36,7 +36,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
 					Outcome::Success(User (
 						Ulid::from_string(user.get_str("_id").unwrap()).unwrap(),
 						user.get_str("username").unwrap().to_string(),
-						user
+						from_bson(bson::Bson::Document(user)).expect("Failed to unwrap user.")
 					))
 				} else {
 					Outcome::Failure((Status::Forbidden, AuthError::Invalid))
@@ -58,7 +58,7 @@ impl<'r> FromParam<'r> for User {
 			Ok(User (
 				Ulid::from_string(user.get_str("_id").unwrap()).unwrap(),
 				user.get_str("username").unwrap().to_string(),
-				user
+				from_bson(bson::Bson::Document(user)).expect("Failed to unwrap user.")
 			))
 		} else {
 			Err(param)

@@ -4,8 +4,8 @@ use crate::routes::channel;
 
 use rocket_contrib::json::{ Json, JsonValue };
 use serde::{ Serialize, Deserialize };
+use bson::{ bson, doc, from_bson };
 use mongodb::options::FindOptions;
-use bson::{ bson, doc };
 use ulid::Ulid;
 
 /// retrieve your user information
@@ -16,9 +16,8 @@ pub fn me(user: User) -> JsonValue {
 	json!({
 		"id": id.to_string(),
 		"username": username,
-		"email": doc.get_str("email").expect("Missing email in user object!"),
-		"verified": doc.get_document("email_verification").expect("DOC[email_verification]")
-						.get_bool("verified").expect("DOC[verified]"),
+		"email": doc.email,
+		"verified": doc.email_verification.verified,
 		"created_timestamp": id.datetime().timestamp(),
 	})
 }
@@ -47,11 +46,11 @@ pub fn lookup(_user: User, query: Json<Query>) -> JsonValue {
 
 	let mut results = Vec::new();
 	for user in users {
-		let u = user.expect("Failed to unwrap user.");
+		let u: database::user::User = from_bson(bson::Bson::Document(user.unwrap())).expect("Failed to unwrap user.");
 		results.push(
 			json!({
-				"id": u.get_str("_id").expect("DB[id]"),
-				"username": u.get_str("username").expect("DB[username]")
+				"id": u.id,
+				"username": u.username
 			})
 		);
 	}
@@ -158,15 +157,12 @@ fn get_relationship(a: &User, b: &User) -> Relationship {
 		return Relationship::SELF
 	}
 
-	if let Ok(arr) = b.2.get_array("relations") {
+	if let Some(arr) = &b.2.relations {
 		let id = a.0.to_string();
 		
 		for entry in arr {
-			let relation = entry.as_document().expect("Expected document in relations array.");
-
-			if relation.get_str("id").expect("DB[id]") == id {
-
-				match relation.get_i32("status").expect("DB[status]") {
+			if entry.id == id {
+				match entry.status {
 					0 => {
 						return Relationship::FRIEND
 					},
@@ -183,7 +179,6 @@ fn get_relationship(a: &User, b: &User) -> Relationship {
 						return Relationship::NONE
 					}
 				}
-
 			}
 		}
 	}
@@ -195,13 +190,12 @@ fn get_relationship(a: &User, b: &User) -> Relationship {
 #[get("/@me/friend")]
 pub fn get_friends(user: User) -> JsonValue {
 	let mut results = Vec::new();
-	if let Ok(arr) = user.2.get_array("relations") {
+	if let Some(arr) = user.2.relations {
 		for item in arr {
-			let doc = item.as_document().expect("Expected document in relations array.");
 			results.push(
 				json!({
-					"id": doc.get_str("id").expect("DB[id]"),
-					"status": doc.get_i32("status").expect("DB[status]")
+					"id": item.id,
+					"status": item.status
 				})
 			)
 		}
