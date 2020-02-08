@@ -1,7 +1,7 @@
 use crate::database;
 use crate::email;
 
-use bson::{ bson, doc, Bson::UtcDatetime, from_bson};
+use bson::{ bson, doc, Bson::UtcDatetime, from_bson };
 use rand::{ Rng, distributions::Alphanumeric };
 use rocket_contrib::json::{ Json, JsonValue };
 use serde::{ Serialize, Deserialize };

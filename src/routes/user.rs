@@ -20,8 +20,8 @@ pub fn me(user: User) -> JsonValue {
 }
 
 /// retrieve another user's information
-#[get("/<target>")]
-pub fn user(user: User, target: User) -> JsonValue {
+#[get("/<_target>")]
+pub fn user(_user: User, _target: User) -> JsonValue {
 	json!([])
 }
 
@@ -67,7 +67,7 @@ pub fn dms(user: User) -> JsonValue {
 					"type": channel::ChannelType::DM as i32
 				},
 				{
-					"type": channel::ChannelType::GROUP_DM as i32
+					"type": channel::ChannelType::GROUPDM as i32
 				}
 			],
 			"recipients": user.id
@@ -130,7 +130,7 @@ enum Relationship {
 	OUTGOING = 1,
 	INCOMING = 2,
 	BLOCKED = 3,
-	BLOCKED_OTHER = 4,
+	BLOCKEDOTHER = 4,
 	NONE = 5,
 	SELF = 6,
 }
@@ -154,8 +154,11 @@ fn get_relationship(a: &User, b: &User) -> Relationship {
 						return Relationship::OUTGOING
 					},
 					3 => {
-						return Relationship::BLOCKED_OTHER
-					}
+						return Relationship::BLOCKEDOTHER
+					},
+					4 => {
+						return Relationship::BLOCKED
+					},
 					_ => {
 						return Relationship::NONE
 					}
@@ -249,7 +252,7 @@ pub fn add_friend(user: User, target: User) -> JsonValue {
 				"success": false,
 				"error": "You have blocked this person."
 			}),
-		Relationship::BLOCKED_OTHER =>
+		Relationship::BLOCKEDOTHER =>
 			json!({
 				"success": false,
 				"error": "You have been blocked by this person."
@@ -340,7 +343,7 @@ pub fn remove_friend(user: User, target: User) -> JsonValue {
 			})
 		},
 		Relationship::BLOCKED |
-		Relationship::BLOCKED_OTHER |
+		Relationship::BLOCKEDOTHER |
 		Relationship::NONE |
 		Relationship::SELF =>
 			json!({

@@ -11,8 +11,8 @@ use ulid::Ulid;
 #[repr(usize)]
 pub enum ChannelType {
 	DM = 0,
-	GROUP_DM = 1,
-	GUILD_CHANNEL = 2,
+	GROUPDM = 1,
+	GUILDCHANNEL = 2,
 }
 
 fn has_permission(user: &User, target: &Channel) -> bool {
