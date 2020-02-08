@@ -1,5 +1,4 @@
-use crate::guards::auth::User;
-use crate::database;
+use crate::database::{ self, user::User, channel::Channel };
 use crate::routes::channel;
 
 use rocket_contrib::json::{ Json, JsonValue };
@@ -11,14 +10,12 @@ use ulid::Ulid;
 /// retrieve your user information
 #[get("/@me")]
 pub fn me(user: User) -> JsonValue {
-	let User ( id, username, doc ) = user;
-
 	json!({
-		"id": id.to_string(),
-		"username": username,
-		"email": doc.email,
-		"verified": doc.email_verification.verified,
-		"created_timestamp": id.datetime().timestamp(),
+		"id": user.id,
+		"username": user.username,
+		"email": user.email,
+		"verified": user.email_verification.verified,
+		"created_timestamp": Ulid::from_string(&user.id).unwrap().datetime().timestamp(),
 	})
 }
 
@@ -46,7 +43,7 @@ pub fn lookup(_user: User, query: Json<Query>) -> JsonValue {
 
 	let mut results = Vec::new();
 	for user in users {
-		let u: database::user::User = from_bson(bson::Bson::Document(user.unwrap())).expect("Failed to unwrap user.");
+		let u: User = from_bson(bson::Bson::Document(user.unwrap())).expect("Failed to unwrap user.");
 		results.push(
 			json!({
 				"id": u.id,
@@ -73,35 +70,21 @@ pub fn dms(user: User) -> JsonValue {
 					"type": channel::ChannelType::GROUP_DM as i32
 				}
 			],
-			"recipients": user.0.to_string()
+			"recipients": user.id
 		},
 		None
 	).expect("Failed channel lookup");
 
 	let mut channels = Vec::new();
-	for res in results {
-		let doc = res.expect("Failed to unwrap document");
-
-		let mut recipients = Vec::new();
-		for user in doc.get_array("recipients").expect("DB[recipients]") {
-			recipients.push(
-				user.as_str()
-					.expect("Should be a string.")
-			);
-		}
-
-		let active =
-			match doc.get_bool("active") {
-				Ok(x) => x,
-				Err(_) => true
-			};
+	for item in results {
+		let channel: Channel = from_bson(bson::Bson::Document(item.unwrap())).expect("Failed to unwrap channel.");
 		
 		channels.push(
 			json!({
-				"id": doc.get_str("_id").expect("DB[id]"),
-				"type": doc.get_i32("type").expect("DB[type]"),
-				"recipients": recipients,
-				"active": active
+				"id": channel.id,
+				"type": channel.channel_type,
+				"recipients": channel.recipients,
+				"active": channel.active.unwrap()
 			})
 		);
 	}
@@ -115,12 +98,12 @@ pub fn dm(user: User, target: User) -> JsonValue {
 	let col = database::get_collection("channels");
 
 	match col.find_one(
-		doc! { "type": channel::ChannelType::DM as i32, "recipients": [ user.0.to_string(), target.0.to_string() ] },
+		doc! { "type": channel::ChannelType::DM as i32, "recipients": [ user.id.clone(), target.id.clone() ] },
 		None
 	).expect("Failed channel lookup") {
 		Some(channel) =>
 			json!({
-				"id": channel.get_str("_id").expect("DB[id]")
+				"id": channel.get_str("_id").unwrap()
 			}),
 		None => {
 			let id = Ulid::new();
@@ -129,7 +112,7 @@ pub fn dm(user: User, target: User) -> JsonValue {
 				doc! {
 					"_id": id.to_string(),
 					"type": channel::ChannelType::DM as i32,
-					"recipients": [ user.0.to_string(), target.0.to_string() ],
+					"recipients": [ user.id, target.id ],
 					"active": false
 				},
 				None
@@ -153,15 +136,13 @@ enum Relationship {
 }
 
 fn get_relationship(a: &User, b: &User) -> Relationship {
-	if a.0.to_string() == b.0.to_string() {
+	if a.id == b.id {
 		return Relationship::SELF
 	}
 
-	if let Some(arr) = &b.2.relations {
-		let id = a.0.to_string();
-		
+	if let Some(arr) = &b.relations {
 		for entry in arr {
-			if entry.id == id {
+			if entry.id == a.id {
 				match entry.status {
 					0 => {
 						return Relationship::FRIEND
@@ -190,7 +171,7 @@ fn get_relationship(a: &User, b: &User) -> Relationship {
 #[get("/@me/friend")]
 pub fn get_friends(user: User) -> JsonValue {
 	let mut results = Vec::new();
-	if let Some(arr) = user.2.relations {
+	if let Some(arr) = user.relations {
 		for item in arr {
 			results.push(
 				json!({
@@ -210,7 +191,7 @@ pub fn get_friend(user: User, target: User) -> JsonValue {
 	let relationship = get_relationship(&user, &target);
 
 	json!({
-		"id": target.0.to_string(),
+		"id": target.id,
 		"status": relationship as u8
 	})
 }
@@ -219,10 +200,7 @@ pub fn get_friend(user: User, target: User) -> JsonValue {
 #[put("/<target>/friend")]
 pub fn add_friend(user: User, target: User) -> JsonValue {
 	let col = database::get_collection("users");
-
 	let relationship = get_relationship(&user, &target);
-	let User ( id, _, _ ) = user;
-	let User ( tid, _, _ ) = target;
 
 	match relationship {
 		Relationship::FRIEND =>
@@ -238,8 +216,8 @@ pub fn add_friend(user: User, target: User) -> JsonValue {
 		Relationship::INCOMING => {
 			col.update_one(
 				doc! {
-					"_id": id.to_string(),
-					"relations.id": tid.to_string()
+					"_id": user.id.clone(),
+					"relations.id": target.id.clone()
 				},
 				doc! {
 					"$set": {
@@ -251,8 +229,8 @@ pub fn add_friend(user: User, target: User) -> JsonValue {
 			
 			col.update_one(
 				doc! {
-					"_id": tid.to_string(),
-					"relations.id": id.to_string()
+					"_id": target.id,
+					"relations.id": user.id
 				},
 				doc! {
 					"$set": {
@@ -279,12 +257,12 @@ pub fn add_friend(user: User, target: User) -> JsonValue {
 		Relationship::NONE => {
 			col.update_one(
 				doc! {
-					"_id": id.to_string()
+					"_id": user.id.clone()
 				},
 				doc! {
 					"$push": {
 						"relations": {
-							"id": tid.to_string(),
+							"id": target.id.clone(),
 							"status": Relationship::OUTGOING as i32
 						}
 					}
@@ -294,12 +272,12 @@ pub fn add_friend(user: User, target: User) -> JsonValue {
 			
 			col.update_one(
 				doc! {
-					"_id": tid.to_string()
+					"_id": target.id
 				},
 				doc! {
 					"$push": {
 						"relations": {
-							"id": id.to_string(),
+							"id": user.id,
 							"status": Relationship::INCOMING as i32
 						}
 					}
@@ -323,10 +301,7 @@ pub fn add_friend(user: User, target: User) -> JsonValue {
 #[delete("/<target>/friend")]
 pub fn remove_friend(user: User, target: User) -> JsonValue {
 	let col = database::get_collection("users");
-
 	let relationship = get_relationship(&user, &target);
-	let User ( id, _, _ ) = user;
-	let User ( tid, _, _ ) = target;
 
 	match relationship {
 		Relationship::FRIEND |
@@ -334,12 +309,12 @@ pub fn remove_friend(user: User, target: User) -> JsonValue {
 		Relationship::INCOMING => {
 			col.update_one(
 				doc! {
-					"_id": id.to_string()
+					"_id": user.id.clone()
 				},
 				doc! {
 					"$pull": {
 						"relations": {
-							"id": tid.to_string()
+							"id": target.id.clone()
 						}
 					}
 				},
@@ -348,12 +323,12 @@ pub fn remove_friend(user: User, target: User) -> JsonValue {
 
 			col.update_one(
 				doc! {
-					"_id": tid.to_string()
+					"_id": target.id
 				},
 				doc! {
 					"$pull": {
 						"relations": {
-							"id": id.to_string()
+							"id": user.id
 						}
 					}
 				},

@@ -1,12 +1,8 @@
-use crate::guards::{ auth::User, channel::Channel };
-use crate::database;
+use crate::database::{ user::User, channel::Channel };
 
-use rocket_contrib::json::{ Json, JsonValue };
-use serde::{ Serialize, Deserialize };
-use mongodb::options::FindOptions;
+use rocket_contrib::json::{ JsonValue };
 use num_enum::TryFromPrimitive;
-use bson::{ bson, doc };
-use ulid::Ulid;
+use bson::{ doc };
 
 #[derive(Debug, TryFromPrimitive)]
 #[repr(usize)]
@@ -17,19 +13,21 @@ pub enum ChannelType {
 }
 
 fn has_permission(user: &User, target: &Channel) -> bool {
-	let id = user.0.to_string();
-	match target.1 {
-		ChannelType::DM |
-		ChannelType::GROUP_DM => {
-			for user in target.2.get_array("recipients").expect("DB[recipients]") {
-				if user.as_str().expect("Expected string id.") == id {
-					return true;
+	match target.channel_type {
+		0..=1 => {
+			if let Some(arr) = &target.recipients {
+				for item in arr {
+					if item == &user.id {
+						return true;
+					}
 				}
 			}
 
 			false
 		},
-		ChannelType::GUILD_CHANNEL =>
+		2 =>
+			false,
+		_ =>
 			false
 	}
 }
@@ -41,12 +39,10 @@ pub fn channel(user: User, target: Channel) -> Option<JsonValue> {
 		return None
 	}
 
-	let Channel ( id, channel_type, doc ) = target;
-
 	Some(
 		json!({
-			"id": id.to_string(),
-			"type": channel_type as u8
+			"id": target.id,
+			"type": target.channel_type
 		}
 	))
 }

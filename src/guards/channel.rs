@@ -1,24 +1,11 @@
-use rocket::Outcome;
-use rocket::http::{ Status, RawStr };
-use rocket::request::{ self, Request, FromRequest, FromParam };
-
-use bson::{ bson, doc, ordered::OrderedDocument };
-use std::convert::TryFrom;
-use ulid::Ulid;
+use rocket::http::{ RawStr };
+use rocket::request::{ FromParam };
+use bson::{ bson, doc, from_bson };
 
 use crate::database;
-use crate::routes::channel::ChannelType;
 
-pub struct Channel (
-	pub Ulid,
-	pub ChannelType,
-	pub OrderedDocument,
-);
-
-pub struct Message (
-	pub Ulid,
-	pub OrderedDocument,
-);
+use database::channel::Channel;
+use database::message::Message;
 
 impl<'r> FromParam<'r> for Channel {
     type Error = &'r RawStr;
@@ -28,11 +15,7 @@ impl<'r> FromParam<'r> for Channel {
 		let result = col.find_one(doc! { "_id": param.to_string() }, None).unwrap();
 
 		if let Some(channel) = result {
-			Ok(Channel (
-				Ulid::from_string(channel.get_str("_id").unwrap()).unwrap(),
-				ChannelType::try_from(channel.get_i32("type").unwrap() as usize).unwrap(),
-				channel
-			))
+			Ok(from_bson(bson::Bson::Document(channel)).expect("Failed to unwrap channel."))
 		} else {
 			Err(param)
 		}
@@ -47,10 +30,7 @@ impl<'r> FromParam<'r> for Message {
 		let result = col.find_one(doc! { "_id": param.to_string() }, None).unwrap();
 
 		if let Some(message) = result {
-			Ok(Message (
-				Ulid::from_string(message.get_str("_id").unwrap()).unwrap(),
-				message
-			))
+			Ok(from_bson(bson::Bson::Document(message)).expect("Failed to unwrap message."))
 		} else {
 			Err(param)
 		}

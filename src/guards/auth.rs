@@ -3,15 +3,9 @@ use rocket::http::{ Status, RawStr };
 use rocket::request::{ self, Request, FromRequest, FromParam };
 
 use bson::{ bson, doc, from_bson };
-use ulid::Ulid;
 
 use crate::database;
-
-pub struct User(
-	pub Ulid,
-	pub String,
-	pub database::user::User,
-);
+use database::user::User;
 
 #[derive(Debug)]
 pub enum AuthError {
@@ -33,11 +27,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
 				let result = col.find_one(doc! { "access_token": key }, None).unwrap();
 
 				if let Some(user) = result {
-					Outcome::Success(User (
-						Ulid::from_string(user.get_str("_id").unwrap()).unwrap(),
-						user.get_str("username").unwrap().to_string(),
-						from_bson(bson::Bson::Document(user)).expect("Failed to unwrap user.")
-					))
+					Outcome::Success(from_bson(bson::Bson::Document(user)).expect("Failed to unwrap user."))
 				} else {
 					Outcome::Failure((Status::Forbidden, AuthError::Invalid))
 				}
@@ -55,11 +45,7 @@ impl<'r> FromParam<'r> for User {
 		let result = col.find_one(doc! { "_id": param.to_string() }, None).unwrap();
 
 		if let Some(user) = result {
-			Ok(User (
-				Ulid::from_string(user.get_str("_id").unwrap()).unwrap(),
-				user.get_str("username").unwrap().to_string(),
-				from_bson(bson::Bson::Document(user)).expect("Failed to unwrap user.")
-			))
+			Ok(from_bson(bson::Bson::Document(user)).expect("Failed to unwrap user."))
 		} else {
 			Err(param)
 		}
