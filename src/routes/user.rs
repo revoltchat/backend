@@ -15,14 +15,17 @@ pub fn me(user: User) -> JsonValue {
 		"username": user.username,
 		"email": user.email,
 		"verified": user.email_verification.verified,
-		"created_timestamp": Ulid::from_string(&user.id).unwrap().datetime().timestamp(),
 	})
 }
 
 /// retrieve another user's information
-#[get("/<_target>")]
-pub fn user(_user: User, _target: User) -> JsonValue {
-	json!([])
+#[get("/<target>")]
+pub fn user(user: User, target: User) -> JsonValue {
+	json!({
+		"id": target.id,
+		"username": target.username,
+		"relationship": get_relationship(&user, &target) as u8
+	})
 }
 
 #[derive(Serialize, Deserialize)]
@@ -33,7 +36,7 @@ pub struct Query {
 /// lookup a user on Revolt
 /// currently only supports exact username searches
 #[post("/lookup", data = "<query>")]
-pub fn lookup(_user: User, query: Json<Query>) -> JsonValue {
+pub fn lookup(user: User, query: Json<Query>) -> JsonValue {
 	let col = database::get_collection("users");
 
 	let users = col.find(
@@ -42,12 +45,13 @@ pub fn lookup(_user: User, query: Json<Query>) -> JsonValue {
 	).expect("Failed user lookup");
 
 	let mut results = Vec::new();
-	for user in users {
-		let u: User = from_bson(bson::Bson::Document(user.unwrap())).expect("Failed to unwrap user.");
+	for item in users {
+		let u: User = from_bson(bson::Bson::Document(item.unwrap())).expect("Failed to unwrap user.");
 		results.push(
 			json!({
 				"id": u.id,
-				"username": u.username
+				"username": u.username,
+				"relationship": get_relationship(&user, &u) as u8
 			})
 		);
 	}
@@ -98,11 +102,12 @@ pub fn dm(user: User, target: User) -> JsonValue {
 	let col = database::get_collection("channels");
 
 	match col.find_one(
-		doc! { "type": channel::ChannelType::DM as i32, "recipients": [ user.id.clone(), target.id.clone() ] },
+		doc! { "type": channel::ChannelType::DM as i32, "recipients": { "$all": [ user.id.clone(), target.id.clone() ] } },
 		None
 	).expect("Failed channel lookup") {
 		Some(channel) =>
 			json!({
+				"success": true,
 				"id": channel.get_str("_id").unwrap()
 			}),
 		None => {
@@ -244,7 +249,8 @@ pub fn add_friend(user: User, target: User) -> JsonValue {
 			).expect("Failed update query.");
 
 			json!({
-				"success": true
+				"success": true,
+				"status": Relationship::FRIEND as u8,
 			})
 		},
 		Relationship::BLOCKED =>
@@ -289,7 +295,8 @@ pub fn add_friend(user: User, target: User) -> JsonValue {
 			).expect("Failed update query.");
 
 			json!({
-				"success": true
+				"success": true,
+				"status": Relationship::OUTGOING as u8,
 			})
 		},
 		Relationship::SELF =>

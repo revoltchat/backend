@@ -53,7 +53,8 @@ pub fn channel(user: User, target: Channel) -> Option<JsonValue> {
 	Some(
 		json!({
 			"id": target.id,
-			"type": target.channel_type
+			"type": target.channel_type,
+			"recipients": get_recipients(&target),
 		}
 	))
 }
@@ -158,10 +159,12 @@ pub fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> 
 				get_recipients(&target),
 				json!({
 					"type": "message",
-					"id": id.clone(),
-					"channel": target.id,
-					"author": user.id,
-					"content": message.content.clone(),
+					"data": {
+						"id": id.clone(),
+						"channel": target.id,
+						"author": user.id,
+						"content": message.content.clone(),
+					},
 				}).to_string()
 			);
 
@@ -176,6 +179,23 @@ pub fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> 
 				"error": "Failed database query."
 			})
 		})
+}
+
+/// get a message
+#[get("/<target>/messages/<message>")]
+pub fn get_message(user: User, target: Channel, message: Message) -> Option<JsonValue> {
+	if !has_permission(&user, &target) {
+		return None
+	}
+
+	Some(
+		json!({
+			"id": message.id,
+			"author": message.author,
+			"content": message.content,
+			"edited": if let Some(t) = message.edited { Some(t.timestamp()) } else { None }
+		})
+	)
 }
 
 #[derive(Serialize, Deserialize)]
@@ -215,10 +235,12 @@ pub fn edit_message(user: User, target: Channel, message: Message, edit: Json<Se
 						get_recipients(&target),
 						json!({
 							"type": "message_update",
-							"id": message.id,
-							"channel": target.id,
-							"content": message.content.clone(),
-							"edited": edited.timestamp()
+							"data": {
+								"id": message.id,
+								"channel": target.id,
+								"content": edit.content.clone(),
+								"edited": edited.timestamp()
+							},
 						}).to_string()
 					);
 
@@ -261,8 +283,10 @@ pub fn delete_message(user: User, target: Channel, message: Message) -> Option<J
 						get_recipients(&target),
 						json!({
 							"type": "message_delete",
-							"id": message.id,
-							"channel": target.id
+							"data": {
+								"id": message.id,
+								"channel": target.id
+							},
 						}).to_string()
 					);
 

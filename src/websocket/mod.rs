@@ -40,6 +40,8 @@ impl Handler for Server {
 						if let Some(_) = self.id {
 							self.out.send(
 								json!({
+									"type": "authenticate",
+									"success": false,
 									"error": "Already authenticated!"
 								})
 								.to_string()
@@ -71,6 +73,7 @@ impl Handler for Server {
 									self.id = Some(id.to_string());
 									self.out.send(
 										json!({
+											"type": "authenticate",
 											"success": true
 										})
 										.to_string()
@@ -79,6 +82,8 @@ impl Handler for Server {
 								None =>
 									self.out.send(
 										json!({
+											"type": "authenticate",
+											"success": false,
 											"error": "Invalid authentication token."
 										})
 										.to_string()
@@ -87,6 +92,8 @@ impl Handler for Server {
 						} else {
 							self.out.send(
 								json!({
+									"type": "authenticate",
+									"success": false,
 									"error": "Missing authentication token."
 								})
 								.to_string()
@@ -141,7 +148,7 @@ pub fn launch_server() {
 		}
 	}
 
-	listen("127.0.0.1:3012", |out| { Server { out: out, id: None, internal: Ulid::new().to_string() } }).unwrap()
+	listen("192.168.0.10:9999", |out| { Server { out: out, id: None, internal: Ulid::new().to_string() } }).unwrap()
 }
 
 pub fn send_message(id: String, message: String) -> std::result::Result<(), ()> {

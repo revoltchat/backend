@@ -267,7 +267,8 @@ pub fn login(info: Json<Login>) -> JsonValue {
 
 						json!({
 							"success": true,
-							"access_token": token
+							"access_token": token,
+							"id": user.id
 						})
 					},
 					false => json!({
@@ -279,6 +280,31 @@ pub fn login(info: Json<Login>) -> JsonValue {
 			json!({
 				"success": false,
 				"error": "Email is not registered.",
+			})
+		}
+}
+
+
+#[derive(Serialize, Deserialize)]
+pub struct Token {
+	token: String,
+}
+
+/// login to a Revolt account via token
+#[post("/token", data = "<info>")]
+pub fn token(info: Json<Token>) -> JsonValue {
+	let col = database::get_collection("users");
+
+	if let Some(u) =
+		col.find_one(doc! { "access_token": info.token.clone() }, None).expect("Failed user lookup") {
+			json!({
+				"success": true,
+				"id": u.get_str("_id").unwrap(),
+			})
+		} else {
+			json!({
+				"success": false,
+				"error": "Invalid token!",
 			})
 		}
 }

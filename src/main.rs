@@ -10,6 +10,7 @@ pub mod email;
 
 use dotenv;
 use std::thread;
+use rocket_cors::AllowedOrigins;
 
 fn main() {
 	dotenv::dotenv().ok();
@@ -19,5 +20,12 @@ fn main() {
 		websocket::launch_server();
 	});
 
-	routes::mount(rocket::ignite()).launch();
+    let cors = rocket_cors::CorsOptions {
+        allowed_origins: AllowedOrigins::All,
+        ..Default::default()
+    }.to_cors().unwrap();
+
+	routes::mount(rocket::ignite())
+		.attach(cors)
+		.launch();
 }
