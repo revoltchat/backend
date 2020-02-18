@@ -159,7 +159,7 @@ pub fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> 
 				let col = database::get_collection("channels");
 				col.update_one(
 					doc! { "_id": target.id.clone() },
-					doc! { "active": true },
+					doc! { "$set": { "active": true } },
 					None
 				).unwrap();
 			}
