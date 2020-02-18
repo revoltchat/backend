@@ -155,6 +155,15 @@ pub fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> 
 		None
 	) {
 		Ok(_) => {
+			if target.channel_type == ChannelType::DM as u8 {
+				let col = database::get_collection("channels");
+				col.update_one(
+					doc! { "_id": target.id.clone() },
+					doc! { "active": true },
+					None
+				).unwrap();
+			}
+
 			websocket::queue_message(
 				get_recipients(&target),
 				json!({
