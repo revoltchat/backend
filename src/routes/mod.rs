@@ -45,5 +45,8 @@ pub fn mount(rocket: Rocket) -> Rocket {
                 channel::delete_message
             ],
         )
-        .mount("/api/guild", routes![guild::create_guild])
+        .mount(
+            "/api/guild",
+            routes![guild::my_guilds, guild::guild, guild::create_guild],
+        )
 }

@@ -1,11 +1,88 @@
-use crate::database::{self, user::User};
+use crate::database::{self, channel::Channel, guild::Guild, user::User};
 
-use bson::{bson, doc};
+use bson::{bson, doc, from_bson, Bson};
 use rocket_contrib::json::{Json, JsonValue};
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 
 use super::channel::ChannelType;
+
+/// fetch your guilds
+#[get("/@me")]
+pub fn my_guilds(user: User) -> JsonValue {
+    let col = database::get_collection("guilds");
+    let guilds = col
+        .find(
+            doc! {
+                "members": {
+                    "$elemMatch": {
+                        "id": user.id,
+                    }
+                }
+            },
+            None,
+        )
+        .unwrap();
+
+    let mut parsed = vec![];
+    for item in guilds {
+        let doc = item.unwrap();
+        parsed.push(json!({
+            "id": doc.get_str("_id").unwrap(),
+            "name": doc.get_str("name").unwrap(),
+            "description": doc.get_str("description").unwrap(),
+            "owner": doc.get_str("owner").unwrap(),
+        }));
+    }
+
+    json!(parsed)
+}
+
+/// fetch a guild
+#[get("/<target>")]
+pub fn guild(user: User, target: Guild) -> JsonValue {
+    let mut targets = vec![];
+    for channel in target.channels {
+        targets.push(Bson::String(channel));
+    }
+
+    let col = database::get_collection("channels");
+    match col.find(
+        doc! {
+            "_id": {
+                "$in": targets,
+            }
+        },
+        None,
+    ) {
+        Ok(results) => {
+            let mut channels = vec![];
+            for item in results {
+                let channel: Channel = from_bson(bson::Bson::Document(item.unwrap()))
+                    .expect("Failed to unwrap channel.");
+
+                channels.push(json!({
+                    "_id": channel.id,
+                    "last_message": channel.last_message,
+                    "name": channel.name,
+                    "description": channel.description,
+                }));
+            }
+
+            json!({
+                "id": target.id,
+                "name": target.name,
+                "description": target.description,
+                "owner": target.owner,
+                "channels": channels,
+            })
+        }
+        Err(_) => json!({
+            "success": false,
+            "error": "Failed to fetch channels."
+        }),
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct CreateGuild {
@@ -47,7 +124,7 @@ pub fn create_guild(user: User, info: Json<CreateGuild>) -> JsonValue {
     if let Err(_) = channels.insert_one(
         doc! {
             "_id": channel_id.clone(),
-            "channel_type": ChannelType::GUILDCHANNEL as u32,
+            "type": ChannelType::GUILDCHANNEL as u32,
             "name": "general",
         },
         None,
@@ -71,7 +148,9 @@ pub fn create_guild(user: User, info: Json<CreateGuild>) -> JsonValue {
                     channel_id.clone()
                 ],
                 "members": [
-                    user.id
+                    {
+                        "id": user.id,
+                    }
                 ],
                 "invites": [],
             },
