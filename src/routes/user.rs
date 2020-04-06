@@ -124,6 +124,7 @@ pub fn dm(user: User, target: User) -> JsonValue {
 			).expect("Failed insert query.");
 
 			json!({
+				"success": true,
 				"id": id.to_string()
 			})
 		}

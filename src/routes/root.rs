@@ -1,5 +1,5 @@
 use rocket_contrib::json::{ JsonValue };
-use bson::{ bson, doc };
+use bson::{ doc };
 
 /// root
 #[get("/")]

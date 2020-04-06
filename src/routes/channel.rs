@@ -134,6 +134,7 @@ pub fn messages(user: User, target: Channel) -> Option<JsonValue> {
 #[derive(Serialize, Deserialize)]
 pub struct SendMessage {
 	content: String,
+	nonce: String,
 }
 
 /// send a message to a channel
@@ -143,51 +144,63 @@ pub fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> 
 		return None
 	}
 
+	let content: String = message.content.chars().take(2000).collect();
+	let nonce: String = message.nonce.chars().take(32).collect();
+
 	let col = database::get_collection("messages");
-	let id = Ulid::new().to_string();
-	Some(match col.insert_one(
-		doc! {
-			"_id": id.clone(),
-			"channel": target.id.clone(),
-			"author": user.id.clone(),
-			"content": message.content.clone(),
-		},
-		None
-	) {
-		Ok(_) => {
-			if target.channel_type == ChannelType::DM as u8 {
-				let col = database::get_collection("channels");
-				col.update_one(
-					doc! { "_id": target.id.clone() },
-					doc! { "$set": { "active": true } },
-					None
-				).unwrap();
-			}
-
-			websocket::queue_message(
-				get_recipients(&target),
-				json!({
-					"type": "message",
-					"data": {
-						"id": id.clone(),
-						"channel": target.id,
-						"author": user.id,
-						"content": message.content.clone(),
-					},
-				}).to_string()
-			);
-
-			json!({
-				"success": true,
-				"id": id
-			})
-		},
-		Err(_) =>
+	if let Some(_) = col.find_one(doc! { "nonce": nonce.clone() }, None).unwrap() {
+		return Some(
 			json!({
 				"success": false,
-				"error": "Failed database query."
+				"error": "Message already sent!"
 			})
-		})
+		)
+	}
+
+	let id = Ulid::new().to_string();
+	Some(if col.insert_one(
+		doc! {
+			"_id": id.clone(),
+			"nonce": nonce.clone(),
+			"channel": target.id.clone(),
+			"author": user.id.clone(),
+			"content": content.clone(),
+		},
+		None
+	).is_ok() {
+        if target.channel_type == ChannelType::DM as u8 {
+            let col = database::get_collection("channels");
+            col.update_one(
+                doc! { "_id": target.id.clone() },
+                doc! { "$set": { "active": true } },
+                None
+            ).unwrap();
+        }
+
+        websocket::queue_message(
+            get_recipients(&target),
+            json!({
+                "type": "message",
+                "data": {
+                    "id": id.clone(),
+                    "nonce": nonce,
+                    "channel": target.id,
+                    "author": user.id,
+                    "content": content,
+                },
+            }).to_string()
+        );
+
+        json!({
+            "success": true,
+            "id": id
+        })
+    } else {
+        json!({
+            "success": false,
+            "error": "Failed database query."
+        })
+    })
 }
 
 /// get a message
@@ -195,14 +208,31 @@ pub fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> 
 pub fn get_message(user: User, target: Channel, message: Message) -> Option<JsonValue> {
 	if !has_permission(&user, &target) {
 		return None
-	}
+    }
+    
+    let prev =
+        // ! CHECK IF USER HAS PERMISSION TO VIEW EDITS OF MESSAGES
+        if let Some(previous) = message.previous_content {
+            let mut entries = vec![];
+            for entry in previous {
+                entries.push(json!({
+                    "content": entry.content,
+                    "time": entry.time.timestamp(),
+                }));
+            }
+
+            Some(entries)
+        } else {
+            None
+        };
 
 	Some(
 		json!({
 			"id": message.id,
 			"author": message.author,
 			"content": message.content,
-			"edited": if let Some(t) = message.edited { Some(t.timestamp()) } else { None }
+            "edited": if let Some(t) = message.edited { Some(t.timestamp()) } else { None },
+            "previous_content": prev,
 		})
 	)
 }
@@ -214,7 +244,7 @@ pub struct EditMessage {
 
 /// edit a message
 #[patch("/<target>/messages/<message>", data = "<edit>")]
-pub fn edit_message(user: User, target: Channel, message: Message, edit: Json<SendMessage>) -> Option<JsonValue> {
+pub fn edit_message(user: User, target: Channel, message: Message, edit: Json<EditMessage>) -> Option<JsonValue> {
 	if !has_permission(&user, &target) {
 		return None
 	}
@@ -228,6 +258,13 @@ pub fn edit_message(user: User, target: Channel, message: Message, edit: Json<Se
 		} else {
 			let col = database::get_collection("messages");
 
+            let time =
+                if let Some(edited) = message.edited {
+                    edited.0
+                } else {
+                    Ulid::from_string(&message.id).unwrap().datetime()
+                };
+
 			let edited = Utc::now();
 			match col.update_one(
 				doc! { "_id": message.id.clone() },
@@ -235,7 +272,13 @@ pub fn edit_message(user: User, target: Channel, message: Message, edit: Json<Se
 					"$set": {
 						"content": edit.content.clone(),
 						"edited": UtcDatetime(edited.clone())
-					}
+                    },
+                    "$push": {
+                        "previous_content": {
+                            "content": message.content,
+                            "time": time,
+                        }
+                    },
 				},
 				None
 			) {

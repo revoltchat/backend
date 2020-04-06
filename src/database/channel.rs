@@ -11,5 +11,11 @@ pub struct Channel {
 	
 	// for Direct Messages
 	pub recipients: Option<Vec<String>>,
-	pub active: Option<bool>,
+    pub active: Option<bool>,
+    
+    // for Guilds
+    pub name: Option<String>,
+
+    // for Guilds and Group DMs
+    pub description: Option<String>,
 }

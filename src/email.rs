@@ -24,25 +24,19 @@ fn public_uri() -> String {
 
 pub fn send_verification_email(email: String, code: String) -> bool {
 	let url = format!("{}/api/account/verify/{}", public_uri(), code);
-	match send_email(
+	send_email(
 		email,
 		"Verify your email!".to_string(),
-		format!("Verify your email here: {}", url).to_string(),
-		format!("<a href=\"{}\">Click to verify your email!</a>", url).to_string()
-	) {
-		Ok(_) => true,
-		Err(_) => false,
-	}
+		format!("Verify your email here: {}", url),
+		format!("<a href=\"{}\">Click to verify your email!</a>", url)
+	).is_ok()
 }
 
 pub fn send_welcome_email(email: String, username: String) -> bool {
-	match send_email(
+	send_email(
 		email,
 		"Welcome to REVOLT!".to_string(),
-		format!("Welcome, {}! You can now use REVOLT.", username.clone()).to_string(),
-		format!("<b>Welcome, {}!</b><br/>You can now use REVOLT.<br/><a href=\"{}\">Go to REVOLT</a>", username.clone(), public_uri()).to_string()
-	) {
-		Ok(_) => true,
-		Err(_) => false,
-	}
+		format!("Welcome, {}! You can now use REVOLT.", username.clone()),
+		format!("<b>Welcome, {}!</b><br/>You can now use REVOLT.<br/><a href=\"{}\">Go to REVOLT</a>", username.clone(), public_uri())
+	).is_ok()
 }

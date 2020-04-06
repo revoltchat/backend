@@ -27,3 +27,4 @@ pub fn get_collection(collection: &str) -> Collection {
 pub mod user;
 pub mod channel;
 pub mod message;
+pub mod guild;
