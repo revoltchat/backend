@@ -1,4 +1,4 @@
-use serde::{ Deserialize, Serialize };
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Member {
@@ -16,7 +16,7 @@ pub struct Invite {
 pub struct Guild {
     #[serde(rename = "_id")]
     pub id: String,
-	// pub nonce: String, used internally
+    // pub nonce: String, used internally
     pub name: String,
     pub description: String,
     pub owner: String,
