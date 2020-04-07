@@ -205,7 +205,7 @@ pub fn resend_email(info: Json<Resend>) -> Response {
 				).expect("Failed to update user!");
 
             match email::send_verification_email(info.email.to_string(), code) {
-                true => Response::Ok(None),
+                true => Response::Result(super::Status::Ok),
                 false => Response::InternalServerError(
                     json!({ "success": false, "error": "Failed to send email! Likely an issue with the backend API." }),
                 ),
@@ -279,16 +279,12 @@ pub fn token(info: Json<Token>) -> Response {
         .find_one(doc! { "access_token": info.token.clone() }, None)
         .expect("Failed user lookup")
     {
-        Response::Success(
-            json!({
-                "id": u.get_str("_id").unwrap(),
-            })
-        )
+        Response::Success(json!({
+            "id": u.get_str("_id").unwrap(),
+        }))
     } else {
-        Response::Unauthorized(
-            json!({
-                "error": "Invalid token!",
-            })
-        )
+        Response::Unauthorized(json!({
+            "error": "Invalid token!",
+        }))
     }
 }

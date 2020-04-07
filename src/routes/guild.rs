@@ -1,3 +1,4 @@
+use super::Response;
 use crate::database::{
     self,
     channel::Channel,
@@ -14,7 +15,7 @@ use super::channel::ChannelType;
 
 /// fetch your guilds
 #[get("/@me")]
-pub fn my_guilds(user: User) -> JsonValue {
+pub fn my_guilds(user: User) -> Response {
     let col = database::get_collection("guilds");
     let guilds = col
         .find(
@@ -40,12 +41,12 @@ pub fn my_guilds(user: User) -> JsonValue {
         }));
     }
 
-    json!(parsed)
+    Response::Success(json!(parsed))
 }
 
 /// fetch a guild
 #[get("/<target>")]
-pub fn guild(user: User, target: Guild) -> Option<JsonValue> {
+pub fn guild(user: User, target: Guild) -> Option<Response> {
     if find_member_permissions(user.id.clone(), target.id.clone(), None) == 0 {
         return None;
     }
@@ -78,18 +79,17 @@ pub fn guild(user: User, target: Guild) -> Option<JsonValue> {
                 }));
             }
 
-            Some(json!({
+            Some(Response::Success(json!({
                 "id": target.id,
                 "name": target.name,
                 "description": target.description,
                 "owner": target.owner,
                 "channels": channels,
-            }))
+            })))
         }
-        Err(_) => Some(json!({
-            "success": false,
-            "error": "Failed to fetch channels."
-        })),
+        Err(_) => Some(Response::InternalServerError(
+            json!({ "error": "Failed to fetch channels." }),
+        )),
     }
 }
 
@@ -102,12 +102,9 @@ pub struct CreateGuild {
 
 /// create a new guild
 #[post("/create", data = "<info>")]
-pub fn create_guild(user: User, info: Json<CreateGuild>) -> JsonValue {
+pub fn create_guild(user: User, info: Json<CreateGuild>) -> Response {
     if !user.email_verification.verified {
-        return json!({
-            "success": false,
-            "error": "Email not verified!",
-        });
+        return Response::Unauthorized(json!({ "error": "Email not verified!" }));
     }
 
     let name: String = info.name.chars().take(32).collect();
@@ -123,10 +120,7 @@ pub fn create_guild(user: User, info: Json<CreateGuild>) -> JsonValue {
     let channels = database::get_collection("channels");
     let col = database::get_collection("guilds");
     if let Some(_) = col.find_one(doc! { "nonce": nonce.clone() }, None).unwrap() {
-        return json!({
-            "success": false,
-            "error": "Guild already created!"
-        });
+        return Response::BadRequest(json!({ "error": "Guild already created!" }));
     }
 
     let id = Ulid::new().to_string();
@@ -140,10 +134,9 @@ pub fn create_guild(user: User, info: Json<CreateGuild>) -> JsonValue {
         },
         None,
     ) {
-        return json!({
-            "success": false,
-            "error": "Failed to create guild channel."
-        });
+        return Response::InternalServerError(
+            json!({ "error": "Failed to create guild channel." }),
+        );
     }
 
     if col
@@ -169,18 +162,12 @@ pub fn create_guild(user: User, info: Json<CreateGuild>) -> JsonValue {
         )
         .is_ok()
     {
-        json!({
-            "success": true,
-            "id": id,
-        })
+        Response::Success(json!({ "id": id }))
     } else {
         channels
             .delete_one(doc! { "_id": channel_id }, None)
             .expect("Failed to delete the channel we just made.");
 
-        json!({
-            "success": false,
-            "error": "Failed to create guild."
-        })
+        Response::InternalServerError(json!({ "error": "Failed to create guild." }))
     }
 }

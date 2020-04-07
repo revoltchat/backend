@@ -1,4 +1,4 @@
-use rocket::http::Status;
+pub use rocket::http::Status;
 pub use rocket::response::Redirect;
 use rocket::Rocket;
 use rocket_contrib::json::JsonValue;
@@ -12,7 +12,7 @@ pub mod user;
 #[derive(Responder)]
 pub enum Response {
     #[response()]
-    Ok(Option<JsonValue>),
+    Result(Status),
     #[response()]
     Success(JsonValue),
     #[response()]
@@ -35,8 +35,6 @@ pub enum Response {
     TooManyRequests(JsonValue),
     #[response(status = 500)]
     InternalServerError(JsonValue),
-    #[response()]
-    Error(Status),
 }
 
 pub fn mount(rocket: Rocket) -> Rocket {

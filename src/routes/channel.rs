@@ -1,3 +1,4 @@
+use super::Response;
 use crate::database::{self, channel::Channel, message::Message, user::User};
 use crate::websocket;
 
@@ -43,24 +44,23 @@ fn get_recipients(target: &Channel) -> Vec<String> {
 
 /// fetch channel information
 #[get("/<target>")]
-pub fn channel(user: User, target: Channel) -> Option<JsonValue> {
+pub fn channel(user: User, target: Channel) -> Option<Response> {
     if !has_permission(&user, &target) {
         return None;
     }
 
-    Some(json!({
-            "id": target.id,
-            "type": target.channel_type,
-            "recipients": get_recipients(&target),
-        }
-    ))
+    Some(Response::Success(json!({
+        "id": target.id,
+        "type": target.channel_type,
+        "recipients": get_recipients(&target),
+    })))
 }
 
 /// delete channel
 /// or leave group DM
 /// or close DM conversation
 #[delete("/<target>")]
-pub fn delete(user: User, target: Channel) -> Option<JsonValue> {
+pub fn delete(user: User, target: Channel) -> Option<Response> {
     if !has_permission(&user, &target) {
         return None;
     }
@@ -75,33 +75,25 @@ pub fn delete(user: User, target: Channel) -> Option<JsonValue> {
             )
             .expect("Failed to update channel.");
 
-            json!({
-                "success": true
-            })
+            Response::Result(super::Status::Ok)
         }
         1 => {
             // ? TODO: group dm
 
-            json!({
-                "success": true
-            })
+            Response::Result(super::Status::Ok)
         }
         2 => {
             // ? TODO: guild
 
-            json!({
-                "success": true
-            })
+            Response::Result(super::Status::Ok)
         }
-        _ => json!({
-            "success": false
-        }),
+        _ => Response::InternalServerError(json!({ "error": "Unknown error has occurred." })),
     })
 }
 
 /// fetch channel messages
 #[get("/<target>/messages")]
-pub fn messages(user: User, target: Channel) -> Option<JsonValue> {
+pub fn messages(user: User, target: Channel) -> Option<Response> {
     if !has_permission(&user, &target) {
         return None;
     }
@@ -121,7 +113,7 @@ pub fn messages(user: User, target: Channel) -> Option<JsonValue> {
         }));
     }
 
-    Some(json!(messages))
+    Some(Response::Success(json!(messages)))
 }
 
 #[derive(Serialize, Deserialize)]
@@ -132,7 +124,7 @@ pub struct SendMessage {
 
 /// send a message to a channel
 #[post("/<target>/messages", data = "<message>")]
-pub fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> Option<JsonValue> {
+pub fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> Option<Response> {
     if !has_permission(&user, &target) {
         return None;
     }
@@ -142,10 +134,9 @@ pub fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> 
 
     let col = database::get_collection("messages");
     if let Some(_) = col.find_one(doc! { "nonce": nonce.clone() }, None).unwrap() {
-        return Some(json!({
-            "success": false,
-            "error": "Message already sent!"
-        }));
+        return Some(Response::BadRequest(
+            json!({ "error": "Message already sent!" }),
+        ));
     }
 
     let id = Ulid::new().to_string();
@@ -188,22 +179,18 @@ pub fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> 
                 .to_string(),
             );
 
-            json!({
-                "success": true,
-                "id": id
-            })
+            Response::Success(json!({ "id": id }))
         } else {
-            json!({
-                "success": false,
+            Response::InternalServerError(json!({
                 "error": "Failed database query."
-            })
+            }))
         },
     )
 }
 
 /// get a message
 #[get("/<target>/messages/<message>")]
-pub fn get_message(user: User, target: Channel, message: Message) -> Option<JsonValue> {
+pub fn get_message(user: User, target: Channel, message: Message) -> Option<Response> {
     if !has_permission(&user, &target) {
         return None;
     }
@@ -224,13 +211,13 @@ pub fn get_message(user: User, target: Channel, message: Message) -> Option<Json
             None
         };
 
-    Some(json!({
+    Some(Response::Success(json!({
         "id": message.id,
         "author": message.author,
         "content": message.content,
         "edited": if let Some(t) = message.edited { Some(t.timestamp()) } else { None },
         "previous_content": prev,
-    }))
+    })))
 }
 
 #[derive(Serialize, Deserialize)]
@@ -245,16 +232,13 @@ pub fn edit_message(
     target: Channel,
     message: Message,
     edit: Json<EditMessage>,
-) -> Option<JsonValue> {
+) -> Option<Response> {
     if !has_permission(&user, &target) {
         return None;
     }
 
     Some(if message.author != user.id {
-        json!({
-            "success": false,
-            "error": "You did not send this message."
-        })
+        Response::Unauthorized(json!({ "error": "You did not send this message." }))
     } else {
         let col = database::get_collection("messages");
 
@@ -296,30 +280,24 @@ pub fn edit_message(
                     .to_string(),
                 );
 
-                json!({
-                    "success": true
-                })
+                Response::Result(super::Status::Ok)
             }
-            Err(_) => json!({
-                "success": false,
-                "error": "Failed to update message."
-            }),
+            Err(_) => {
+                Response::InternalServerError(json!({ "error": "Failed to update message." }))
+            }
         }
     })
 }
 
 /// delete a message
 #[delete("/<target>/messages/<message>")]
-pub fn delete_message(user: User, target: Channel, message: Message) -> Option<JsonValue> {
+pub fn delete_message(user: User, target: Channel, message: Message) -> Option<Response> {
     if !has_permission(&user, &target) {
         return None;
     }
 
     Some(if message.author != user.id {
-        json!({
-            "success": false,
-            "error": "You did not send this message."
-        })
+        Response::Unauthorized(json!({ "error": "You did not send this message." }))
     } else {
         let col = database::get_collection("messages");
 
@@ -337,14 +315,11 @@ pub fn delete_message(user: User, target: Channel, message: Message) -> Option<J
                     .to_string(),
                 );
 
-                json!({
-                    "success": true
-                })
+                Response::Result(super::Status::Ok)
             }
-            Err(_) => json!({
-                "success": false,
-                "error": "Failed to delete message."
-            }),
+            Err(_) => {
+                Response::InternalServerError(json!({ "error": "Failed to delete message." }))
+            }
         }
     })
 }

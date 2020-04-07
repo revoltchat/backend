@@ -1,10 +1,11 @@
+use super::Response;
+
 use bson::doc;
-use rocket_contrib::json::JsonValue;
 
 /// root
 #[get("/")]
-pub fn root() -> JsonValue {
-    json!({
+pub fn root() -> Response {
+    Response::Success(json!({
         "revolt": "0.0.1"
-    })
+    }))
 }
