@@ -1,4 +1,9 @@
-use crate::database::{self, channel::Channel, guild::{ Guild, find_member_permissions }, user::User};
+use crate::database::{
+    self,
+    channel::Channel,
+    guild::{find_member_permissions, Guild},
+    user::User,
+};
 
 use bson::{bson, doc, from_bson, Bson};
 use rocket_contrib::json::{Json, JsonValue};

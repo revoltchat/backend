@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use bson::{bson, doc};
+use serde::{Deserialize, Serialize};
 
 use super::get_collection;
 use mongodb::options::FindOneOptions;
@@ -15,7 +15,11 @@ bitfield! {
     pub get_send_messages, set_send_messages: 2;
 }
 
-pub fn find_member_permissions<C: Into<Option<String>>>(id: String, guild: String, channel: C) -> u8 {
+pub fn find_member_permissions<C: Into<Option<String>>>(
+    id: String,
+    guild: String,
+    channel: C,
+) -> u8 {
     let col = get_collection("guilds");
 
     match col.find_one(
@@ -28,27 +32,25 @@ pub fn find_member_permissions<C: Into<Option<String>>>(id: String, guild: Strin
             }
         },
         FindOneOptions::builder()
-            .projection(
-                doc! {
-                    "members.$": 1,
-                    "owner": 1,
-                    "default_permissions": 1,
-                }
-            )
-            .build()
+            .projection(doc! {
+                "members.$": 1,
+                "owner": 1,
+                "default_permissions": 1,
+            })
+            .build(),
     ) {
         Ok(result) => {
             if let Some(doc) = result {
                 if doc.get_str("owner").unwrap() == id {
                     return u8::MAX;
                 }
-                
+
                 doc.get_i32("default_permissions").unwrap() as u8
             } else {
                 0
             }
-        },
-        Err(_) => 0
+        }
+        Err(_) => 0,
     }
 }
 

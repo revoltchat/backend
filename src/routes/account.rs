@@ -1,3 +1,4 @@
+use super::Response;
 use crate::database;
 use crate::email;
 
@@ -33,38 +34,30 @@ pub struct Create {
 /// (2) check email existence
 /// (3) add user and send email verification
 #[post("/create", data = "<info>")]
-pub fn create(info: Json<Create>) -> JsonValue {
+pub fn create(info: Json<Create>) -> Response {
     let col = database::get_collection("users");
 
     if info.username.len() < 2 || info.username.len() > 32 {
-        return json!({
-            "success": false,
-            "error": "Username requirements not met! Must be between 2 and 32 characters.",
-        });
+        return Response::NotAcceptable(
+            json!({ "error": "Username needs to be at least 2 chars and less than 32 chars." }),
+        );
     }
 
     if info.password.len() < 8 || info.password.len() > 72 {
-        return json!({
-            "success": false,
-            "error": "Password requirements not met! Must be between 8 and 72 characters.",
-        });
+        return Response::NotAcceptable(
+            json!({ "error": "Password needs to be at least 8 chars and at most 72." }),
+        );
     }
 
     if !validate_email(info.email.clone()) {
-        return json!({
-            "success": false,
-            "error": "Invalid email provided!",
-        });
+        return Response::UnprocessableEntity(json!({ "error": "Invalid email." }));
     }
 
     if let Some(_) = col
         .find_one(doc! { "email": info.email.clone() }, None)
         .expect("Failed user lookup")
     {
-        return json!({
-            "success": false,
-            "error": "Email already in use!",
-        });
+        return Response::Conflict(json!({ "error": "Email already in use!" }));
     }
 
     if let Ok(hashed) = hash(info.password.clone(), 10) {
@@ -91,21 +84,17 @@ pub fn create(info: Json<Create>) -> JsonValue {
             Ok(_) => {
                 let sent = email::send_verification_email(info.email.clone(), code);
 
-                json!({
+                Response::Success(json!({
                     "success": true,
                     "email_sent": sent,
-                })
+                }))
             }
-            Err(_) => json!({
-                "success": false,
-                "error": "Failed to create account!",
-            }),
+            Err(_) => {
+                Response::InternalServerError(json!({ "error": "Failed to create account." }))
+            }
         }
     } else {
-        json!({
-            "success": false,
-            "error": "Failed to hash password!",
-        })
+        Response::InternalServerError(json!({ "error": "Failed to hash." }))
     }
 }
 
@@ -114,7 +103,7 @@ pub fn create(info: Json<Create>) -> JsonValue {
 /// (2) check if it expired yet
 /// (3) set account as verified
 #[get("/verify/<code>")]
-pub fn verify_email(code: String) -> JsonValue {
+pub fn verify_email(code: String) -> Response {
     let col = database::get_collection("users");
 
     if let Some(u) = col
@@ -125,10 +114,10 @@ pub fn verify_email(code: String) -> JsonValue {
         let ev = user.email_verification;
 
         if Utc::now() > *ev.expiry.unwrap() {
-            json!({
+            Response::Gone(json!({
                 "success": false,
                 "error": "Token has expired!",
-            })
+            }))
         } else {
             let target = ev.target.unwrap();
             col.update_one(
@@ -151,15 +140,12 @@ pub fn verify_email(code: String) -> JsonValue {
 
             email::send_welcome_email(target.to_string(), user.username);
 
-            json!({
-                "success": true
-            })
+            Response::Redirect(
+                super::Redirect::to("https://example.com"), // ! FIXME; redirect to landing page
+            )
         }
     } else {
-        json!({
-            "success": false,
-            "error": "Invalid code!",
-        })
+        Response::BadRequest(json!({ "error": "Invalid code." }))
     }
 }
 
@@ -173,7 +159,7 @@ pub struct Resend {
 /// (2) check for rate limit
 /// (3) resend the email
 #[post("/resend", data = "<info>")]
-pub fn resend_email(info: Json<Resend>) -> JsonValue {
+pub fn resend_email(info: Json<Resend>) -> Response {
     let col = database::get_collection("users");
 
     if let Some(u) = col
@@ -190,18 +176,16 @@ pub fn resend_email(info: Json<Resend>) -> JsonValue {
         let rate_limit = ev.rate_limit.unwrap();
 
         if Utc::now() < *rate_limit {
-            json!({
-                "success": false,
-                "error": "Hit rate limit! Please try again in a minute or so.",
-            })
+            Response::TooManyRequests(
+                json!({ "error": "You are being rate limited, please try again in a while." }),
+            )
         } else {
             let mut new_expiry = UtcDatetime(Utc::now() + chrono::Duration::days(1));
             if info.email.clone() != user.email {
                 if Utc::now() > *expiry {
-                    return json!({
-                        "success": "false",
-                        "error": "For security reasons, please login and change your email again.",
-                    });
+                    return Response::Gone(
+                        json!({ "error": "To help protect your account, please login and change your email again. The original request was made over one day ago." }),
+                    );
                 }
 
                 new_expiry = UtcDatetime(*expiry);
@@ -221,20 +205,16 @@ pub fn resend_email(info: Json<Resend>) -> JsonValue {
 				).expect("Failed to update user!");
 
             match email::send_verification_email(info.email.to_string(), code) {
-                true => json!({
-                    "success": true,
-                }),
-                false => json!({
-                    "success": false,
-                    "error": "Failed to send email! Likely an issue with the backend API.",
-                }),
+                true => Response::Ok(None),
+                false => Response::InternalServerError(
+                    json!({ "success": false, "error": "Failed to send email! Likely an issue with the backend API." }),
+                ),
             }
         }
     } else {
-        json!({
-            "success": false,
-            "error": "Email not pending verification!",
-        })
+        Response::NotFound(
+            json!({ "success": false, "error": "Email not found or pending verification!" }),
+        )
     }
 }
 
@@ -249,7 +229,7 @@ pub struct Login {
 /// (2) verify password
 /// (3) return access token
 #[post("/login", data = "<info>")]
-pub fn login(info: Json<Login>) -> JsonValue {
+pub fn login(info: Json<Login>) -> Response {
     let col = database::get_collection("users");
 
     if let Some(u) = col
@@ -276,22 +256,12 @@ pub fn login(info: Json<Login>) -> JsonValue {
                     }
                 };
 
-                json!({
-                    "success": true,
-                    "access_token": token,
-                    "id": user.id
-                })
+                Response::Success(json!({ "access_token": token, "id": user.id }))
             }
-            false => json!({
-                "success": false,
-                "error": "Invalid password."
-            }),
+            false => Response::Unauthorized(json!({ "error": "Invalid password." })),
         }
     } else {
-        json!({
-            "success": false,
-            "error": "Email is not registered.",
-        })
+        Response::NotFound(json!({ "error": "Email is not registered." }))
     }
 }
 
@@ -302,21 +272,23 @@ pub struct Token {
 
 /// login to a Revolt account via token
 #[post("/token", data = "<info>")]
-pub fn token(info: Json<Token>) -> JsonValue {
+pub fn token(info: Json<Token>) -> Response {
     let col = database::get_collection("users");
 
     if let Some(u) = col
         .find_one(doc! { "access_token": info.token.clone() }, None)
         .expect("Failed user lookup")
     {
-        json!({
-            "success": true,
-            "id": u.get_str("_id").unwrap(),
-        })
+        Response::Success(
+            json!({
+                "id": u.get_str("_id").unwrap(),
+            })
+        )
     } else {
-        json!({
-            "success": false,
-            "error": "Invalid token!",
-        })
+        Response::Unauthorized(
+            json!({
+                "error": "Invalid token!",
+            })
+        )
     }
 }

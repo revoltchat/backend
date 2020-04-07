@@ -1,10 +1,43 @@
+use rocket::http::Status;
+pub use rocket::response::Redirect;
 use rocket::Rocket;
+use rocket_contrib::json::JsonValue;
 
 pub mod account;
 pub mod channel;
 pub mod guild;
 pub mod root;
 pub mod user;
+
+#[derive(Responder)]
+pub enum Response {
+    #[response()]
+    Ok(Option<JsonValue>),
+    #[response()]
+    Success(JsonValue),
+    #[response()]
+    Redirect(Redirect),
+    #[response(status = 400)]
+    BadRequest(JsonValue),
+    #[response(status = 401)]
+    Unauthorized(JsonValue),
+    #[response(status = 404)]
+    NotFound(JsonValue),
+    #[response(status = 406)]
+    NotAcceptable(JsonValue),
+    #[response(status = 409)]
+    Conflict(JsonValue),
+    #[response(status = 410)]
+    Gone(JsonValue),
+    #[response(status = 422)]
+    UnprocessableEntity(JsonValue),
+    #[response(status = 429)]
+    TooManyRequests(JsonValue),
+    #[response(status = 500)]
+    InternalServerError(JsonValue),
+    #[response()]
+    Error(Status),
+}
 
 pub fn mount(rocket: Rocket) -> Rocket {
     rocket
