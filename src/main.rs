@@ -3,6 +3,8 @@
 extern crate rocket;
 #[macro_use]
 extern crate rocket_contrib;
+#[macro_use]
+extern crate bitfield;
 
 pub mod database;
 pub mod email;

@@ -6,7 +6,7 @@ pub struct Channel {
     pub id: String,
     #[serde(rename = "type")]
     pub channel_type: u8,
-
+   
     pub last_message: Option<String>,
 
     // for Direct Messages
@@ -15,6 +15,7 @@ pub struct Channel {
 
     // for Guilds
     pub name: Option<String>,
+    pub guild: Option<String>,
 
     // for Guilds and Group DMs
     pub description: Option<String>,

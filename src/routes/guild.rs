@@ -1,4 +1,4 @@
-use crate::database::{self, channel::Channel, guild::Guild, user::User};
+use crate::database::{self, channel::Channel, guild::{ Guild, find_member_permissions }, user::User};
 
 use bson::{bson, doc, from_bson, Bson};
 use rocket_contrib::json::{Json, JsonValue};
@@ -40,7 +40,11 @@ pub fn my_guilds(user: User) -> JsonValue {
 
 /// fetch a guild
 #[get("/<target>")]
-pub fn guild(user: User, target: Guild) -> JsonValue {
+pub fn guild(user: User, target: Guild) -> Option<JsonValue> {
+    if find_member_permissions(user.id.clone(), target.id.clone(), None) == 0 {
+        return None;
+    }
+
     let mut targets = vec![];
     for channel in target.channels {
         targets.push(Bson::String(channel));
@@ -69,18 +73,18 @@ pub fn guild(user: User, target: Guild) -> JsonValue {
                 }));
             }
 
-            json!({
+            Some(json!({
                 "id": target.id,
                 "name": target.name,
                 "description": target.description,
                 "owner": target.owner,
                 "channels": channels,
-            })
+            }))
         }
-        Err(_) => json!({
+        Err(_) => Some(json!({
             "success": false,
             "error": "Failed to fetch channels."
-        }),
+        })),
     }
 }
 
@@ -91,7 +95,7 @@ pub struct CreateGuild {
     nonce: String,
 }
 
-/// send a message to a channel
+/// create a new guild
 #[post("/create", data = "<info>")]
 pub fn create_guild(user: User, info: Json<CreateGuild>) -> JsonValue {
     if !user.email_verification.verified {
@@ -120,12 +124,14 @@ pub fn create_guild(user: User, info: Json<CreateGuild>) -> JsonValue {
         });
     }
 
+    let id = Ulid::new().to_string();
     let channel_id = Ulid::new().to_string();
     if let Err(_) = channels.insert_one(
         doc! {
             "_id": channel_id.clone(),
             "type": ChannelType::GUILDCHANNEL as u32,
             "name": "general",
+            "guild": id.clone(),
         },
         None,
     ) {
@@ -135,7 +141,6 @@ pub fn create_guild(user: User, info: Json<CreateGuild>) -> JsonValue {
         });
     }
 
-    let id = Ulid::new().to_string();
     if col
         .insert_one(
             doc! {
@@ -153,6 +158,7 @@ pub fn create_guild(user: User, info: Json<CreateGuild>) -> JsonValue {
                     }
                 ],
                 "invites": [],
+                "default_permissions": 51,
             },
             None,
         )
