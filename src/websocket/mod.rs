@@ -172,7 +172,7 @@ pub fn send_message(id: String, message: String) -> std::result::Result<(), ()> 
             let arr = map.get(&id).unwrap();
 
             for item in arr {
-                if let Err(_) = item.out.send(message.clone()) {
+                if item.out.send(message.clone()).is_err() {
                     return Err(());
                 }
             }

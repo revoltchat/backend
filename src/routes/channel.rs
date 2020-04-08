@@ -5,7 +5,7 @@ use crate::websocket;
 use bson::{bson, doc, from_bson, Bson::UtcDatetime};
 use chrono::prelude::*;
 use num_enum::TryFromPrimitive;
-use rocket_contrib::json::{Json, JsonValue};
+use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 
