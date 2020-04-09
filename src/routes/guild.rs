@@ -6,7 +6,7 @@ use crate::database::{
 };
 use crate::guards::auth::UserRef;
 
-use bson::{bson, doc, from_bson, Bson};
+use bson::{doc, from_bson, Bson};
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
@@ -125,15 +125,18 @@ pub fn create_guild(user: UserRef, info: Json<CreateGuild>) -> Response {
 
     let id = Ulid::new().to_string();
     let channel_id = Ulid::new().to_string();
-    if channels.insert_one(
-        doc! {
-            "_id": channel_id.clone(),
-            "type": ChannelType::GUILDCHANNEL as u32,
-            "name": "general",
-            "guild": id.clone(),
-        },
-        None,
-    ).is_err() {
+    if channels
+        .insert_one(
+            doc! {
+                "_id": channel_id.clone(),
+                "type": ChannelType::GUILDCHANNEL as u32,
+                "name": "general",
+                "guild": id.clone(),
+            },
+            None,
+        )
+        .is_err()
+    {
         return Response::InternalServerError(
             json!({ "error": "Failed to create guild channel." }),
         );

@@ -1,4 +1,4 @@
-use bson::{bson, doc};
+use bson::doc;
 use serde::{Deserialize, Serialize};
 
 use super::get_collection;

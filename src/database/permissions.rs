@@ -4,7 +4,7 @@ use crate::guards::auth::UserRef;
 use crate::guards::channel::ChannelRef;
 use crate::guards::guild::GuildRef;
 
-use bson::{bson, doc};
+use bson::doc;
 use num_enum::TryFromPrimitive;
 
 #[derive(Debug, PartialEq, Eq, TryFromPrimitive)]

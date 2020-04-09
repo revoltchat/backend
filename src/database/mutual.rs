@@ -1,6 +1,6 @@
 use super::get_collection;
 
-use bson::{bson, doc};
+use bson::doc;
 use mongodb::options::FindOneOptions;
 
 /*pub struct MutualGuild {

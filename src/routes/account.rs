@@ -3,7 +3,7 @@ use crate::database;
 use crate::email;
 
 use bcrypt::{hash, verify};
-use bson::{bson, doc, from_bson, Bson::UtcDatetime};
+use bson::{doc, from_bson, Bson::UtcDatetime};
 use chrono::prelude::*;
 use database::user::User;
 use rand::{distributions::Alphanumeric, Rng};

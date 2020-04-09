@@ -6,7 +6,7 @@ use hashbrown::HashMap;
 use std::sync::RwLock;
 use ulid::Ulid;
 
-use bson::{bson, doc};
+use bson::doc;
 use serde_json::{from_str, json, Value};
 
 use ws::{listen, CloseCode, Error, Handler, Handshake, Message, Result, Sender};

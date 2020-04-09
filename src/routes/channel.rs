@@ -6,7 +6,7 @@ use crate::database::{
 use crate::guards::auth::UserRef;
 use crate::guards::channel::ChannelRef;
 
-use bson::{bson, doc, from_bson, Bson, Bson::UtcDatetime};
+use bson::{doc, from_bson, Bson, Bson::UtcDatetime};
 use chrono::prelude::*;
 use hashbrown::HashSet;
 use num_enum::TryFromPrimitive;

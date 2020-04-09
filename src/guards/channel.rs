@@ -1,4 +1,4 @@
-use bson::{bson, doc, from_bson, Document};
+use bson::{doc, from_bson, Document};
 use mongodb::options::FindOneOptions;
 use rocket::http::RawStr;
 use rocket::request::FromParam;

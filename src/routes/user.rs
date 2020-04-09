@@ -4,7 +4,7 @@ use crate::database::{get_relationship, get_relationship_internal, Relationship}
 use crate::guards::auth::UserRef;
 use crate::routes::channel;
 
-use bson::{bson, doc, from_bson};
+use bson::{doc, from_bson};
 use mongodb::options::FindOptions;
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
