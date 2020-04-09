@@ -133,7 +133,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
             0 => Outcome::Failure((Status::Forbidden, AuthError::Missing)),
             1 => {
                 let key = keys[0];
-                let col = database::get_db().collection("users");
+                let col = database::get_collection("users");
                 let result = col.find_one(doc! { "access_token": key }, None).unwrap();
 
                 if let Some(user) = result {
@@ -165,7 +165,7 @@ impl<'r> FromParam<'r> for User {
     type Error = &'r RawStr;
 
     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-        let col = database::get_db().collection("users");
+        let col = database::get_collection("users");
         let result = col
             .find_one(doc! { "_id": param.to_string() }, None)
             .unwrap();

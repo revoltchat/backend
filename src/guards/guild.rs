@@ -79,7 +79,7 @@ impl<'r> FromParam<'r> for Guild {
     type Error = &'r RawStr;
 
     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-        let col = database::get_db().collection("guilds");
+        let col = database::get_collection("guilds");
         let result = col
             .find_one(doc! { "_id": param.to_string() }, None)
             .unwrap();

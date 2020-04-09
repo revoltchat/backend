@@ -1,10 +1,9 @@
 use super::Response;
-use crate::database::{self, channel::Channel};
-use crate::database::{get_relationship, get_relationship_internal, Relationship};
+use crate::database::{self, get_relationship, get_relationship_internal, Relationship};
 use crate::guards::auth::UserRef;
 use crate::routes::channel;
 
-use bson::{doc, from_bson};
+use bson::doc;
 use mongodb::options::FindOptions;
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
@@ -92,11 +91,7 @@ pub fn dms(user: UserRef) -> Response {
                 ],
                 "recipients": user.id
             },
-            FindOptions::builder()
-                .projection(doc! {
-
-                })
-                .build(),
+            FindOptions::builder().projection(doc! {}).build(),
         )
         .expect("Failed channel lookup");
 
@@ -113,7 +108,7 @@ pub fn dms(user: UserRef) -> Response {
                         "type": 0,
                         "recipients": recipients,
                     }));
-                },
+                }
                 1 => {
                     channels.push(json!({
                         "id": id,
@@ -123,8 +118,8 @@ pub fn dms(user: UserRef) -> Response {
                         "owner": doc.get_str("owner").unwrap(),
                         "description": doc.get_str("description").unwrap_or(""),
                     }));
-                },
-                _ => unreachable!()
+                }
+                _ => unreachable!(),
             }
         }
     }

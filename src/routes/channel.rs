@@ -129,7 +129,7 @@ pub fn channel(user: UserRef, target: ChannelRef) -> Option<Response> {
             } else {
                 None
             }
-        },
+        }
         2 => {
             if let Some(info) = target.fetch_data(doc! {
                 "name": 1,
@@ -167,20 +167,21 @@ pub fn delete(user: UserRef, target: ChannelRef) -> Option<Response> {
     let try_delete = || {
         let messages = database::get_collection("messages");
 
-        if messages.delete_many(
-            doc! { "channel": &target_id },
-            None
-        ).is_ok() {
-            if col.delete_one(
-                doc! { "_id": &target_id },
-                None
-            ).is_ok() {
+        if messages
+            .delete_many(doc! { "channel": &target_id }, None)
+            .is_ok()
+        {
+            if col.delete_one(doc! { "_id": &target_id }, None).is_ok() {
                 Some(Response::Result(super::Status::Ok))
             } else {
-                Some(Response::InternalServerError(json!({ "error": "Failed to delete group." })))
+                Some(Response::InternalServerError(
+                    json!({ "error": "Failed to delete group." }),
+                ))
             }
         } else {
-            Some(Response::InternalServerError(json!({ "error": "Failed to delete messages." })))
+            Some(Response::InternalServerError(
+                json!({ "error": "Failed to delete messages." }),
+            ))
         }
     };
 
@@ -216,27 +217,30 @@ pub fn delete(user: UserRef, target: ChannelRef) -> Option<Response> {
                     &owner
                 };
 
-                if col.update_one(
-                    doc! { "_id": target_id },
-                    doc! {
-                        "$set": {
-                            "owner": new_owner,
+                if col
+                    .update_one(
+                        doc! { "_id": target_id },
+                        doc! {
+                            "$set": {
+                                "owner": new_owner,
+                            },
+                            "$pull": {
+                                "recipients": &user.id,
+                            }
                         },
-                        "$pull": {
-                            "recipients": &user.id,
-                        }
-                    },
-                    None
-                ).is_ok() {
+                        None,
+                    )
+                    .is_ok()
+                {
                     Some(Response::Result(super::Status::Ok))
                 } else {
-                    Some(Response::InternalServerError(json!({ "error": "Failed to remove you from the group." })))
+                    Some(Response::InternalServerError(
+                        json!({ "error": "Failed to remove you from the group." }),
+                    ))
                 }
             }
         }
-        2 => {
-            try_delete()
-        }
+        2 => try_delete(),
         _ => Some(Response::InternalServerError(
             json!({ "error": "Unknown error has occurred." }),
         )),
