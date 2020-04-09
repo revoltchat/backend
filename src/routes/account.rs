@@ -7,7 +7,7 @@ use bson::{bson, doc, from_bson, Bson::UtcDatetime};
 use chrono::prelude::*;
 use database::user::User;
 use rand::{distributions::Alphanumeric, Rng};
-use rocket_contrib::json::{Json, JsonValue};
+use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use validator::validate_email;
@@ -167,7 +167,7 @@ pub fn resend_email(info: Json<Resend>) -> Response {
             doc! { "email_verification.target": info.email.clone() },
             None,
         )
-        .expect("Failed user lookup")
+        .expect("Failed user lookup.")
     {
         let user: User = from_bson(bson::Bson::Document(u)).expect("Failed to unwrap user.");
         let ev = user.email_verification;

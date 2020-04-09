@@ -1,14 +1,20 @@
 use super::Response;
-use crate::database::{self, message::Message, Permission, PermissionCalculator};
+use crate::database::{
+    self, get_relationship_internal, message::Message, Permission, PermissionCalculator,
+    Relationship,
+};
 use crate::guards::auth::UserRef;
 use crate::guards::channel::ChannelRef;
 
-use bson::{bson, doc, from_bson, Bson::UtcDatetime};
+use bson::{bson, doc, from_bson, Bson, Bson::UtcDatetime};
 use chrono::prelude::*;
+use hashbrown::HashSet;
 use num_enum::TryFromPrimitive;
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
+
+const MAXGROUPSIZE: usize = 50;
 
 #[derive(Debug, TryFromPrimitive)]
 #[repr(usize)]
@@ -30,6 +36,71 @@ macro_rules! with_permissions {
 
         permissions
     }};
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct CreateGroup {
+    name: String,
+    nonce: String,
+    users: Vec<String>,
+}
+
+/// create a new group
+#[post("/create", data = "<info>")]
+pub fn create_group(user: UserRef, info: Json<CreateGroup>) -> Response {
+    let name: String = info.name.chars().take(32).collect();
+    let nonce: String = info.nonce.chars().take(32).collect();
+
+    let mut set = HashSet::new();
+    set.insert(user.id.clone());
+    for item in &info.users {
+        set.insert(item.clone());
+    }
+
+    if set.len() > MAXGROUPSIZE {
+        return Response::BadRequest(json!({ "error": "Maximum group size is 50." }));
+    }
+
+    let col = database::get_collection("channels");
+    if let Some(_) = col.find_one(doc! { "nonce": nonce.clone() }, None).unwrap() {
+        return Response::BadRequest(json!({ "error": "Group already created!" }));
+    }
+
+    let relationships = user.fetch_relationships();
+
+    let mut users = vec![];
+    for item in set {
+        if let Some(target) = UserRef::from(item) {
+            if get_relationship_internal(&user.id, &target.id, &relationships)
+                != Relationship::Friend
+            {
+                return Response::BadRequest(json!({ "error": "Not friends with user(s)." }));
+            }
+
+            users.push(Bson::String(target.id));
+        } else {
+            return Response::BadRequest(json!({ "error": "Specified non-existant user(s)." }));
+        }
+    }
+
+    let id = Ulid::new().to_string();
+    if col
+        .insert_one(
+            doc! {
+                "_id": id.clone(),
+                "nonce": nonce,
+                "type": ChannelType::GROUPDM as u32,
+                "recipients": users,
+                "name": name,
+            },
+            None,
+        )
+        .is_ok()
+    {
+        Response::Success(json!({ "id": id }))
+    } else {
+        Response::InternalServerError(json!({ "error": "Failed to create guild channel." }))
+    }
 }
 
 /// fetch channel information
@@ -71,20 +142,25 @@ pub fn delete(user: UserRef, target: ChannelRef) -> Option<Response> {
     let permissions = with_permissions!(user, target);
 
     if !permissions.get_manage_channels() {
-        return Some(Response::LackingPermission(Permission::MANAGE_CHANNELS));
+        return Some(Response::LackingPermission(Permission::ManageChannels));
     }
 
     let col = database::get_collection("channels");
     match target.channel_type {
         0 => {
-            if col.update_one(
-                doc! { "_id": target.id },
-                doc! { "$set": { "active": false } },
-                None,
-            ).is_ok() {
+            if col
+                .update_one(
+                    doc! { "_id": target.id },
+                    doc! { "$set": { "active": false } },
+                    None,
+                )
+                .is_ok()
+            {
                 Some(Response::Result(super::Status::Ok))
             } else {
-                Some(Response::InternalServerError(json!({ "error": "Failed to close channel." })))
+                Some(Response::InternalServerError(
+                    json!({ "error": "Failed to close channel." }),
+                ))
             }
         }
         1 => {
@@ -109,7 +185,7 @@ pub fn messages(user: UserRef, target: ChannelRef) -> Option<Response> {
     let permissions = with_permissions!(user, target);
 
     if !permissions.get_read_messages() {
-        return Some(Response::LackingPermission(Permission::READ_MESSAGES));
+        return Some(Response::LackingPermission(Permission::ReadMessages));
     }
 
     let col = database::get_collection("messages");
@@ -146,7 +222,7 @@ pub fn send_message(
     let permissions = with_permissions!(user, target);
 
     if !permissions.get_send_messages() {
-        return Some(Response::LackingPermission(Permission::SEND_MESSAGES));
+        return Some(Response::LackingPermission(Permission::SendMessages));
     }
 
     let content: String = message.content.chars().take(2000).collect();
@@ -214,7 +290,7 @@ pub fn get_message(user: UserRef, target: ChannelRef, message: Message) -> Optio
     let permissions = with_permissions!(user, target);
 
     if !permissions.get_read_messages() {
-        return Some(Response::LackingPermission(Permission::READ_MESSAGES));
+        return Some(Response::LackingPermission(Permission::ReadMessages));
     }
 
     let prev =
@@ -317,7 +393,7 @@ pub fn delete_message(user: UserRef, target: ChannelRef, message: Message) -> Op
 
     if !permissions.get_manage_messages() {
         if message.author != user.id {
-            return Some(Response::LackingPermission(Permission::MANAGE_MESSAGES));
+            return Some(Response::LackingPermission(Permission::ManageMessages));
         }
     }
 

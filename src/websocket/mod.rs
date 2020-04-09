@@ -37,7 +37,7 @@ impl Handler for Server {
             if let Value::String(packet_type) = &data["type"] {
                 match packet_type.as_str() {
                     "authenticate" => {
-                        if let Some(_) = self.id {
+                        if self.id.is_some() {
                             self.out.send(
                                 json!({
                                     "type": "authenticate",
@@ -152,7 +152,7 @@ impl Handler for Server {
 
 pub fn launch_server() {
     unsafe {
-        if let Err(_) = CLIENTS.set(RwLock::new(HashMap::new())) {
+        if CLIENTS.set(RwLock::new(HashMap::new())).is_err() {
             panic!("Failed to set CLIENTS map!");
         }
     }

@@ -87,6 +87,7 @@ pub fn mount(rocket: Rocket) -> Rocket {
         .mount(
             "/api/channels",
             routes![
+                channel::create_group,
                 channel::channel,
                 channel::delete,
                 channel::messages,

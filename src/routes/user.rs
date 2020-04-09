@@ -64,7 +64,7 @@ pub fn lookup(user: UserRef, query: Json<Query>) -> Response {
         if let Ok(doc) = item {
             let id = doc.get_str("id").unwrap();
             results.push(json!({
-                "id": id.clone(),
+                "id": id,
                 "username": doc.get_str("username").unwrap(),
                 "relationship": get_relationship_internal(&user.id, &id, &relationships) as u8
             }));
@@ -174,11 +174,11 @@ pub fn add_friend(user: UserRef, target: UserRef) -> Response {
     let col = database::get_collection("users");
 
     match relationship {
-        Relationship::FRIEND => Response::BadRequest(json!({ "error": "Already friends." })),
-        Relationship::OUTGOING => {
+        Relationship::Friend => Response::BadRequest(json!({ "error": "Already friends." })),
+        Relationship::Outgoing => {
             Response::BadRequest(json!({ "error": "Already sent a friend request." }))
         }
-        Relationship::INCOMING => {
+        Relationship::Incoming => {
             if col
                 .update_one(
                     doc! {
@@ -187,7 +187,7 @@ pub fn add_friend(user: UserRef, target: UserRef) -> Response {
                     },
                     doc! {
                         "$set": {
-                            "relations.$.status": Relationship::FRIEND as i32
+                            "relations.$.status": Relationship::Friend as i32
                         }
                     },
                     None,
@@ -202,14 +202,14 @@ pub fn add_friend(user: UserRef, target: UserRef) -> Response {
                         },
                         doc! {
                             "$set": {
-                                "relations.$.status": Relationship::FRIEND as i32
+                                "relations.$.status": Relationship::Friend as i32
                             }
                         },
                         None,
                     )
                     .is_ok()
                 {
-                    Response::Success(json!({ "status": Relationship::FRIEND as u8 }))
+                    Response::Success(json!({ "status": Relationship::Friend as u8 }))
                 } else {
                     Response::InternalServerError(
                         json!({ "error": "Failed to commit! Try re-adding them as a friend." }),
@@ -221,10 +221,10 @@ pub fn add_friend(user: UserRef, target: UserRef) -> Response {
                 )
             }
         }
-        Relationship::BLOCKED => {
+        Relationship::Blocked => {
             Response::BadRequest(json!({ "error": "You have blocked this person." }))
         }
-        Relationship::BLOCKEDOTHER => {
+        Relationship::BlockedOther => {
             Response::Conflict(json!({ "error": "You have been blocked by this person." }))
         }
         Relationship::NONE => {
@@ -237,7 +237,7 @@ pub fn add_friend(user: UserRef, target: UserRef) -> Response {
                         "$push": {
                             "relations": {
                                 "id": target.id.clone(),
-                                "status": Relationship::OUTGOING as i32
+                                "status": Relationship::Outgoing as i32
                             }
                         }
                     },
@@ -254,7 +254,7 @@ pub fn add_friend(user: UserRef, target: UserRef) -> Response {
                             "$push": {
                                 "relations": {
                                     "id": user.id,
-                                    "status": Relationship::INCOMING as i32
+                                    "status": Relationship::Incoming as i32
                                 }
                             }
                         },
@@ -262,7 +262,7 @@ pub fn add_friend(user: UserRef, target: UserRef) -> Response {
                     )
                     .is_ok()
                 {
-                    Response::Success(json!({ "status": Relationship::OUTGOING as u8 }))
+                    Response::Success(json!({ "status": Relationship::Outgoing as u8 }))
                 } else {
                     Response::InternalServerError(
                         json!({ "error": "Failed to commit! Try re-adding them as a friend." }),
@@ -287,7 +287,7 @@ pub fn remove_friend(user: UserRef, target: UserRef) -> Response {
     let col = database::get_collection("users");
 
     match relationship {
-        Relationship::FRIEND | Relationship::OUTGOING | Relationship::INCOMING => {
+        Relationship::Friend | Relationship::Outgoing | Relationship::Incoming => {
             if col
                 .update_one(
                     doc! {
@@ -332,8 +332,8 @@ pub fn remove_friend(user: UserRef, target: UserRef) -> Response {
                 )
             }
         }
-        Relationship::BLOCKED
-        | Relationship::BLOCKEDOTHER
+        Relationship::Blocked
+        | Relationship::BlockedOther
         | Relationship::NONE
         | Relationship::SELF => Response::BadRequest(json!({ "error": "This has no effect." })),
     }

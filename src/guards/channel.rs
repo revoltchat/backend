@@ -36,6 +36,7 @@ pub struct ChannelRef {
     // information required for permission calculations
     pub recipients: Option<Vec<String>>,
     pub guild: Option<String>,
+    pub owner: Option<String>,
 }
 
 impl ChannelRef {

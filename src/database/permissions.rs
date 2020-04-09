@@ -10,11 +10,11 @@ use num_enum::TryFromPrimitive;
 #[derive(Debug, PartialEq, Eq, TryFromPrimitive)]
 #[repr(u8)]
 pub enum Relationship {
-    FRIEND = 0,
-    OUTGOING = 1,
-    INCOMING = 2,
-    BLOCKED = 3,
-    BLOCKEDOTHER = 4,
+    Friend = 0,
+    Outgoing = 1,
+    Incoming = 2,
+    Blocked = 3,
+    BlockedOther = 4,
     NONE = 5,
     SELF = 6,
 }
@@ -22,16 +22,16 @@ pub enum Relationship {
 #[derive(Debug, PartialEq, Eq, TryFromPrimitive)]
 #[repr(u32)]
 pub enum Permission {
-    ACCESS = 1,
-    CREATE_INVITE = 2,
-    KICK_MEMBERS = 4,
-    BAN_MEMBERS = 8,
-    READ_MESSAGES = 16,
-    SEND_MESSAGES = 32,
-    MANAGE_MESSAGES = 64,
-    MANAGE_CHANNELS = 128,
-    MANAGE_SERVER = 256,
-    MANAGE_ROLES = 512,
+    Access = 1,
+    CreateInvite = 2,
+    KickMembers = 4,
+    BanMembers = 8,
+    ReadMessages = 16,
+    SendMessages = 32,
+    ManageMessages = 64,
+    ManageChannels = 128,
+    ManageServer = 256,
+    ManageRoles = 512,
 }
 
 bitfield! {
@@ -62,11 +62,11 @@ pub fn get_relationship_internal(
         for entry in arr {
             if entry.id == target_id {
                 match entry.status {
-                    0 => return Relationship::FRIEND,
-                    1 => return Relationship::OUTGOING,
-                    2 => return Relationship::INCOMING,
-                    3 => return Relationship::BLOCKED,
-                    4 => return Relationship::BLOCKEDOTHER,
+                    0 => return Relationship::Friend,
+                    1 => return Relationship::Outgoing,
+                    2 => return Relationship::Incoming,
+                    3 => return Relationship::Blocked,
+                    4 => return Relationship::BlockedOther,
                     _ => return Relationship::NONE,
                 }
             }
@@ -132,7 +132,7 @@ impl PermissionCalculator {
             None
         };
 
-        let mut permissions = 0;
+        let mut permissions: u32 = 0;
         if let Some(guild) = guild {
             if let Some(_data) = guild.fetch_data_given(
                 doc! {
@@ -148,14 +148,13 @@ impl PermissionCalculator {
                     return u32::MAX;
                 }
 
-                permissions = guild.default_permissions;
+                permissions = guild.default_permissions as u32;
             }
         }
 
         if let Some(channel) = &self.channel {
             match channel.channel_type {
                 0 => {
-                    // ? check user is part of the channel
                     if let Some(arr) = &channel.recipients {
                         let mut other_user = "";
                         for item in arr {
@@ -170,8 +169,8 @@ impl PermissionCalculator {
                         let relationship =
                             get_relationship_internal(&self.user.id, &other_user, &relationships);
 
-                        if relationship == Relationship::BLOCKED
-                            || relationship == Relationship::BLOCKEDOTHER
+                        if relationship == Relationship::Blocked
+                            || relationship == Relationship::BlockedOther
                         {
                             permissions = 1;
                         } else if has_mutual_connection(self.user.id, other_user.to_string()) {
@@ -179,7 +178,22 @@ impl PermissionCalculator {
                         }
                     }
                 }
-                1 => unreachable!(),
+                1 => {
+                    if let Some(id) = &channel.owner {
+                        if &self.user.id == id {
+                            return u32::MAX;
+                        }
+                    }
+
+                    if let Some(arr) = &channel.recipients {
+                        for item in arr {
+                            if item == &self.user.id {
+                                permissions = 49;
+                                break;
+                            }
+                        }
+                    }
+                }
                 2 => {
                     // nothing implemented yet
                 }
@@ -187,7 +201,7 @@ impl PermissionCalculator {
             }
         }
 
-        permissions as u32
+        permissions
     }
 
     pub fn as_permission(self) -> MemberPermissions<[u32; 1]> {

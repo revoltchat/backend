@@ -16,6 +16,33 @@ pub struct UserRef {
 }
 
 impl UserRef {
+    pub fn from(id: String) -> Option<UserRef> {
+        match database::get_collection("users").find_one(
+            doc! { "_id": id },
+            FindOneOptions::builder()
+                .projection(doc! {
+                    "_id": 1,
+                    "username": 1,
+                    "email_verification.verified": 1,
+                })
+                .build(),
+        ) {
+            Ok(result) => match result {
+                Some(doc) => Some(UserRef {
+                    id: doc.get_str("_id").unwrap().to_string(),
+                    username: doc.get_str("username").unwrap().to_string(),
+                    email_verified: doc
+                        .get_document("email_verification")
+                        .unwrap()
+                        .get_bool("verified")
+                        .unwrap(),
+                }),
+                None => None,
+            },
+            Err(_) => None,
+        }
+    }
+
     pub fn fetch_data(&self, projection: Document) -> Option<Document> {
         database::get_collection("users")
             .find_one(
@@ -126,30 +153,8 @@ impl<'r> FromParam<'r> for UserRef {
     type Error = &'r RawStr;
 
     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-        let col = database::get_db().collection("users");
-        let result = database::get_collection("users")
-            .find_one(
-                doc! { "_id": param.to_string() },
-                FindOneOptions::builder()
-                    .projection(doc! {
-                        "_id": 1,
-                        "username": 1,
-                        "email_verification.verified": 1,
-                    })
-                    .build(),
-            )
-            .unwrap();
-
-        if let Some(user) = result {
-            Ok(UserRef {
-                id: user.get_str("_id").unwrap().to_string(),
-                username: user.get_str("username").unwrap().to_string(),
-                email_verified: user
-                    .get_document("email_verification")
-                    .unwrap()
-                    .get_bool("verified")
-                    .unwrap(),
-            })
+        if let Some(user) = UserRef::from(param.to_string()) {
+            Ok(user)
         } else {
             Err(param)
         }

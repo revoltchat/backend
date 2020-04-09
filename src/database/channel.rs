@@ -10,13 +10,18 @@ pub struct Channel {
     pub last_message: Option<String>,
 
     // for Direct Messages
-    pub recipients: Option<Vec<String>>,
     pub active: Option<bool>,
 
+    // for DMs / GDMs
+    pub recipients: Option<Vec<String>>,
+
+    // for GDMs
+    pub owner: Option<String>,
+
     // for Guilds
-    pub name: Option<String>,
     pub guild: Option<String>,
 
     // for Guilds and Group DMs
+    pub name: Option<String>,
     pub description: Option<String>,
 }

@@ -7,7 +7,7 @@ use mongodb::options::FindOneOptions;
 pub fn find_member_permissions<C: Into<Option<String>>>(
     id: String,
     guild: String,
-    channel: C,
+    _channel: C,
 ) -> u32 {
     let col = get_collection("guilds");
 
@@ -46,6 +46,7 @@ pub fn find_member_permissions<C: Into<Option<String>>>(
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Member {
     pub id: String,
+    pub nickname: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
