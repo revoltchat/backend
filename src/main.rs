@@ -10,6 +10,7 @@ pub mod database;
 pub mod email;
 pub mod guards;
 pub mod routes;
+pub mod util;
 pub mod websocket;
 
 use dotenv;

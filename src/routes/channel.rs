@@ -5,6 +5,7 @@ use crate::database::{
 };
 use crate::guards::auth::UserRef;
 use crate::guards::channel::ChannelRef;
+use crate::util::vec_to_set;
 
 use bson::{doc, from_bson, Bson, Bson::UtcDatetime};
 use chrono::prelude::*;
@@ -51,11 +52,8 @@ pub fn create_group(user: UserRef, info: Json<CreateGroup>) -> Response {
     let name: String = info.name.chars().take(32).collect();
     let nonce: String = info.nonce.chars().take(32).collect();
 
-    let mut set = HashSet::new();
+    let mut set = vec_to_set(&info.users);
     set.insert(user.id.clone());
-    for item in &info.users {
-        set.insert(item.clone());
-    }
 
     if set.len() > MAXGROUPSIZE {
         return Response::BadRequest(json!({ "error": "Maximum group size is 50." }));
@@ -109,11 +107,29 @@ pub fn channel(user: UserRef, target: ChannelRef) -> Option<Response> {
     with_permissions!(user, target);
 
     match target.channel_type {
-        0..=1 => Some(Response::Success(json!({
+        0 => Some(Response::Success(json!({
             "id": target.id,
             "type": target.channel_type,
             "recipients": target.recipients,
         }))),
+        1 => {
+            if let Some(info) = target.fetch_data(doc! {
+                "name": 1,
+                "description": 1,
+                "owner": 1,
+            }) {
+                Some(Response::Success(json!({
+                    "id": target.id,
+                    "type": target.channel_type,
+                    "recipients": target.recipients,
+                    "name": info.get_str("name").unwrap(),
+                    "owner": info.get_str("owner").unwrap(),
+                    "description": info.get_str("description").unwrap_or(""),
+                })))
+            } else {
+                None
+            }
+        },
         2 => {
             if let Some(info) = target.fetch_data(doc! {
                 "name": 1,
@@ -146,11 +162,33 @@ pub fn delete(user: UserRef, target: ChannelRef) -> Option<Response> {
     }
 
     let col = database::get_collection("channels");
+    let target_id = target.id.clone();
+
+    let try_delete = || {
+        let messages = database::get_collection("messages");
+
+        if messages.delete_many(
+            doc! { "channel": &target_id },
+            None
+        ).is_ok() {
+            if col.delete_one(
+                doc! { "_id": &target_id },
+                None
+            ).is_ok() {
+                Some(Response::Result(super::Status::Ok))
+            } else {
+                Some(Response::InternalServerError(json!({ "error": "Failed to delete group." })))
+            }
+        } else {
+            Some(Response::InternalServerError(json!({ "error": "Failed to delete messages." })))
+        }
+    };
+
     match target.channel_type {
         0 => {
             if col
                 .update_one(
-                    doc! { "_id": target.id },
+                    doc! { "_id": &target_id },
                     doc! { "$set": { "active": false } },
                     None,
                 )
@@ -164,14 +202,40 @@ pub fn delete(user: UserRef, target: ChannelRef) -> Option<Response> {
             }
         }
         1 => {
-            // ? TODO: group dm
+            let mut recipients =
+                vec_to_set(&target.recipients.expect("Missing recipients on Group DM."));
+            let owner = target.owner.expect("Missing owner on Group DM.");
 
-            Some(Response::Result(super::Status::Ok))
+            if recipients.len() == 1 {
+                try_delete()
+            } else {
+                recipients.remove(&user.id);
+                let new_owner = if owner == user.id {
+                    recipients.iter().next().unwrap()
+                } else {
+                    &owner
+                };
+
+                if col.update_one(
+                    doc! { "_id": target_id },
+                    doc! {
+                        "$set": {
+                            "owner": new_owner,
+                        },
+                        "$pull": {
+                            "recipients": &user.id,
+                        }
+                    },
+                    None
+                ).is_ok() {
+                    Some(Response::Result(super::Status::Ok))
+                } else {
+                    Some(Response::InternalServerError(json!({ "error": "Failed to remove you from the group." })))
+                }
+            }
         }
         2 => {
-            // ? TODO: guild
-
-            Some(Response::Result(super::Status::Ok))
+            try_delete()
         }
         _ => Some(Response::InternalServerError(
             json!({ "error": "Unknown error has occurred." }),

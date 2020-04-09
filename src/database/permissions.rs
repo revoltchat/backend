@@ -159,7 +159,7 @@ impl PermissionCalculator {
                         let mut other_user = "";
                         for item in arr {
                             if item == &self.user.id {
-                                permissions = 49;
+                                permissions = 177;
                             } else {
                                 other_user = item;
                             }
@@ -174,7 +174,7 @@ impl PermissionCalculator {
                         {
                             permissions = 1;
                         } else if has_mutual_connection(self.user.id, other_user.to_string()) {
-                            permissions = 49;
+                            permissions = 177;
                         }
                     }
                 }
@@ -188,7 +188,7 @@ impl PermissionCalculator {
                     if let Some(arr) = &channel.recipients {
                         for item in arr {
                             if item == &self.user.id {
-                                permissions = 49;
+                                permissions = 177;
                                 break;
                             }
                         }

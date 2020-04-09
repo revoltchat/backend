@@ -92,21 +92,41 @@ pub fn dms(user: UserRef) -> Response {
                 ],
                 "recipients": user.id
             },
-            None,
+            FindOptions::builder()
+                .projection(doc! {
+
+                })
+                .build(),
         )
         .expect("Failed channel lookup");
 
     let mut channels = Vec::new();
     for item in results {
-        let channel: Channel =
-            from_bson(bson::Bson::Document(item.unwrap())).expect("Failed to unwrap channel.");
+        if let Ok(doc) = item {
+            let id = doc.get_str("_id").unwrap();
+            let recipients = doc.get_array("recipients").unwrap();
 
-        channels.push(json!({
-            "id": channel.id,
-            "type": channel.channel_type,
-            "recipients": channel.recipients,
-            "active": channel.active.unwrap()
-        }));
+            match doc.get_i32("type").unwrap() {
+                0 => {
+                    channels.push(json!({
+                        "id": id,
+                        "type": 0,
+                        "recipients": recipients,
+                    }));
+                },
+                1 => {
+                    channels.push(json!({
+                        "id": id,
+                        "type": 1,
+                        "recipients": recipients,
+                        "name": doc.get_str("name").unwrap(),
+                        "owner": doc.get_str("owner").unwrap(),
+                        "description": doc.get_str("description").unwrap_or(""),
+                    }));
+                },
+                _ => unreachable!()
+            }
+        }
     }
 
     Response::Success(json!(channels))

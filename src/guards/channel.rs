@@ -64,6 +64,7 @@ impl<'r> FromParam<'r> for ChannelRef {
                         "type": 1,
                         "recipients": 1,
                         "guild": 1,
+                        "owner": 1,
                     })
                     .build(),
             )
