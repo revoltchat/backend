@@ -11,8 +11,11 @@ use crate::database::guild::Guild;
 pub struct GuildRef {
     #[serde(rename = "_id")]
     pub id: String,
-
+    pub name: String,
+    pub description: String,
     pub owner: String,
+
+    pub channels: Vec<String>,
     pub default_permissions: i32,
 }
 
@@ -22,7 +25,10 @@ impl GuildRef {
             doc! { "_id": id },
             FindOneOptions::builder()
                 .projection(doc! {
+                    "name": 1,
+                    "description": 1,
                     "owner": 1,
+                    "channels": 1,
                     "default_permissions": 1
                 })
                 .build(),

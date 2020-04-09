@@ -1,17 +1,27 @@
+use super::channel::ChannelType;
 use super::Response;
-use crate::database::{
-    self,
-    channel::Channel,
-    guild::{find_member_permissions, Guild},
-};
+use crate::database::{self, channel::Channel, PermissionCalculator};
 use crate::guards::auth::UserRef;
+use crate::guards::guild::GuildRef;
 
 use bson::{doc, from_bson, Bson};
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 
-use super::channel::ChannelType;
+macro_rules! with_permissions {
+    ($user: expr, $target: expr) => {{
+        let permissions = PermissionCalculator::new($user.clone())
+            .guild($target.clone())
+            .as_permission();
+
+        if !permissions.get_access() {
+            return None;
+        }
+
+        permissions
+    }};
+}
 
 /// fetch your guilds
 #[get("/@me")]
@@ -46,10 +56,8 @@ pub fn my_guilds(user: UserRef) -> Response {
 
 /// fetch a guild
 #[get("/<target>")]
-pub fn guild(user: UserRef, target: Guild) -> Option<Response> {
-    if find_member_permissions(user.id.clone(), target.id.clone(), None) == 0 {
-        return None;
-    }
+pub fn guild(user: UserRef, target: GuildRef) -> Option<Response> {
+    with_permissions!(user, target);
 
     let mut targets = vec![];
     for channel in target.channels {

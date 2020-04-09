@@ -1,48 +1,6 @@
 use bson::doc;
 use serde::{Deserialize, Serialize};
 
-use super::get_collection;
-use mongodb::options::FindOneOptions;
-
-pub fn find_member_permissions<C: Into<Option<String>>>(
-    id: String,
-    guild: String,
-    _channel: C,
-) -> u32 {
-    let col = get_collection("guilds");
-
-    match col.find_one(
-        doc! {
-            "_id": &guild,
-            "members": {
-                "$elemMatch": {
-                    "id": &id,
-                }
-            }
-        },
-        FindOneOptions::builder()
-            .projection(doc! {
-                "members.$": 1,
-                "owner": 1,
-                "default_permissions": 1,
-            })
-            .build(),
-    ) {
-        Ok(result) => {
-            if let Some(doc) = result {
-                if doc.get_str("owner").unwrap() == id {
-                    return u32::MAX;
-                }
-
-                doc.get_i32("default_permissions").unwrap() as u32
-            } else {
-                0
-            }
-        }
-        Err(_) => 0,
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Member {
     pub id: String,
