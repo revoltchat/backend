@@ -5,6 +5,7 @@ use crate::database::{
     guild::{find_member_permissions, Guild},
     user::User,
 };
+use crate::guards::auth::UserRef;
 
 use bson::{bson, doc, from_bson, Bson};
 use rocket_contrib::json::{Json, JsonValue};
@@ -15,7 +16,7 @@ use super::channel::ChannelType;
 
 /// fetch your guilds
 #[get("/@me")]
-pub fn my_guilds(user: User) -> Response {
+pub fn my_guilds(user: UserRef) -> Response {
     let col = database::get_collection("guilds");
     let guilds = col
         .find(
@@ -46,7 +47,7 @@ pub fn my_guilds(user: User) -> Response {
 
 /// fetch a guild
 #[get("/<target>")]
-pub fn guild(user: User, target: Guild) -> Option<Response> {
+pub fn guild(user: UserRef, target: Guild) -> Option<Response> {
     if find_member_permissions(user.id.clone(), target.id.clone(), None) == 0 {
         return None;
     }
@@ -72,7 +73,7 @@ pub fn guild(user: User, target: Guild) -> Option<Response> {
                     .expect("Failed to unwrap channel.");
 
                 channels.push(json!({
-                    "_id": channel.id,
+                    "id": channel.id,
                     "last_message": channel.last_message,
                     "name": channel.name,
                     "description": channel.description,
@@ -102,8 +103,8 @@ pub struct CreateGuild {
 
 /// create a new guild
 #[post("/create", data = "<info>")]
-pub fn create_guild(user: User, info: Json<CreateGuild>) -> Response {
-    if !user.email_verification.verified {
+pub fn create_guild(user: UserRef, info: Json<CreateGuild>) -> Response {
+    if !user.email_verified {
         return Response::Unauthorized(json!({ "error": "Email not verified!" }));
     }
 

@@ -1,27 +1,75 @@
 use super::Response;
-use crate::database::{self, channel::Channel, user::User};
+use crate::database::{self, channel::Channel, user::UserRelationship};
 use crate::routes::channel;
+use crate::guards::auth::UserRef;
 
 use bson::{bson, doc, from_bson};
 use mongodb::options::FindOptions;
-use rocket_contrib::json::{Json, JsonValue};
+use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 
+enum Relationship {
+    FRIEND = 0,
+    OUTGOING = 1,
+    INCOMING = 2,
+    BLOCKED = 3,
+    BLOCKEDOTHER = 4,
+    NONE = 5,
+    SELF = 6,
+}
+
+fn get_relationship_internal(user_id: &str, target_id: &str, relationships: &Option<Vec<UserRelationship>>) -> Relationship {
+    if user_id == target_id {
+        return Relationship::SELF;
+    }
+
+    if let Some(arr) = &relationships {
+        for entry in arr {
+            if entry.id == target_id {
+                match entry.status {
+                    0 => return Relationship::FRIEND,
+                    1 => return Relationship::OUTGOING,
+                    2 => return Relationship::INCOMING,
+                    3 => return Relationship::BLOCKED,
+                    4 => return Relationship::BLOCKEDOTHER,
+                    _ => return Relationship::NONE,
+                }
+            }
+        }
+    }
+
+    Relationship::NONE
+}
+
+fn get_relationship(a: &UserRef, b: &UserRef) -> Relationship {
+    if a.id == b.id {
+        return Relationship::SELF;
+    }
+
+    get_relationship_internal(&a.id, &b.id, &a.fetch_relationships())
+}
+
 /// retrieve your user information
 #[get("/@me")]
-pub fn me(user: User) -> JsonValue {
-    json!({
-        "id": user.id,
-        "username": user.username,
-        "email": user.email,
-        "verified": user.email_verification.verified,
-    })
+pub fn me(user: UserRef) -> Response {
+    if let Some(info) = user.fetch_data(doc! { "email": 1 }) {
+        Response::Success(
+            json!({
+                "id": user.id,
+                "username": user.username,
+                "email": info.get_str("email").unwrap(),
+                "verified": user.email_verified,
+            })
+        )
+    } else {
+        Response::InternalServerError(json!({ "error": "Failed to fetch information from database." }))
+    }
 }
 
 /// retrieve another user's information
 #[get("/<target>")]
-pub fn user(user: User, target: User) -> Response {
+pub fn user(user: UserRef, target: UserRef) -> Response {
     Response::Success(json!({
         "id": target.id,
         "username": target.username,
@@ -37,25 +85,30 @@ pub struct Query {
 /// lookup a user on Revolt
 /// currently only supports exact username searches
 #[post("/lookup", data = "<query>")]
-pub fn lookup(user: User, query: Json<Query>) -> Response {
+pub fn lookup(user: UserRef, query: Json<Query>) -> Response {
+    let relationships = user.fetch_relationships();
     let col = database::get_collection("users");
 
     let users = col
         .find(
             doc! { "username": query.username.clone() },
-            FindOptions::builder().limit(10).build(),
+            FindOptions::builder()
+                .projection(doc! { "_id": 1, "username": 1 })
+                .limit(10)
+                .build(),
         )
         .expect("Failed user lookup");
 
     let mut results = Vec::new();
     for item in users {
-        let u: User =
-            from_bson(bson::Bson::Document(item.unwrap())).expect("Failed to unwrap user.");
-        results.push(json!({
-            "id": u.id,
-            "username": u.username,
-            "relationship": get_relationship(&user, &u) as u8
-        }));
+        if let Ok(doc) = item {
+            let id = doc.get_str("id").unwrap();
+            results.push(json!({
+                "id": id.clone(),
+                "username": doc.get_str("username").unwrap(),
+                "relationship": get_relationship_internal(&user.id, &id, &relationships) as u8
+            }));
+        }
     }
 
     Response::Success(json!(results))
@@ -63,7 +116,7 @@ pub fn lookup(user: User, query: Json<Query>) -> Response {
 
 /// retrieve all of your DMs
 #[get("/@me/dms")]
-pub fn dms(user: User) -> Response {
+pub fn dms(user: UserRef) -> Response {
     let col = database::get_collection("channels");
 
     let results = col
@@ -101,7 +154,7 @@ pub fn dms(user: User) -> Response {
 
 /// open a DM with a user
 #[get("/<target>/dm")]
-pub fn dm(user: User, target: User) -> Response {
+pub fn dm(user: UserRef, target: UserRef) -> Response {
     let col = database::get_collection("channels");
 
     match col.find_one(
@@ -128,44 +181,13 @@ pub fn dm(user: User, target: User) -> Response {
 	}
 }
 
-enum Relationship {
-    FRIEND = 0,
-    OUTGOING = 1,
-    INCOMING = 2,
-    BLOCKED = 3,
-    BLOCKEDOTHER = 4,
-    NONE = 5,
-    SELF = 6,
-}
-
-fn get_relationship(a: &User, b: &User) -> Relationship {
-    if a.id == b.id {
-        return Relationship::SELF;
-    }
-
-    if let Some(arr) = &b.relations {
-        for entry in arr {
-            if entry.id == a.id {
-                match entry.status {
-                    0 => return Relationship::FRIEND,
-                    1 => return Relationship::INCOMING,
-                    2 => return Relationship::OUTGOING,
-                    3 => return Relationship::BLOCKEDOTHER,
-                    4 => return Relationship::BLOCKED,
-                    _ => return Relationship::NONE,
-                }
-            }
-        }
-    }
-
-    Relationship::NONE
-}
-
 /// retrieve all of your friends
 #[get("/@me/friend")]
-pub fn get_friends(user: User) -> Response {
+pub fn get_friends(user: UserRef) -> Response {
+    let relationships = user.fetch_relationships();
+
     let mut results = Vec::new();
-    if let Some(arr) = user.relations {
+    if let Some(arr) = relationships {
         for item in arr {
             results.push(json!({
                 "id": item.id,
@@ -179,7 +201,7 @@ pub fn get_friends(user: User) -> Response {
 
 /// retrieve friend status with user
 #[get("/<target>/friend")]
-pub fn get_friend(user: User, target: User) -> Response {
+pub fn get_friend(user: UserRef, target: UserRef) -> Response {
     let relationship = get_relationship(&user, &target);
 
     Response::Success(json!({ "status": relationship as u8 }))
@@ -187,9 +209,9 @@ pub fn get_friend(user: User, target: User) -> Response {
 
 /// create or accept a friend request
 #[put("/<target>/friend")]
-pub fn add_friend(user: User, target: User) -> Response {
-    let col = database::get_collection("users");
+pub fn add_friend(user: UserRef, target: UserRef) -> Response {
     let relationship = get_relationship(&user, &target);
+    let col = database::get_collection("users");
 
     match relationship {
         Relationship::FRIEND => Response::BadRequest(json!({ "error": "Already friends." })),
@@ -300,9 +322,9 @@ pub fn add_friend(user: User, target: User) -> Response {
 
 /// remove a friend or deny a request
 #[delete("/<target>/friend")]
-pub fn remove_friend(user: User, target: User) -> Response {
-    let col = database::get_collection("users");
+pub fn remove_friend(user: UserRef, target: UserRef) -> Response {
     let relationship = get_relationship(&user, &target);
+    let col = database::get_collection("users");
 
     match relationship {
         Relationship::FRIEND | Relationship::OUTGOING | Relationship::INCOMING => {

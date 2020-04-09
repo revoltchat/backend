@@ -1,5 +1,7 @@
 use super::Response;
-use crate::database::{self, channel::Channel, message::Message, user::User};
+use crate::database::{self, channel::Channel, message::Message, user::User, PermissionCalculator};
+use crate::guards::channel::ChannelRef;
+use crate::guards::auth::UserRef;
 use crate::websocket;
 
 use bson::{bson, doc, from_bson, Bson::UtcDatetime};
@@ -17,53 +19,65 @@ pub enum ChannelType {
     GUILDCHANNEL = 2,
 }
 
-fn has_permission(user: &User, target: &Channel) -> bool {
-    match target.channel_type {
-        0..=1 => {
-            if let Some(arr) = &target.recipients {
-                for item in arr {
-                    if item == &user.id {
-                        return true;
-                    }
-                }
+macro_rules! with_permissions {
+    ($user: expr, $target: expr) => {
+        {
+            let permissions = PermissionCalculator::new($user.id.clone())
+                .channel($target.clone())
+                .as_permission();
+            
+            if !permissions.get_access() {
+                return None;
             }
 
-            false
+            permissions
         }
-        2 => false,
-        _ => false,
-    }
-}
-
-fn get_recipients(target: &Channel) -> Vec<String> {
-    match target.channel_type {
-        0..=1 => target.recipients.clone().unwrap(),
-        _ => vec![],
-    }
+    };
 }
 
 /// fetch channel information
 #[get("/<target>")]
-pub fn channel(user: User, target: Channel) -> Option<Response> {
-    if !has_permission(&user, &target) {
-        return None;
-    }
+pub fn channel(user: UserRef, target: ChannelRef) -> Option<Response> {
+    with_permissions!(user, target);
 
-    Some(Response::Success(json!({
-        "id": target.id,
-        "type": target.channel_type,
-        "recipients": get_recipients(&target),
-    })))
+    match target.channel_type {
+        0..=1 => Some(Response::Success(
+            json!({
+                "id": target.id,
+                "type": target.channel_type,
+                "recipients": target.recipients,
+            })
+        )),
+        2 => {
+            if let Some(info) = target.fetch_data(
+                doc! {
+                    "name": 1,
+                    "description": 1,
+                }
+            ) {
+                Some(Response::Success(
+                    json!({
+                        "id": target.id,
+                        "type": target.channel_type,
+                        "guild": target.guild,
+                        "name": info.get_str("name").unwrap(),
+                        "description": info.get_str("description").unwrap_or(""),
+                    })
+                ))
+            } else {
+                None
+            }
+        },
+        _ => unreachable!()
+    }
 }
 
 /// delete channel
 /// or leave group DM
 /// or close DM conversation
 #[delete("/<target>")]
-pub fn delete(user: User, target: Channel) -> Option<Response> {
-    if !has_permission(&user, &target) {
-        return None;
-    }
+pub fn delete(user: UserRef, target: ChannelRef) -> Option<Response> {
+    with_permissions!(user, target);
 
     let col = database::get_collection("channels");
     Some(match target.channel_type {
@@ -93,10 +107,8 @@ pub fn delete(user: User, target: Channel) -> Option<Response> {
 
 /// fetch channel messages
 #[get("/<target>/messages")]
-pub fn messages(user: User, target: Channel) -> Option<Response> {
-    if !has_permission(&user, &target) {
-        return None;
-    }
+pub fn messages(user: UserRef, target: ChannelRef) -> Option<Response> {
+    with_permissions!(user, target);
 
     let col = database::get_collection("messages");
     let result = col.find(doc! { "channel": target.id }, None).unwrap();
@@ -124,10 +136,8 @@ pub struct SendMessage {
 
 /// send a message to a channel
 #[post("/<target>/messages", data = "<message>")]
-pub fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> Option<Response> {
-    if !has_permission(&user, &target) {
-        return None;
-    }
+pub fn send_message(user: UserRef, target: ChannelRef, message: Json<SendMessage>) -> Option<Response> {
+    with_permissions!(user, target);
 
     let content: String = message.content.chars().take(2000).collect();
     let nonce: String = message.nonce.chars().take(32).collect();
@@ -164,7 +174,7 @@ pub fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> 
                 .unwrap();
             }
 
-            websocket::queue_message(
+            /*websocket::queue_message(
                 get_recipients(&target),
                 json!({
                     "type": "message",
@@ -177,7 +187,7 @@ pub fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> 
                     },
                 })
                 .to_string(),
-            );
+            );*/
 
             Response::Success(json!({ "id": id }))
         } else {
@@ -190,10 +200,8 @@ pub fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> 
 
 /// get a message
 #[get("/<target>/messages/<message>")]
-pub fn get_message(user: User, target: Channel, message: Message) -> Option<Response> {
-    if !has_permission(&user, &target) {
-        return None;
-    }
+pub fn get_message(user: UserRef, target: ChannelRef, message: Message) -> Option<Response> {
+    with_permissions!(user, target);
 
     let prev =
         // ! CHECK IF USER HAS PERMISSION TO VIEW EDITS OF MESSAGES
@@ -228,14 +236,12 @@ pub struct EditMessage {
 /// edit a message
 #[patch("/<target>/messages/<message>", data = "<edit>")]
 pub fn edit_message(
-    user: User,
-    target: Channel,
+    user: UserRef,
+    target: ChannelRef,
     message: Message,
     edit: Json<EditMessage>,
 ) -> Option<Response> {
-    if !has_permission(&user, &target) {
-        return None;
-    }
+    with_permissions!(user, target);
 
     Some(if message.author != user.id {
         Response::Unauthorized(json!({ "error": "You did not send this message." }))
@@ -266,7 +272,7 @@ pub fn edit_message(
             None,
         ) {
             Ok(_) => {
-                websocket::queue_message(
+                /*websocket::queue_message(
                     get_recipients(&target),
                     json!({
                         "type": "message_update",
@@ -278,7 +284,7 @@ pub fn edit_message(
                         },
                     })
                     .to_string(),
-                );
+                );*/
 
                 Response::Result(super::Status::Ok)
             }
@@ -291,10 +297,8 @@ pub fn edit_message(
 
 /// delete a message
 #[delete("/<target>/messages/<message>")]
-pub fn delete_message(user: User, target: Channel, message: Message) -> Option<Response> {
-    if !has_permission(&user, &target) {
-        return None;
-    }
+pub fn delete_message(user: UserRef, target: ChannelRef, message: Message) -> Option<Response> {
+    with_permissions!(user, target);
 
     Some(if message.author != user.id {
         Response::Unauthorized(json!({ "error": "You did not send this message." }))
@@ -303,7 +307,7 @@ pub fn delete_message(user: User, target: Channel, message: Message) -> Option<R
 
         match col.delete_one(doc! { "_id": message.id.clone() }, None) {
             Ok(_) => {
-                websocket::queue_message(
+                /*websocket::queue_message(
                     get_recipients(&target),
                     json!({
                         "type": "message_delete",
@@ -313,7 +317,7 @@ pub fn delete_message(user: User, target: Channel, message: Message) -> Option<R
                         },
                     })
                     .to_string(),
-                );
+                );*/
 
                 Response::Result(super::Status::Ok)
             }

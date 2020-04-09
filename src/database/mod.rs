@@ -24,10 +24,10 @@ pub fn get_collection(collection: &str) -> Collection {
     get_db().collection(collection)
 }
 
-pub mod permissions;
 pub mod channel;
 pub mod guild;
 pub mod message;
+pub mod permissions;
 pub mod user;
 
 pub use permissions::*;

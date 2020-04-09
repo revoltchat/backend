@@ -1,7 +1,7 @@
 use bson::{bson, doc};
 use serde::{Deserialize, Serialize};
 
-use super::{get_collection, MemberPermissions};
+use super::get_collection;
 use mongodb::options::FindOneOptions;
 
 pub fn find_member_permissions<C: Into<Option<String>>>(
