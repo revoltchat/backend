@@ -1,14 +1,14 @@
+use bson::{bson, doc, from_bson, Document};
+use mongodb::options::FindOneOptions;
 use rocket::http::{RawStr, Status};
 use rocket::request::{self, FromParam, FromRequest, Request};
 use rocket::Outcome;
-use bson::{bson, doc, from_bson, Document};
 use serde::{Deserialize, Serialize};
-use mongodb::options::FindOneOptions;
 
 use crate::database;
 use database::user::{User, UserRelationship};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UserRef {
     pub id: String,
     pub username: String,
@@ -29,11 +29,13 @@ impl UserRef {
         let user = database::get_collection("users")
             .find_one(
                 doc! { "_id": &self.id },
-                FindOneOptions::builder().projection(doc! { "relations": 1 }).build(),
+                FindOneOptions::builder()
+                    .projection(doc! { "relations": 1 })
+                    .build(),
             )
             .expect("Failed to fetch user relationships from database.")
             .expect("Missing user document.");
-        
+
         if let Ok(arr) = user.get_array("relations") {
             let mut relationships = vec![];
             for item in arr {
@@ -77,13 +79,15 @@ impl<'a, 'r> FromRequest<'a, 'r> for UserRef {
                     .unwrap();
 
                 if let Some(user) = result {
-                    Outcome::Success(
-                        UserRef {
-                            id: user.get_str("_id").unwrap().to_string(),
-                            username: user.get_str("username").unwrap().to_string(),
-                            email_verified: user.get_document("email_verification").unwrap().get_bool("verified").unwrap(),
-                        }
-                    )
+                    Outcome::Success(UserRef {
+                        id: user.get_str("_id").unwrap().to_string(),
+                        username: user.get_str("username").unwrap().to_string(),
+                        email_verified: user
+                            .get_document("email_verification")
+                            .unwrap()
+                            .get_bool("verified")
+                            .unwrap(),
+                    })
                 } else {
                     Outcome::Failure((Status::Forbidden, AuthError::Invalid))
                 }
@@ -124,26 +128,28 @@ impl<'r> FromParam<'r> for UserRef {
     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
         let col = database::get_db().collection("users");
         let result = database::get_collection("users")
-                    .find_one(
-                        doc! { "_id": param.to_string() },
-                        FindOneOptions::builder()
-                            .projection(doc! {
-                                "_id": 1,
-                                "username": 1,
-                                "email_verification.verified": 1,
-                            })
-                            .build(),
-                    )
-                    .unwrap();
+            .find_one(
+                doc! { "_id": param.to_string() },
+                FindOneOptions::builder()
+                    .projection(doc! {
+                        "_id": 1,
+                        "username": 1,
+                        "email_verification.verified": 1,
+                    })
+                    .build(),
+            )
+            .unwrap();
 
         if let Some(user) = result {
-            Ok(
-                UserRef {
-                    id: user.get_str("_id").unwrap().to_string(),
-                    username: user.get_str("username").unwrap().to_string(),
-                    email_verified: user.get_document("email_verification").unwrap().get_bool("verified").unwrap(),
-                }
-            )
+            Ok(UserRef {
+                id: user.get_str("_id").unwrap().to_string(),
+                username: user.get_str("username").unwrap().to_string(),
+                email_verified: user
+                    .get_document("email_verification")
+                    .unwrap()
+                    .get_bool("verified")
+                    .unwrap(),
+            })
         } else {
             Err(param)
         }

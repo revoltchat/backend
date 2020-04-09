@@ -1,8 +1,7 @@
 use super::Response;
-use crate::database::{self, channel::Channel, message::Message, user::User, PermissionCalculator};
-use crate::guards::channel::ChannelRef;
+use crate::database::{self, message::Message, Permission, PermissionCalculator};
 use crate::guards::auth::UserRef;
-use crate::websocket;
+use crate::guards::channel::ChannelRef;
 
 use bson::{bson, doc, from_bson, Bson::UtcDatetime};
 use chrono::prelude::*;
@@ -20,19 +19,17 @@ pub enum ChannelType {
 }
 
 macro_rules! with_permissions {
-    ($user: expr, $target: expr) => {
-        {
-            let permissions = PermissionCalculator::new($user.id.clone())
-                .channel($target.clone())
-                .as_permission();
-            
-            if !permissions.get_access() {
-                return None;
-            }
+    ($user: expr, $target: expr) => {{
+        let permissions = PermissionCalculator::new($user.clone())
+            .channel($target.clone())
+            .as_permission();
 
-            permissions
+        if !permissions.get_access() {
+            return None;
         }
-    };
+
+        permissions
+    }};
 }
 
 /// fetch channel information
@@ -41,34 +38,28 @@ pub fn channel(user: UserRef, target: ChannelRef) -> Option<Response> {
     with_permissions!(user, target);
 
     match target.channel_type {
-        0..=1 => Some(Response::Success(
-            json!({
-                "id": target.id,
-                "type": target.channel_type,
-                "recipients": target.recipients,
-            })
-        )),
+        0..=1 => Some(Response::Success(json!({
+            "id": target.id,
+            "type": target.channel_type,
+            "recipients": target.recipients,
+        }))),
         2 => {
-            if let Some(info) = target.fetch_data(
-                doc! {
-                    "name": 1,
-                    "description": 1,
-                }
-            ) {
-                Some(Response::Success(
-                    json!({
-                        "id": target.id,
-                        "type": target.channel_type,
-                        "guild": target.guild,
-                        "name": info.get_str("name").unwrap(),
-                        "description": info.get_str("description").unwrap_or(""),
-                    })
-                ))
+            if let Some(info) = target.fetch_data(doc! {
+                "name": 1,
+                "description": 1,
+            }) {
+                Some(Response::Success(json!({
+                    "id": target.id,
+                    "type": target.channel_type,
+                    "guild": target.guild,
+                    "name": info.get_str("name").unwrap(),
+                    "description": info.get_str("description").unwrap_or(""),
+                })))
             } else {
                 None
             }
-        },
-        _ => unreachable!()
+        }
+        _ => unreachable!(),
     }
 }
 
@@ -77,38 +68,49 @@ pub fn channel(user: UserRef, target: ChannelRef) -> Option<Response> {
 /// or close DM conversation
 #[delete("/<target>")]
 pub fn delete(user: UserRef, target: ChannelRef) -> Option<Response> {
-    with_permissions!(user, target);
+    let permissions = with_permissions!(user, target);
+
+    if !permissions.get_manage_channels() {
+        return Some(Response::LackingPermission(Permission::MANAGE_CHANNELS));
+    }
 
     let col = database::get_collection("channels");
-    Some(match target.channel_type {
+    match target.channel_type {
         0 => {
-            col.update_one(
+            if col.update_one(
                 doc! { "_id": target.id },
                 doc! { "$set": { "active": false } },
                 None,
-            )
-            .expect("Failed to update channel.");
-
-            Response::Result(super::Status::Ok)
+            ).is_ok() {
+                Some(Response::Result(super::Status::Ok))
+            } else {
+                Some(Response::InternalServerError(json!({ "error": "Failed to close channel." })))
+            }
         }
         1 => {
             // ? TODO: group dm
 
-            Response::Result(super::Status::Ok)
+            Some(Response::Result(super::Status::Ok))
         }
         2 => {
             // ? TODO: guild
 
-            Response::Result(super::Status::Ok)
+            Some(Response::Result(super::Status::Ok))
         }
-        _ => Response::InternalServerError(json!({ "error": "Unknown error has occurred." })),
-    })
+        _ => Some(Response::InternalServerError(
+            json!({ "error": "Unknown error has occurred." }),
+        )),
+    }
 }
 
 /// fetch channel messages
 #[get("/<target>/messages")]
 pub fn messages(user: UserRef, target: ChannelRef) -> Option<Response> {
-    with_permissions!(user, target);
+    let permissions = with_permissions!(user, target);
+
+    if !permissions.get_read_messages() {
+        return Some(Response::LackingPermission(Permission::READ_MESSAGES));
+    }
 
     let col = database::get_collection("messages");
     let result = col.find(doc! { "channel": target.id }, None).unwrap();
@@ -136,8 +138,16 @@ pub struct SendMessage {
 
 /// send a message to a channel
 #[post("/<target>/messages", data = "<message>")]
-pub fn send_message(user: UserRef, target: ChannelRef, message: Json<SendMessage>) -> Option<Response> {
-    with_permissions!(user, target);
+pub fn send_message(
+    user: UserRef,
+    target: ChannelRef,
+    message: Json<SendMessage>,
+) -> Option<Response> {
+    let permissions = with_permissions!(user, target);
+
+    if !permissions.get_send_messages() {
+        return Some(Response::LackingPermission(Permission::SEND_MESSAGES));
+    }
 
     let content: String = message.content.chars().take(2000).collect();
     let nonce: String = message.nonce.chars().take(32).collect();
@@ -201,7 +211,11 @@ pub fn send_message(user: UserRef, target: ChannelRef, message: Json<SendMessage
 /// get a message
 #[get("/<target>/messages/<message>")]
 pub fn get_message(user: UserRef, target: ChannelRef, message: Message) -> Option<Response> {
-    with_permissions!(user, target);
+    let permissions = with_permissions!(user, target);
+
+    if !permissions.get_read_messages() {
+        return Some(Response::LackingPermission(Permission::READ_MESSAGES));
+    }
 
     let prev =
         // ! CHECK IF USER HAS PERMISSION TO VIEW EDITS OF MESSAGES
@@ -243,87 +257,90 @@ pub fn edit_message(
 ) -> Option<Response> {
     with_permissions!(user, target);
 
-    Some(if message.author != user.id {
-        Response::Unauthorized(json!({ "error": "You did not send this message." }))
+    if message.author != user.id {
+        return Some(Response::Unauthorized(
+            json!({ "error": "You did not send this message." }),
+        ));
+    }
+
+    let col = database::get_collection("messages");
+    let time = if let Some(edited) = message.edited {
+        edited.0
     } else {
-        let col = database::get_collection("messages");
+        Ulid::from_string(&message.id).unwrap().datetime()
+    };
 
-        let time = if let Some(edited) = message.edited {
-            edited.0
-        } else {
-            Ulid::from_string(&message.id).unwrap().datetime()
-        };
-
-        let edited = Utc::now();
-        match col.update_one(
-            doc! { "_id": message.id.clone() },
-            doc! {
-                "$set": {
-                    "content": edit.content.clone(),
-                    "edited": UtcDatetime(edited.clone())
-                },
-                "$push": {
-                    "previous_content": {
-                        "content": message.content,
-                        "time": time,
-                    }
-                },
+    let edited = Utc::now();
+    match col.update_one(
+        doc! { "_id": message.id.clone() },
+        doc! {
+            "$set": {
+                "content": edit.content.clone(),
+                "edited": UtcDatetime(edited.clone())
             },
-            None,
-        ) {
-            Ok(_) => {
-                /*websocket::queue_message(
-                    get_recipients(&target),
-                    json!({
-                        "type": "message_update",
-                        "data": {
-                            "id": message.id,
-                            "channel": target.id,
-                            "content": edit.content.clone(),
-                            "edited": edited.timestamp()
-                        },
-                    })
-                    .to_string(),
-                );*/
+            "$push": {
+                "previous_content": {
+                    "content": message.content,
+                    "time": time,
+                }
+            },
+        },
+        None,
+    ) {
+        Ok(_) => {
+            /*websocket::queue_message(
+                get_recipients(&target),
+                json!({
+                    "type": "message_update",
+                    "data": {
+                        "id": message.id,
+                        "channel": target.id,
+                        "content": edit.content.clone(),
+                        "edited": edited.timestamp()
+                    },
+                })
+                .to_string(),
+            );*/
 
-                Response::Result(super::Status::Ok)
-            }
-            Err(_) => {
-                Response::InternalServerError(json!({ "error": "Failed to update message." }))
-            }
+            Some(Response::Result(super::Status::Ok))
         }
-    })
+        Err(_) => Some(Response::InternalServerError(
+            json!({ "error": "Failed to update message." }),
+        )),
+    }
 }
 
 /// delete a message
 #[delete("/<target>/messages/<message>")]
 pub fn delete_message(user: UserRef, target: ChannelRef, message: Message) -> Option<Response> {
-    with_permissions!(user, target);
+    let permissions = with_permissions!(user, target);
 
-    Some(if message.author != user.id {
-        Response::Unauthorized(json!({ "error": "You did not send this message." }))
-    } else {
-        let col = database::get_collection("messages");
-
-        match col.delete_one(doc! { "_id": message.id.clone() }, None) {
-            Ok(_) => {
-                /*websocket::queue_message(
-                    get_recipients(&target),
-                    json!({
-                        "type": "message_delete",
-                        "data": {
-                            "id": message.id,
-                            "channel": target.id
-                        },
-                    })
-                    .to_string(),
-                );*/
-
-                Response::Result(super::Status::Ok)
-            }
-            Err(_) => {
-                Response::InternalServerError(json!({ "error": "Failed to delete message." }))
-            }
+    if !permissions.get_manage_messages() {
+        if message.author != user.id {
+            return Some(Response::LackingPermission(Permission::MANAGE_MESSAGES));
         }
-    })
+    }
+
+    let col = database::get_collection("messages");
+
+    match col.delete_one(doc! { "_id": message.id.clone() }, None) {
+        Ok(_) => {
+            /*websocket::queue_message(
+                get_recipients(&target),
+                json!({
+                    "type": "message_delete",
+                    "data": {
+                        "id": message.id,
+                        "channel": target.id
+                    },
+                })
+                .to_string(),
+            );*/
+
+            Some(Response::Result(super::Status::Ok))
+        }
+        Err(_) => Some(Response::InternalServerError(
+            json!({ "error": "Failed to delete message." }),
+        )),
+    }
 }

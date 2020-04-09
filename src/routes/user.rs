@@ -1,7 +1,8 @@
 use super::Response;
-use crate::database::{self, channel::Channel, user::UserRelationship};
-use crate::routes::channel;
+use crate::database::{self, channel::Channel};
+use crate::database::{get_relationship, get_relationship_internal, Relationship};
 use crate::guards::auth::UserRef;
+use crate::routes::channel;
 
 use bson::{bson, doc, from_bson};
 use mongodb::options::FindOptions;
@@ -9,61 +10,20 @@ use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 
-enum Relationship {
-    FRIEND = 0,
-    OUTGOING = 1,
-    INCOMING = 2,
-    BLOCKED = 3,
-    BLOCKEDOTHER = 4,
-    NONE = 5,
-    SELF = 6,
-}
-
-fn get_relationship_internal(user_id: &str, target_id: &str, relationships: &Option<Vec<UserRelationship>>) -> Relationship {
-    if user_id == target_id {
-        return Relationship::SELF;
-    }
-
-    if let Some(arr) = &relationships {
-        for entry in arr {
-            if entry.id == target_id {
-                match entry.status {
-                    0 => return Relationship::FRIEND,
-                    1 => return Relationship::OUTGOING,
-                    2 => return Relationship::INCOMING,
-                    3 => return Relationship::BLOCKED,
-                    4 => return Relationship::BLOCKEDOTHER,
-                    _ => return Relationship::NONE,
-                }
-            }
-        }
-    }
-
-    Relationship::NONE
-}
-
-fn get_relationship(a: &UserRef, b: &UserRef) -> Relationship {
-    if a.id == b.id {
-        return Relationship::SELF;
-    }
-
-    get_relationship_internal(&a.id, &b.id, &a.fetch_relationships())
-}
-
 /// retrieve your user information
 #[get("/@me")]
 pub fn me(user: UserRef) -> Response {
     if let Some(info) = user.fetch_data(doc! { "email": 1 }) {
-        Response::Success(
-            json!({
-                "id": user.id,
-                "username": user.username,
-                "email": info.get_str("email").unwrap(),
-                "verified": user.email_verified,
-            })
-        )
+        Response::Success(json!({
+            "id": user.id,
+            "username": user.username,
+            "email": info.get_str("email").unwrap(),
+            "verified": user.email_verified,
+        }))
     } else {
-        Response::InternalServerError(json!({ "error": "Failed to fetch information from database." }))
+        Response::InternalServerError(
+            json!({ "error": "Failed to fetch information from database." }),
+        )
     }
 }
 

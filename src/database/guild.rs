@@ -8,7 +8,7 @@ pub fn find_member_permissions<C: Into<Option<String>>>(
     id: String,
     guild: String,
     channel: C,
-) -> u8 {
+) -> u32 {
     let col = get_collection("guilds");
 
     match col.find_one(
@@ -31,10 +31,10 @@ pub fn find_member_permissions<C: Into<Option<String>>>(
         Ok(result) => {
             if let Some(doc) = result {
                 if doc.get_str("owner").unwrap() == id {
-                    return u8::MAX;
+                    return u32::MAX;
                 }
 
-                doc.get_i32("default_permissions").unwrap() as u8
+                doc.get_i32("default_permissions").unwrap() as u32
             } else {
                 0
             }

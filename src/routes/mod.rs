@@ -3,6 +3,8 @@ pub use rocket::response::Redirect;
 use rocket::Rocket;
 use rocket_contrib::json::JsonValue;
 
+use crate::database::Permission;
+
 pub mod account;
 pub mod channel;
 pub mod guild;
@@ -21,6 +23,8 @@ pub enum Response {
     BadRequest(JsonValue),
     #[response(status = 401)]
     Unauthorized(JsonValue),
+    #[response(status = 401)]
+    LackingPermission(Permission),
     #[response(status = 404)]
     NotFound(JsonValue),
     #[response(status = 406)]
@@ -35,6 +39,22 @@ pub enum Response {
     TooManyRequests(JsonValue),
     #[response(status = 500)]
     InternalServerError(JsonValue),
+}
+
+use rocket::http::ContentType;
+use rocket::request::Request;
+use std::io::Cursor;
+
+impl<'a> rocket::response::Responder<'a> for Permission {
+    fn respond_to(self, _: &Request) -> rocket::response::Result<'a> {
+        rocket::response::Response::build()
+            .header(ContentType::JSON)
+            .sized_body(Cursor::new(format!(
+                "{{\"error\":\"Lacking {:?} permission.\"}}",
+                self
+            )))
+            .ok()
+    }
 }
 
 pub fn mount(rocket: Rocket) -> Rocket {
