@@ -6,25 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::database;
 
-use database::channel::Channel;
 use database::message::Message;
-
-impl<'r> FromParam<'r> for Channel {
-    type Error = &'r RawStr;
-
-    fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-        let col = database::get_collection("channels");
-        let result = col
-            .find_one(doc! { "_id": param.to_string() }, None)
-            .unwrap();
-
-        if let Some(channel) = result {
-            Ok(from_bson(bson::Bson::Document(channel)).expect("Failed to unwrap channel."))
-        } else {
-            Err(param)
-        }
-    }
-}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ChannelRef {

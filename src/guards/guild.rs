@@ -5,7 +5,6 @@ use rocket::request::FromParam;
 use serde::{Deserialize, Serialize};
 
 use crate::database;
-use crate::database::guild::Guild;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GuildRef {
@@ -69,23 +68,6 @@ impl<'r> FromParam<'r> for GuildRef {
     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
         if let Some(guild) = GuildRef::from(param.to_string()) {
             Ok(guild)
-        } else {
-            Err(param)
-        }
-    }
-}
-
-impl<'r> FromParam<'r> for Guild {
-    type Error = &'r RawStr;
-
-    fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-        let col = database::get_collection("guilds");
-        let result = col
-            .find_one(doc! { "_id": param.to_string() }, None)
-            .unwrap();
-
-        if let Some(guild) = result {
-            Ok(from_bson(bson::Bson::Document(guild)).expect("Failed to unwrap guild."))
         } else {
             Err(param)
         }

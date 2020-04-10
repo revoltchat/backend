@@ -127,7 +127,11 @@ pub fn create_guild(user: UserRef, info: Json<CreateGuild>) -> Response {
 
     let channels = database::get_collection("channels");
     let col = database::get_collection("guilds");
-    if let Some(_) = col.find_one(doc! { "nonce": nonce.clone() }, None).unwrap() {
+    if col
+        .find_one(doc! { "nonce": nonce.clone() }, None)
+        .unwrap()
+        .is_some()
+    {
         return Response::BadRequest(json!({ "error": "Guild already created!" }));
     }
 

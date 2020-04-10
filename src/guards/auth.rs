@@ -160,20 +160,3 @@ impl<'r> FromParam<'r> for UserRef {
         }
     }
 }
-
-impl<'r> FromParam<'r> for User {
-    type Error = &'r RawStr;
-
-    fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-        let col = database::get_collection("users");
-        let result = col
-            .find_one(doc! { "_id": param.to_string() }, None)
-            .unwrap();
-
-        if let Some(user) = result {
-            Ok(from_bson(bson::Bson::Document(user)).expect("Failed to unwrap user."))
-        } else {
-            Err(param)
-        }
-    }
-}

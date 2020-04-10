@@ -89,6 +89,8 @@ pub fn mount(rocket: Rocket) -> Rocket {
             routes![
                 channel::create_group,
                 channel::channel,
+                channel::add_member,
+                channel::remove_member,
                 channel::delete,
                 channel::messages,
                 channel::get_message,

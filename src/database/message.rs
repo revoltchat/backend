@@ -20,3 +20,7 @@ pub struct Message {
 
     pub previous_content: Option<Vec<PreviousEntry>>,
 }
+
+// ? TODO: write global send message
+// ? pub fn send_message();
+// ? handle websockets?

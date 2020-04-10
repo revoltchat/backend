@@ -1,7 +1,7 @@
 use super::Response;
 use crate::database::{
-    self, get_relationship_internal, message::Message, Permission, PermissionCalculator,
-    Relationship,
+    self, get_relationship, get_relationship_internal, message::Message, Permission,
+    PermissionCalculator, Relationship,
 };
 use crate::guards::auth::UserRef;
 use crate::guards::channel::ChannelRef;
@@ -9,7 +9,7 @@ use crate::util::vec_to_set;
 
 use bson::{doc, from_bson, Bson, Bson::UtcDatetime};
 use chrono::prelude::*;
-use hashbrown::HashSet;
+use mongodb::options::FindOptions;
 use num_enum::TryFromPrimitive;
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
@@ -64,40 +64,61 @@ pub fn create_group(user: UserRef, info: Json<CreateGroup>) -> Response {
         return Response::BadRequest(json!({ "error": "Group already created!" }));
     }
 
-    let relationships = user.fetch_relationships();
-
-    let mut users = vec![];
-    for item in set {
-        if let Some(target) = UserRef::from(item) {
-            if get_relationship_internal(&user.id, &target.id, &relationships)
-                != Relationship::Friend
-            {
-                return Response::BadRequest(json!({ "error": "Not friends with user(s)." }));
-            }
-
-            users.push(Bson::String(target.id));
-        } else {
-            return Response::BadRequest(json!({ "error": "Specified non-existant user(s)." }));
+    let mut query = vec![];
+    for item in &set {
+        if item == &user.id {
+            continue;
         }
+
+        query.push(Bson::String(item.clone()));
     }
 
-    let id = Ulid::new().to_string();
-    if col
-        .insert_one(
-            doc! {
-                "_id": id.clone(),
-                "nonce": nonce,
-                "type": ChannelType::GROUPDM as u32,
-                "recipients": users,
-                "name": name,
-            },
-            None,
-        )
-        .is_ok()
-    {
-        Response::Success(json!({ "id": id }))
+    if let Ok(result) = database::get_collection("users").find(
+        doc! {
+            "_id": {
+                "$in": &query
+            }
+        },
+        FindOptions::builder().limit(query.len() as i64).build(),
+    ) {
+        if result.count() != query.len() {
+            return Response::BadRequest(json!({ "error": "Specified non-existant user(s)." }));
+        }
+
+        let relationships = user.fetch_relationships();
+        for item in set {
+            if item == user.id {
+                continue;
+            }
+
+            if get_relationship_internal(&user.id, &item, &relationships) != Relationship::Friend {
+                return Response::BadRequest(json!({ "error": "Not friends with user(s)." }));
+            }
+        }
+
+        query.push(Bson::String(user.id.clone()));
+
+        let id = Ulid::new().to_string();
+        if col
+            .insert_one(
+                doc! {
+                    "_id": id.clone(),
+                    "nonce": nonce,
+                    "type": ChannelType::GROUPDM as u32,
+                    "recipients": &query,
+                    "name": name,
+                    "owner": &user.id,
+                },
+                None,
+            )
+            .is_ok()
+        {
+            Response::Success(json!({ "id": id }))
+        } else {
+            Response::InternalServerError(json!({ "error": "Failed to create guild channel." }))
+        }
     } else {
-        Response::InternalServerError(json!({ "error": "Failed to create guild channel." }))
+        Response::InternalServerError(json!({ "error": "Failed to validate users." }))
     }
 }
 
@@ -147,6 +168,102 @@ pub fn channel(user: UserRef, target: ChannelRef) -> Option<Response> {
             }
         }
         _ => unreachable!(),
+    }
+}
+
+/// [groups] add user to channel
+#[put("/<target>/recipients/<member>")]
+pub fn add_member(user: UserRef, target: ChannelRef, member: UserRef) -> Option<Response> {
+    if target.channel_type != 1 {
+        return Some(Response::BadRequest(json!({ "error": "Not a group DM." })));
+    }
+
+    with_permissions!(user, target);
+
+    let recp = target.recipients.unwrap();
+    if recp.len() == 50 {
+        return Some(Response::BadRequest(
+            json!({ "error": "Maximum group size is 50." }),
+        ));
+    }
+
+    let set = vec_to_set(&recp);
+    if set.get(&member.id).is_some() {
+        return Some(Response::BadRequest(
+            json!({ "error": "User already in group!" }),
+        ));
+    }
+
+    match get_relationship(&user, &member) {
+        Relationship::Friend => {
+            if database::get_collection("channels")
+                .update_one(
+                    doc! { "_id": &target.id },
+                    doc! {
+                        "$push": {
+                            "recipients": &member.id
+                        }
+                    },
+                    None,
+                )
+                .is_ok()
+            {
+                Some(Response::Result(super::Status::Ok))
+            } else {
+                Some(Response::InternalServerError(
+                    json!({ "error": "Failed to add user to group." }),
+                ))
+            }
+        }
+        _ => Some(Response::BadRequest(
+            json!({ "error": "Not friends with user." }),
+        )),
+    }
+}
+
+/// [groups] remove user from channel
+#[delete("/<target>/recipients/<member>")]
+pub fn remove_member(user: UserRef, target: ChannelRef, member: UserRef) -> Option<Response> {
+    if target.channel_type != 1 {
+        return Some(Response::BadRequest(json!({ "error": "Not a group DM." })));
+    }
+
+    if &user.id == &member.id {
+        return Some(Response::BadRequest(
+            json!({ "error": "Cannot kick yourself, leave the channel instead." }),
+        ));
+    }
+
+    let permissions = with_permissions!(user, target);
+
+    if !permissions.get_kick_members() {
+        return Some(Response::LackingPermission(Permission::KickMembers));
+    }
+
+    let set = vec_to_set(&target.recipients.unwrap());
+    if set.get(&member.id).is_none() {
+        return Some(Response::BadRequest(
+            json!({ "error": "User not in group!" }),
+        ));
+    }
+
+    if database::get_collection("channels")
+        .update_one(
+            doc! { "_id": &target.id },
+            doc! {
+                "$pull": {
+                    "recipients": &member.id
+                }
+            },
+            None,
+        )
+        .is_ok()
+    {
+        Some(Response::Result(super::Status::Ok))
+    } else {
+        Some(Response::InternalServerError(
+            json!({ "error": "Failed to add user to group." }),
+        ))
     }
 }
 
@@ -297,7 +414,11 @@ pub fn send_message(
     let nonce: String = message.nonce.chars().take(32).collect();
 
     let col = database::get_collection("messages");
-    if let Some(_) = col.find_one(doc! { "nonce": nonce.clone() }, None).unwrap() {
+    if col
+        .find_one(doc! { "nonce": nonce.clone() }, None)
+        .unwrap()
+        .is_some()
+    {
         return Some(Response::BadRequest(
             json!({ "error": "Message already sent!" }),
         ));
@@ -309,10 +430,10 @@ pub fn send_message(
             .insert_one(
                 doc! {
                     "_id": id.clone(),
-                    "nonce": nonce.clone(),
+                    "nonce": nonce,
                     "channel": target.id.clone(),
-                    "author": user.id.clone(),
-                    "content": content.clone(),
+                    "author": user.id,
+                    "content": content,
                 },
                 None,
             )
@@ -321,7 +442,7 @@ pub fn send_message(
             if target.channel_type == ChannelType::DM as u8 {
                 let col = database::get_collection("channels");
                 col.update_one(
-                    doc! { "_id": target.id.clone() },
+                    doc! { "_id": &target.id },
                     doc! { "$set": { "active": true } },
                     None,
                 )
@@ -420,7 +541,7 @@ pub fn edit_message(
         doc! {
             "$set": {
                 "content": edit.content.clone(),
-                "edited": UtcDatetime(edited.clone())
+                "edited": UtcDatetime(edited)
             },
             "$push": {
                 "previous_content": {
@@ -467,7 +588,7 @@ pub fn delete_message(user: UserRef, target: ChannelRef, message: Message) -> Op
 
     let col = database::get_collection("messages");
 
-    match col.delete_one(doc! { "_id": message.id.clone() }, None) {
+    match col.delete_one(doc! { "_id": &message.id }, None) {
         Ok(_) => {
             /*websocket::queue_message(
                 get_recipients(&target),
