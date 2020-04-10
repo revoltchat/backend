@@ -76,15 +76,18 @@ pub fn guild(user: UserRef, target: GuildRef) -> Option<Response> {
         Ok(results) => {
             let mut channels = vec![];
             for item in results {
-                let channel: Channel = from_bson(bson::Bson::Document(item.unwrap()))
-                    .expect("Failed to unwrap channel.");
-
-                channels.push(json!({
-                    "id": channel.id,
-                    "last_message": channel.last_message,
-                    "name": channel.name,
-                    "description": channel.description,
-                }));
+                if let Ok(entry) = item {
+                    if let Ok(channel) =
+                        from_bson(bson::Bson::Document(entry)) as Result<Channel, _>
+                    {
+                        channels.push(json!({
+                            "id": channel.id,
+                            "last_message": channel.last_message,
+                            "name": channel.name,
+                            "description": channel.description,
+                        }));
+                    }
+                }
             }
 
             Some(Response::Success(json!({

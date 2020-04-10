@@ -1,5 +1,5 @@
 use super::Response;
-use crate::database::{self, get_relationship, get_relationship_internal, Relationship, mutual};
+use crate::database::{self, get_relationship, get_relationship_internal, mutual, Relationship};
 use crate::guards::auth::UserRef;
 use crate::routes::channel;
 
@@ -53,29 +53,29 @@ pub fn lookup(user: UserRef, query: Json<Query>) -> Response {
     let relationships = user.fetch_relationships();
     let col = database::get_collection("users");
 
-    let users = col
-        .find(
-            doc! { "username": query.username.clone() },
-            FindOptions::builder()
-                .projection(doc! { "_id": 1, "username": 1 })
-                .limit(10)
-                .build(),
-        )
-        .expect("Failed user lookup");
-
-    let mut results = Vec::new();
-    for item in users {
-        if let Ok(doc) = item {
-            let id = doc.get_str("id").unwrap();
-            results.push(json!({
-                "id": id,
-                "username": doc.get_str("username").unwrap(),
-                "relationship": get_relationship_internal(&user.id, &id, &relationships) as u8
-            }));
+    if let Ok(users) = col.find(
+        doc! { "username": query.username.clone() },
+        FindOptions::builder()
+            .projection(doc! { "_id": 1, "username": 1 })
+            .limit(10)
+            .build(),
+    ) {
+        let mut results = Vec::new();
+        for item in users {
+            if let Ok(doc) = item {
+                let id = doc.get_str("id").unwrap();
+                results.push(json!({
+                    "id": id,
+                    "username": doc.get_str("username").unwrap(),
+                    "relationship": get_relationship_internal(&user.id, &id, &relationships) as u8
+                }));
+            }
         }
-    }
 
-    Response::Success(json!(results))
+        Response::Success(json!(results))
+    } else {
+        Response::InternalServerError(json!({ "error": "Failed database query." }))
+    }
 }
 
 /// retrieve all of your DMs
@@ -83,53 +83,53 @@ pub fn lookup(user: UserRef, query: Json<Query>) -> Response {
 pub fn dms(user: UserRef) -> Response {
     let col = database::get_collection("channels");
 
-    let results = col
-        .find(
-            doc! {
-                "$or": [
-                    {
-                        "type": channel::ChannelType::DM as i32
-                    },
-                    {
-                        "type": channel::ChannelType::GROUPDM as i32
+    if let Ok(results) = col.find(
+        doc! {
+            "$or": [
+                {
+                    "type": channel::ChannelType::DM as i32
+                },
+                {
+                    "type": channel::ChannelType::GROUPDM as i32
+                }
+            ],
+            "recipients": user.id
+        },
+        FindOptions::builder().projection(doc! {}).build(),
+    ) {
+        let mut channels = Vec::new();
+        for item in results {
+            if let Ok(doc) = item {
+                let id = doc.get_str("_id").unwrap();
+                let recipients = doc.get_array("recipients").unwrap();
+
+                match doc.get_i32("type").unwrap() {
+                    0 => {
+                        channels.push(json!({
+                            "id": id,
+                            "type": 0,
+                            "recipients": recipients,
+                        }));
                     }
-                ],
-                "recipients": user.id
-            },
-            FindOptions::builder().projection(doc! {}).build(),
-        )
-        .expect("Failed channel lookup");
-
-    let mut channels = Vec::new();
-    for item in results {
-        if let Ok(doc) = item {
-            let id = doc.get_str("_id").unwrap();
-            let recipients = doc.get_array("recipients").unwrap();
-
-            match doc.get_i32("type").unwrap() {
-                0 => {
-                    channels.push(json!({
-                        "id": id,
-                        "type": 0,
-                        "recipients": recipients,
-                    }));
+                    1 => {
+                        channels.push(json!({
+                            "id": id,
+                            "type": 1,
+                            "recipients": recipients,
+                            "name": doc.get_str("name").unwrap(),
+                            "owner": doc.get_str("owner").unwrap(),
+                            "description": doc.get_str("description").unwrap_or(""),
+                        }));
+                    }
+                    _ => unreachable!(),
                 }
-                1 => {
-                    channels.push(json!({
-                        "id": id,
-                        "type": 1,
-                        "recipients": recipients,
-                        "name": doc.get_str("name").unwrap(),
-                        "owner": doc.get_str("owner").unwrap(),
-                        "description": doc.get_str("description").unwrap_or(""),
-                    }));
-                }
-                _ => unreachable!(),
             }
         }
-    }
 
-    Response::Success(json!(channels))
+        Response::Success(json!(channels))
+    } else {
+        Response::InternalServerError(json!({ "error": "Failed database query." }))
+    }
 }
 
 /// open a DM with a user
@@ -137,16 +137,16 @@ pub fn dms(user: UserRef) -> Response {
 pub fn dm(user: UserRef, target: UserRef) -> Response {
     let col = database::get_collection("channels");
 
-    match col.find_one(
+    if let Ok(result) = col.find_one(
 		doc! { "type": channel::ChannelType::DM as i32, "recipients": { "$all": [ user.id.clone(), target.id.clone() ] } },
 		None
-	).expect("Failed channel lookup") {
-        Some(channel) =>
-            Response::Success( json!({ "id": channel.get_str("_id").unwrap() })),
-		None => {
+	) {
+        if let Some(channel) = result {
+            Response::Success( json!({ "id": channel.get_str("_id").unwrap() }))
+        } else {
 			let id = Ulid::new();
 
-			col.insert_one(
+			if col.insert_one(
 				doc! {
 					"_id": id.to_string(),
 					"type": channel::ChannelType::DM as i32,
@@ -154,11 +154,15 @@ pub fn dm(user: UserRef, target: UserRef) -> Response {
 					"active": false
 				},
 				None
-			).expect("Failed insert query.");
-
-            Response::Success(json!({ "id": id.to_string() }))
+			).is_ok() {
+                Response::Success(json!({ "id": id.to_string() }))
+            } else {
+                Response::InternalServerError(json!({ "error": "Failed to create new chanel." }))
+            }
 		}
-	}
+	} else {
+        Response::InternalServerError(json!({ "error": "Failed server query." }))
+    }
 }
 
 /// retrieve all of your friends
@@ -361,9 +365,7 @@ pub fn block_user(user: UserRef, target: UserRef) -> Response {
     let col = database::get_collection("users");
 
     match get_relationship(&user, &target) {
-        Relationship::Friend
-        | Relationship::Incoming
-        | Relationship::Outgoing => {
+        Relationship::Friend | Relationship::Incoming | Relationship::Outgoing => {
             if col
                 .update_one(
                     doc! {
@@ -405,8 +407,10 @@ pub fn block_user(user: UserRef, target: UserRef) -> Response {
                     json!({ "error": "Failed to commit to database, try again." }),
                 )
             }
-        },
-        Relationship::Blocked => Response::BadRequest(json!({ "error": "Already blocked this person." })),
+        }
+        Relationship::Blocked => {
+            Response::BadRequest(json!({ "error": "Already blocked this person." }))
+        }
         Relationship::BlockedOther => {
             if col
                 .update_one(
@@ -429,9 +433,10 @@ pub fn block_user(user: UserRef, target: UserRef) -> Response {
                     json!({ "error": "Failed to commit to database, try again." }),
                 )
             }
-        },
-        Relationship::SELF
-        | Relationship::NONE => Response::BadRequest(json!({ "error": "This has no effect." })),
+        }
+        Relationship::SELF | Relationship::NONE => {
+            Response::BadRequest(json!({ "error": "This has no effect." }))
+        }
     }
 }
 
@@ -441,41 +446,56 @@ pub fn unblock_user(user: UserRef, target: UserRef) -> Response {
     let col = database::get_collection("users");
 
     match get_relationship(&user, &target) {
-        Relationship::Blocked => {
-            match get_relationship(&target, &user) {
-                Relationship::Blocked => {
-                    if col
-                        .update_one(
-                            doc! {
-                                "_id": user.id.clone(),
-                                "relations.id": target.id.clone()
-                            },
-                            doc! {
-                                "$set": {
-                                    "relations.$.status": Relationship::BlockedOther as i32
+        Relationship::Blocked => match get_relationship(&target, &user) {
+            Relationship::Blocked => {
+                if col
+                    .update_one(
+                        doc! {
+                            "_id": user.id.clone(),
+                            "relations.id": target.id.clone()
+                        },
+                        doc! {
+                            "$set": {
+                                "relations.$.status": Relationship::BlockedOther as i32
+                            }
+                        },
+                        None,
+                    )
+                    .is_ok()
+                {
+                    Response::Success(json!({ "status": Relationship::BlockedOther as u8 }))
+                } else {
+                    Response::InternalServerError(
+                        json!({ "error": "Failed to commit to database, try again." }),
+                    )
+                }
+            }
+            Relationship::BlockedOther => {
+                if col
+                    .update_one(
+                        doc! {
+                            "_id": user.id.clone()
+                        },
+                        doc! {
+                            "$pull": {
+                                "relations": {
+                                    "id": target.id.clone()
                                 }
-                            },
-                            None,
-                        )
-                        .is_ok()
-                    {
-                        Response::Success(json!({ "status": Relationship::BlockedOther as u8 }))
-                    } else {
-                        Response::InternalServerError(
-                            json!({ "error": "Failed to commit to database, try again." }),
-                        )
-                    }
-                },
-                Relationship::BlockedOther => {
+                            }
+                        },
+                        None,
+                    )
+                    .is_ok()
+                {
                     if col
                         .update_one(
                             doc! {
-                                "_id": user.id.clone()
+                                "_id": target.id
                             },
                             doc! {
                                 "$pull": {
                                     "relations": {
-                                        "id": target.id.clone()
+                                        "id": user.id
                                     }
                                 }
                             },
@@ -483,38 +503,23 @@ pub fn unblock_user(user: UserRef, target: UserRef) -> Response {
                         )
                         .is_ok()
                     {
-                        if col
-                            .update_one(
-                                doc! {
-                                    "_id": target.id
-                                },
-                                doc! {
-                                    "$pull": {
-                                        "relations": {
-                                            "id": user.id
-                                        }
-                                    }
-                                },
-                                None,
-                            )
-                            .is_ok()
-                        {
-                            Response::Success(json!({ "status": Relationship::NONE as u8 }))
-                        } else {
-                            Response::InternalServerError(
-                                json!({ "error": "Failed to commit! Target remains in same state." }),
-                            )
-                        }
+                        Response::Success(json!({ "status": Relationship::NONE as u8 }))
                     } else {
                         Response::InternalServerError(
-                            json!({ "error": "Failed to commit to database, try again." }),
+                            json!({ "error": "Failed to commit! Target remains in same state." }),
                         )
                     }
-                },
-                _ => unreachable!()
+                } else {
+                    Response::InternalServerError(
+                        json!({ "error": "Failed to commit to database, try again." }),
+                    )
+                }
             }
+            _ => unreachable!(),
         },
-        Relationship::BlockedOther => Response::BadRequest(json!({ "error": "Cannot remove block by other user." })),
+        Relationship::BlockedOther => {
+            Response::BadRequest(json!({ "error": "Cannot remove block by other user." }))
+        }
         Relationship::Friend
         | Relationship::Incoming
         | Relationship::Outgoing

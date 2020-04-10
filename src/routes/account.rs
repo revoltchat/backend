@@ -246,12 +246,14 @@ pub fn login(info: Json<Login>) -> Response {
                     Some(t) => t.to_string(),
                     None => {
                         let token = gen_token(92);
-                        col.update_one(
+                        if col.update_one(
                             doc! { "_id": &user.id },
                             doc! { "$set": { "access_token": token.clone() } },
                             None,
-                        )
-                        .expect("Failed to update user object");
+                        ).is_err() {
+                            return Response::InternalServerError(json!({ "error": "Failed database operation." }));
+                        }
+                        
                         token
                     }
                 };
@@ -275,16 +277,21 @@ pub struct Token {
 pub fn token(info: Json<Token>) -> Response {
     let col = database::get_collection("users");
 
-    if let Some(u) = col
+    if let Ok(result) = col
         .find_one(doc! { "access_token": info.token.clone() }, None)
-        .expect("Failed user lookup")
     {
-        Response::Success(json!({
-            "id": u.get_str("_id").unwrap(),
-        }))
+        if let Some(user) = result {
+            Response::Success(json!({
+                "id": user.get_str("_id").unwrap(),
+            }))
+        } else {
+            Response::Unauthorized(json!({
+                "error": "Invalid token!",
+            }))
+        }
     } else {
-        Response::Unauthorized(json!({
-            "error": "Invalid token!",
+        Response::InternalServerError(json!({
+            "error": "Failed database query.",
         }))
     }
 }

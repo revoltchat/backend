@@ -446,7 +446,8 @@ pub fn send_message(
 
             // !! this stuff can be async
             if target.channel_type == ChannelType::DM as u8
-                || target.channel_type == ChannelType::GROUPDM as u8 {
+                || target.channel_type == ChannelType::GROUPDM as u8
+            {
                 let mut update = doc! {
                     "$set": {
                         "last_message": {
@@ -458,14 +459,16 @@ pub fn send_message(
                 };
 
                 if target.channel_type == ChannelType::DM as u8 {
-                    update.get_document_mut("$set").unwrap().insert("active", true);
+                    update
+                        .get_document_mut("$set")
+                        .unwrap()
+                        .insert("active", true);
                 }
 
-                if col.update_one(
-                    doc! { "_id": &target.id },
-                    update,
-                    None,
-                ).is_ok() {
+                if col
+                    .update_one(doc! { "_id": &target.id }, update, None)
+                    .is_ok()
+                {
                     Response::Success(json!({ "id": id }))
                 } else {
                     Response::InternalServerError(json!({ "error": "Failed to update channel." }))
@@ -474,20 +477,20 @@ pub fn send_message(
                 Response::Success(json!({ "id": id }))
             }
 
-            /*websocket::queue_message(
-                get_recipients(&target),
-                json!({
-                    "type": "message",
-                    "data": {
-                        "id": id.clone(),
-                        "nonce": nonce,
-                        "channel": target.id,
-                        "author": user.id,
-                        "content": content,
-                    },
-                })
-                .to_string(),
-            );*/
+        /*websocket::queue_message(
+            get_recipients(&target),
+            json!({
+                "type": "message",
+                "data": {
+                    "id": id.clone(),
+                    "nonce": nonce,
+                    "channel": target.id,
+                    "author": user.id,
+                    "content": content,
+                },
+            })
+            .to_string(),
+        );*/
         } else {
             Response::InternalServerError(json!({
                 "error": "Failed database query."

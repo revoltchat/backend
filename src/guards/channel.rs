@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::database;
 
-use database::message::Message;
 use database::channel::LastMessage;
+use database::message::Message;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ChannelRef {

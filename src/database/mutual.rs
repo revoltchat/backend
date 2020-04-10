@@ -1,7 +1,7 @@
 use super::get_collection;
 
 use bson::doc;
-use mongodb::options::{FindOptions, FindOneOptions};
+use mongodb::options::{FindOneOptions, FindOptions};
 
 pub fn find_mutual_guilds(user_id: &str, target_id: &str) -> Vec<String> {
     let col = get_collection("guilds");
@@ -12,9 +12,7 @@ pub fn find_mutual_guilds(user_id: &str, target_id: &str) -> Vec<String> {
                 { "members": { "$elemMatch": { "id": target_id } } },
             ]
         },
-        FindOptions::builder()
-            .projection(doc! { "_id": 1 })
-            .build(),
+        FindOptions::builder().projection(doc! { "_id": 1 }).build(),
     ) {
         let mut results = vec![];
 
@@ -39,9 +37,7 @@ pub fn find_mutual_friends(user_id: &str, target_id: &str) -> Vec<String> {
                 { "relations": { "$elemMatch": { "id": target_id, "status": 0 } } },
             ]
         },
-        FindOptions::builder()
-            .projection(doc! { "_id": 1 })
-            .build(),
+        FindOptions::builder().projection(doc! { "_id": 1 }).build(),
     ) {
         let mut results = vec![];
 
@@ -67,9 +63,7 @@ pub fn find_mutual_groups(user_id: &str, target_id: &str) -> Vec<String> {
                 { "recipients": target_id },
             ]
         },
-        FindOptions::builder()
-            .projection(doc! { "_id": 1 })
-            .build(),
+        FindOptions::builder().projection(doc! { "_id": 1 }).build(),
     ) {
         let mut results = vec![];
 
