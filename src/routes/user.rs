@@ -1,5 +1,5 @@
 use super::Response;
-use crate::database::{self, get_relationship, get_relationship_internal, Relationship};
+use crate::database::{self, get_relationship, get_relationship_internal, Relationship, mutual};
 use crate::guards::auth::UserRef;
 use crate::routes::channel;
 
@@ -32,7 +32,12 @@ pub fn user(user: UserRef, target: UserRef) -> Response {
     Response::Success(json!({
         "id": target.id,
         "username": target.username,
-        "relationship": get_relationship(&user, &target) as u8
+        "relationship": get_relationship(&user, &target) as u8,
+        "mutual": {
+            "guilds": mutual::find_mutual_guilds(&user.id, &target.id),
+            "friends": mutual::find_mutual_friends(&user.id, &target.id),
+            "groups": mutual::find_mutual_groups(&user.id, &target.id),
+        }
     }))
 }
 

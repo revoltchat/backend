@@ -173,7 +173,7 @@ impl PermissionCalculator {
                             || relationship == Relationship::BlockedOther
                         {
                             permissions = 1;
-                        } else if has_mutual_connection(self.user.id, other_user.to_string()) {
+                        } else if has_mutual_connection(&self.user.id, other_user) {
                             permissions = 177;
                         }
                     }
