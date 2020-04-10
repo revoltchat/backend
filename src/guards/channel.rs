@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::database;
 
 use database::message::Message;
+use database::channel::LastMessage;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ChannelRef {
@@ -14,6 +15,8 @@ pub struct ChannelRef {
     pub id: String,
     #[serde(rename = "type")]
     pub channel_type: u8,
+
+    pub last_message: Option<LastMessage>,
 
     // information required for permission calculations
     pub recipients: Option<Vec<String>>,
@@ -44,6 +47,7 @@ impl<'r> FromParam<'r> for ChannelRef {
                     .projection(doc! {
                         "_id": 1,
                         "type": 1,
+                        "last_message": 1,
                         "recipients": 1,
                         "guild": 1,
                         "owner": 1,

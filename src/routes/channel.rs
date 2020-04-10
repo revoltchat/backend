@@ -131,6 +131,7 @@ pub fn channel(user: UserRef, target: ChannelRef) -> Option<Response> {
         0 => Some(Response::Success(json!({
             "id": target.id,
             "type": target.channel_type,
+            "last_message": target.last_message,
             "recipients": target.recipients,
         }))),
         1 => {
@@ -142,6 +143,7 @@ pub fn channel(user: UserRef, target: ChannelRef) -> Option<Response> {
                 Some(Response::Success(json!({
                     "id": target.id,
                     "type": target.channel_type,
+                    "last_message": target.last_message,
                     "recipients": target.recipients,
                     "name": info.get_str("name").unwrap(),
                     "owner": info.get_str("owner").unwrap(),
@@ -429,24 +431,47 @@ pub fn send_message(
         if col
             .insert_one(
                 doc! {
-                    "_id": id.clone(),
+                    "_id": &id,
                     "nonce": nonce,
-                    "channel": target.id.clone(),
-                    "author": user.id,
-                    "content": content,
+                    "channel": &target.id,
+                    "author": &user.id,
+                    "content": &content,
                 },
                 None,
             )
             .is_ok()
         {
-            if target.channel_type == ChannelType::DM as u8 {
-                let col = database::get_collection("channels");
-                col.update_one(
+            let short_content: String = content.chars().take(24).collect();
+            let col = database::get_collection("channels");
+
+            // !! this stuff can be async
+            if target.channel_type == ChannelType::DM as u8
+                || target.channel_type == ChannelType::GROUPDM as u8 {
+                let mut update = doc! {
+                    "$set": {
+                        "last_message": {
+                            "id": &id,
+                            "user_id": &user.id,
+                            "short_content": short_content,
+                        }
+                    }
+                };
+
+                if target.channel_type == ChannelType::DM as u8 {
+                    update.get_document_mut("$set").unwrap().insert("active", true);
+                }
+
+                if col.update_one(
                     doc! { "_id": &target.id },
-                    doc! { "$set": { "active": true } },
+                    update,
                     None,
-                )
-                .unwrap();
+                ).is_ok() {
+                    Response::Success(json!({ "id": id }))
+                } else {
+                    Response::InternalServerError(json!({ "error": "Failed to update channel." }))
+                }
+            } else {
+                Response::Success(json!({ "id": id }))
             }
 
             /*websocket::queue_message(
@@ -463,8 +488,6 @@ pub fn send_message(
                 })
                 .to_string(),
             );*/
-
-            Response::Success(json!({ "id": id }))
         } else {
             Response::InternalServerError(json!({
                 "error": "Failed database query."
