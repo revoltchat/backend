@@ -24,7 +24,6 @@ pub struct Guild {
     pub owner: String,
 
     pub channels: Vec<String>,
-    pub members: Vec<Member>,
     pub invites: Vec<Invite>,
 
     pub default_permissions: u32,

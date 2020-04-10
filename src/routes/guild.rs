@@ -1,10 +1,11 @@
 use super::channel::ChannelType;
 use super::Response;
-use crate::database::{self, channel::Channel, PermissionCalculator};
+use crate::database::{self, channel::Channel, PermissionCalculator, Permission};
 use crate::guards::auth::UserRef;
 use crate::guards::guild::GuildRef;
 
 use bson::{doc, from_bson, Bson};
+use mongodb::options::FindOptions;
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
@@ -26,32 +27,59 @@ macro_rules! with_permissions {
 /// fetch your guilds
 #[get("/@me")]
 pub fn my_guilds(user: UserRef) -> Response {
-    let col = database::get_collection("guilds");
-    let guilds = col
-        .find(
+    if let Ok(result) = database::get_collection("members").find(
+        doc! {
+            "_id.user": &user.id
+        },
+        None,
+    ) {
+        let mut guilds = vec![];
+        for item in result {
+            if let Ok(entry) = item {
+                guilds.push(Bson::String(
+                    entry
+                        .get_document("_id")
+                        .unwrap()
+                        .get_str("guild")
+                        .unwrap()
+                        .to_string(),
+                ));
+            }
+        }
+
+        if let Ok(result) = database::get_collection("guilds").find(
             doc! {
-                "members": {
-                    "$elemMatch": {
-                        "id": user.id,
-                    }
+                "_id": {
+                    "$in": guilds
                 }
             },
-            None,
-        )
-        .unwrap();
+            FindOptions::builder()
+                .projection(doc! {
+                    "_id": 1,
+                    "name": 1,
+                    "description": 1,
+                    "owner": 1,
+                })
+                .build(),
+        ) {
+            let mut parsed = vec![];
+            for item in result {
+                let doc = item.unwrap();
+                parsed.push(json!({
+                    "id": doc.get_str("_id").unwrap(),
+                    "name": doc.get_str("name").unwrap(),
+                    "description": doc.get_str("description").unwrap(),
+                    "owner": doc.get_str("owner").unwrap(),
+                }));
+            }
 
-    let mut parsed = vec![];
-    for item in guilds {
-        let doc = item.unwrap();
-        parsed.push(json!({
-            "id": doc.get_str("_id").unwrap(),
-            "name": doc.get_str("name").unwrap(),
-            "description": doc.get_str("description").unwrap(),
-            "owner": doc.get_str("owner").unwrap(),
-        }));
+            Response::Success(json!(parsed))
+        } else {
+            Response::InternalServerError(json!({ "error": "Failed to fetch guilds." }))
+        }
+    } else {
+        Response::InternalServerError(json!({ "error": "Failed to fetch memberships." }))
     }
-
-    Response::Success(json!(parsed))
 }
 
 /// fetch a guild
@@ -157,21 +185,33 @@ pub fn create_guild(user: UserRef, info: Json<CreateGuild>) -> Response {
         );
     }
 
+    if database::get_collection("members")
+        .insert_one(
+            doc! {
+                "_id": {
+                    "guild": &id,
+                    "user": &user.id
+                }
+            },
+            None,
+        )
+        .is_err()
+    {
+        return Response::InternalServerError(
+            json!({ "error": "Failed to add you to members list." }),
+        );
+    }
+
     if col
         .insert_one(
             doc! {
-                "_id": id.clone(),
+                "_id": &id,
                 "nonce": nonce,
                 "name": name,
                 "description": description,
-                "owner": user.id.clone(),
+                "owner": &user.id,
                 "channels": [
-                    channel_id.clone()
-                ],
-                "members": [
-                    {
-                        "id": user.id,
-                    }
+                    &channel_id
                 ],
                 "invites": [],
                 "default_permissions": 51,
@@ -187,5 +227,89 @@ pub fn create_guild(user: UserRef, info: Json<CreateGuild>) -> Response {
             .expect("Failed to delete the channel we just made.");
 
         Response::InternalServerError(json!({ "error": "Failed to create guild." }))
+    }
+}
+
+/// fetch a guild's member
+#[get("/<target>/members")]
+pub fn fetch_members(user: UserRef, target: GuildRef) -> Option<Response> {
+    with_permissions!(user, target);
+
+    if let Ok(result) =
+        database::get_collection("members").find(doc! { "_id.guild": target.id }, None)
+    {
+        let mut users = vec![];
+
+        for item in result {
+            if let Ok(doc) = item {
+                users.push(json!({
+                    "id": doc.get_document("_id").unwrap().get_str("user").unwrap(),
+                    "nickname": doc.get_str("nickname").ok(),
+                }));
+            }
+        }
+
+        Some(Response::Success(json!(users)))
+    } else {
+        Some(Response::InternalServerError(
+            json!({ "error": "Failed to fetch members." }),
+        ))
+    }
+}
+
+/// fetch a guild member
+#[get("/<target>/members/<other>")]
+pub fn fetch_member(user: UserRef, target: GuildRef, other: String) -> Option<Response> {
+    with_permissions!(user, target);
+
+    if let Ok(result) = database::get_collection("members").find_one(
+        doc! {
+            "_id.guild": &target.id,
+            "_id.user": &other,
+        },
+        None,
+    ) {
+        if let Some(doc) = result {
+            Some(Response::Success(json!({
+                "id": doc.get_document("_id").unwrap().get_str("user").unwrap(),
+                "nickname": doc.get_str("nickname").ok(),
+            })))
+        } else {
+            Some(Response::NotFound(
+                json!({ "error": "User not part of guild." }),
+            ))
+        }
+    } else {
+        Some(Response::InternalServerError(
+            json!({ "error": "Failed to fetch member." }),
+        ))
+    }
+}
+
+/// kick a guild member
+#[delete("/<target>/members/<other>")]
+pub fn kick_member(user: UserRef, target: GuildRef, other: String) -> Option<Response> {
+    let permissions = with_permissions!(user, target);
+
+    if !permissions.get_kick_members() {
+        return Some(Response::LackingPermission(Permission::KickMembers));
+    }
+
+    if user.id == other {
+        return Some(Response::BadRequest(json!({ "error": "Cannot kick yourself." })))
+    }
+
+    if database::get_collection("members").delete_one(
+        doc! {
+            "_id.guild": &target.id,
+            "_id.user": &other,
+        },
+        None,
+    ).is_ok() {
+        Some(Response::Result(super::Status::Ok))
+    } else {
+        Some(Response::InternalServerError(
+            json!({ "error": "Failed to kick member." }),
+        ))
     }
 }

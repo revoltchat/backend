@@ -4,12 +4,12 @@ use bson::doc;
 use mongodb::options::{FindOneOptions, FindOptions};
 
 pub fn find_mutual_guilds(user_id: &str, target_id: &str) -> Vec<String> {
-    let col = get_collection("guilds");
+    let col = get_collection("members");
     if let Ok(result) = col.find(
         doc! {
             "$and": [
-                { "members": { "$elemMatch": { "id": user_id   } } },
-                { "members": { "$elemMatch": { "id": target_id } } },
+                { "id": user_id   },
+                { "id": target_id },
             ]
         },
         FindOptions::builder().projection(doc! { "_id": 1 }).build(),

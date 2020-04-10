@@ -246,14 +246,19 @@ pub fn login(info: Json<Login>) -> Response {
                     Some(t) => t.to_string(),
                     None => {
                         let token = gen_token(92);
-                        if col.update_one(
-                            doc! { "_id": &user.id },
-                            doc! { "$set": { "access_token": token.clone() } },
-                            None,
-                        ).is_err() {
-                            return Response::InternalServerError(json!({ "error": "Failed database operation." }));
+                        if col
+                            .update_one(
+                                doc! { "_id": &user.id },
+                                doc! { "$set": { "access_token": token.clone() } },
+                                None,
+                            )
+                            .is_err()
+                        {
+                            return Response::InternalServerError(
+                                json!({ "error": "Failed database operation." }),
+                            );
                         }
-                        
+
                         token
                     }
                 };
@@ -277,9 +282,7 @@ pub struct Token {
 pub fn token(info: Json<Token>) -> Response {
     let col = database::get_collection("users");
 
-    if let Ok(result) = col
-        .find_one(doc! { "access_token": info.token.clone() }, None)
-    {
+    if let Ok(result) = col.find_one(doc! { "access_token": info.token.clone() }, None) {
         if let Some(user) = result {
             Response::Success(json!({
                 "id": user.get_str("_id").unwrap(),

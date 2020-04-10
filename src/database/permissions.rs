@@ -1,4 +1,5 @@
 use super::mutual::has_mutual_connection;
+use crate::database::get_collection;
 use crate::database::user::UserRelationship;
 use crate::guards::auth::UserRef;
 use crate::guards::channel::ChannelRef;
@@ -32,6 +33,7 @@ pub enum Permission {
     ManageChannels = 128,
     ManageServer = 256,
     ManageRoles = 512,
+    SendDirectMessages = 1024,
 }
 
 bitfield! {
@@ -47,6 +49,7 @@ bitfield! {
     pub get_manage_channels, set_manage_channels: 24;
     pub get_manage_server, set_manage_server: 23;
     pub get_manage_roles, set_manage_roles: 22;
+    pub get_send_direct_messages, set_send_direct_messages: 21;
 }
 
 pub fn get_relationship_internal(
@@ -134,21 +137,20 @@ impl PermissionCalculator {
 
         let mut permissions: u32 = 0;
         if let Some(guild) = guild {
-            if let Some(_data) = guild.fetch_data_given(
+            if let Ok(result) = get_collection("members").find_one(
                 doc! {
-                    "members": {
-                        "$elemMatch": {
-                            "id": &self.user.id,
-                        }
-                    }
+                    "_id.user": &self.user.id,
+                    "_id.guild": &guild.id,
                 },
-                doc! {},
+                None,
             ) {
-                if guild.owner == self.user.id {
-                    return u32::MAX;
-                }
+                if result.is_some() {
+                    if guild.owner == self.user.id {
+                        return u32::MAX;
+                    }
 
-                permissions = guild.default_permissions as u32;
+                    permissions = guild.default_permissions as u32;
+                }
             }
         }
 

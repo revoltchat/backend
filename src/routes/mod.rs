@@ -103,6 +103,13 @@ pub fn mount(rocket: Rocket) -> Rocket {
         )
         .mount(
             "/api/guild",
-            routes![guild::my_guilds, guild::guild, guild::create_guild],
+            routes![
+                guild::my_guilds,
+                guild::guild,
+                guild::create_guild,
+                guild::fetch_members,
+                guild::fetch_member,
+                guild::kick_member
+            ],
         )
 }
