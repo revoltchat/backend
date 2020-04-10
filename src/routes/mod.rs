@@ -81,7 +81,9 @@ pub fn mount(rocket: Rocket) -> Rocket {
                 user::get_friends,
                 user::get_friend,
                 user::add_friend,
-                user::remove_friend
+                user::remove_friend,
+                user::block_user,
+                user::unblock_user
             ],
         )
         .mount(

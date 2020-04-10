@@ -177,18 +177,15 @@ pub fn get_friends(user: UserRef) -> Response {
 /// retrieve friend status with user
 #[get("/<target>/friend")]
 pub fn get_friend(user: UserRef, target: UserRef) -> Response {
-    let relationship = get_relationship(&user, &target);
-
-    Response::Success(json!({ "status": relationship as u8 }))
+    Response::Success(json!({ "status": get_relationship(&user, &target) as u8 }))
 }
 
 /// create or accept a friend request
 #[put("/<target>/friend")]
 pub fn add_friend(user: UserRef, target: UserRef) -> Response {
-    let relationship = get_relationship(&user, &target);
     let col = database::get_collection("users");
 
-    match relationship {
+    match get_relationship(&user, &target) {
         Relationship::Friend => Response::BadRequest(json!({ "error": "Already friends." })),
         Relationship::Outgoing => {
             Response::BadRequest(json!({ "error": "Already sent a friend request." }))
@@ -298,10 +295,9 @@ pub fn add_friend(user: UserRef, target: UserRef) -> Response {
 /// remove a friend or deny a request
 #[delete("/<target>/friend")]
 pub fn remove_friend(user: UserRef, target: UserRef) -> Response {
-    let relationship = get_relationship(&user, &target);
     let col = database::get_collection("users");
 
-    match relationship {
+    match get_relationship(&user, &target) {
         Relationship::Friend | Relationship::Outgoing | Relationship::Incoming => {
             if col
                 .update_one(
@@ -335,7 +331,7 @@ pub fn remove_friend(user: UserRef, target: UserRef) -> Response {
                     )
                     .is_ok()
                 {
-                    Response::Result(super::Status::Ok)
+                    Response::Success(json!({ "status": Relationship::NONE as u8 }))
                 } else {
                     Response::InternalServerError(
                         json!({ "error": "Failed to commit! Target remains in same state." }),
@@ -351,5 +347,173 @@ pub fn remove_friend(user: UserRef, target: UserRef) -> Response {
         | Relationship::BlockedOther
         | Relationship::NONE
         | Relationship::SELF => Response::BadRequest(json!({ "error": "This has no effect." })),
+    }
+}
+
+/// block a user
+#[put("/<target>/block")]
+pub fn block_user(user: UserRef, target: UserRef) -> Response {
+    let col = database::get_collection("users");
+
+    match get_relationship(&user, &target) {
+        Relationship::Friend
+        | Relationship::Incoming
+        | Relationship::Outgoing => {
+            if col
+                .update_one(
+                    doc! {
+                        "_id": user.id.clone(),
+                        "relations.id": target.id.clone()
+                    },
+                    doc! {
+                        "$set": {
+                            "relations.$.status": Relationship::Blocked as i32
+                        }
+                    },
+                    None,
+                )
+                .is_ok()
+            {
+                if col
+                    .update_one(
+                        doc! {
+                            "_id": target.id,
+                            "relations.id": user.id
+                        },
+                        doc! {
+                            "$set": {
+                                "relations.$.status": Relationship::BlockedOther as i32
+                            }
+                        },
+                        None,
+                    )
+                    .is_ok()
+                {
+                    Response::Success(json!({ "status": Relationship::Blocked as u8 }))
+                } else {
+                    Response::InternalServerError(
+                        json!({ "error": "Failed to commit! Try blocking the user again, remove it first." }),
+                    )
+                }
+            } else {
+                Response::InternalServerError(
+                    json!({ "error": "Failed to commit to database, try again." }),
+                )
+            }
+        },
+        Relationship::Blocked => Response::BadRequest(json!({ "error": "Already blocked this person." })),
+        Relationship::BlockedOther => {
+            if col
+                .update_one(
+                    doc! {
+                        "_id": user.id.clone(),
+                        "relations.id": target.id.clone()
+                    },
+                    doc! {
+                        "$set": {
+                            "relations.$.status": Relationship::Blocked as i32
+                        }
+                    },
+                    None,
+                )
+                .is_ok()
+            {
+                Response::Success(json!({ "status": Relationship::Blocked as u8 }))
+            } else {
+                Response::InternalServerError(
+                    json!({ "error": "Failed to commit to database, try again." }),
+                )
+            }
+        },
+        Relationship::SELF
+        | Relationship::NONE => Response::BadRequest(json!({ "error": "This has no effect." })),
+    }
+}
+
+/// unblock a user
+#[delete("/<target>/block")]
+pub fn unblock_user(user: UserRef, target: UserRef) -> Response {
+    let col = database::get_collection("users");
+
+    match get_relationship(&user, &target) {
+        Relationship::Blocked => {
+            match get_relationship(&target, &user) {
+                Relationship::Blocked => {
+                    if col
+                        .update_one(
+                            doc! {
+                                "_id": user.id.clone(),
+                                "relations.id": target.id.clone()
+                            },
+                            doc! {
+                                "$set": {
+                                    "relations.$.status": Relationship::BlockedOther as i32
+                                }
+                            },
+                            None,
+                        )
+                        .is_ok()
+                    {
+                        Response::Success(json!({ "status": Relationship::BlockedOther as u8 }))
+                    } else {
+                        Response::InternalServerError(
+                            json!({ "error": "Failed to commit to database, try again." }),
+                        )
+                    }
+                },
+                Relationship::BlockedOther => {
+                    if col
+                        .update_one(
+                            doc! {
+                                "_id": user.id.clone()
+                            },
+                            doc! {
+                                "$pull": {
+                                    "relations": {
+                                        "id": target.id.clone()
+                                    }
+                                }
+                            },
+                            None,
+                        )
+                        .is_ok()
+                    {
+                        if col
+                            .update_one(
+                                doc! {
+                                    "_id": target.id
+                                },
+                                doc! {
+                                    "$pull": {
+                                        "relations": {
+                                            "id": user.id
+                                        }
+                                    }
+                                },
+                                None,
+                            )
+                            .is_ok()
+                        {
+                            Response::Success(json!({ "status": Relationship::NONE as u8 }))
+                        } else {
+                            Response::InternalServerError(
+                                json!({ "error": "Failed to commit! Target remains in same state." }),
+                            )
+                        }
+                    } else {
+                        Response::InternalServerError(
+                            json!({ "error": "Failed to commit to database, try again." }),
+                        )
+                    }
+                },
+                _ => unreachable!()
+            }
+        },
+        Relationship::BlockedOther => Response::BadRequest(json!({ "error": "Cannot remove block by other user." })),
+        Relationship::Friend
+        | Relationship::Incoming
+        | Relationship::Outgoing
+        | Relationship::SELF
+        | Relationship::NONE => Response::BadRequest(json!({ "error": "This has no effect." })),
     }
 }
