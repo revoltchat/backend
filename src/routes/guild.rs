@@ -245,7 +245,7 @@ pub fn create_invite(
 pub fn remove_invite(user: UserRef, target: GuildRef, code: String) -> Option<Response> {
     let (permissions, _) = with_permissions!(user, target);
 
-    if let Some((guild_id, _, invite)) = get_invite(&code) {
+    if let Some((guild_id, _, invite)) = get_invite(&code, None) {
         if invite.creator != user.id {
             if !permissions.get_manage_server() {
                 return Some(Response::LackingPermission(Permission::ManageServer));
@@ -303,8 +303,8 @@ pub fn fetch_invites(user: UserRef, target: GuildRef) -> Option<Response> {
 
 /// view an invite before joining
 #[get("/join/<code>", rank = 1)]
-pub fn fetch_invite(_user: UserRef, code: String) -> Response {
-    if let Some((guild_id, name, invite)) = get_invite(&code) {
+pub fn fetch_invite(user: UserRef, code: String) -> Response {
+    if let Some((guild_id, name, invite)) = get_invite(&code, user.id) {
         if let Some(channel) = ChannelRef::from(invite.channel) {
             Response::Success(json!({
                 "guild": {
@@ -327,7 +327,7 @@ pub fn fetch_invite(_user: UserRef, code: String) -> Response {
 /// join a guild using an invite
 #[post("/join/<code>", rank = 1)]
 pub fn use_invite(user: UserRef, code: String) -> Response {
-    if let Some((guild_id, _, invite)) = get_invite(&code) {
+    if let Some((guild_id, _, invite)) = get_invite(&code, Some(user.id.clone())) {
         if let Ok(result) = database::get_collection("members").find_one(
             doc! {
                 "_id.guild": &guild_id,

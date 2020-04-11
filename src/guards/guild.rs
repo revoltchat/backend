@@ -94,15 +94,33 @@ pub fn get_member(guild_id: &String, member: &String) -> Option<Member> {
     }
 }
 
-pub fn get_invite(code: &String) -> Option<(String, String, Invite)> {
-    if let Ok(result) = database::get_collection("guilds").find_one(
-        doc! {
-            "invites": {
-                "$elemMatch": {
-                    "code": &code
-                }
+pub fn get_invite<U: Into<Option<String>>>(
+    code: &String,
+    user: U,
+) -> Option<(String, String, Invite)> {
+    let mut doc = doc! {
+        "invites": {
+            "$elemMatch": {
+                "code": &code
             }
-        },
+        }
+    };
+
+    if let Some(user_id) = user.into() {
+        doc.insert(
+            "bans",
+            doc! {
+                "$not": {
+                    "$elemMatch": {
+                        "id": user_id
+                    }
+                }
+            },
+        );
+    }
+
+    if let Ok(result) = database::get_collection("guilds").find_one(
+        doc,
         FindOneOptions::builder()
             .projection(doc! {
                 "_id": 1,
