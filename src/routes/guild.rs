@@ -89,17 +89,11 @@ pub fn my_guilds(user: UserRef) -> Response {
 pub fn guild(user: UserRef, target: GuildRef) -> Option<Response> {
     with_permissions!(user, target);
 
-    let mut targets = vec![];
-    for channel in target.channels {
-        targets.push(Bson::String(channel));
-    }
-
     let col = database::get_collection("channels");
     match col.find(
         doc! {
-            "_id": {
-                "$in": targets,
-            }
+            "type": 2,
+            "guild": &target.id,
         },
         None,
     ) {
@@ -112,7 +106,6 @@ pub fn guild(user: UserRef, target: GuildRef) -> Option<Response> {
                     {
                         channels.push(json!({
                             "id": channel.id,
-                            "last_message": channel.last_message,
                             "name": channel.name,
                             "description": channel.description,
                         }));
@@ -131,6 +124,73 @@ pub fn guild(user: UserRef, target: GuildRef) -> Option<Response> {
         Err(_) => Some(Response::InternalServerError(
             json!({ "error": "Failed to fetch channels." }),
         )),
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct CreateChannel {
+    nonce: String,
+    name: String,
+    description: Option<String>,
+}
+
+/// create a new channel
+#[post("/<target>/channels", data = "<info>")]
+pub fn create_channel(
+    user: UserRef,
+    target: GuildRef,
+    info: Json<CreateChannel>,
+) -> Option<Response> {
+    let (permissions, _) = with_permissions!(user, target);
+
+    if !permissions.get_manage_channels() {
+        return Some(Response::LackingPermission(Permission::ManageChannels));
+    }
+
+    let nonce: String = info.nonce.chars().take(32).collect();
+    let name: String = info.name.chars().take(32).collect();
+    let description: String = info
+        .description
+        .clone()
+        .unwrap_or(String::new())
+        .chars()
+        .take(255)
+        .collect();
+
+    if let Ok(result) =
+        database::get_collection("channels").find_one(doc! { "nonce": &nonce }, None)
+    {
+        if result.is_some() {
+            return Some(Response::BadRequest(
+                json!({ "error": "Channel already created." }),
+            ));
+        }
+
+        let id = Ulid::new().to_string();
+        if database::get_collection("channels")
+            .insert_one(
+                doc! {
+                    "_id": &id,
+                    "nonce": &nonce,
+                    "type": 2,
+                    "guild": &target.id,
+                    "name": name,
+                    "description": description,
+                },
+                None,
+            )
+            .is_ok()
+        {
+            Some(Response::Success(json!({ "id": &id })))
+        } else {
+            Some(Response::BadRequest(
+                json!({ "error": "Couldn't create channel." }),
+            ))
+        }
+    } else {
+        Some(Response::BadRequest(
+            json!({ "error": "Failed to check if channel was made." }),
+        ))
     }
 }
 
@@ -176,6 +236,7 @@ pub fn create_guild(user: UserRef, info: Json<CreateGuild>) -> Response {
                 "_id": channel_id.clone(),
                 "type": ChannelType::GUILDCHANNEL as u32,
                 "name": "general",
+                "description": "",
                 "guild": id.clone(),
             },
             None,
@@ -212,9 +273,6 @@ pub fn create_guild(user: UserRef, info: Json<CreateGuild>) -> Response {
                 "name": name,
                 "description": description,
                 "owner": &user.id,
-                "channels": [
-                    &channel_id
-                ],
                 "invites": [],
                 "bans": [],
                 "default_permissions": 51,
@@ -416,7 +474,7 @@ pub fn unban_member(user: UserRef, target: GuildRef, other: String) -> Option<Re
                     }
                 }
             },
-            doc! { }
+            doc! {},
         )
         .is_none()
     {

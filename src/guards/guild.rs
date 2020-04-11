@@ -15,7 +15,6 @@ pub struct GuildRef {
     pub description: String,
     pub owner: String,
 
-    pub channels: Vec<String>,
     pub bans: Vec<Ban>,
 
     pub default_permissions: i32,
@@ -30,7 +29,6 @@ impl GuildRef {
                     "name": 1,
                     "description": 1,
                     "owner": 1,
-                    "channels": 1,
                     "bans": 1,
                     "default_permissions": 1
                 })

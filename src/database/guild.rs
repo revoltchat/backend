@@ -36,7 +36,6 @@ pub struct Guild {
     pub description: String,
     pub owner: String,
 
-    pub channels: Vec<String>,
     pub invites: Vec<Invite>,
     pub bans: Vec<Ban>,
 
