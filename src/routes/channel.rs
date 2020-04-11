@@ -360,7 +360,28 @@ pub fn delete(user: UserRef, target: ChannelRef) -> Option<Response> {
                 }
             }
         }
-        2 => try_delete(),
+        2 => {
+            if database::get_collection("guilds")
+                .update_one(
+                    doc! { "_id": target.guild.unwrap() },
+                    doc! {
+                        "$pull": {
+                            "invites": {
+                                "channel": &target.id
+                            }
+                        }
+                    },
+                    None,
+                )
+                .is_ok()
+            {
+                try_delete()
+            } else {
+                Some(Response::InternalServerError(
+                    json!({ "error": "Failed to remove invites." }),
+                ))
+            }
+        }
         _ => Some(Response::InternalServerError(
             json!({ "error": "Unknown error has occurred." }),
         )),
