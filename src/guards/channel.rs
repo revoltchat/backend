@@ -16,6 +16,7 @@ pub struct ChannelRef {
     #[serde(rename = "type")]
     pub channel_type: u8,
 
+    pub name: Option<String>,
     pub last_message: Option<LastMessage>,
 
     // information required for permission calculations
@@ -25,6 +26,31 @@ pub struct ChannelRef {
 }
 
 impl ChannelRef {
+    pub fn from(id: String) -> Option<ChannelRef> {
+        match database::get_collection("channels").find_one(
+            doc! { "_id": id },
+            FindOneOptions::builder()
+                .projection(doc! {
+                    "_id": 1,
+                    "type": 1,
+                    "name": 1,
+                    "last_message": 1,
+                    "recipients": 1,
+                    "guild": 1,
+                    "owner": 1,
+                })
+                .build(),
+        ) {
+            Ok(result) => match result {
+                Some(doc) => {
+                    Some(from_bson(bson::Bson::Document(doc)).expect("Failed to unwrap channel."))
+                }
+                None => None,
+            },
+            Err(_) => None,
+        }
+    }
+
     pub fn fetch_data(&self, projection: Document) -> Option<Document> {
         database::get_collection("channels")
             .find_one(
@@ -39,25 +65,8 @@ impl<'r> FromParam<'r> for ChannelRef {
     type Error = &'r RawStr;
 
     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-        let id = param.to_string();
-        let result = database::get_collection("channels")
-            .find_one(
-                doc! { "_id": id },
-                FindOneOptions::builder()
-                    .projection(doc! {
-                        "_id": 1,
-                        "type": 1,
-                        "last_message": 1,
-                        "recipients": 1,
-                        "guild": 1,
-                        "owner": 1,
-                    })
-                    .build(),
-            )
-            .unwrap();
-
-        if let Some(channel) = result {
-            Ok(from_bson(bson::Bson::Document(channel)).expect("Failed to deserialize channel."))
+        if let Some(channel) = ChannelRef::from(param.to_string()) {
+            Ok(channel)
         } else {
             Err(param)
         }

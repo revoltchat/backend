@@ -1,23 +1,16 @@
 use super::Response;
 use crate::database;
 use crate::email;
+use crate::util::gen_token;
 
 use bcrypt::{hash, verify};
 use bson::{doc, from_bson, Bson::UtcDatetime};
 use chrono::prelude::*;
 use database::user::User;
-use rand::{distributions::Alphanumeric, Rng};
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use validator::validate_email;
-
-fn gen_token(l: usize) -> String {
-    rand::thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(l)
-        .collect::<String>()
-}
 
 #[derive(Serialize, Deserialize)]
 pub struct Create {

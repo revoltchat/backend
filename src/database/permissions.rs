@@ -137,7 +137,7 @@ impl PermissionCalculator {
         };
 
         if let Some(guild) = &guild {
-            self.member = get_member(guild, &self.user.id);
+            self.member = get_member(&guild.id, &self.user.id);
         }
 
         self.guild = guild;

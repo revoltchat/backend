@@ -16,8 +16,8 @@ pub struct Member {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Invite {
-    pub id: String,
-    pub custom: bool,
+    pub code: String,
+    pub creator: String,
     pub channel: String,
 }
 

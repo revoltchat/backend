@@ -5,7 +5,7 @@ use rocket::request::FromParam;
 use serde::{Deserialize, Serialize};
 
 use crate::database;
-use crate::database::guild::{Ban, Member};
+use crate::database::guild::{Ban, Invite, Member};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GuildRef {
@@ -76,16 +76,56 @@ impl<'r> FromParam<'r> for GuildRef {
     }
 }
 
-pub fn get_member(guild: &GuildRef, member: &String) -> Option<Member> {
+pub fn get_member(guild_id: &String, member: &String) -> Option<Member> {
     if let Ok(result) = database::get_collection("members").find_one(
         doc! {
-            "_id.guild": &guild.id,
+            "_id.guild": &guild_id,
             "_id.user": &member,
         },
         None,
     ) {
         if let Some(doc) = result {
             Some(from_bson(Bson::Document(doc)).expect("Failed to unwrap member."))
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+}
+
+pub fn get_invite(code: &String) -> Option<(String, String, Invite)> {
+    if let Ok(result) = database::get_collection("guilds").find_one(
+        doc! {
+            "invites": {
+                "$elemMatch": {
+                    "code": &code
+                }
+            }
+        },
+        FindOneOptions::builder()
+            .projection(doc! {
+                "_id": 1,
+                "name": 1,
+                "invites.$": 1,
+            })
+            .build(),
+    ) {
+        if let Some(doc) = result {
+            let invite = doc
+                .get_array("invites")
+                .unwrap()
+                .iter()
+                .next()
+                .unwrap()
+                .as_document()
+                .unwrap();
+
+            Some((
+                doc.get_str("_id").unwrap().to_string(),
+                doc.get_str("name").unwrap().to_string(),
+                from_bson(Bson::Document(invite.clone())).unwrap(),
+            ))
         } else {
             None
         }

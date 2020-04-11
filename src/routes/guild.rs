@@ -2,10 +2,12 @@ use super::channel::ChannelType;
 use super::Response;
 use crate::database::{self, channel::Channel, Permission, PermissionCalculator};
 use crate::guards::auth::UserRef;
-use crate::guards::guild::{get_member, GuildRef};
+use crate::guards::channel::ChannelRef;
+use crate::guards::guild::{get_invite, get_member, GuildRef};
+use crate::util::gen_token;
 
 use bson::{doc, from_bson, Bson};
-use mongodb::options::FindOptions;
+use mongodb::options::{FindOneOptions, FindOptions};
 use rocket::request::Form;
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
@@ -195,6 +197,182 @@ pub fn create_channel(
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct InviteOptions {
+    // ? TODO: add options
+}
+
+/// create a new invite
+#[post("/<target>/channels/<channel>/invite", data = "<_options>")]
+pub fn create_invite(
+    user: UserRef,
+    target: GuildRef,
+    channel: ChannelRef,
+    _options: Json<InviteOptions>,
+) -> Option<Response> {
+    let (permissions, _) = with_permissions!(user, target);
+
+    if !permissions.get_create_invite() {
+        return Some(Response::LackingPermission(Permission::CreateInvite));
+    }
+
+    let code = gen_token(7);
+    if database::get_collection("guilds")
+        .update_one(
+            doc! { "_id": target.id },
+            doc! {
+                "$push": {
+                    "invites": {
+                        "code": &code,
+                        "creator": user.id,
+                        "channel": channel.id,
+                    }
+                }
+            },
+            None,
+        )
+        .is_ok()
+    {
+        Some(Response::Success(json!({ "code": code })))
+    } else {
+        Some(Response::BadRequest(
+            json!({ "error": "Failed to create invite." }),
+        ))
+    }
+}
+
+/// remove an invite
+#[delete("/<target>/invites/<code>")]
+pub fn remove_invite(user: UserRef, target: GuildRef, code: String) -> Option<Response> {
+    let (permissions, _) = with_permissions!(user, target);
+
+    if let Some((guild_id, _, invite)) = get_invite(&code) {
+        if invite.creator != user.id {
+            if !permissions.get_manage_server() {
+                return Some(Response::LackingPermission(Permission::ManageServer));
+            }
+        }
+
+        if database::get_collection("guilds")
+            .update_one(
+                doc! {
+                    "_id": &guild_id,
+                },
+                doc! {
+                    "$pull": {
+                        "invites": {
+                            "code": &code
+                        }
+                    }
+                },
+                None,
+            )
+            .is_ok()
+        {
+            Some(Response::Result(super::Status::Ok))
+        } else {
+            Some(Response::BadRequest(
+                json!({ "error": "Failed to delete invite." }),
+            ))
+        }
+    } else {
+        Some(Response::NotFound(
+            json!({ "error": "Failed to fetch invite or code is invalid." }),
+        ))
+    }
+}
+
+/// fetch all guild invites
+#[get("/<target>/invites")]
+pub fn fetch_invites(user: UserRef, target: GuildRef) -> Option<Response> {
+    let (permissions, _) = with_permissions!(user, target);
+
+    if !permissions.get_manage_server() {
+        return Some(Response::LackingPermission(Permission::ManageServer));
+    }
+
+    if let Some(doc) = target.fetch_data(doc! {
+        "invites": 1,
+    }) {
+        Some(Response::Success(json!(doc.get_array("invites").unwrap())))
+    } else {
+        Some(Response::InternalServerError(
+            json!({ "error": "Failed to fetch invites." }),
+        ))
+    }
+}
+
+/// view an invite before joining
+#[get("/join/<code>", rank = 1)]
+pub fn fetch_invite(_user: UserRef, code: String) -> Response {
+    if let Some((guild_id, name, invite)) = get_invite(&code) {
+        if let Some(channel) = ChannelRef::from(invite.channel) {
+            Response::Success(json!({
+                "guild": {
+                    "id": guild_id,
+                    "name": name,
+                },
+                "channel": {
+                    "id": channel.id,
+                    "name": channel.name,
+                }
+            }))
+        } else {
+            Response::BadRequest(json!({ "error": "Failed to fetch channel." }))
+        }
+    } else {
+        Response::NotFound(json!({ "error": "Failed to fetch invite or code is invalid." }))
+    }
+}
+
+/// join a guild using an invite
+#[post("/join/<code>", rank = 1)]
+pub fn use_invite(user: UserRef, code: String) -> Response {
+    if let Some((guild_id, _, invite)) = get_invite(&code) {
+        if let Ok(result) = database::get_collection("members").find_one(
+            doc! {
+                "_id.guild": &guild_id,
+                "_id.user": &user.id
+            },
+            FindOneOptions::builder()
+                .projection(doc! { "_id": 1 })
+                .build(),
+        ) {
+            if result.is_none() {
+                if database::get_collection("members")
+                    .insert_one(
+                        doc! {
+                            "_id": {
+                                "guild": &guild_id,
+                                "user": &user.id
+                            }
+                        },
+                        None,
+                    )
+                    .is_ok()
+                {
+                    Response::Success(json!({
+                        "guild": &guild_id,
+                        "channel": &invite.channel,
+                    }))
+                } else {
+                    Response::InternalServerError(
+                        json!({ "error": "Failed to add you to the guild." }),
+                    )
+                }
+            } else {
+                Response::BadRequest(json!({ "error": "Already in the guild." }))
+            }
+        } else {
+            Response::InternalServerError(
+                json!({ "error": "Failed to check if you're in the guild." }),
+            )
+        }
+    } else {
+        Response::NotFound(json!({ "error": "Failed to fetch invite or code is invalid." }))
+    }
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct CreateGuild {
     name: String,
     description: Option<String>,
@@ -323,7 +501,7 @@ pub fn fetch_members(user: UserRef, target: GuildRef) -> Option<Response> {
 pub fn fetch_member(user: UserRef, target: GuildRef, other: String) -> Option<Response> {
     with_permissions!(user, target);
 
-    if let Some(member) = get_member(&target, &other) {
+    if let Some(member) = get_member(&target.id, &other) {
         Some(Response::Success(json!({
             "id": member.id.user,
             "nickname": member.nickname,
@@ -350,7 +528,7 @@ pub fn kick_member(user: UserRef, target: GuildRef, other: String) -> Option<Res
         return Some(Response::LackingPermission(Permission::KickMembers));
     }
 
-    if get_member(&target, &other).is_none() {
+    if get_member(&target.id, &other).is_none() {
         return Some(Response::BadRequest(
             json!({ "error": "User not part of guild." }),
         ));
@@ -406,7 +584,7 @@ pub fn ban_member(
         return Some(Response::LackingPermission(Permission::BanMembers));
     }
 
-    if get_member(&target, &other).is_none() {
+    if get_member(&target.id, &other).is_none() {
         return Some(Response::BadRequest(
             json!({ "error": "User not part of guild." }),
         ));
