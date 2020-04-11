@@ -129,6 +129,98 @@ pub fn guild(user: UserRef, target: GuildRef) -> Option<Response> {
     }
 }
 
+/// delete or leave a guild
+#[delete("/<target>")]
+pub fn remove_guild(user: UserRef, target: GuildRef) -> Option<Response> {
+    with_permissions!(user, target);
+
+    if user.id == target.owner {
+        let channels = database::get_collection("channels");
+        if let Ok(result) = channels.find(
+            doc! {
+                "type": 2,
+                "guild": &target.id
+            },
+            FindOptions::builder().projection(doc! { "_id": 1 }).build(),
+        ) {
+            let mut values = vec![];
+            for item in result {
+                if let Ok(doc) = item {
+                    values.push(Bson::String(doc.get_str("_id").unwrap().to_string()));
+                }
+            }
+
+            if database::get_collection("messages")
+                .delete_many(
+                    doc! {
+                        "channel": {
+                            "$in": values
+                        }
+                    },
+                    None,
+                )
+                .is_ok()
+            {
+                if channels
+                    .delete_many(
+                        doc! {
+                            "type": 2,
+                            "guild": &target.id,
+                        },
+                        None,
+                    )
+                    .is_ok()
+                {
+                    if database::get_collection("guilds")
+                        .delete_one(
+                            doc! {
+                                "_id": &target.id
+                            },
+                            None,
+                        )
+                        .is_ok()
+                    {
+                        Some(Response::Result(super::Status::Ok))
+                    } else {
+                        Some(Response::InternalServerError(
+                            json!({ "error": "Failed to delete guild." }),
+                        ))
+                    }
+                } else {
+                    Some(Response::InternalServerError(
+                        json!({ "error": "Failed to delete guild channels." }),
+                    ))
+                }
+            } else {
+                Some(Response::InternalServerError(
+                    json!({ "error": "Failed to delete guild messages." }),
+                ))
+            }
+        } else {
+            Some(Response::InternalServerError(
+                json!({ "error": "Could not fetch channels." }),
+            ))
+        }
+    } else {
+        if database::get_collection("members")
+            .delete_one(
+                doc! {
+                    "_id.guild": &target.id,
+                    "_id.user": &user.id,
+                },
+                None,
+            )
+            .is_ok()
+        {
+            Some(Response::Result(super::Status::Ok))
+        } else {
+            Some(Response::InternalServerError(
+                json!({ "error": "Failed to remove you from the guild." }),
+            ))
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct CreateChannel {
     nonce: String,

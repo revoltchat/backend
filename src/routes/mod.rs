@@ -106,6 +106,7 @@ pub fn mount(rocket: Rocket) -> Rocket {
             routes![
                 guild::my_guilds,
                 guild::guild,
+                guild::remove_guild,
                 guild::create_channel,
                 guild::create_invite,
                 guild::remove_invite,
