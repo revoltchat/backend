@@ -42,14 +42,14 @@ pub fn user(user: UserRef, target: UserRef) -> Response {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct Query {
+pub struct LookupQuery {
     username: String,
 }
 
 /// lookup a user on Revolt
 /// currently only supports exact username searches
 #[post("/lookup", data = "<query>")]
-pub fn lookup(user: UserRef, query: Json<Query>) -> Response {
+pub fn lookup(user: UserRef, query: Json<LookupQuery>) -> Response {
     let relationships = user.fetch_relationships();
     let col = database::get_collection("users");
 

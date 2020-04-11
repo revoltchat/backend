@@ -29,13 +29,14 @@ macro_rules! with_permissions {
     ($user: expr, $target: expr) => {{
         let permissions = PermissionCalculator::new($user.clone())
             .channel($target.clone())
-            .as_permission();
+            .fetch_data();
 
-        if !permissions.get_access() {
+        let value = permissions.as_permission();
+        if !value.get_access() {
             return None;
         }
 
-        permissions
+        value
     }};
 }
 

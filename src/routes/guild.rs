@@ -1,11 +1,12 @@
 use super::channel::ChannelType;
 use super::Response;
-use crate::database::{self, channel::Channel, PermissionCalculator, Permission};
+use crate::database::{self, channel::Channel, Permission, PermissionCalculator};
 use crate::guards::auth::UserRef;
-use crate::guards::guild::GuildRef;
+use crate::guards::guild::{get_member, GuildRef};
 
 use bson::{doc, from_bson, Bson};
 use mongodb::options::FindOptions;
+use rocket::request::Form;
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
@@ -14,13 +15,14 @@ macro_rules! with_permissions {
     ($user: expr, $target: expr) => {{
         let permissions = PermissionCalculator::new($user.clone())
             .guild($target.clone())
-            .as_permission();
+            .fetch_data();
 
-        if !permissions.get_access() {
+        let value = permissions.as_permission();
+        if !value.get_access() {
             return None;
         }
 
-        permissions
+        (value, permissions.member.unwrap())
     }};
 }
 
@@ -214,6 +216,7 @@ pub fn create_guild(user: UserRef, info: Json<CreateGuild>) -> Response {
                     &channel_id
                 ],
                 "invites": [],
+                "bans": [],
                 "default_permissions": 51,
             },
             None,
@@ -262,26 +265,14 @@ pub fn fetch_members(user: UserRef, target: GuildRef) -> Option<Response> {
 pub fn fetch_member(user: UserRef, target: GuildRef, other: String) -> Option<Response> {
     with_permissions!(user, target);
 
-    if let Ok(result) = database::get_collection("members").find_one(
-        doc! {
-            "_id.guild": &target.id,
-            "_id.user": &other,
-        },
-        None,
-    ) {
-        if let Some(doc) = result {
-            Some(Response::Success(json!({
-                "id": doc.get_document("_id").unwrap().get_str("user").unwrap(),
-                "nickname": doc.get_str("nickname").ok(),
-            })))
-        } else {
-            Some(Response::NotFound(
-                json!({ "error": "User not part of guild." }),
-            ))
-        }
+    if let Some(member) = get_member(&target, &other) {
+        Some(Response::Success(json!({
+            "id": member.id.user,
+            "nickname": member.nickname,
+        })))
     } else {
         Some(Response::InternalServerError(
-            json!({ "error": "Failed to fetch member." }),
+            json!({ "error": "Failed to fetch member or user does not exist." }),
         ))
     }
 }
@@ -289,27 +280,171 @@ pub fn fetch_member(user: UserRef, target: GuildRef, other: String) -> Option<Re
 /// kick a guild member
 #[delete("/<target>/members/<other>")]
 pub fn kick_member(user: UserRef, target: GuildRef, other: String) -> Option<Response> {
-    let permissions = with_permissions!(user, target);
+    let (permissions, _) = with_permissions!(user, target);
+
+    if user.id == other {
+        return Some(Response::BadRequest(
+            json!({ "error": "Cannot kick yourself." }),
+        ));
+    }
 
     if !permissions.get_kick_members() {
         return Some(Response::LackingPermission(Permission::KickMembers));
     }
 
-    if user.id == other {
-        return Some(Response::BadRequest(json!({ "error": "Cannot kick yourself." })))
+    if get_member(&target, &other).is_none() {
+        return Some(Response::BadRequest(
+            json!({ "error": "User not part of guild." }),
+        ));
     }
 
-    if database::get_collection("members").delete_one(
-        doc! {
-            "_id.guild": &target.id,
-            "_id.user": &other,
-        },
-        None,
-    ).is_ok() {
+    if database::get_collection("members")
+        .delete_one(
+            doc! {
+                "_id.guild": &target.id,
+                "_id.user": &other,
+            },
+            None,
+        )
+        .is_ok()
+    {
         Some(Response::Result(super::Status::Ok))
     } else {
         Some(Response::InternalServerError(
             json!({ "error": "Failed to kick member." }),
+        ))
+    }
+}
+
+#[derive(Serialize, Deserialize, FromForm)]
+pub struct BanOptions {
+    reason: Option<String>,
+}
+
+/// ban a guild member
+#[put("/<target>/members/<other>/ban?<options..>")]
+pub fn ban_member(
+    user: UserRef,
+    target: GuildRef,
+    other: String,
+    options: Form<BanOptions>,
+) -> Option<Response> {
+    let (permissions, _) = with_permissions!(user, target);
+    let reason: String = options
+        .reason
+        .clone()
+        .unwrap_or("No reason specified.".to_string())
+        .chars()
+        .take(64)
+        .collect();
+
+    if user.id == other {
+        return Some(Response::BadRequest(
+            json!({ "error": "Cannot ban yourself." }),
+        ));
+    }
+
+    if !permissions.get_ban_members() {
+        return Some(Response::LackingPermission(Permission::BanMembers));
+    }
+
+    if get_member(&target, &other).is_none() {
+        return Some(Response::BadRequest(
+            json!({ "error": "User not part of guild." }),
+        ));
+    }
+
+    if database::get_collection("guilds")
+        .update_one(
+            doc! { "_id": &target.id },
+            doc! {
+                "$push": {
+                    "bans": {
+                        "id": &other,
+                        "reason": reason,
+                    }
+                }
+            },
+            None,
+        )
+        .is_err()
+    {
+        return Some(Response::BadRequest(
+            json!({ "error": "Failed to add ban to guild." }),
+        ));
+    }
+
+    if database::get_collection("members")
+        .delete_one(
+            doc! {
+                "_id.guild": &target.id,
+                "_id.user": &other,
+            },
+            None,
+        )
+        .is_ok()
+    {
+        Some(Response::Result(super::Status::Ok))
+    } else {
+        Some(Response::InternalServerError(
+            json!({ "error": "Failed to kick member after adding to ban list." }),
+        ))
+    }
+}
+
+/// unban a guild member
+#[delete("/<target>/members/<other>/ban")]
+pub fn unban_member(user: UserRef, target: GuildRef, other: String) -> Option<Response> {
+    let (permissions, _) = with_permissions!(user, target);
+
+    if user.id == other {
+        return Some(Response::BadRequest(
+            json!({ "error": "Cannot unban yourself (not checking if you're banned)." }),
+        ));
+    }
+
+    if !permissions.get_ban_members() {
+        return Some(Response::LackingPermission(Permission::BanMembers));
+    }
+
+    if target
+        .fetch_data_given(
+            doc! {
+                "bans": {
+                    "$elemMatch": {
+                        "id": &other
+                    }
+                }
+            },
+            doc! { }
+        )
+        .is_none()
+    {
+        return Some(Response::BadRequest(json!({ "error": "User not banned." })));
+    }
+
+    if database::get_collection("guilds")
+        .update_one(
+            doc! {
+                "_id": &target.id
+            },
+            doc! {
+                "$pull": {
+                    "bans": {
+                        "$elemMatch": {
+                            "id": &other
+                        }
+                    }
+                }
+            },
+            None,
+        )
+        .is_ok()
+    {
+        Some(Response::Result(super::Status::Ok))
+    } else {
+        Some(Response::BadRequest(
+            json!({ "error": "Failed to remove ban." }),
         ))
     }
 }

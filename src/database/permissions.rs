@@ -1,11 +1,10 @@
 use super::mutual::has_mutual_connection;
-use crate::database::get_collection;
+use crate::database::guild::Member;
 use crate::database::user::UserRelationship;
 use crate::guards::auth::UserRef;
 use crate::guards::channel::ChannelRef;
-use crate::guards::guild::GuildRef;
+use crate::guards::guild::{get_member, GuildRef};
 
-use bson::doc;
 use num_enum::TryFromPrimitive;
 
 #[derive(Debug, PartialEq, Eq, TryFromPrimitive)]
@@ -91,6 +90,7 @@ pub struct PermissionCalculator {
     pub user: UserRef,
     pub channel: Option<ChannelRef>,
     pub guild: Option<GuildRef>,
+    pub member: Option<Member>,
 }
 
 impl PermissionCalculator {
@@ -99,6 +99,7 @@ impl PermissionCalculator {
             user,
             channel: None,
             guild: None,
+            member: None,
         }
     }
 
@@ -116,7 +117,7 @@ impl PermissionCalculator {
         }
     }
 
-    pub fn calculate(self) -> u32 {
+    pub fn fetch_data(mut self) -> PermissionCalculator {
         let guild = if let Some(value) = self.guild {
             Some(value)
         } else if let Some(channel) = &self.channel {
@@ -135,22 +136,23 @@ impl PermissionCalculator {
             None
         };
 
-        let mut permissions: u32 = 0;
-        if let Some(guild) = guild {
-            if let Ok(result) = get_collection("members").find_one(
-                doc! {
-                    "_id.user": &self.user.id,
-                    "_id.guild": &guild.id,
-                },
-                None,
-            ) {
-                if result.is_some() {
-                    if guild.owner == self.user.id {
-                        return u32::MAX;
-                    }
+        if let Some(guild) = &guild {
+            self.member = get_member(guild, &self.user.id);
+        }
 
-                    permissions = guild.default_permissions as u32;
+        self.guild = guild;
+        self
+    }
+
+    pub fn calculate(&self) -> u32 {
+        let mut permissions: u32 = 0;
+        if let Some(guild) = &self.guild {
+            if let Some(_member) = &self.member {
+                if guild.owner == self.user.id {
+                    return u32::MAX;
                 }
+
+                permissions = guild.default_permissions as u32;
             }
         }
 
@@ -206,7 +208,7 @@ impl PermissionCalculator {
         permissions
     }
 
-    pub fn as_permission(self) -> MemberPermissions<[u32; 1]> {
+    pub fn as_permission(&self) -> MemberPermissions<[u32; 1]> {
         MemberPermissions([self.calculate()])
     }
 }

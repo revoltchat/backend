@@ -1,10 +1,11 @@
-use bson::{doc, from_bson, Document};
+use bson::{doc, from_bson, Bson, Document};
 use mongodb::options::FindOneOptions;
 use rocket::http::RawStr;
 use rocket::request::FromParam;
 use serde::{Deserialize, Serialize};
 
 use crate::database;
+use crate::database::guild::{Ban, Member};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GuildRef {
@@ -15,6 +16,8 @@ pub struct GuildRef {
     pub owner: String,
 
     pub channels: Vec<String>,
+    pub bans: Vec<Ban>,
+
     pub default_permissions: i32,
 }
 
@@ -28,6 +31,7 @@ impl GuildRef {
                     "description": 1,
                     "owner": 1,
                     "channels": 1,
+                    "bans": 1,
                     "default_permissions": 1
                 })
                 .build(),
@@ -71,5 +75,23 @@ impl<'r> FromParam<'r> for GuildRef {
         } else {
             Err(param)
         }
+    }
+}
+
+pub fn get_member(guild: &GuildRef, member: &String) -> Option<Member> {
+    if let Ok(result) = database::get_collection("members").find_one(
+        doc! {
+            "_id.guild": &guild.id,
+            "_id.user": &member,
+        },
+        None,
+    ) {
+        if let Some(doc) = result {
+            Some(from_bson(Bson::Document(doc)).expect("Failed to unwrap member."))
+        } else {
+            None
+        }
+    } else {
+        None
     }
 }

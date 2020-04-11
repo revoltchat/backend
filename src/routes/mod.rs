@@ -109,7 +109,9 @@ pub fn mount(rocket: Rocket) -> Rocket {
                 guild::create_guild,
                 guild::fetch_members,
                 guild::fetch_member,
-                guild::kick_member
+                guild::kick_member,
+                guild::ban_member,
+                guild::unban_member
             ],
         )
 }
