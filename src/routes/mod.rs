@@ -19,6 +19,8 @@ pub enum Response {
     Success(JsonValue),
     #[response()]
     Redirect(Redirect),
+    #[response(status = 207)]
+    PartialStatus(JsonValue),
     #[response(status = 400)]
     BadRequest(JsonValue),
     #[response(status = 401)]
@@ -51,8 +53,7 @@ impl<'a> rocket::response::Responder<'a> for Permission {
             .header(ContentType::JSON)
             .sized_body(Cursor::new(format!(
                 "{{\"error\":\"Lacking permission: {:?}.\",\"permission\":{}}}",
-                self,
-                self as u32,
+                self, self as u32,
             )))
             .ok()
     }

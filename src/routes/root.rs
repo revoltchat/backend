@@ -6,6 +6,6 @@ use bson::doc;
 #[get("/")]
 pub fn root() -> Response {
     Response::Success(json!({
-        "revolt": "0.0.1"
+        "revolt": "0.1.0"
     }))
 }

@@ -183,7 +183,7 @@ pub fn add_member(user: UserRef, target: ChannelRef, member: UserRef) -> Option<
 
     with_permissions!(user, target);
 
-    let recp = target.recipients.unwrap();
+    let recp = target.recipients.as_ref().unwrap();
     if recp.len() == 50 {
         return Some(Response::BadRequest(
             json!({ "error": "Maximum group size is 50." }),
@@ -201,7 +201,7 @@ pub fn add_member(user: UserRef, target: ChannelRef, member: UserRef) -> Option<
         Relationship::Friend => {
             if database::get_collection("channels")
                 .update_one(
-                    doc! { "_id": &target.id },
+                    doc! { "_id": target.id.clone() },
                     doc! {
                         "$push": {
                             "recipients": &member.id
@@ -211,7 +211,23 @@ pub fn add_member(user: UserRef, target: ChannelRef, member: UserRef) -> Option<
                 )
                 .is_ok()
             {
-                Some(Response::Result(super::Status::Ok))
+                if (Message {
+                    id: Ulid::new().to_string(),
+                    nonce: None,
+                    channel: target.id.clone(),
+                    author: "system".to_string(),
+                    content: format!("<@{}> added <@{}> to the group.", &user.id, &member.id),
+                    edited: None,
+                    previous_content: None,
+                })
+                .send(&target)
+                {
+                    Some(Response::Result(super::Status::Ok))
+                } else {
+                    Some(Response::PartialStatus(
+                        json!({ "error": "Failed to send join message, but user has been added." }),
+                    ))
+                }
             } else {
                 Some(Response::InternalServerError(
                     json!({ "error": "Failed to add user to group." }),
@@ -243,7 +259,7 @@ pub fn remove_member(user: UserRef, target: ChannelRef, member: UserRef) -> Opti
         return Some(Response::LackingPermission(Permission::KickMembers));
     }
 
-    let set = vec_to_set(&target.recipients.unwrap());
+    let set = vec_to_set(target.recipients.as_ref().unwrap());
     if set.get(&member.id).is_none() {
         return Some(Response::BadRequest(
             json!({ "error": "User not in group!" }),
@@ -262,7 +278,23 @@ pub fn remove_member(user: UserRef, target: ChannelRef, member: UserRef) -> Opti
         )
         .is_ok()
     {
-        Some(Response::Result(super::Status::Ok))
+        if (Message {
+            id: Ulid::new().to_string(),
+            nonce: None,
+            channel: target.id.clone(),
+            author: "system".to_string(),
+            content: format!("<@{}> removed <@{}> from the group.", &user.id, &member.id),
+            edited: None,
+            previous_content: None,
+        })
+        .send(&target)
+        {
+            Some(Response::Result(super::Status::Ok))
+        } else {
+            Some(Response::PartialStatus(
+                json!({ "error": "Failed to send join message, but user has been removed." }),
+            ))
+        }
     } else {
         Some(Response::InternalServerError(
             json!({ "error": "Failed to add user to group." }),
@@ -323,15 +355,19 @@ pub fn delete(user: UserRef, target: ChannelRef) -> Option<Response> {
             }
         }
         1 => {
-            let mut recipients =
-                vec_to_set(&target.recipients.expect("Missing recipients on Group DM."));
-            let owner = target.owner.expect("Missing owner on Group DM.");
+            let mut recipients = vec_to_set(
+                target
+                    .recipients
+                    .as_ref()
+                    .expect("Missing recipients on Group DM."),
+            );
+            let owner = target.owner.as_ref().expect("Missing owner on Group DM.");
 
             if recipients.len() == 1 {
                 try_delete()
             } else {
                 recipients.remove(&user.id);
-                let new_owner = if owner == user.id {
+                let new_owner = if owner == &user.id {
                     recipients.iter().next().unwrap()
                 } else {
                     &owner
@@ -352,7 +388,23 @@ pub fn delete(user: UserRef, target: ChannelRef) -> Option<Response> {
                     )
                     .is_ok()
                 {
-                    Some(Response::Result(super::Status::Ok))
+                    if (Message {
+                        id: Ulid::new().to_string(),
+                        nonce: None,
+                        channel: target.id.clone(),
+                        author: "system".to_string(),
+                        content: format!("<@{}> left the group.", &user.id),
+                        edited: None,
+                        previous_content: None,
+                    })
+                    .send(&target)
+                    {
+                        Some(Response::Result(super::Status::Ok))
+                    } else {
+                        Some(Response::PartialStatus(
+                            json!({ "error": "Failed to send leave message, but you have left the group." }),
+                        ))
+                    }
                 } else {
                     Some(Response::InternalServerError(
                         json!({ "error": "Failed to remove you from the group." }),
@@ -453,76 +505,23 @@ pub fn send_message(
     }
 
     let id = Ulid::new().to_string();
-    Some(
-        if col
-            .insert_one(
-                doc! {
-                    "_id": &id,
-                    "nonce": nonce,
-                    "channel": &target.id,
-                    "author": &user.id,
-                    "content": &content,
-                },
-                None,
-            )
-            .is_ok()
-        {
-            let short_content: String = content.chars().take(24).collect();
-            let col = database::get_collection("channels");
+    let message = Message {
+        id: id.clone(),
+        nonce: Some(nonce),
+        channel: target.id.clone(),
+        author: user.id,
+        content,
+        edited: None,
+        previous_content: None,
+    };
 
-            // !! this stuff can be async
-            if target.channel_type == ChannelType::DM as u8
-                || target.channel_type == ChannelType::GROUPDM as u8
-            {
-                let mut update = doc! {
-                    "$set": {
-                        "last_message": {
-                            "id": &id,
-                            "user_id": &user.id,
-                            "short_content": short_content,
-                        }
-                    }
-                };
-
-                if target.channel_type == ChannelType::DM as u8 {
-                    update
-                        .get_document_mut("$set")
-                        .unwrap()
-                        .insert("active", true);
-                }
-
-                if col
-                    .update_one(doc! { "_id": &target.id }, update, None)
-                    .is_ok()
-                {
-                    Response::Success(json!({ "id": id }))
-                } else {
-                    Response::InternalServerError(json!({ "error": "Failed to update channel." }))
-                }
-            } else {
-                Response::Success(json!({ "id": id }))
-            }
-
-        /*websocket::queue_message(
-            get_recipients(&target),
-            json!({
-                "type": "message",
-                "data": {
-                    "id": id.clone(),
-                    "nonce": nonce,
-                    "channel": target.id,
-                    "author": user.id,
-                    "content": content,
-                },
-            })
-            .to_string(),
-        );*/
-        } else {
-            Response::InternalServerError(json!({
-                "error": "Failed database query."
-            }))
-        },
-    )
+    if message.send(&target) {
+        Some(Response::Success(json!({ "id": id })))
+    } else {
+        Some(Response::BadRequest(
+            json!({ "error": "Failed to send message." }),
+        ))
+    }
 }
 
 /// get a message

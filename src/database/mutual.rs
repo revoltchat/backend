@@ -111,7 +111,7 @@ pub fn has_mutual_connection(user_id: &str, target_id: &str, with_permission: bo
 
                     let permissions = guild.get_i32("default_permissions").unwrap() as u32;
 
-                    if MemberPermissions([ permissions ]).get_send_direct_messages() {
+                    if MemberPermissions([permissions]).get_send_direct_messages() {
                         return true;
                     }
                 }
