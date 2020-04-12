@@ -19,7 +19,7 @@ pub enum Relationship {
     SELF = 6,
 }
 
-#[derive(Debug, PartialEq, Eq, TryFromPrimitive)]
+#[derive(Debug, PartialEq, Eq, TryFromPrimitive, Copy, Clone)]
 #[repr(u32)]
 pub enum Permission {
     Access = 1,
@@ -37,7 +37,7 @@ pub enum Permission {
 
 bitfield! {
     pub struct MemberPermissions(MSB0 [u32]);
-    u8;
+    u32;
     pub get_access, set_access: 31;
     pub get_create_invite, set_create_invite: 30;
     pub get_kick_members, set_kick_members: 29;
@@ -148,6 +148,7 @@ impl PermissionCalculator {
         let mut permissions: u32 = 0;
         if let Some(guild) = &self.guild {
             if let Some(_member) = &self.member {
+                // ? logic should match mutual.rs#has_mutual_connection
                 if guild.owner == self.user.id {
                     return u32::MAX;
                 }
@@ -162,9 +163,7 @@ impl PermissionCalculator {
                     if let Some(arr) = &channel.recipients {
                         let mut other_user = "";
                         for item in arr {
-                            if item == &self.user.id {
-                                permissions = 177;
-                            } else {
+                            if item != &self.user.id {
                                 other_user = item;
                             }
                         }
@@ -173,12 +172,16 @@ impl PermissionCalculator {
                         let relationship =
                             get_relationship_internal(&self.user.id, &other_user, &relationships);
 
-                        if relationship == Relationship::Blocked
+                        if relationship == Relationship::Friend {
+                            permissions = 177;
+                        } else if relationship == Relationship::Blocked
                             || relationship == Relationship::BlockedOther
                         {
                             permissions = 1;
-                        } else if has_mutual_connection(&self.user.id, other_user) {
+                        } else if has_mutual_connection(&self.user.id, other_user, true) {
                             permissions = 177;
+                        } else {
+                            permissions = 1;
                         }
                     }
                 }

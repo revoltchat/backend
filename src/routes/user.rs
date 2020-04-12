@@ -157,7 +157,7 @@ pub fn dm(user: UserRef, target: UserRef) -> Response {
 			).is_ok() {
                 Response::Success(json!({ "id": id.to_string() }))
             } else {
-                Response::InternalServerError(json!({ "error": "Failed to create new chanel." }))
+                Response::InternalServerError(json!({ "error": "Failed to create new channel." }))
             }
 		}
 	} else {

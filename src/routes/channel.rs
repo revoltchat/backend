@@ -431,6 +431,10 @@ pub fn send_message(
     let permissions = with_permissions!(user, target);
 
     if !permissions.get_send_messages() {
+        if target.channel_type == 0 {
+            return Some(Response::LackingPermission(Permission::SendDirectMessages));
+        }
+
         return Some(Response::LackingPermission(Permission::SendMessages));
     }
 

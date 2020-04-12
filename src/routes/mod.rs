@@ -50,8 +50,9 @@ impl<'a> rocket::response::Responder<'a> for Permission {
         rocket::response::Response::build()
             .header(ContentType::JSON)
             .sized_body(Cursor::new(format!(
-                "{{\"error\":\"Lacking {:?} permission.\"}}",
-                self
+                "{{\"error\":\"Lacking permission: {:?}.\",\"permission\":{}}}",
+                self,
+                self as u32,
             )))
             .ok()
     }
