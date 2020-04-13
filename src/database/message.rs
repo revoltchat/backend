@@ -1,9 +1,9 @@
 use super::get_collection;
 use crate::guards::channel::ChannelRef;
-use crate::routes::channel::ChannelType;
 use crate::notifications;
-use crate::notifications::events::Notification::MessageCreate;
 use crate::notifications::events::message::Create;
+use crate::notifications::events::Notification::MessageCreate;
+use crate::routes::channel::ChannelType;
 
 use bson::{doc, to_bson, UtcDateTime};
 use serde::{Deserialize, Serialize};
@@ -37,20 +37,18 @@ impl Message {
             .insert_one(to_bson(&self).unwrap().as_document().unwrap().clone(), None)
             .is_ok()
         {
-            let data = MessageCreate(
-                Create {
-                    id: self.id.clone(),
-                    nonce: self.nonce.clone(),
-                    channel: self.channel.clone(),
-                    author: self.author.clone(),
-                    content: self.content.clone(),
-                }
-            );
+            let data = MessageCreate(Create {
+                id: self.id.clone(),
+                nonce: self.nonce.clone(),
+                channel: self.channel.clone(),
+                author: self.author.clone(),
+                content: self.content.clone(),
+            });
 
             match target.channel_type {
-                0..=1 => notifications::send_message(target.recipients.clone(), None, data),
-                2 => notifications::send_message(target.recipients.clone(), None, data),
-                _ => unreachable!()
+                0..=1 => notifications::send_message_threaded(target.recipients.clone(), None, data),
+                2 => notifications::send_message_threaded(None, target.guild.clone(), data),
+                _ => unreachable!(),
             };
 
             let short_content: String = self.content.chars().take(24).collect();

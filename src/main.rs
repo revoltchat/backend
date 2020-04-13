@@ -20,6 +20,7 @@ use std::thread;
 fn main() {
     dotenv::dotenv().ok();
     database::connect();
+    notifications::start_worker();
 
     thread::spawn(|| {
         notifications::pubsub::launch_subscriber();

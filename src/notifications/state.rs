@@ -1,4 +1,3 @@
-use super::events::Notification;
 use crate::database;
 use crate::util::vec_to_set;
 
@@ -174,14 +173,10 @@ pub fn init() {
     }
 }
 
-pub fn send_message(
-    users: Option<Vec<String>>,
-    guild: Option<String>,
-    data: String,
-) {
+pub fn send_message(users: Option<Vec<String>>, guild: Option<String>, data: String) {
     let state = unsafe { DATA.get().unwrap().read().unwrap() };
     let mut connections = HashSet::new();
-    
+
     let mut users = vec_to_set(&users.unwrap_or(vec![]));
     if let Some(guild) = guild {
         if let Some(entry) = state.guilds.get(&guild) {

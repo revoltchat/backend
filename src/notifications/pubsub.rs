@@ -23,11 +23,7 @@ pub struct PubSubMessage {
     data: Notification,
 }
 
-pub fn send_message(
-    users: Option<Vec<String>>,
-    guild: Option<String>,
-    data: Notification,
-) -> bool {
+pub fn send_message(users: Option<Vec<String>>, guild: Option<String>, data: Notification) -> bool {
     let message = PubSubMessage {
         id: Ulid::new().to_string(),
         source: SOURCEID.get().unwrap().to_string(),
@@ -92,7 +88,7 @@ pub fn launch_subscriber() {
                                 super::state::send_message(
                                     message.user_recipients,
                                     message.target_guild,
-                                    json!(message.data).to_string(),
+                                    message.data.serialize(),
                                 );
                             }
                         } else {
