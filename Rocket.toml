@@ -4,4 +4,4 @@ port = 5500
 
 [production]
 address = "192.168.0.10"
-port = 5500
+port = 3000

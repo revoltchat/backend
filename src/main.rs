@@ -9,9 +9,9 @@ extern crate bitfield;
 pub mod database;
 pub mod email;
 pub mod guards;
+pub mod notifications;
 pub mod routes;
 pub mod util;
-pub mod websocket;
 
 use dotenv;
 use rocket_cors::AllowedOrigins;
@@ -22,7 +22,11 @@ fn main() {
     database::connect();
 
     thread::spawn(|| {
-        websocket::launch_server();
+        notifications::pubsub::launch_subscriber();
+    });
+
+    thread::spawn(|| {
+        notifications::ws::launch_server();
     });
 
     let cors = rocket_cors::CorsOptions {
