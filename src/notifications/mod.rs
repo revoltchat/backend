@@ -1,3 +1,5 @@
+use crate::guards::channel::ChannelRef;
+
 use once_cell::sync::OnceCell;
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
@@ -61,4 +63,12 @@ pub fn send_message_threaded<U: Into<Option<Vec<String>>>, G: Into<Option<String
             })
             .is_ok()
     }
+}
+
+pub fn send_message_given_channel(data: events::Notification, channel: &ChannelRef) {
+    match channel.channel_type {
+        0..=1 => send_message_threaded(channel.recipients.clone(), None, data),
+        2 => send_message_threaded(None, channel.guild.clone(), data),
+        _ => unreachable!(),
+    };
 }

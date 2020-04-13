@@ -4,6 +4,10 @@ use crate::database::{self, channel::Channel, Permission, PermissionCalculator};
 use crate::guards::auth::UserRef;
 use crate::guards::channel::ChannelRef;
 use crate::guards::guild::{get_invite, get_member, GuildRef};
+use crate::notifications::{
+    self,
+    events::{guilds::*, Notification},
+};
 use crate::util::gen_token;
 
 use bson::{doc, from_bson, Bson};
@@ -180,6 +184,14 @@ pub fn remove_guild(user: UserRef, target: GuildRef) -> Option<Response> {
                         )
                         .is_ok()
                     {
+                        notifications::send_message_threaded(
+                            None,
+                            target.id.clone(),
+                            Notification::guild_delete(Delete {
+                                id: target.id.clone(),
+                            }),
+                        );
+
                         Some(Response::Result(super::Status::Ok))
                     } else {
                         Some(Response::InternalServerError(
@@ -212,6 +224,16 @@ pub fn remove_guild(user: UserRef, target: GuildRef) -> Option<Response> {
             )
             .is_ok()
         {
+            notifications::send_message_threaded(
+                None,
+                target.id.clone(),
+                Notification::guild_user_leave(UserLeave {
+                    id: target.id.clone(),
+                    user: user.id.clone(),
+                    banned: false,
+                }),
+            );
+
             Some(Response::Result(super::Status::Ok))
         } else {
             Some(Response::InternalServerError(
@@ -268,13 +290,24 @@ pub fn create_channel(
                     "nonce": &nonce,
                     "type": 2,
                     "guild": &target.id,
-                    "name": name,
-                    "description": description,
+                    "name": &name,
+                    "description": &description,
                 },
                 None,
             )
             .is_ok()
         {
+            notifications::send_message_threaded(
+                None,
+                target.id.clone(),
+                Notification::guild_channel_create(ChannelCreate {
+                    id: target.id.clone(),
+                    channel: id.clone(),
+                    name: name.clone(),
+                    description: description.clone(),
+                }),
+            );
+
             Some(Response::Success(json!({ "id": &id })))
         } else {
             Some(Response::BadRequest(
@@ -442,6 +475,15 @@ pub fn use_invite(user: UserRef, code: String) -> Response {
                     )
                     .is_ok()
                 {
+                    notifications::send_message_threaded(
+                        None,
+                        guild_id.clone(),
+                        Notification::guild_user_join(UserJoin {
+                            id: guild_id.clone(),
+                            user: user.id.clone(),
+                        }),
+                    );
+
                     Response::Success(json!({
                         "guild": &guild_id,
                         "channel": &invite.channel,
@@ -636,6 +678,16 @@ pub fn kick_member(user: UserRef, target: GuildRef, other: String) -> Option<Res
         )
         .is_ok()
     {
+        notifications::send_message_threaded(
+            None,
+            target.id.clone(),
+            Notification::guild_user_leave(UserLeave {
+                id: target.id.clone(),
+                user: other.clone(),
+                banned: false,
+            }),
+        );
+
         Some(Response::Result(super::Status::Ok))
     } else {
         Some(Response::InternalServerError(
@@ -712,6 +764,16 @@ pub fn ban_member(
         )
         .is_ok()
     {
+        notifications::send_message_threaded(
+            None,
+            target.id.clone(),
+            Notification::guild_user_leave(UserLeave {
+                id: target.id.clone(),
+                user: other.clone(),
+                banned: true,
+            }),
+        );
+
         Some(Response::Result(super::Status::Ok))
     } else {
         Some(Response::InternalServerError(

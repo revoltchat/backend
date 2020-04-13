@@ -5,6 +5,10 @@ use crate::database::{
 };
 use crate::guards::auth::UserRef;
 use crate::guards::channel::ChannelRef;
+use crate::notifications::{
+    self,
+    events::{groups::*, guilds::ChannelDelete, message::*, Notification},
+};
 use crate::util::vec_to_set;
 
 use bson::{doc, from_bson, Bson, Bson::UtcDatetime};
@@ -218,10 +222,18 @@ pub fn add_member(user: UserRef, target: ChannelRef, member: UserRef) -> Option<
                     author: "system".to_string(),
                     content: format!("<@{}> added <@{}> to the group.", &user.id, &member.id),
                     edited: None,
-                    previous_content: None,
+                    previous_content: vec![],
                 })
                 .send(&target)
                 {
+                    notifications::send_message_given_channel(
+                        Notification::group_user_join(UserJoin {
+                            id: target.id.clone(),
+                            user: member.id.clone(),
+                        }),
+                        &target,
+                    );
+
                     Some(Response::Result(super::Status::Ok))
                 } else {
                     Some(Response::PartialStatus(
@@ -285,10 +297,18 @@ pub fn remove_member(user: UserRef, target: ChannelRef, member: UserRef) -> Opti
             author: "system".to_string(),
             content: format!("<@{}> removed <@{}> from the group.", &user.id, &member.id),
             edited: None,
-            previous_content: None,
+            previous_content: vec![],
         })
         .send(&target)
         {
+            notifications::send_message_given_channel(
+                Notification::group_user_leave(UserLeave {
+                    id: target.id.clone(),
+                    user: member.id.clone(),
+                }),
+                &target,
+            );
+
             Some(Response::Result(super::Status::Ok))
         } else {
             Some(Response::PartialStatus(
@@ -327,7 +347,7 @@ pub fn delete(user: UserRef, target: ChannelRef) -> Option<Response> {
                 Some(Response::Result(super::Status::Ok))
             } else {
                 Some(Response::InternalServerError(
-                    json!({ "error": "Failed to delete group." }),
+                    json!({ "error": "Failed to delete channel." }),
                 ))
             }
         } else {
@@ -395,10 +415,18 @@ pub fn delete(user: UserRef, target: ChannelRef) -> Option<Response> {
                         author: "system".to_string(),
                         content: format!("<@{}> left the group.", &user.id),
                         edited: None,
-                        previous_content: None,
+                        previous_content: vec![],
                     })
                     .send(&target)
                     {
+                        notifications::send_message_given_channel(
+                            Notification::group_user_leave(UserLeave {
+                                id: target.id.clone(),
+                                user: user.id.clone(),
+                            }),
+                            &target,
+                        );
+
                         Some(Response::Result(super::Status::Ok))
                     } else {
                         Some(Response::PartialStatus(
@@ -413,9 +441,10 @@ pub fn delete(user: UserRef, target: ChannelRef) -> Option<Response> {
             }
         }
         2 => {
+            let guild_id = target.guild.unwrap();
             if database::get_collection("guilds")
                 .update_one(
-                    doc! { "_id": target.guild.unwrap() },
+                    doc! { "_id": &guild_id },
                     doc! {
                         "$pull": {
                             "invites": {
@@ -427,6 +456,15 @@ pub fn delete(user: UserRef, target: ChannelRef) -> Option<Response> {
                 )
                 .is_ok()
             {
+                notifications::send_message_threaded(
+                    None,
+                    guild_id.clone(),
+                    Notification::guild_channel_delete(ChannelDelete {
+                        id: guild_id.clone(),
+                        channel: target.id.clone(),
+                    }),
+                );
+
                 try_delete()
             } else {
                 Some(Response::InternalServerError(
@@ -512,7 +550,7 @@ pub fn send_message(
         author: user.id,
         content,
         edited: None,
-        previous_content: None,
+        previous_content: vec![],
     };
 
     if message.send(&target) {
@@ -533,28 +571,21 @@ pub fn get_message(user: UserRef, target: ChannelRef, message: Message) -> Optio
         return Some(Response::LackingPermission(Permission::ReadMessages));
     }
 
-    let prev =
-        // ! CHECK IF USER HAS PERMISSION TO VIEW EDITS OF MESSAGES
-        if let Some(previous) = message.previous_content {
-            let mut entries = vec![];
-            for entry in previous {
-                entries.push(json!({
-                    "content": entry.content,
-                    "time": entry.time.timestamp(),
-                }));
-            }
-
-            Some(entries)
-        } else {
-            None
-        };
+    // ! CHECK IF USER HAS PERMISSION TO VIEW EDITS OF MESSAGES
+    let mut entries = vec![];
+    for entry in message.previous_content {
+        entries.push(json!({
+            "content": entry.content,
+            "time": entry.time.timestamp(),
+        }));
+    }
 
     Some(Response::Success(json!({
         "id": message.id,
         "author": message.author,
         "content": message.content,
         "edited": if let Some(t) = message.edited { Some(t.timestamp()) } else { None },
-        "previous_content": prev,
+        "previous_content": entries,
     })))
 }
 
@@ -596,7 +627,7 @@ pub fn edit_message(
             },
             "$push": {
                 "previous_content": {
-                    "content": message.content,
+                    "content": &message.content,
                     "time": time,
                 }
             },
@@ -604,19 +635,13 @@ pub fn edit_message(
         None,
     ) {
         Ok(_) => {
-            /*websocket::queue_message(
-                get_recipients(&target),
-                json!({
-                    "type": "message_update",
-                    "data": {
-                        "id": message.id,
-                        "channel": target.id,
-                        "content": edit.content.clone(),
-                        "edited": edited.timestamp()
-                    },
-                })
-                .to_string(),
-            );*/
+            notifications::send_message_given_channel(
+                Notification::message_edit(Edit {
+                    id: message.id.clone(),
+                    content: message.content,
+                }),
+                &target,
+            );
 
             Some(Response::Result(super::Status::Ok))
         }
@@ -641,17 +666,12 @@ pub fn delete_message(user: UserRef, target: ChannelRef, message: Message) -> Op
 
     match col.delete_one(doc! { "_id": &message.id }, None) {
         Ok(_) => {
-            /*websocket::queue_message(
-                get_recipients(&target),
-                json!({
-                    "type": "message_delete",
-                    "data": {
-                        "id": message.id,
-                        "channel": target.id
-                    },
-                })
-                .to_string(),
-            );*/
+            notifications::send_message_given_channel(
+                Notification::message_delete(Delete {
+                    id: message.id.clone(),
+                }),
+                &target,
+            );
 
             Some(Response::Result(super::Status::Ok))
         }

@@ -18,8 +18,6 @@ pub struct PubSubMessage {
 
     user_recipients: Option<Vec<String>>,
     target_guild: Option<String>,
-
-    notification_type: String,
     data: Notification,
 }
 
@@ -29,10 +27,6 @@ pub fn send_message(users: Option<Vec<String>>, guild: Option<String>, data: Not
         source: SOURCEID.get().unwrap().to_string(),
         user_recipients: users.into(),
         target_guild: guild.into(),
-        notification_type: match data {
-            Notification::MessageCreate(_) => "message_create",
-        }
-        .to_string(),
         data,
     };
 

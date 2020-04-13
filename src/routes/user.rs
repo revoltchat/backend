@@ -1,6 +1,10 @@
 use super::Response;
 use crate::database::{self, get_relationship, get_relationship_internal, mutual, Relationship};
 use crate::guards::auth::UserRef;
+use crate::notifications::{
+    self,
+    events::{users::*, Notification},
+};
 use crate::routes::channel;
 
 use bson::doc;
@@ -32,7 +36,7 @@ pub fn user(user: UserRef, target: UserRef) -> Response {
     Response::Success(json!({
         "id": target.id,
         "username": target.username,
-        "relationship": get_relationship(&user, &target) as u8,
+        "relationship": get_relationship(&user, &target) as i32,
         "mutual": {
             "guilds": mutual::find_mutual_guilds(&user.id, &target.id),
             "friends": mutual::find_mutual_friends(&user.id, &target.id),
@@ -67,7 +71,7 @@ pub fn lookup(user: UserRef, query: Json<LookupQuery>) -> Response {
                 results.push(json!({
                     "id": id,
                     "username": doc.get_str("username").unwrap(),
-                    "relationship": get_relationship_internal(&user.id, &id, &relationships) as u8
+                    "relationship": get_relationship_internal(&user.id, &id, &relationships) as i32
                 }));
             }
         }
@@ -186,7 +190,7 @@ pub fn get_friends(user: UserRef) -> Response {
 /// retrieve friend status with user
 #[get("/<target>/friend")]
 pub fn get_friend(user: UserRef, target: UserRef) -> Response {
-    Response::Success(json!({ "status": get_relationship(&user, &target) as u8 }))
+    Response::Success(json!({ "status": get_relationship(&user, &target) as i32 }))
 }
 
 /// create or accept a friend request
@@ -218,8 +222,8 @@ pub fn add_friend(user: UserRef, target: UserRef) -> Response {
                 if col
                     .update_one(
                         doc! {
-                            "_id": target.id,
-                            "relations.id": user.id
+                            "_id": target.id.clone(),
+                            "relations.id": user.id.clone()
                         },
                         doc! {
                             "$set": {
@@ -230,7 +234,25 @@ pub fn add_friend(user: UserRef, target: UserRef) -> Response {
                     )
                     .is_ok()
                 {
-                    Response::Success(json!({ "status": Relationship::Friend as u8 }))
+                    notifications::send_message_threaded(
+                        vec![target.id.clone()],
+                        None,
+                        Notification::user_friend_status(FriendStatus {
+                            id: user.id.clone(),
+                            status: Relationship::Friend as i32,
+                        }),
+                    );
+
+                    notifications::send_message_threaded(
+                        vec![user.id.clone()],
+                        None,
+                        Notification::user_friend_status(FriendStatus {
+                            id: target.id.clone(),
+                            status: Relationship::Friend as i32,
+                        }),
+                    );
+
+                    Response::Success(json!({ "status": Relationship::Friend as i32 }))
                 } else {
                     Response::InternalServerError(
                         json!({ "error": "Failed to commit! Try re-adding them as a friend." }),
@@ -269,12 +291,12 @@ pub fn add_friend(user: UserRef, target: UserRef) -> Response {
                 if col
                     .update_one(
                         doc! {
-                            "_id": target.id
+                            "_id": target.id.clone()
                         },
                         doc! {
                             "$push": {
                                 "relations": {
-                                    "id": user.id,
+                                    "id": user.id.clone(),
                                     "status": Relationship::Incoming as i32
                                 }
                             }
@@ -283,7 +305,25 @@ pub fn add_friend(user: UserRef, target: UserRef) -> Response {
                     )
                     .is_ok()
                 {
-                    Response::Success(json!({ "status": Relationship::Outgoing as u8 }))
+                    notifications::send_message_threaded(
+                        vec![user.id.clone()],
+                        None,
+                        Notification::user_friend_status(FriendStatus {
+                            id: target.id.clone(),
+                            status: Relationship::Outgoing as i32,
+                        }),
+                    );
+
+                    notifications::send_message_threaded(
+                        vec![target.id.clone()],
+                        None,
+                        Notification::user_friend_status(FriendStatus {
+                            id: user.id.clone(),
+                            status: Relationship::Incoming as i32,
+                        }),
+                    );
+
+                    Response::Success(json!({ "status": Relationship::Outgoing as i32 }))
                 } else {
                     Response::InternalServerError(
                         json!({ "error": "Failed to commit! Try re-adding them as a friend." }),
@@ -327,12 +367,12 @@ pub fn remove_friend(user: UserRef, target: UserRef) -> Response {
                 if col
                     .update_one(
                         doc! {
-                            "_id": target.id
+                            "_id": target.id.clone()
                         },
                         doc! {
                             "$pull": {
                                 "relations": {
-                                    "id": user.id
+                                    "id": user.id.clone()
                                 }
                             }
                         },
@@ -340,7 +380,25 @@ pub fn remove_friend(user: UserRef, target: UserRef) -> Response {
                     )
                     .is_ok()
                 {
-                    Response::Success(json!({ "status": Relationship::NONE as u8 }))
+                    notifications::send_message_threaded(
+                        vec![user.id.clone()],
+                        None,
+                        Notification::user_friend_status(FriendStatus {
+                            id: target.id.clone(),
+                            status: Relationship::NONE as i32,
+                        }),
+                    );
+
+                    notifications::send_message_threaded(
+                        vec![target.id.clone()],
+                        None,
+                        Notification::user_friend_status(FriendStatus {
+                            id: user.id.clone(),
+                            status: Relationship::NONE as i32,
+                        }),
+                    );
+
+                    Response::Success(json!({ "status": Relationship::NONE as i32 }))
                 } else {
                     Response::InternalServerError(
                         json!({ "error": "Failed to commit! Target remains in same state." }),
@@ -365,7 +423,9 @@ pub fn block_user(user: UserRef, target: UserRef) -> Response {
     let col = database::get_collection("users");
 
     match get_relationship(&user, &target) {
-        Relationship::Friend | Relationship::Incoming | Relationship::Outgoing => {
+        Relationship::Friend
+        | Relationship::Incoming
+        | Relationship::Outgoing => {
             if col
                 .update_one(
                     doc! {
@@ -384,8 +444,8 @@ pub fn block_user(user: UserRef, target: UserRef) -> Response {
                 if col
                     .update_one(
                         doc! {
-                            "_id": target.id,
-                            "relations.id": user.id
+                            "_id": target.id.clone(),
+                            "relations.id": user.id.clone()
                         },
                         doc! {
                             "$set": {
@@ -396,7 +456,91 @@ pub fn block_user(user: UserRef, target: UserRef) -> Response {
                     )
                     .is_ok()
                 {
-                    Response::Success(json!({ "status": Relationship::Blocked as u8 }))
+                    notifications::send_message_threaded(
+                        vec![user.id.clone()],
+                        None,
+                        Notification::user_friend_status(FriendStatus {
+                            id: target.id.clone(),
+                            status: Relationship::Blocked as i32,
+                        }),
+                    );
+
+                    notifications::send_message_threaded(
+                        vec![target.id.clone()],
+                        None,
+                        Notification::user_friend_status(FriendStatus {
+                            id: user.id.clone(),
+                            status: Relationship::BlockedOther as i32,
+                        }),
+                    );
+
+                    Response::Success(json!({ "status": Relationship::Blocked as i32 }))
+                } else {
+                    Response::InternalServerError(
+                        json!({ "error": "Failed to commit! Try blocking the user again, remove it first." }),
+                    )
+                }
+            } else {
+                Response::InternalServerError(
+                    json!({ "error": "Failed to commit to database, try again." }),
+                )
+            }
+        }
+
+        Relationship::NONE => {
+            if col
+                .update_one(
+                    doc! {
+                        "_id": user.id.clone(),
+                    },
+                    doc! {
+                        "$push": {
+                            "relations": {
+                                "id": target.id.clone(),
+                                "status": Relationship::Blocked as i32,
+                            }
+                        }
+                    },
+                    None,
+                )
+                .is_ok()
+            {
+                if col
+                    .update_one(
+                        doc! {
+                            "_id": target.id.clone(),
+                        },
+                        doc! {
+                            "$push": {
+                                "relations": {
+                                    "id": user.id.clone(),
+                                    "status": Relationship::BlockedOther as i32,
+                                }
+                            }
+                        },
+                        None,
+                    )
+                    .is_ok()
+                {
+                    notifications::send_message_threaded(
+                        vec![user.id.clone()],
+                        None,
+                        Notification::user_friend_status(FriendStatus {
+                            id: target.id.clone(),
+                            status: Relationship::Blocked as i32,
+                        }),
+                    );
+
+                    notifications::send_message_threaded(
+                        vec![target.id.clone()],
+                        None,
+                        Notification::user_friend_status(FriendStatus {
+                            id: user.id.clone(),
+                            status: Relationship::BlockedOther as i32,
+                        }),
+                    );
+
+                    Response::Success(json!({ "status": Relationship::Blocked as i32 }))
                 } else {
                     Response::InternalServerError(
                         json!({ "error": "Failed to commit! Try blocking the user again, remove it first." }),
@@ -427,16 +571,23 @@ pub fn block_user(user: UserRef, target: UserRef) -> Response {
                 )
                 .is_ok()
             {
-                Response::Success(json!({ "status": Relationship::Blocked as u8 }))
+                notifications::send_message_threaded(
+                    vec![user.id.clone()],
+                    None,
+                    Notification::user_friend_status(FriendStatus {
+                        id: target.id.clone(),
+                        status: Relationship::Blocked as i32,
+                    }),
+                );
+
+                Response::Success(json!({ "status": Relationship::Blocked as i32 }))
             } else {
                 Response::InternalServerError(
                     json!({ "error": "Failed to commit to database, try again." }),
                 )
             }
         }
-        Relationship::SELF | Relationship::NONE => {
-            Response::BadRequest(json!({ "error": "This has no effect." }))
-        }
+        Relationship::SELF => Response::BadRequest(json!({ "error": "This has no effect." })),
     }
 }
 
@@ -463,7 +614,16 @@ pub fn unblock_user(user: UserRef, target: UserRef) -> Response {
                     )
                     .is_ok()
                 {
-                    Response::Success(json!({ "status": Relationship::BlockedOther as u8 }))
+                    notifications::send_message_threaded(
+                        vec![user.id.clone()],
+                        None,
+                        Notification::user_friend_status(FriendStatus {
+                            id: target.id.clone(),
+                            status: Relationship::BlockedOther as i32,
+                        }),
+                    );
+
+                    Response::Success(json!({ "status": Relationship::BlockedOther as i32 }))
                 } else {
                     Response::InternalServerError(
                         json!({ "error": "Failed to commit to database, try again." }),
@@ -490,12 +650,12 @@ pub fn unblock_user(user: UserRef, target: UserRef) -> Response {
                     if col
                         .update_one(
                             doc! {
-                                "_id": target.id
+                                "_id": target.id.clone()
                             },
                             doc! {
                                 "$pull": {
                                     "relations": {
-                                        "id": user.id
+                                        "id": user.id.clone()
                                     }
                                 }
                             },
@@ -503,7 +663,25 @@ pub fn unblock_user(user: UserRef, target: UserRef) -> Response {
                         )
                         .is_ok()
                     {
-                        Response::Success(json!({ "status": Relationship::NONE as u8 }))
+                        notifications::send_message_threaded(
+                            vec![user.id.clone()],
+                            None,
+                            Notification::user_friend_status(FriendStatus {
+                                id: target.id.clone(),
+                                status: Relationship::NONE as i32,
+                            }),
+                        );
+
+                        notifications::send_message_threaded(
+                            vec![target.id.clone()],
+                            None,
+                            Notification::user_friend_status(FriendStatus {
+                                id: user.id.clone(),
+                                status: Relationship::NONE as i32,
+                            }),
+                        );
+
+                        Response::Success(json!({ "status": Relationship::NONE as i32 }))
                     } else {
                         Response::InternalServerError(
                             json!({ "error": "Failed to commit! Target remains in same state." }),

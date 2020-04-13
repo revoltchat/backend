@@ -2,7 +2,7 @@ use super::get_collection;
 use crate::guards::channel::ChannelRef;
 use crate::notifications;
 use crate::notifications::events::message::Create;
-use crate::notifications::events::Notification::MessageCreate;
+use crate::notifications::events::Notification;
 use crate::routes::channel::ChannelType;
 
 use bson::{doc, to_bson, UtcDateTime};
@@ -25,7 +25,7 @@ pub struct Message {
     pub content: String,
     pub edited: Option<UtcDateTime>,
 
-    pub previous_content: Option<Vec<PreviousEntry>>,
+    pub previous_content: Vec<PreviousEntry>,
 }
 
 // ? TODO: write global send message
@@ -37,19 +37,16 @@ impl Message {
             .insert_one(to_bson(&self).unwrap().as_document().unwrap().clone(), None)
             .is_ok()
         {
-            let data = MessageCreate(Create {
-                id: self.id.clone(),
-                nonce: self.nonce.clone(),
-                channel: self.channel.clone(),
-                author: self.author.clone(),
-                content: self.content.clone(),
-            });
-
-            match target.channel_type {
-                0..=1 => notifications::send_message_threaded(target.recipients.clone(), None, data),
-                2 => notifications::send_message_threaded(None, target.guild.clone(), data),
-                _ => unreachable!(),
-            };
+            notifications::send_message_given_channel(
+                Notification::message_create(Create {
+                    id: self.id.clone(),
+                    nonce: self.nonce.clone(),
+                    channel: self.channel.clone(),
+                    author: self.author.clone(),
+                    content: self.content.clone(),
+                }),
+                &target,
+            );
 
             let short_content: String = self.content.chars().take(24).collect();
 
