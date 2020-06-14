@@ -78,7 +78,6 @@ pub fn create(info: Json<Create>) -> Response {
                 let sent = email::send_verification_email(info.email.clone(), code);
 
                 Response::Success(json!({
-                    "success": true,
                     "email_sent": sent,
                 }))
             }
@@ -200,13 +199,13 @@ pub fn resend_email(info: Json<Resend>) -> Response {
             match email::send_verification_email(info.email.to_string(), code) {
                 true => Response::Result(super::Status::Ok),
                 false => Response::InternalServerError(
-                    json!({ "success": false, "error": "Failed to send email! Likely an issue with the backend API." }),
+                    json!({ "error": "Failed to send email! Likely an issue with the backend API." }),
                 ),
             }
         }
     } else {
         Response::NotFound(
-            json!({ "success": false, "error": "Email not found or pending verification!" }),
+            json!({ "error": "Email not found or pending verification!" }),
         )
     }
 }

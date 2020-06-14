@@ -1,3 +1,4 @@
+Rocket.toml
 /target
 **/*.rs.bk
 .env

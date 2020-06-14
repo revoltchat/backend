@@ -531,6 +531,10 @@ pub fn send_message(
     let content: String = message.content.chars().take(2000).collect();
     let nonce: String = message.nonce.chars().take(32).collect();
 
+    if content.len() == 0 {
+        return Some(Response::NotAcceptable(json!({ "error": "No message content!" })));
+    }
+
     let col = database::get_collection("messages");
     if col
         .find_one(doc! { "nonce": nonce.clone() }, None)
