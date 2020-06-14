@@ -61,9 +61,9 @@ impl<'a> rocket::response::Responder<'a> for Permission {
 
 pub fn mount(rocket: Rocket) -> Rocket {
     rocket
-        .mount("/api", routes![root::root])
+        .mount("/", routes![root::root])
         .mount(
-            "/api/account",
+            "/account",
             routes![
                 account::create,
                 account::verify_email,
@@ -73,7 +73,7 @@ pub fn mount(rocket: Rocket) -> Rocket {
             ],
         )
         .mount(
-            "/api/users",
+            "/users",
             routes![
                 user::me,
                 user::user,
@@ -89,7 +89,7 @@ pub fn mount(rocket: Rocket) -> Rocket {
             ],
         )
         .mount(
-            "/api/channels",
+            "/channels",
             routes![
                 channel::create_group,
                 channel::channel,
@@ -104,7 +104,7 @@ pub fn mount(rocket: Rocket) -> Rocket {
             ],
         )
         .mount(
-            "/api/guild",
+            "/guild",
             routes![
                 guild::my_guilds,
                 guild::guild,
