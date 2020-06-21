@@ -216,11 +216,6 @@ pub struct Login {
     password: String,
 }
 
-#[options("/login")]
-pub fn login_preflight() -> Response {
-    Response::Result(super::Status::Ok)
-}
-
 /// login to a Revolt account
 /// (1) find user by email
 /// (2) verify password
@@ -295,3 +290,9 @@ pub fn token(info: Json<Token>) -> Response {
         }))
     }
 }
+
+#[options("/create")] pub fn create_preflight() -> Response { Response::Result(super::Status::Ok) }
+#[options("/verify/<_code>")] pub fn verify_email_preflight(_code: String) -> Response { Response::Result(super::Status::Ok) }
+#[options("/resend")] pub fn resend_email_preflight() -> Response { Response::Result(super::Status::Ok) }
+#[options("/login")] pub fn login_preflight() -> Response { Response::Result(super::Status::Ok) }
+#[options("/token")] pub fn token_preflight() -> Response { Response::Result(super::Status::Ok) }

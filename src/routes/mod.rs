@@ -71,7 +71,11 @@ pub fn mount(rocket: Rocket) -> Rocket {
                 account::login,
                 account::token,
 
+                account::create_preflight,
+                account::verify_email_preflight,
+                account::resend_email_preflight,
                 account::login_preflight,
+                account::token_preflight,
             ],
         )
         .mount(
@@ -87,7 +91,14 @@ pub fn mount(rocket: Rocket) -> Rocket {
                 user::add_friend,
                 user::remove_friend,
                 user::block_user,
-                user::unblock_user
+                user::unblock_user,
+
+                user::user_preflight,
+                user::lookup_preflight,
+                user::dms_preflight,
+                user::dm_preflight,
+                user::friend_preflight,
+                user::block_user_preflight,
             ],
         )
         .mount(
@@ -102,7 +113,13 @@ pub fn mount(rocket: Rocket) -> Rocket {
                 channel::get_message,
                 channel::send_message,
                 channel::edit_message,
-                channel::delete_message
+                channel::delete_message,
+
+                channel::create_group_preflight,
+                channel::channel_preflight,
+                channel::member_preflight,
+                channel::messages_preflight,
+                channel::message_preflight,
             ],
         )
         .mount(
@@ -122,7 +139,18 @@ pub fn mount(rocket: Rocket) -> Rocket {
                 guild::fetch_member,
                 guild::kick_member,
                 guild::ban_member,
-                guild::unban_member
+                guild::unban_member,
+
+                guild::guild_preflight,
+                guild::create_channel_preflight,
+                guild::create_invite_preflight,
+                guild::remove_invite_preflight,
+                guild::fetch_invites_preflight,
+                guild::invite_preflight,
+                guild::create_guild_preflight,
+                guild::fetch_members_preflight,
+                guild::fetch_member_preflight,
+                guild::ban_member_preflight,
             ],
         )
 }

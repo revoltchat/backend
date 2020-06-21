@@ -686,3 +686,9 @@ pub fn delete_message(user: UserRef, target: ChannelRef, message: Message) -> Op
         )),
     }
 }
+
+#[options("/create")] pub fn create_group_preflight() -> Response { Response::Result(super::Status::Ok) }
+#[options("/<_target>")] pub fn channel_preflight(_target: String) -> Response { Response::Result(super::Status::Ok) }
+#[options("/<_target>/recipients/<_member>")] pub fn member_preflight(_target: String, _member: String) -> Response { Response::Result(super::Status::Ok) }
+#[options("/<_target>/messages")] pub fn messages_preflight(_target: String) -> Response { Response::Result(super::Status::Ok) }
+#[options("/<_target>/messages/<_message>")] pub fn message_preflight(_target: String, _message: String) -> Response { Response::Result(super::Status::Ok) }

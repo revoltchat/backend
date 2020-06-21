@@ -838,3 +838,14 @@ pub fn unban_member(user: UserRef, target: GuildRef, other: String) -> Option<Re
         ))
     }
 }
+
+#[options("/<_target>")] pub fn guild_preflight(_target: String) -> Response { Response::Result(super::Status::Ok) }
+#[options("/<_target>/channels")] pub fn create_channel_preflight(_target: String) -> Response { Response::Result(super::Status::Ok) }
+#[options("/<_target>/channels/<_channel>/invite")] pub fn create_invite_preflight(_target: String, _channel: String) -> Response { Response::Result(super::Status::Ok) }
+#[options("/<_target>/invites/<_code>")] pub fn remove_invite_preflight(_target: String, _code: String) -> Response { Response::Result(super::Status::Ok) }
+#[options("/<_target>/invites")] pub fn fetch_invites_preflight(_target: String) -> Response { Response::Result(super::Status::Ok) }
+#[options("/join/<_code>", rank = 1)] pub fn invite_preflight(_code: String) -> Response { Response::Result(super::Status::Ok) }
+#[options("/create")] pub fn create_guild_preflight() -> Response { Response::Result(super::Status::Ok) }
+#[options("/<_target>/members")] pub fn fetch_members_preflight(_target: String) -> Response { Response::Result(super::Status::Ok) }
+#[options("/<_target>/members/<_other>")] pub fn fetch_member_preflight(_target: String, _other: String) -> Response { Response::Result(super::Status::Ok) }
+#[options("/<_target>/members/<_other>/ban")] pub fn ban_member_preflight(_target: String, _other: String) -> Response { Response::Result(super::Status::Ok) }

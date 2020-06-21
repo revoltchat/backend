@@ -705,3 +705,10 @@ pub fn unblock_user(user: UserRef, target: UserRef) -> Response {
         | Relationship::NONE => Response::BadRequest(json!({ "error": "This has no effect." })),
     }
 }
+
+#[options("/<_target>")] pub fn user_preflight(_target: String) -> Response { Response::Result(super::Status::Ok) }
+#[options("/lookup")] pub fn lookup_preflight() -> Response { Response::Result(super::Status::Ok) }
+#[options("/@me/dms")] pub fn dms_preflight() -> Response { Response::Result(super::Status::Ok) }
+#[options("/<_target>/dm")] pub fn dm_preflight(_target: String) -> Response { Response::Result(super::Status::Ok) }
+#[options("/<_target>/friend")] pub fn friend_preflight(_target: String) -> Response { Response::Result(super::Status::Ok) }
+#[options("/<_target>/block")] pub fn block_user_preflight(_target: String) -> Response { Response::Result(super::Status::Ok) }
