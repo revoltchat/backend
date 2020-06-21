@@ -642,6 +642,8 @@ pub fn edit_message(
             notifications::send_message_given_channel(
                 Notification::message_edit(Edit {
                     id: message.id.clone(),
+                    channel: target.id.clone(),
+                    author: message.author.clone(),
                     content: edit.content.clone(),
                 }),
                 &target,

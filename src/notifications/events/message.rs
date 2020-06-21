@@ -12,6 +12,8 @@ pub struct Create {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Edit {
     pub id: String,
+    pub channel: String,
+    pub author: String,
     pub content: String,
 }
 
