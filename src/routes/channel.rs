@@ -626,7 +626,7 @@ pub fn edit_message(
         doc! { "_id": message.id.clone() },
         doc! {
             "$set": {
-                "content": edit.content.clone(),
+                "content": &edit.content,
                 "edited": UtcDatetime(edited)
             },
             "$push": {
@@ -642,7 +642,7 @@ pub fn edit_message(
             notifications::send_message_given_channel(
                 Notification::message_edit(Edit {
                     id: message.id.clone(),
-                    content: message.content,
+                    content: edit.content.clone(),
                 }),
                 &target,
             );
