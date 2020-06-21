@@ -35,6 +35,8 @@ pub enum Response {
     Conflict(JsonValue),
     #[response(status = 410)]
     Gone(JsonValue),
+    #[response(status = 418)]
+    Teapot(JsonValue),
     #[response(status = 422)]
     UnprocessableEntity(JsonValue),
     #[response(status = 429)]
@@ -61,7 +63,12 @@ impl<'a> rocket::response::Responder<'a> for Permission {
 
 pub fn mount(rocket: Rocket) -> Rocket {
     rocket
-        .mount("/", routes![root::root])
+        .mount("/",
+            routes![
+                root::root,
+                root::teapot
+            ]
+        )
         .mount(
             "/account",
             routes![

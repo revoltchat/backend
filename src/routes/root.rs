@@ -9,3 +9,12 @@ pub fn root() -> Response {
         "revolt": "0.2.0"
     }))
 }
+
+/// I'm a teapot.
+#[delete("/")]
+pub fn teapot() -> Response {
+    Response::Teapot(json!({
+        "teapot": true,
+        "can_delete": false
+    }))
+}
