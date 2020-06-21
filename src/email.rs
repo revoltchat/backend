@@ -2,6 +2,14 @@ use reqwest::blocking::Client;
 use std::collections::HashMap;
 use std::env;
 
+fn public_uri() -> String {
+    env::var("PUBLIC_URI").expect("PUBLIC_URI not in environment variables!")
+}
+
+fn portal() -> String {
+    env::var("PORTAL_URL").expect("PORTAL_URL not in environment variables!")
+}
+
 pub fn send_email(target: String, subject: String, body: String, html: String) -> Result<(), ()> {
     let mut map = HashMap::new();
     map.insert("target", target.clone());
@@ -11,17 +19,13 @@ pub fn send_email(target: String, subject: String, body: String, html: String) -
 
     let client = Client::new();
     match client
-        .post("http://192.168.0.36:3838/send")
+        .post(&portal())
         .json(&map)
         .send()
     {
         Ok(_) => Ok(()),
         Err(_) => Err(()),
     }
-}
-
-fn public_uri() -> String {
-    env::var("PUBLIC_URI").expect("PUBLIC_URI not in environment variables!")
 }
 
 pub fn send_verification_email(email: String, code: String) -> bool {
