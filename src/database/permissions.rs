@@ -168,19 +168,23 @@ impl PermissionCalculator {
                             }
                         }
 
+                        // ? In this case, it is a "self DM".
+                        if other_user == "" {
+                            return 1024 + 128 + 32 + 16 + 1;
+                        }
+
                         let relationships = self.user.fetch_relationships();
                         let relationship =
                             get_relationship_internal(&self.user.id, &other_user, &relationships);
 
-                        if relationship == Relationship::SELF ||
-                           relationship == Relationship::Friend {
-                            permissions = 177;
+                        if relationship == Relationship::Friend {
+                            permissions = 1024 + 128 + 32 + 16 + 1;
                         } else if relationship == Relationship::Blocked
                             || relationship == Relationship::BlockedOther
                         {
                             permissions = 1;
                         } else if has_mutual_connection(&self.user.id, other_user, true) {
-                            permissions = 177;
+                            permissions = 1024 + 128 + 32 + 16 + 1;
                         } else {
                             permissions = 1;
                         }
