@@ -11,7 +11,7 @@ pub fn send_email(target: String, subject: String, body: String, html: String) -
 
     let client = Client::new();
     match client
-        .post("http://192.168.0.26:3838/send")
+        .post("http://192.168.0.36:3838/send")
         .json(&map)
         .send()
     {

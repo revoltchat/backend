@@ -172,7 +172,8 @@ impl PermissionCalculator {
                         let relationship =
                             get_relationship_internal(&self.user.id, &other_user, &relationships);
 
-                        if relationship == Relationship::Friend {
+                        if relationship == Relationship::SELF ||
+                           relationship == Relationship::Friend {
                             permissions = 177;
                         } else if relationship == Relationship::Blocked
                             || relationship == Relationship::BlockedOther
