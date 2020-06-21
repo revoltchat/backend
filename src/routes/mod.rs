@@ -69,7 +69,9 @@ pub fn mount(rocket: Rocket) -> Rocket {
                 account::verify_email,
                 account::resend_email,
                 account::login,
-                account::token
+                account::token,
+
+                account::login_preflight,
             ],
         )
         .mount(

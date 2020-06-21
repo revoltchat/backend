@@ -216,6 +216,11 @@ pub struct Login {
     password: String,
 }
 
+#[options("/login")]
+pub fn login_preflight() -> Response {
+    Response::Result(super::Status::Ok)
+}
+
 /// login to a Revolt account
 /// (1) find user by email
 /// (2) verify password
