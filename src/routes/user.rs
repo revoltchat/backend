@@ -92,7 +92,7 @@ pub fn dms(user: UserRef) -> Response {
             "$or": [
                 {
                     "type": channel::ChannelType::DM as i32,
-                    "active": 1
+                    "active": true
                 },
                 {
                     "type": channel::ChannelType::GROUPDM as i32
