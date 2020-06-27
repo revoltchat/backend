@@ -91,7 +91,8 @@ pub fn dms(user: UserRef) -> Response {
         doc! {
             "$or": [
                 {
-                    "type": channel::ChannelType::DM as i32
+                    "type": channel::ChannelType::DM as i32,
+                    "active": 1
                 },
                 {
                     "type": channel::ChannelType::GROUPDM as i32
