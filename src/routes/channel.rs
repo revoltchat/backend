@@ -503,11 +503,11 @@ pub fn messages(
     let mut query = doc! { "channel": target.id };
 
     if let Some(before) = &options.before {
-        query.insert("_id", doc! { "$lte": before });
+        query.insert("_id", doc! { "$lt": before });
     }
 
     if let Some(after) = &options.after {
-        query.insert("_id", doc! { "$gte": after });
+        query.insert("_id", doc! { "$gt": after });
     }
 
     let limit = if let Some(limit) = options.limit {
