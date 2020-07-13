@@ -63,12 +63,7 @@ impl<'a> rocket::response::Responder<'a> for Permission {
 
 pub fn mount(rocket: Rocket) -> Rocket {
     rocket
-        .mount("/",
-            routes![
-                root::root,
-                root::teapot
-            ]
-        )
+        .mount("/", routes![root::root, root::teapot])
         .mount(
             "/account",
             routes![
@@ -77,7 +72,6 @@ pub fn mount(rocket: Rocket) -> Rocket {
                 account::resend_email,
                 account::login,
                 account::token,
-
                 account::create_preflight,
                 account::verify_email_preflight,
                 account::resend_email_preflight,
@@ -99,7 +93,6 @@ pub fn mount(rocket: Rocket) -> Rocket {
                 user::remove_friend,
                 user::block_user,
                 user::unblock_user,
-
                 user::user_preflight,
                 user::lookup_preflight,
                 user::dms_preflight,
@@ -121,7 +114,6 @@ pub fn mount(rocket: Rocket) -> Rocket {
                 channel::send_message,
                 channel::edit_message,
                 channel::delete_message,
-
                 channel::create_group_preflight,
                 channel::channel_preflight,
                 channel::member_preflight,
@@ -147,7 +139,6 @@ pub fn mount(rocket: Rocket) -> Rocket {
                 guild::kick_member,
                 guild::ban_member,
                 guild::unban_member,
-
                 guild::guild_preflight,
                 guild::create_channel_preflight,
                 guild::create_invite_preflight,

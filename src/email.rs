@@ -18,11 +18,7 @@ pub fn send_email(target: String, subject: String, body: String, html: String) -
     map.insert("html", html);
 
     let client = Client::new();
-    match client
-        .post(&portal())
-        .json(&map)
-        .send()
-    {
+    match client.post(&portal()).json(&map).send() {
         Ok(_) => Ok(()),
         Err(_) => Err(()),
     }

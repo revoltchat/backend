@@ -15,6 +15,7 @@ use bson::{doc, from_bson, Bson, Bson::UtcDatetime};
 use chrono::prelude::*;
 use mongodb::options::FindOptions;
 use num_enum::TryFromPrimitive;
+use rocket::request::Form;
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
@@ -478,17 +479,55 @@ pub fn delete(user: UserRef, target: ChannelRef) -> Option<Response> {
     }
 }
 
+#[derive(Serialize, Deserialize, FromForm)]
+pub struct MessageFetchOptions {
+    limit: Option<i64>,
+    before: Option<String>,
+    after: Option<String>,
+}
+
 /// fetch channel messages
-#[get("/<target>/messages")]
-pub fn messages(user: UserRef, target: ChannelRef) -> Option<Response> {
+#[get("/<target>/messages?<options..>")]
+pub fn messages(
+    user: UserRef,
+    target: ChannelRef,
+    options: Form<MessageFetchOptions>,
+) -> Option<Response> {
     let permissions = with_permissions!(user, target);
 
     if !permissions.get_read_messages() {
         return Some(Response::LackingPermission(Permission::ReadMessages));
     }
 
+    // ! FIXME: update wiki to reflect changes
+    let mut query = doc! { "channel": target.id };
+
+    if let Some(before) = &options.before {
+        query.insert("_id", doc! { "$lte": before });
+    }
+
+    if let Some(after) = &options.after {
+        query.insert("_id", doc! { "$gte": after });
+    }
+
+    let limit = if let Some(limit) = options.limit {
+        limit.min(100).max(0)
+    } else {
+        50
+    };
+
     let col = database::get_collection("messages");
-    let result = col.find(doc! { "channel": target.id }, None).unwrap();
+    let result = col
+        .find(
+            query,
+            FindOptions::builder()
+                .limit(limit)
+                .sort(doc! {
+                    "_id": -1
+                })
+                .build(),
+        )
+        .unwrap();
 
     let mut messages = Vec::new();
     for item in result {
@@ -532,7 +571,9 @@ pub fn send_message(
     let nonce: String = message.nonce.chars().take(32).collect();
 
     if content.len() == 0 {
-        return Some(Response::NotAcceptable(json!({ "error": "No message content!" })));
+        return Some(Response::NotAcceptable(
+            json!({ "error": "No message content!" }),
+        ));
     }
 
     let col = database::get_collection("messages");
@@ -687,8 +728,23 @@ pub fn delete_message(user: UserRef, target: ChannelRef, message: Message) -> Op
     }
 }
 
-#[options("/create")] pub fn create_group_preflight() -> Response { Response::Result(super::Status::Ok) }
-#[options("/<_target>")] pub fn channel_preflight(_target: String) -> Response { Response::Result(super::Status::Ok) }
-#[options("/<_target>/recipients/<_member>")] pub fn member_preflight(_target: String, _member: String) -> Response { Response::Result(super::Status::Ok) }
-#[options("/<_target>/messages")] pub fn messages_preflight(_target: String) -> Response { Response::Result(super::Status::Ok) }
-#[options("/<_target>/messages/<_message>")] pub fn message_preflight(_target: String, _message: String) -> Response { Response::Result(super::Status::Ok) }
+#[options("/create")]
+pub fn create_group_preflight() -> Response {
+    Response::Result(super::Status::Ok)
+}
+#[options("/<_target>")]
+pub fn channel_preflight(_target: String) -> Response {
+    Response::Result(super::Status::Ok)
+}
+#[options("/<_target>/recipients/<_member>")]
+pub fn member_preflight(_target: String, _member: String) -> Response {
+    Response::Result(super::Status::Ok)
+}
+#[options("/<_target>/messages")]
+pub fn messages_preflight(_target: String) -> Response {
+    Response::Result(super::Status::Ok)
+}
+#[options("/<_target>/messages/<_message>")]
+pub fn message_preflight(_target: String, _message: String) -> Response {
+    Response::Result(super::Status::Ok)
+}

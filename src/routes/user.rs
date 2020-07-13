@@ -424,9 +424,7 @@ pub fn block_user(user: UserRef, target: UserRef) -> Response {
     let col = database::get_collection("users");
 
     match get_relationship(&user, &target) {
-        Relationship::Friend
-        | Relationship::Incoming
-        | Relationship::Outgoing => {
+        Relationship::Friend | Relationship::Incoming | Relationship::Outgoing => {
             if col
                 .update_one(
                     doc! {
@@ -707,9 +705,27 @@ pub fn unblock_user(user: UserRef, target: UserRef) -> Response {
     }
 }
 
-#[options("/<_target>")] pub fn user_preflight(_target: String) -> Response { Response::Result(super::Status::Ok) }
-#[options("/lookup")] pub fn lookup_preflight() -> Response { Response::Result(super::Status::Ok) }
-#[options("/@me/dms")] pub fn dms_preflight() -> Response { Response::Result(super::Status::Ok) }
-#[options("/<_target>/dm")] pub fn dm_preflight(_target: String) -> Response { Response::Result(super::Status::Ok) }
-#[options("/<_target>/friend")] pub fn friend_preflight(_target: String) -> Response { Response::Result(super::Status::Ok) }
-#[options("/<_target>/block")] pub fn block_user_preflight(_target: String) -> Response { Response::Result(super::Status::Ok) }
+#[options("/<_target>")]
+pub fn user_preflight(_target: String) -> Response {
+    Response::Result(super::Status::Ok)
+}
+#[options("/lookup")]
+pub fn lookup_preflight() -> Response {
+    Response::Result(super::Status::Ok)
+}
+#[options("/@me/dms")]
+pub fn dms_preflight() -> Response {
+    Response::Result(super::Status::Ok)
+}
+#[options("/<_target>/dm")]
+pub fn dm_preflight(_target: String) -> Response {
+    Response::Result(super::Status::Ok)
+}
+#[options("/<_target>/friend")]
+pub fn friend_preflight(_target: String) -> Response {
+    Response::Result(super::Status::Ok)
+}
+#[options("/<_target>/block")]
+pub fn block_user_preflight(_target: String) -> Response {
+    Response::Result(super::Status::Ok)
+}

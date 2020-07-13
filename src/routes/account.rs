@@ -204,9 +204,7 @@ pub fn resend_email(info: Json<Resend>) -> Response {
             }
         }
     } else {
-        Response::NotFound(
-            json!({ "error": "Email not found or pending verification!" }),
-        )
+        Response::NotFound(json!({ "error": "Email not found or pending verification!" }))
     }
 }
 
@@ -291,8 +289,23 @@ pub fn token(info: Json<Token>) -> Response {
     }
 }
 
-#[options("/create")] pub fn create_preflight() -> Response { Response::Result(super::Status::Ok) }
-#[options("/verify/<_code>")] pub fn verify_email_preflight(_code: String) -> Response { Response::Result(super::Status::Ok) }
-#[options("/resend")] pub fn resend_email_preflight() -> Response { Response::Result(super::Status::Ok) }
-#[options("/login")] pub fn login_preflight() -> Response { Response::Result(super::Status::Ok) }
-#[options("/token")] pub fn token_preflight() -> Response { Response::Result(super::Status::Ok) }
+#[options("/create")]
+pub fn create_preflight() -> Response {
+    Response::Result(super::Status::Ok)
+}
+#[options("/verify/<_code>")]
+pub fn verify_email_preflight(_code: String) -> Response {
+    Response::Result(super::Status::Ok)
+}
+#[options("/resend")]
+pub fn resend_email_preflight() -> Response {
+    Response::Result(super::Status::Ok)
+}
+#[options("/login")]
+pub fn login_preflight() -> Response {
+    Response::Result(super::Status::Ok)
+}
+#[options("/token")]
+pub fn token_preflight() -> Response {
+    Response::Result(super::Status::Ok)
+}
