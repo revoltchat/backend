@@ -8,7 +8,7 @@ use crate::notifications::{
 use crate::routes::channel;
 
 use bson::doc;
-use mongodb::options::FindOptions;
+use mongodb::options::{Collation, FindOptions, FindOneOptions};
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
@@ -20,6 +20,7 @@ pub fn me(user: UserRef) -> Response {
         Response::Success(json!({
             "id": user.id,
             "username": user.username,
+            "display_name": user.display_name,
             "email": info.get_str("email").unwrap(),
             "verified": user.email_verified,
         }))
@@ -36,6 +37,7 @@ pub fn user(user: UserRef, target: UserRef) -> Response {
     Response::Success(json!({
         "id": target.id,
         "username": target.username,
+        "display_name": target.display_name,
         "relationship": get_relationship(&user, &target) as i32,
         "mutual": {
             "guilds": mutual::find_mutual_guilds(&user.id, &target.id),
@@ -46,6 +48,46 @@ pub fn user(user: UserRef, target: UserRef) -> Response {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct UserQuery {
+    username: String,
+}
+
+/// find a user by their username
+#[post("/query", data = "<query>")]
+pub fn query(user: UserRef, query: Json<UserQuery>) -> Response {
+    let relationships = user.fetch_relationships();
+    let col = database::get_collection("users");
+
+    if let Ok(result) = col.find_one(
+        doc! { "username": query.username.clone() },
+        FindOneOptions::builder()
+            .collation(
+                Collation::builder()
+                    .locale("en")
+                    .strength(2)
+                    .build()
+            )
+            .build()
+    ) {
+        if let Some(doc) = result {
+            let id = doc.get_str("_id").unwrap();
+            Response::Success(json!({
+                "id": id,
+                "username": doc.get_str("username").unwrap(),
+                "display_name": doc.get_str("display_name").unwrap(),
+                "relationship": get_relationship_internal(&user.id, &id, &relationships) as i32
+            }))
+        } else {
+            Response::NotFound(json!({
+                "error": "User not found!"
+            }))
+        }
+    } else {
+        Response::InternalServerError(json!({ "error": "Failed database query." }))
+    }
+}
+
+/*#[derive(Serialize, Deserialize)]
 pub struct LookupQuery {
     username: String,
 }
@@ -80,7 +122,7 @@ pub fn lookup(user: UserRef, query: Json<LookupQuery>) -> Response {
     } else {
         Response::InternalServerError(json!({ "error": "Failed database query." }))
     }
-}
+}*/
 
 /// retrieve all of your DMs
 #[get("/@me/dms")]

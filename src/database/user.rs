@@ -23,6 +23,7 @@ pub struct User {
     pub email: String,
     pub username: String,
     pub password: String,
+    pub display_name: String,
     pub access_token: Option<String>,
     pub email_verification: UserEmailVerification,
     pub relations: Option<Vec<UserRelationship>>,

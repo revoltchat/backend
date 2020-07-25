@@ -53,6 +53,13 @@ pub fn create(info: Json<Create>) -> Response {
         return Response::Conflict(json!({ "error": "Email already in use!" }));
     }
 
+    if let Some(_) = col
+        .find_one(doc! { "username": info.username.clone() }, None)
+        .expect("Failed user lookup")
+    {
+        return Response::Conflict(json!({ "error": "Username already in use!" }));
+    }
+
     if let Ok(hashed) = hash(info.password.clone(), 10) {
         let access_token = gen_token(92);
         let code = gen_token(48);
@@ -62,6 +69,7 @@ pub fn create(info: Json<Create>) -> Response {
                 "_id": Ulid::new().to_string(),
                 "email": info.email.clone(),
                 "username": info.username.clone(),
+                "display_name": info.username.clone(),
                 "password": hashed,
                 "access_token": access_token,
                 "email_verification": {
@@ -133,7 +141,7 @@ pub fn verify_email(code: String) -> Response {
             email::send_welcome_email(target.to_string(), user.username);
 
             Response::Redirect(
-                super::Redirect::to("https://example.com"), // ! FIXME; redirect to landing page
+                super::Redirect::to("https://app.revolt.chat"),
             )
         }
     } else {

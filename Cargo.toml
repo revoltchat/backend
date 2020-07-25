@@ -1,6 +1,6 @@
 [package]
 name = "revolt"
-version = "0.2.0"
+version = "0.2.2"
 authors = ["Paul Makles <paulmakles@gmail.com>"]
 edition = "2018"
 

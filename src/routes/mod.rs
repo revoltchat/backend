@@ -84,7 +84,7 @@ pub fn mount(rocket: Rocket) -> Rocket {
             routes![
                 user::me,
                 user::user,
-                user::lookup,
+                user::query,
                 user::dms,
                 user::dm,
                 user::get_friends,

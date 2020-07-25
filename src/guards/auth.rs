@@ -12,6 +12,7 @@ use database::user::{User, UserRelationship};
 pub struct UserRef {
     pub id: String,
     pub username: String,
+    pub display_name: String,
     pub email_verified: bool,
 }
 
@@ -23,6 +24,7 @@ impl UserRef {
                 .projection(doc! {
                     "_id": 1,
                     "username": 1,
+                    "display_name": 1,
                     "email_verification.verified": 1,
                 })
                 .build(),
@@ -31,6 +33,7 @@ impl UserRef {
                 Some(doc) => Some(UserRef {
                     id: doc.get_str("_id").unwrap().to_string(),
                     username: doc.get_str("username").unwrap().to_string(),
+                    display_name: doc.get_str("display_name").unwrap().to_string(),
                     email_verified: doc
                         .get_document("email_verification")
                         .unwrap()
@@ -99,6 +102,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for UserRef {
                             .projection(doc! {
                                 "_id": 1,
                                 "username": 1,
+                                "display_name": 1,
                                 "email_verification.verified": 1,
                             })
                             .build(),
@@ -109,6 +113,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for UserRef {
                     Outcome::Success(UserRef {
                         id: user.get_str("_id").unwrap().to_string(),
                         username: user.get_str("username").unwrap().to_string(),
+                        display_name: user.get_str("display_name").unwrap().to_string(),
                         email_verified: user
                             .get_document("email_verification")
                             .unwrap()
