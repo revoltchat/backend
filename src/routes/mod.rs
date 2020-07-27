@@ -94,7 +94,7 @@ pub fn mount(rocket: Rocket) -> Rocket {
                 user::block_user,
                 user::unblock_user,
                 user::user_preflight,
-                user::lookup_preflight,
+                user::query_preflight,
                 user::dms_preflight,
                 user::dm_preflight,
                 user::friend_preflight,

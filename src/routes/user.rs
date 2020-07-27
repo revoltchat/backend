@@ -751,8 +751,8 @@ pub fn unblock_user(user: UserRef, target: UserRef) -> Response {
 pub fn user_preflight(_target: String) -> Response {
     Response::Result(super::Status::Ok)
 }
-#[options("/lookup")]
-pub fn lookup_preflight() -> Response {
+#[options("/query")]
+pub fn query_preflight() -> Response {
     Response::Result(super::Status::Ok)
 }
 #[options("/@me/dms")]
