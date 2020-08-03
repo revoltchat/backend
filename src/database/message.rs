@@ -1,12 +1,15 @@
-use super::get_collection;
-use crate::notifications;
 use crate::notifications::events::message::Create;
 use crate::notifications::events::Notification;
-use crate::database::channel::Channel;
 use crate::routes::channel::ChannelType;
+use crate::database::channel::Channel;
+use super::get_collection;
+use crate::notifications;
 
 use bson::{doc, to_bson, UtcDateTime};
 use serde::{Deserialize, Serialize};
+use rocket::request::FromParam;
+use bson::from_bson;
+use rocket::http::RawStr;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PreviousEntry {
@@ -84,6 +87,23 @@ impl Message {
             }
         } else {
             false
+        }
+    }
+}
+
+impl<'r> FromParam<'r> for Message {
+    type Error = &'r RawStr;
+
+    fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
+        let col = get_collection("messages");
+        let result = col
+            .find_one(doc! { "_id": param.to_string() }, None)
+            .unwrap();
+
+        if let Some(message) = result {
+            Ok(from_bson(bson::Bson::Document(message)).expect("Failed to unwrap message."))
+        } else {
+            Err(param)
         }
     }
 }

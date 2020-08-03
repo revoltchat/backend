@@ -1,9 +1,8 @@
 use super::mutual::has_mutual_connection;
 use crate::database::channel::Channel;
-use crate::database::guild::Member;
+use crate::database::guild::{Guild, Member, get_member, fetch_guild};
 use crate::database::user::UserRelationship;
 use crate::guards::auth::UserRef;
-use crate::guards::guild::{get_member, GuildRef};
 
 use num_enum::TryFromPrimitive;
 
@@ -89,7 +88,7 @@ pub fn get_relationship(a: &UserRef, b: &UserRef) -> Relationship {
 pub struct PermissionCalculator {
     pub user: UserRef,
     pub channel: Option<Channel>,
-    pub guild: Option<GuildRef>,
+    pub guild: Option<Guild>,
     pub member: Option<Member>,
 }
 
@@ -110,7 +109,7 @@ impl PermissionCalculator {
         }
     }
 
-    pub fn guild(self, guild: GuildRef) -> PermissionCalculator {
+    pub fn guild(self, guild: Guild) -> PermissionCalculator {
         PermissionCalculator {
             guild: Some(guild),
             ..self
@@ -125,7 +124,11 @@ impl PermissionCalculator {
                 0..=1 => None,
                 2 => {
                     if let Some(id) = &channel.guild {
-                        GuildRef::from(id.clone())
+                        if let Ok(result) = fetch_guild(id) {
+                            result
+                        } else {
+                            None
+                        }
                     } else {
                         None
                     }
