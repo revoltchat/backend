@@ -6,12 +6,14 @@ extern crate rocket;
 extern crate rocket_contrib;
 #[macro_use]
 extern crate bitfield;
+#[macro_use]
+extern crate lazy_static;
 
-pub mod database;
-pub mod email;
-pub mod guards;
 pub mod notifications;
+pub mod database;
+pub mod guards;
 pub mod routes;
+pub mod email;
 pub mod util;
 
 use dotenv;

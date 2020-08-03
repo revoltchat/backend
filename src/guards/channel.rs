@@ -27,7 +27,20 @@ pub struct ChannelRef {
 
 impl ChannelRef {
     pub fn from(id: String) -> Option<ChannelRef> {
-        match database::get_collection("channels").find_one(
+        let channel = database::channel::fetch_channel(&id);
+        Some(ChannelRef {
+            id: channel.id,
+            channel_type: channel.channel_type,
+
+            name: channel.name,
+            last_message: channel.last_message,
+            
+            recipients: channel.recipients,
+            guild: channel.guild,
+            owner: channel.owner
+        })
+
+        /*match database::get_collection("channels").find_one(
             doc! { "_id": id },
             FindOneOptions::builder()
                 .projection(doc! {
@@ -48,7 +61,7 @@ impl ChannelRef {
                 None => None,
             },
             Err(_) => None,
-        }
+        }*/
     }
 
     pub fn fetch_data(&self, projection: Document) -> Option<Document> {
