@@ -1,8 +1,7 @@
 use super::channel::ChannelType;
 use super::Response;
-use crate::database::{self, channel::Channel, Permission, PermissionCalculator};
+use crate::database::{self, channel::Channel, channel::fetch_channel, Permission, PermissionCalculator};
 use crate::guards::auth::UserRef;
-use crate::guards::channel::ChannelRef;
 use crate::guards::guild::{get_invite, get_member, GuildRef};
 use crate::notifications::{
     self,
@@ -331,7 +330,7 @@ pub struct InviteOptions {
 pub fn create_invite(
     user: UserRef,
     target: GuildRef,
-    channel: ChannelRef,
+    channel: Channel,
     _options: Json<InviteOptions>,
 ) -> Option<Response> {
     let (permissions, _) = with_permissions!(user, target);
@@ -430,7 +429,8 @@ pub fn fetch_invites(user: UserRef, target: GuildRef) -> Option<Response> {
 #[get("/join/<code>", rank = 1)]
 pub fn fetch_invite(user: UserRef, code: String) -> Response {
     if let Some((guild_id, name, invite)) = get_invite(&code, user.id) {
-        if let Some(channel) = ChannelRef::from(invite.channel) {
+        //if let Some(channel) = ChannelRef::from(invite.channel) {
+            let channel = fetch_channel(&invite.channel);
             Response::Success(json!({
                 "guild": {
                     "id": guild_id,
@@ -441,9 +441,9 @@ pub fn fetch_invite(user: UserRef, code: String) -> Response {
                     "name": channel.name,
                 }
             }))
-        } else {
+        /*} else {
             Response::BadRequest(json!({ "error": "Failed to fetch channel." }))
-        }
+        }*/
     } else {
         Response::NotFound(json!({ "error": "Failed to fetch invite or code is invalid." }))
     }

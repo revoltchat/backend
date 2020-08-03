@@ -1,8 +1,8 @@
 use super::mutual::has_mutual_connection;
+use crate::database::channel::Channel;
 use crate::database::guild::Member;
 use crate::database::user::UserRelationship;
 use crate::guards::auth::UserRef;
-use crate::guards::channel::ChannelRef;
 use crate::guards::guild::{get_member, GuildRef};
 
 use num_enum::TryFromPrimitive;
@@ -88,7 +88,7 @@ pub fn get_relationship(a: &UserRef, b: &UserRef) -> Relationship {
 
 pub struct PermissionCalculator {
     pub user: UserRef,
-    pub channel: Option<ChannelRef>,
+    pub channel: Option<Channel>,
     pub guild: Option<GuildRef>,
     pub member: Option<Member>,
 }
@@ -103,7 +103,7 @@ impl PermissionCalculator {
         }
     }
 
-    pub fn channel(self, channel: ChannelRef) -> PermissionCalculator {
+    pub fn channel(self, channel: Channel) -> PermissionCalculator {
         PermissionCalculator {
             channel: Some(channel),
             ..self

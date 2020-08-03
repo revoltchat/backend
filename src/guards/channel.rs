@@ -6,9 +6,23 @@ use serde::{Deserialize, Serialize};
 
 use crate::database;
 
-use database::channel::LastMessage;
+use database::channel::{ Channel, fetch_channel };
 use database::message::Message;
 
+impl<'r> FromParam<'r> for Channel {
+    type Error = &'r RawStr;
+
+    fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
+        Ok(fetch_channel(param))
+        /*if let Some(channel) = fetch_channel(param) {
+            Ok(channel)
+        } else {
+            Err(param)
+        }*/
+    }
+}
+
+/*
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ChannelRef {
     #[serde(rename = "_id")]
@@ -84,7 +98,7 @@ impl<'r> FromParam<'r> for ChannelRef {
             Err(param)
         }
     }
-}
+}*/
 
 impl<'r> FromParam<'r> for Message {
     type Error = &'r RawStr;

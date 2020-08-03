@@ -1,8 +1,8 @@
 use super::get_collection;
-use crate::guards::channel::ChannelRef;
 use crate::notifications;
 use crate::notifications::events::message::Create;
 use crate::notifications::events::Notification;
+use crate::database::channel::Channel;
 use crate::routes::channel::ChannelType;
 
 use bson::{doc, to_bson, UtcDateTime};
@@ -32,7 +32,7 @@ pub struct Message {
 // ? pub fn send_message();
 // ? handle websockets?
 impl Message {
-    pub fn send(&self, target: &ChannelRef) -> bool {
+    pub fn send(&self, target: &Channel) -> bool {
         if get_collection("messages")
             .insert_one(to_bson(&self).unwrap().as_document().unwrap().clone(), None)
             .is_ok()
