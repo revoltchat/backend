@@ -3,7 +3,7 @@ use super::get_collection;
 use serde::{Deserialize, Serialize};
 use rocket::request::FromParam;
 use std::sync::{Arc, Mutex};
-use bson::{doc, from_bson};
+use mongodb::bson::{Bson, doc, from_bson};
 use rocket::http::RawStr;
 use lru::LruCache;
 
@@ -60,7 +60,7 @@ pub fn fetch_channel(id: &str) -> Result<Option<Channel>, String> {
     let col = get_collection("channels");
     if let Ok(result) = col.find_one(doc! { "_id": id }, None) {
         if let Some(doc) = result {
-            if let Ok(channel) = from_bson(bson::Bson::Document(doc)) as Result<Channel, _> {
+            if let Ok(channel) = from_bson(Bson::Document(doc)) as Result<Channel, _> {
                 let mut cache = CACHE.lock().unwrap();
                 cache.put(id.to_string(), channel.clone());
     
@@ -105,7 +105,7 @@ pub fn fetch_channels(ids: &Vec<String>) -> Result<Option<Vec<Channel>>, String>
         for item in result {
             let mut cache = CACHE.lock().unwrap();
             if let Ok(doc) = item {
-                if let Ok(channel) = from_bson(bson::Bson::Document(doc)) as Result<Channel, _> {
+                if let Ok(channel) = from_bson(Bson::Document(doc)) as Result<Channel, _> {
                     cache.put(channel.id.clone(), channel.clone());
                     channels.push(channel);
                 } else {

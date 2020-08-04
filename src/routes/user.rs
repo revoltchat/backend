@@ -7,7 +7,7 @@ use crate::notifications::{
 };
 use crate::routes::channel;
 
-use bson::doc;
+use mongodb::bson::doc;
 use mongodb::options::{Collation, FindOptions, FindOneOptions};
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
@@ -148,6 +148,7 @@ pub fn dms(user: UserRef) -> Response {
         for item in results {
             if let Ok(doc) = item {
                 let id = doc.get_str("_id").unwrap();
+                let last_message = doc.get_document("last_message").unwrap();
                 let recipients = doc.get_array("recipients").unwrap();
 
                 match doc.get_i32("type").unwrap() {
@@ -155,6 +156,7 @@ pub fn dms(user: UserRef) -> Response {
                         channels.push(json!({
                             "id": id,
                             "type": 0,
+                            "last_message": last_message,
                             "recipients": recipients,
                         }));
                     }

@@ -1,7 +1,7 @@
 use crate::database;
 use crate::util::vec_to_set;
 
-use bson::doc;
+use mongodb::bson::doc;
 use hashbrown::{HashMap, HashSet};
 use mongodb::options::FindOneOptions;
 use once_cell::sync::OnceCell;

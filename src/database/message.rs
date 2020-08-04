@@ -5,16 +5,16 @@ use crate::database::channel::Channel;
 use super::get_collection;
 use crate::notifications;
 
-use bson::{doc, to_bson, UtcDateTime};
+use mongodb::bson::{doc, to_bson, Bson, DateTime};
 use serde::{Deserialize, Serialize};
 use rocket::request::FromParam;
-use bson::from_bson;
+use mongodb::bson::from_bson;
 use rocket::http::RawStr;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PreviousEntry {
     pub content: String,
-    pub time: UtcDateTime,
+    pub time: DateTime,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -26,7 +26,7 @@ pub struct Message {
     pub author: String,
 
     pub content: String,
-    pub edited: Option<UtcDateTime>,
+    pub edited: Option<DateTime>,
 
     pub previous_content: Vec<PreviousEntry>,
 }
@@ -101,7 +101,7 @@ impl<'r> FromParam<'r> for Message {
             .unwrap();
 
         if let Some(message) = result {
-            Ok(from_bson(bson::Bson::Document(message)).expect("Failed to unwrap message."))
+            Ok(from_bson(Bson::Document(message)).expect("Failed to unwrap message."))
         } else {
             Err(param)
         }

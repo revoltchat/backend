@@ -4,7 +4,7 @@ use crate::email;
 use crate::util::gen_token;
 
 use bcrypt::{hash, verify};
-use bson::{doc, from_bson, Bson::UtcDatetime};
+use mongodb::bson::{doc, from_bson, Bson};
 use chrono::prelude::*;
 use database::user::User;
 use rocket_contrib::json::Json;
@@ -75,8 +75,8 @@ pub fn create(info: Json<Create>) -> Response {
                 "email_verification": {
                     "verified": false,
                     "target": info.email.clone(),
-                    "expiry": UtcDatetime(Utc::now() + chrono::Duration::days(1)),
-                    "rate_limit": UtcDatetime(Utc::now() + chrono::Duration::minutes(1)),
+                    "expiry": Bson::DateTime(Utc::now() + chrono::Duration::days(1)),
+                    "rate_limit": Bson::DateTime(Utc::now() + chrono::Duration::minutes(1)),
                     "code": code.clone(),
                 }
             },
@@ -110,7 +110,7 @@ pub fn verify_email(code: String) -> Response {
         .find_one(doc! { "email_verification.code": code.clone() }, None)
         .expect("Failed user lookup")
     {
-        let user: User = from_bson(bson::Bson::Document(u)).expect("Failed to unwrap user.");
+        let user: User = from_bson(Bson::Document(u)).expect("Failed to unwrap user.");
         let ev = user.email_verification;
 
         if Utc::now() > *ev.expiry.unwrap() {
@@ -169,7 +169,7 @@ pub fn resend_email(info: Json<Resend>) -> Response {
         )
         .expect("Failed user lookup.")
     {
-        let user: User = from_bson(bson::Bson::Document(u)).expect("Failed to unwrap user.");
+        let user: User = from_bson(Bson::Document(u)).expect("Failed to unwrap user.");
         let ev = user.email_verification;
 
         let expiry = ev.expiry.unwrap();
@@ -180,7 +180,7 @@ pub fn resend_email(info: Json<Resend>) -> Response {
                 json!({ "error": "You are being rate limited, please try again in a while." }),
             )
         } else {
-            let mut new_expiry = UtcDatetime(Utc::now() + chrono::Duration::days(1));
+            let mut new_expiry = Bson::DateTime(Utc::now() + chrono::Duration::days(1));
             if info.email.clone() != user.email {
                 if Utc::now() > *expiry {
                     return Response::Gone(
@@ -188,7 +188,7 @@ pub fn resend_email(info: Json<Resend>) -> Response {
                     );
                 }
 
-                new_expiry = UtcDatetime(*expiry);
+                new_expiry = Bson::DateTime(*expiry);
             }
 
             let code = gen_token(48);
@@ -198,7 +198,7 @@ pub fn resend_email(info: Json<Resend>) -> Response {
 						"$set": {
 							"email_verification.code": code.clone(),
 							"email_verification.expiry": new_expiry,
-							"email_verification.rate_limit": UtcDatetime(Utc::now() + chrono::Duration::minutes(1)),
+							"email_verification.rate_limit": Bson::DateTime(Utc::now() + chrono::Duration::minutes(1)),
 						},
 					},
 					None,
@@ -234,7 +234,7 @@ pub fn login(info: Json<Login>) -> Response {
         .find_one(doc! { "email": info.email.clone() }, None)
         .expect("Failed user lookup")
     {
-        let user: User = from_bson(bson::Bson::Document(u)).expect("Failed to unwrap user.");
+        let user: User = from_bson(Bson::Document(u)).expect("Failed to unwrap user.");
 
         match verify(info.password.clone(), &user.password)
             .expect("Failed to check hash of password.")

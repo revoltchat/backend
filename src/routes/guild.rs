@@ -9,7 +9,7 @@ use crate::notifications::{
 };
 use crate::util::gen_token;
 
-use bson::{doc, from_bson, Bson};
+use mongodb::bson::{doc, from_bson, Bson};
 use mongodb::options::{FindOneOptions, FindOptions};
 use rocket::request::Form;
 use rocket_contrib::json::Json;
@@ -107,7 +107,7 @@ pub fn guild(user: UserRef, target: Guild) -> Option<Response> {
             for item in results {
                 if let Ok(entry) = item {
                     if let Ok(channel) =
-                        from_bson(bson::Bson::Document(entry)) as Result<Channel, _>
+                        from_bson(Bson::Document(entry)) as Result<Channel, _>
                     {
                         channels.push(json!({
                             "id": channel.id,

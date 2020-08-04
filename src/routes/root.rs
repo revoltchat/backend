@@ -1,12 +1,12 @@
 use super::Response;
 
-use bson::doc;
+use mongodb::bson::doc;
 
 /// root
 #[get("/")]
 pub fn root() -> Response {
     Response::Success(json!({
-        "revolt": "0.2.2"
+        "revolt": "0.2.3"
     }))
 }
 

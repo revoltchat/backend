@@ -35,6 +35,17 @@ pub fn send_verification_email(email: String, code: String) -> bool {
     .is_ok()
 }
 
+pub fn send_password_reset(email: String, code: String) -> bool {
+    let url = format!("{}/api/account/reset/{}", public_uri(), code);
+    send_email(
+        email,
+        "Reset your password.".to_string(),
+        format!("Reset your password here: {}", url),
+        format!("<a href=\"{}\">Click to reset your password!</a>", url),
+    )
+    .is_ok()
+}
+
 pub fn send_welcome_email(email: String, username: String) -> bool {
     send_email(
         email,

@@ -1,4 +1,4 @@
-use bson::{doc, from_bson, Bson, Document};
+use mongodb::bson::{doc, from_bson, Bson, Document};
 use mongodb::options::FindOneOptions;
 use rocket::http::RawStr;
 use rocket::request::FromParam;
@@ -36,7 +36,7 @@ impl GuildRef {
         ) {
             Ok(result) => match result {
                 Some(doc) => {
-                    Some(from_bson(bson::Bson::Document(doc)).expect("Failed to unwrap guild."))
+                    Some(from_bson(mongodb::bson::mongodb::bson::Document(doc)).expect("Failed to unwrap guild."))
                 }
                 None => None,
             },
@@ -85,7 +85,7 @@ pub fn get_member(guild_id: &String, member: &String) -> Option<Member> {
         None,
     ) {
         if let Some(doc) = result {
-            Some(from_bson(Bson::Document(doc)).expect("Failed to unwrap member."))
+            Some(from_bson(mongodb::bson::Document(doc)).expect("Failed to unwrap member."))
         } else {
             None
         }
@@ -142,7 +142,7 @@ pub fn get_invite<U: Into<Option<String>>>(
             Some((
                 doc.get_str("_id").unwrap().to_string(),
                 doc.get_str("name").unwrap().to_string(),
-                from_bson(Bson::Document(invite.clone())).unwrap(),
+                from_bson(mongodb::bson::Document(invite.clone())).unwrap(),
             ))
         } else {
             None

@@ -3,7 +3,7 @@ use super::get_collection;
 use serde::{Deserialize, Serialize};
 use rocket::request::FromParam;
 use std::sync::{Arc, Mutex};
-use bson::{doc, from_bson};
+use mongodb::bson::{Bson, doc, from_bson};
 use rocket::http::RawStr;
 use lru::LruCache;
 
@@ -68,7 +68,7 @@ pub fn fetch_guild(id: &str) -> Result<Option<Guild>, String> {
     let col = get_collection("guilds");
     if let Ok(result) = col.find_one(doc! { "_id": id }, None) {
         if let Some(doc) = result {
-            if let Ok(guild) = from_bson(bson::Bson::Document(doc)) as Result<Guild, _> {
+            if let Ok(guild) = from_bson(Bson::Document(doc)) as Result<Guild, _> {
                 let mut cache = CACHE.lock().unwrap();
                 cache.put(id.to_string(), guild.clone());
     
@@ -109,7 +109,7 @@ pub fn get_member(guild_id: &String, member: &String) -> Option<Member> {
         None,
     ) {
         if let Some(doc) = result {
-            Some(from_bson(bson::Bson::Document(doc)).expect("Failed to unwrap member."))
+            Some(from_bson(Bson::Document(doc)).expect("Failed to unwrap member."))
         } else {
             None
         }
@@ -166,7 +166,7 @@ pub fn get_invite<U: Into<Option<String>>>(
             Some((
                 doc.get_str("_id").unwrap().to_string(),
                 doc.get_str("name").unwrap().to_string(),
-                from_bson(bson::Bson::Document(invite.clone())).unwrap(),
+                from_bson(Bson::Document(invite.clone())).unwrap(),
             ))
         } else {
             None

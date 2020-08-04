@@ -10,7 +10,7 @@ use crate::notifications::{
 };
 use crate::util::vec_to_set;
 
-use bson::{doc, from_bson, Bson, Bson::UtcDatetime};
+use mongodb::bson::{doc, from_bson, Bson};
 use chrono::prelude::*;
 use mongodb::options::FindOptions;
 use num_enum::TryFromPrimitive;
@@ -531,7 +531,7 @@ pub fn messages(
     let mut messages = Vec::new();
     for item in result {
         let message: Message =
-            from_bson(bson::Bson::Document(item.unwrap())).expect("Failed to unwrap message.");
+            from_bson(Bson::Document(item.unwrap())).expect("Failed to unwrap message.");
         messages.push(json!({
             "id": message.id,
             "author": message.author,
@@ -667,7 +667,7 @@ pub fn edit_message(
         doc! {
             "$set": {
                 "content": &edit.content,
-                "edited": UtcDatetime(edited)
+                "edited": Bson::DateTime(edited)
             },
             "$push": {
                 "previous_content": {
