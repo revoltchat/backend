@@ -10,6 +10,11 @@ pub fn root() -> Response {
     }))
 }
 
+#[options("/")]
+pub fn root_preflight() -> Response {
+    Response::Result(super::Status::Ok)
+}
+
 /// I'm a teapot.
 #[delete("/")]
 pub fn teapot() -> Response {

@@ -63,7 +63,7 @@ impl<'a> rocket::response::Responder<'a> for Permission {
 
 pub fn mount(rocket: Rocket) -> Rocket {
     rocket
-        .mount("/", routes![root::root, root::teapot])
+        .mount("/", routes![root::root, root::root_preflight, root::teapot])
         .mount(
             "/account",
             routes![

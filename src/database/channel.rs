@@ -1,11 +1,11 @@
 use super::get_collection;
 
-use serde::{Deserialize, Serialize};
-use rocket::request::FromParam;
-use std::sync::{Arc, Mutex};
-use mongodb::bson::{Bson, doc, from_bson};
-use rocket::http::RawStr;
 use lru::LruCache;
+use mongodb::bson::{doc, from_bson, Bson};
+use rocket::http::RawStr;
+use rocket::request::FromParam;
+use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LastMessage {
@@ -41,7 +41,8 @@ pub struct Channel {
 }
 
 lazy_static! {
-    static ref CACHE: Arc<Mutex<LruCache<String, Channel>>> = Arc::new(Mutex::new(LruCache::new(4_000_000)));
+    static ref CACHE: Arc<Mutex<LruCache<String, Channel>>> =
+        Arc::new(Mutex::new(LruCache::new(4_000_000)));
 }
 
 pub fn fetch_channel(id: &str) -> Result<Option<Channel>, String> {
@@ -63,7 +64,7 @@ pub fn fetch_channel(id: &str) -> Result<Option<Channel>, String> {
             if let Ok(channel) = from_bson(Bson::Document(doc)) as Result<Channel, _> {
                 let mut cache = CACHE.lock().unwrap();
                 cache.put(id.to_string(), channel.clone());
-    
+
                 Ok(Some(channel))
             } else {
                 Err("Failed to deserialize channel!".to_string())
@@ -84,7 +85,7 @@ pub fn fetch_channels(ids: &Vec<String>) -> Result<Option<Vec<Channel>>, String>
         if let Ok(mut cache) = CACHE.lock() {
             for gid in ids {
                 let existing = cache.get(gid);
-    
+
                 if let Some(channel) = existing {
                     channels.push((*channel).clone());
                 } else {
@@ -97,7 +98,7 @@ pub fn fetch_channels(ids: &Vec<String>) -> Result<Option<Vec<Channel>>, String>
     }
 
     if missing.len() == 0 {
-        return Ok(Some(channels))
+        return Ok(Some(channels));
     }
 
     let col = get_collection("channels");
@@ -109,7 +110,7 @@ pub fn fetch_channels(ids: &Vec<String>) -> Result<Option<Vec<Channel>>, String>
                     cache.put(channel.id.clone(), channel.clone());
                     channels.push(channel);
                 } else {
-                    return Err("Failed to deserialize channel!".to_string())
+                    return Err("Failed to deserialize channel!".to_string());
                 }
             } else {
                 return Err("Failed to fetch channel.".to_string());
@@ -148,7 +149,7 @@ impl<'r> FromParam<'r> for Channel {
         let c = Channel {
             id: "potato".to_string(),
             channel_type: 0,
-    
+
             active: None,
             last_message: None,
             description: None,

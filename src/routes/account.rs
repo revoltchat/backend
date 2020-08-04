@@ -4,9 +4,9 @@ use crate::email;
 use crate::util::gen_token;
 
 use bcrypt::{hash, verify};
-use mongodb::bson::{doc, from_bson, Bson};
 use chrono::prelude::*;
 use database::user::User;
+use mongodb::bson::{doc, from_bson, Bson};
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
@@ -140,9 +140,7 @@ pub fn verify_email(code: String) -> Response {
 
             email::send_welcome_email(target.to_string(), user.username);
 
-            Response::Redirect(
-                super::Redirect::to("https://app.revolt.chat"),
-            )
+            Response::Redirect(super::Redirect::to("https://app.revolt.chat"))
         }
     } else {
         Response::BadRequest(json!({ "error": "Invalid code." }))

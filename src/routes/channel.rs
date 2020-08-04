@@ -1,7 +1,7 @@
 use super::Response;
 use crate::database::{
-    self, get_relationship, get_relationship_internal, message::Message, Permission,
-    PermissionCalculator, Relationship, channel::Channel
+    self, channel::Channel, get_relationship, get_relationship_internal, message::Message,
+    Permission, PermissionCalculator, Relationship,
 };
 use crate::guards::auth::UserRef;
 use crate::notifications::{
@@ -10,8 +10,8 @@ use crate::notifications::{
 };
 use crate::util::vec_to_set;
 
-use mongodb::bson::{doc, from_bson, Bson};
 use chrono::prelude::*;
+use mongodb::bson::{doc, from_bson, Bson};
 use mongodb::options::FindOptions;
 use num_enum::TryFromPrimitive;
 use rocket::request::Form;
@@ -145,15 +145,15 @@ pub fn channel(user: UserRef, target: Channel) -> Option<Response> {
                 "description": 1,
                 "owner": 1,
             }) {*/
-                Some(Response::Success(json!({
-                    "id": target.id,
-                    "type": target.channel_type,
-                    "last_message": target.last_message,
-                    "recipients": target.recipients,
-                    "name": target.name,
-                    "owner": target.owner,
-                    "description": target.description,
-                })))
+            Some(Response::Success(json!({
+                "id": target.id,
+                "type": target.channel_type,
+                "last_message": target.last_message,
+                "recipients": target.recipients,
+                "name": target.name,
+                "owner": target.owner,
+                "description": target.description,
+            })))
             /*} else {
                 None
             }*/
@@ -163,13 +163,13 @@ pub fn channel(user: UserRef, target: Channel) -> Option<Response> {
                 "name": 1,
                 "description": 1,
             }) {*/
-                Some(Response::Success(json!({
-                    "id": target.id,
-                    "type": target.channel_type,
-                    "guild": target.guild,
-                    "name": target.name,
-                    "description": target.description,
-                })))
+            Some(Response::Success(json!({
+                "id": target.id,
+                "type": target.channel_type,
+                "guild": target.guild,
+                "name": target.name,
+                "description": target.description,
+            })))
             /*} else {
                 None
             }*/

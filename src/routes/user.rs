@@ -8,7 +8,7 @@ use crate::notifications::{
 use crate::routes::channel;
 
 use mongodb::bson::doc;
-use mongodb::options::{Collation, FindOptions, FindOneOptions};
+use mongodb::options::{Collation, FindOneOptions, FindOptions};
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
@@ -61,13 +61,8 @@ pub fn query(user: UserRef, query: Json<UserQuery>) -> Response {
     if let Ok(result) = col.find_one(
         doc! { "username": query.username.clone() },
         FindOneOptions::builder()
-            .collation(
-                Collation::builder()
-                    .locale("en")
-                    .strength(2)
-                    .build()
-            )
-            .build()
+            .collation(Collation::builder().locale("en").strength(2).build())
+            .build(),
     ) {
         if let Some(doc) = result {
             let id = doc.get_str("_id").unwrap();

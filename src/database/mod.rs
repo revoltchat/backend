@@ -1,5 +1,5 @@
-use mongodb::sync::{Client, Collection, Database};
 use mongodb::bson::doc;
+use mongodb::sync::{Client, Collection, Database};
 use std::env;
 
 use once_cell::sync::OnceCell;
@@ -10,7 +10,11 @@ pub fn connect() {
         Client::with_uri_str(&env::var("DB_URI").expect("DB_URI not in environment variables!"))
             .expect("Failed to init db connection.");
 
-    client.database("revolt").collection("migrations").find(doc! { }, None).expect("Failed to get migration data from database.");
+    client
+        .database("revolt")
+        .collection("migrations")
+        .find(doc! {}, None)
+        .expect("Failed to get migration data from database.");
 
     DBCONN.set(client).unwrap();
 }

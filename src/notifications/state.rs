@@ -1,8 +1,8 @@
 use crate::database;
 use crate::util::vec_to_set;
 
-use mongodb::bson::doc;
 use hashbrown::{HashMap, HashSet};
+use mongodb::bson::doc;
 use mongodb::options::FindOneOptions;
 use once_cell::sync::OnceCell;
 use std::sync::RwLock;

@@ -1,7 +1,9 @@
 use super::channel::ChannelType;
 use super::Response;
-use crate::database::{self, channel::Channel, channel::fetch_channel, Permission, PermissionCalculator};
 use crate::database::guild::{get_invite, get_member, Guild};
+use crate::database::{
+    self, channel::fetch_channel, channel::Channel, Permission, PermissionCalculator,
+};
 use crate::guards::auth::UserRef;
 use crate::notifications::{
     self,
@@ -106,9 +108,7 @@ pub fn guild(user: UserRef, target: Guild) -> Option<Response> {
             let mut channels = vec![];
             for item in results {
                 if let Ok(entry) = item {
-                    if let Ok(channel) =
-                        from_bson(Bson::Document(entry)) as Result<Channel, _>
-                    {
+                    if let Ok(channel) = from_bson(Bson::Document(entry)) as Result<Channel, _> {
                         channels.push(json!({
                             "id": channel.id,
                             "name": channel.name,
@@ -265,11 +265,7 @@ pub struct CreateChannel {
 
 /// create a new channel
 #[post("/<target>/channels", data = "<info>")]
-pub fn create_channel(
-    user: UserRef,
-    target: Guild,
-    info: Json<CreateChannel>,
-) -> Option<Response> {
+pub fn create_channel(user: UserRef, target: Guild, info: Json<CreateChannel>) -> Option<Response> {
     let (permissions, _) = with_permissions!(user, target);
 
     if !permissions.get_manage_channels() {
@@ -451,8 +447,8 @@ pub fn fetch_invite(user: UserRef, code: String) -> Response {
                 } else {
                     Response::NotFound(json!({ "error": "Channel does not exist." }))
                 }
-            },
-            Err(err) => Response::InternalServerError(json!({ "error": err }))
+            }
+            Err(err) => Response::InternalServerError(json!({ "error": err })),
         }
     } else {
         Response::NotFound(json!({ "error": "Failed to fetch invite or code is invalid." }))

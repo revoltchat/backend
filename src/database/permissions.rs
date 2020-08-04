@@ -1,6 +1,6 @@
 use super::mutual::has_mutual_connection;
 use crate::database::channel::Channel;
-use crate::database::guild::{Guild, Member, get_member, fetch_guild};
+use crate::database::guild::{fetch_guild, get_member, Guild, Member};
 use crate::database::user::UserRelationship;
 use crate::guards::auth::UserRef;
 

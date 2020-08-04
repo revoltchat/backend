@@ -1,11 +1,11 @@
 use super::get_collection;
 
-use serde::{Deserialize, Serialize};
-use rocket::request::FromParam;
-use std::sync::{Arc, Mutex};
-use mongodb::bson::{Bson, doc, from_bson};
-use rocket::http::RawStr;
 use lru::LruCache;
+use mongodb::bson::{doc, from_bson, Bson};
+use rocket::http::RawStr;
+use rocket::request::FromParam;
+use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MemberRef {
@@ -49,7 +49,8 @@ pub struct Guild {
 }
 
 lazy_static! {
-    static ref CACHE: Arc<Mutex<LruCache<String, Guild>>> = Arc::new(Mutex::new(LruCache::new(4_000_000)));
+    static ref CACHE: Arc<Mutex<LruCache<String, Guild>>> =
+        Arc::new(Mutex::new(LruCache::new(4_000_000)));
 }
 
 pub fn fetch_guild(id: &str) -> Result<Option<Guild>, String> {
@@ -71,7 +72,7 @@ pub fn fetch_guild(id: &str) -> Result<Option<Guild>, String> {
             if let Ok(guild) = from_bson(Bson::Document(doc)) as Result<Guild, _> {
                 let mut cache = CACHE.lock().unwrap();
                 cache.put(id.to_string(), guild.clone());
-    
+
                 Ok(Some(guild))
             } else {
                 Err("Failed to deserialize guild!".to_string())

@@ -1,15 +1,15 @@
+use super::get_collection;
+use crate::database::channel::Channel;
+use crate::notifications;
 use crate::notifications::events::message::Create;
 use crate::notifications::events::Notification;
 use crate::routes::channel::ChannelType;
-use crate::database::channel::Channel;
-use super::get_collection;
-use crate::notifications;
 
-use mongodb::bson::{doc, to_bson, Bson, DateTime};
-use serde::{Deserialize, Serialize};
-use rocket::request::FromParam;
 use mongodb::bson::from_bson;
+use mongodb::bson::{doc, to_bson, Bson, DateTime};
 use rocket::http::RawStr;
+use rocket::request::FromParam;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PreviousEntry {
