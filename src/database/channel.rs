@@ -179,8 +179,8 @@ pub fn process_event(event: &Notification) {
                     owner: None,
                     guild: Some(ev.id.clone()),
                     name: Some(ev.name.clone()),
-                    description: Some(ev.description.clone())
-                }
+                    description: Some(ev.description.clone()),
+                },
             );
         }
         Notification::guild_channel_delete(ev) => {

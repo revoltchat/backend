@@ -1,6 +1,6 @@
 use super::channel::ChannelType;
 use super::Response;
-use crate::database::guild::{get_invite, get_member, Guild};
+use crate::database::guild::{fetch_member as get_member, get_invite, Guild, MemberKey};
 use crate::database::{
     self, channel::fetch_channel, channel::Channel, Permission, PermissionCalculator,
 };
@@ -641,11 +641,17 @@ pub fn fetch_members(user: UserRef, target: Guild) -> Option<Response> {
 pub fn fetch_member(user: UserRef, target: Guild, other: String) -> Option<Response> {
     with_permissions!(user, target);
 
-    if let Some(member) = get_member(&target.id, &other) {
-        Some(Response::Success(json!({
-            "id": member.id.user,
-            "nickname": member.nickname,
-        })))
+    if let Ok(result) = get_member(MemberKey(target.id, user.id)) {
+        if let Some(member) = result {
+            Some(Response::Success(json!({
+                "id": member.id.user,
+                "nickname": member.nickname,
+            })))
+        } else {
+            Some(Response::NotFound(
+                json!({ "error": "Member does not exist!" }),
+            ))
+        }
     } else {
         Some(Response::InternalServerError(
             json!({ "error": "Failed to fetch member or user does not exist." }),
@@ -668,10 +674,14 @@ pub fn kick_member(user: UserRef, target: Guild, other: String) -> Option<Respon
         return Some(Response::LackingPermission(Permission::KickMembers));
     }
 
-    if get_member(&target.id, &other).is_none() {
-        return Some(Response::BadRequest(
-            json!({ "error": "User not part of guild." }),
-        ));
+    if let Ok(result) = get_member(MemberKey( target.id.clone(), other.clone() )) {
+        if result.is_none() {
+            return Some(Response::BadRequest(
+                json!({ "error": "User not part of guild." }),
+            ));
+        }
+    } else {
+        return Some(Response::InternalServerError(json!({ "error": "Failed to fetch member." })))
     }
 
     if database::get_collection("members")
@@ -734,10 +744,14 @@ pub fn ban_member(
         return Some(Response::LackingPermission(Permission::BanMembers));
     }
 
-    if get_member(&target.id, &other).is_none() {
-        return Some(Response::BadRequest(
-            json!({ "error": "User not part of guild." }),
-        ));
+    if let Ok(result) = get_member(MemberKey( target.id.clone(), other.clone() )) {
+        if result.is_none() {
+            return Some(Response::BadRequest(
+                json!({ "error": "User not part of guild." }),
+            ));
+        }
+    } else {
+        return Some(Response::InternalServerError(json!({ "error": "Failed to fetch member." })))
     }
 
     if database::get_collection("guilds")

@@ -18,7 +18,7 @@ pub fn send_message<U: Into<Option<Vec<String>>>, G: Into<Option<String>>>(
     let guild = guild.into();
 
     data.push_to_cache();
-    
+
     if pubsub::send_message(users.clone(), guild.clone(), data.clone()) {
         state::send_message(users, guild, data.serialize());
 
