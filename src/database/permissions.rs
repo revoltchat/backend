@@ -1,8 +1,7 @@
 use super::mutual::has_mutual_connection;
 use crate::database::channel::Channel;
 use crate::database::guild::{fetch_guild, fetch_member, Guild, Member, MemberKey};
-use crate::database::user::UserRelationship;
-use crate::guards::auth::UserRef;
+use crate::database::user::{User, UserRelationship};
 
 use num_enum::TryFromPrimitive;
 
@@ -77,23 +76,23 @@ pub fn get_relationship_internal(
     Relationship::NONE
 }
 
-pub fn get_relationship(a: &UserRef, b: &UserRef) -> Relationship {
+pub fn get_relationship(a: &User, b: &User) -> Relationship {
     if a.id == b.id {
         return Relationship::SELF;
     }
 
-    get_relationship_internal(&a.id, &b.id, &a.fetch_relationships())
+    get_relationship_internal(&a.id, &b.id, &a.relations)
 }
 
 pub struct PermissionCalculator {
-    pub user: UserRef,
+    pub user: User,
     pub channel: Option<Channel>,
     pub guild: Option<Guild>,
     pub member: Option<Member>,
 }
 
 impl PermissionCalculator {
-    pub fn new(user: UserRef) -> PermissionCalculator {
+    pub fn new(user: User) -> PermissionCalculator {
         PermissionCalculator {
             user,
             channel: None,
@@ -174,9 +173,8 @@ impl PermissionCalculator {
                         }
 
                         if let Some(other) = other_user {
-                            let relationships = self.user.fetch_relationships();
                             let relationship =
-                                get_relationship_internal(&self.user.id, &other, &relationships);
+                                get_relationship_internal(&self.user.id, &other, &self.user.relations);
     
                             if relationship == Relationship::Friend {
                                 permissions = 1024 + 128 + 32 + 16 + 1;

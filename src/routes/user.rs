@@ -1,6 +1,5 @@
 use super::Response;
-use crate::database::{self, get_relationship, get_relationship_internal, mutual, Relationship};
-use crate::guards::auth::UserRef;
+use crate::database::{self, get_relationship, get_relationship_internal, mutual, Relationship, user::User};
 use crate::notifications::{
     self,
     events::{users::*, Notification},
@@ -15,25 +14,19 @@ use ulid::Ulid;
 
 /// retrieve your user information
 #[get("/@me")]
-pub fn me(user: UserRef) -> Response {
-    if let Some(info) = user.fetch_data(doc! { "email": 1 }) {
-        Response::Success(json!({
-            "id": user.id,
-            "username": user.username,
-            "display_name": user.display_name,
-            "email": info.get_str("email").unwrap(),
-            "verified": user.email_verified,
-        }))
-    } else {
-        Response::InternalServerError(
-            json!({ "error": "Failed to fetch information from database." }),
-        )
-    }
+pub fn me(user: User) -> Response {
+    Response::Success(json!({
+        "id": user.id,
+        "username": user.username,
+        "display_name": user.display_name,
+        "email": user.email,
+        "verified": user.email_verification.verified,
+    }))
 }
 
 /// retrieve another user's information
 #[get("/<target>")]
-pub fn user(user: UserRef, target: UserRef) -> Response {
+pub fn user(user: User, target: User) -> Response {
     Response::Success(json!({
         "id": target.id,
         "username": target.username,
@@ -54,8 +47,7 @@ pub struct UserQuery {
 
 /// find a user by their username
 #[post("/query", data = "<query>")]
-pub fn query(user: UserRef, query: Json<UserQuery>) -> Response {
-    let relationships = user.fetch_relationships();
+pub fn query(user: User, query: Json<UserQuery>) -> Response {
     let col = database::get_collection("users");
 
     if let Ok(result) = col.find_one(
@@ -70,7 +62,7 @@ pub fn query(user: UserRef, query: Json<UserQuery>) -> Response {
                 "id": id,
                 "username": doc.get_str("username").unwrap(),
                 "display_name": doc.get_str("display_name").unwrap(),
-                "relationship": get_relationship_internal(&user.id, &id, &relationships) as i32
+                "relationship": get_relationship_internal(&user.id, &id, &user.relations) as i32
             }))
         } else {
             Response::NotFound(json!({
@@ -90,7 +82,7 @@ pub struct LookupQuery {
 /// lookup a user on Revolt
 /// currently only supports exact username searches
 #[post("/lookup", data = "<query>")]
-pub fn lookup(user: UserRef, query: Json<LookupQuery>) -> Response {
+pub fn lookup(user: User, query: Json<LookupQuery>) -> Response {
     let relationships = user.fetch_relationships();
     let col = database::get_collection("users");
 
@@ -121,7 +113,7 @@ pub fn lookup(user: UserRef, query: Json<LookupQuery>) -> Response {
 
 /// retrieve all of your DMs
 #[get("/@me/dms")]
-pub fn dms(user: UserRef) -> Response {
+pub fn dms(user: User) -> Response {
     let col = database::get_collection("channels");
 
     if let Ok(results) = col.find(
@@ -178,7 +170,7 @@ pub fn dms(user: UserRef) -> Response {
 
 /// open a DM with a user
 #[get("/<target>/dm")]
-pub fn dm(user: UserRef, target: UserRef) -> Response {
+pub fn dm(user: User, target: User) -> Response {
     let col = database::get_collection("channels");
 
     if let Ok(result) = col.find_one(
@@ -211,11 +203,9 @@ pub fn dm(user: UserRef, target: UserRef) -> Response {
 
 /// retrieve all of your friends
 #[get("/@me/friend")]
-pub fn get_friends(user: UserRef) -> Response {
-    let relationships = user.fetch_relationships();
-
+pub fn get_friends(user: User) -> Response {
     let mut results = Vec::new();
-    if let Some(arr) = relationships {
+    if let Some(arr) = user.relations {
         for item in arr {
             results.push(json!({
                 "id": item.id,
@@ -229,13 +219,13 @@ pub fn get_friends(user: UserRef) -> Response {
 
 /// retrieve friend status with user
 #[get("/<target>/friend")]
-pub fn get_friend(user: UserRef, target: UserRef) -> Response {
+pub fn get_friend(user: User, target: User) -> Response {
     Response::Success(json!({ "status": get_relationship(&user, &target) as i32 }))
 }
 
 /// create or accept a friend request
 #[put("/<target>/friend")]
-pub fn add_friend(user: UserRef, target: UserRef) -> Response {
+pub fn add_friend(user: User, target: User) -> Response {
     let col = database::get_collection("users");
 
     match get_relationship(&user, &target) {
@@ -383,7 +373,7 @@ pub fn add_friend(user: UserRef, target: UserRef) -> Response {
 
 /// remove a friend or deny a request
 #[delete("/<target>/friend")]
-pub fn remove_friend(user: UserRef, target: UserRef) -> Response {
+pub fn remove_friend(user: User, target: User) -> Response {
     let col = database::get_collection("users");
 
     match get_relationship(&user, &target) {
@@ -459,7 +449,7 @@ pub fn remove_friend(user: UserRef, target: UserRef) -> Response {
 
 /// block a user
 #[put("/<target>/block")]
-pub fn block_user(user: UserRef, target: UserRef) -> Response {
+pub fn block_user(user: User, target: User) -> Response {
     let col = database::get_collection("users");
 
     match get_relationship(&user, &target) {
@@ -631,7 +621,7 @@ pub fn block_user(user: UserRef, target: UserRef) -> Response {
 
 /// unblock a user
 #[delete("/<target>/block")]
-pub fn unblock_user(user: UserRef, target: UserRef) -> Response {
+pub fn unblock_user(user: User, target: User) -> Response {
     let col = database::get_collection("users");
 
     match get_relationship(&user, &target) {

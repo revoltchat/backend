@@ -9,11 +9,10 @@ extern crate bitfield;
 #[macro_use]
 extern crate lazy_static;
 
-pub mod database;
-pub mod email;
-pub mod guards;
 pub mod notifications;
+pub mod database;
 pub mod routes;
+pub mod email;
 pub mod util;
 
 use dotenv;

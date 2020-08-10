@@ -1,9 +1,8 @@
 use super::Response;
 use crate::database::{
     self, channel::Channel, get_relationship, get_relationship_internal, message::Message,
-    Permission, PermissionCalculator, Relationship,
+    Permission, PermissionCalculator, Relationship, user::User
 };
-use crate::guards::auth::UserRef;
 use crate::notifications::{
     self,
     events::{groups::*, guilds::ChannelDelete, message::*, Notification},
@@ -53,7 +52,7 @@ pub struct CreateGroup {
 
 /// create a new group
 #[post("/create", data = "<info>")]
-pub fn create_group(user: UserRef, info: Json<CreateGroup>) -> Response {
+pub fn create_group(user: User, info: Json<CreateGroup>) -> Response {
     let name: String = info.name.chars().take(32).collect();
     let nonce: String = info.nonce.chars().take(32).collect();
 
@@ -90,13 +89,12 @@ pub fn create_group(user: UserRef, info: Json<CreateGroup>) -> Response {
             return Response::BadRequest(json!({ "error": "Specified non-existant user(s)." }));
         }
 
-        let relationships = user.fetch_relationships();
         for item in set {
             if item == user.id {
                 continue;
             }
 
-            if get_relationship_internal(&user.id, &item, &relationships) != Relationship::Friend {
+            if get_relationship_internal(&user.id, &item, &user.relations) != Relationship::Friend {
                 return Response::BadRequest(json!({ "error": "Not friends with user(s)." }));
             }
         }
@@ -129,7 +127,7 @@ pub fn create_group(user: UserRef, info: Json<CreateGroup>) -> Response {
 
 /// fetch channel information
 #[get("/<target>")]
-pub fn channel(user: UserRef, target: Channel) -> Option<Response> {
+pub fn channel(user: User, target: Channel) -> Option<Response> {
     with_permissions!(user, target);
 
     match target.channel_type {
@@ -180,7 +178,7 @@ pub fn channel(user: UserRef, target: Channel) -> Option<Response> {
 
 /// [groups] add user to channel
 #[put("/<target>/recipients/<member>")]
-pub fn add_member(user: UserRef, target: Channel, member: UserRef) -> Option<Response> {
+pub fn add_member(user: User, target: Channel, member: User) -> Option<Response> {
     if target.channel_type != 1 {
         return Some(Response::BadRequest(json!({ "error": "Not a group DM." })));
     }
@@ -254,7 +252,7 @@ pub fn add_member(user: UserRef, target: Channel, member: UserRef) -> Option<Res
 
 /// [groups] remove user from channel
 #[delete("/<target>/recipients/<member>")]
-pub fn remove_member(user: UserRef, target: Channel, member: UserRef) -> Option<Response> {
+pub fn remove_member(user: User, target: Channel, member: User) -> Option<Response> {
     if target.channel_type != 1 {
         return Some(Response::BadRequest(json!({ "error": "Not a group DM." })));
     }
@@ -326,7 +324,7 @@ pub fn remove_member(user: UserRef, target: Channel, member: UserRef) -> Option<
 /// or leave group DM
 /// or close DM conversation
 #[delete("/<target>")]
-pub fn delete(user: UserRef, target: Channel) -> Option<Response> {
+pub fn delete(user: User, target: Channel) -> Option<Response> {
     let permissions = with_permissions!(user, target);
 
     if !permissions.get_manage_channels() {
@@ -488,7 +486,7 @@ pub struct MessageFetchOptions {
 /// fetch channel messages
 #[get("/<target>/messages?<options..>")]
 pub fn messages(
-    user: UserRef,
+    user: User,
     target: Channel,
     options: Form<MessageFetchOptions>,
 ) -> Option<Response> {
@@ -552,7 +550,7 @@ pub struct SendMessage {
 /// send a message to a channel
 #[post("/<target>/messages", data = "<message>")]
 pub fn send_message(
-    user: UserRef,
+    user: User,
     target: Channel,
     message: Json<SendMessage>,
 ) -> Option<Response> {
@@ -608,7 +606,7 @@ pub fn send_message(
 
 /// get a message
 #[get("/<target>/messages/<message>")]
-pub fn get_message(user: UserRef, target: Channel, message: Message) -> Option<Response> {
+pub fn get_message(user: User, target: Channel, message: Message) -> Option<Response> {
     let permissions = with_permissions!(user, target);
 
     if !permissions.get_read_messages() {
@@ -641,7 +639,7 @@ pub struct EditMessage {
 /// edit a message
 #[patch("/<target>/messages/<message>", data = "<edit>")]
 pub fn edit_message(
-    user: UserRef,
+    user: User,
     target: Channel,
     message: Message,
     edit: Json<EditMessage>,
@@ -699,7 +697,7 @@ pub fn edit_message(
 
 /// delete a message
 #[delete("/<target>/messages/<message>")]
-pub fn delete_message(user: UserRef, target: Channel, message: Message) -> Option<Response> {
+pub fn delete_message(user: User, target: Channel, message: Message) -> Option<Response> {
     let permissions = with_permissions!(user, target);
 
     if !permissions.get_manage_messages() {

@@ -2,9 +2,8 @@ use super::channel::ChannelType;
 use super::Response;
 use crate::database::guild::{fetch_member as get_member, get_invite, Guild, MemberKey};
 use crate::database::{
-    self, channel::fetch_channel, channel::Channel, Permission, PermissionCalculator,
+    self, channel::fetch_channel, channel::Channel, Permission, PermissionCalculator, user::User
 };
-use crate::guards::auth::UserRef;
 use crate::notifications::{
     self,
     events::{guilds::*, Notification},
@@ -35,7 +34,7 @@ macro_rules! with_permissions {
 
 /// fetch your guilds
 #[get("/@me")]
-pub fn my_guilds(user: UserRef) -> Response {
+pub fn my_guilds(user: User) -> Response {
     if let Ok(result) = database::get_collection("members").find(
         doc! {
             "_id.user": &user.id
@@ -93,7 +92,7 @@ pub fn my_guilds(user: UserRef) -> Response {
 
 /// fetch a guild
 #[get("/<target>")]
-pub fn guild(user: UserRef, target: Guild) -> Option<Response> {
+pub fn guild(user: User, target: Guild) -> Option<Response> {
     with_permissions!(user, target);
 
     let col = database::get_collection("channels");
@@ -134,7 +133,7 @@ pub fn guild(user: UserRef, target: Guild) -> Option<Response> {
 
 /// delete or leave a guild
 #[delete("/<target>")]
-pub fn remove_guild(user: UserRef, target: Guild) -> Option<Response> {
+pub fn remove_guild(user: User, target: Guild) -> Option<Response> {
     with_permissions!(user, target);
 
     if user.id == target.owner {
@@ -265,7 +264,7 @@ pub struct CreateChannel {
 
 /// create a new channel
 #[post("/<target>/channels", data = "<info>")]
-pub fn create_channel(user: UserRef, target: Guild, info: Json<CreateChannel>) -> Option<Response> {
+pub fn create_channel(user: User, target: Guild, info: Json<CreateChannel>) -> Option<Response> {
     let (permissions, _) = with_permissions!(user, target);
 
     if !permissions.get_manage_channels() {
@@ -338,7 +337,7 @@ pub struct InviteOptions {
 /// create a new invite
 #[post("/<target>/channels/<channel>/invite", data = "<_options>")]
 pub fn create_invite(
-    user: UserRef,
+    user: User,
     target: Guild,
     channel: Channel,
     _options: Json<InviteOptions>,
@@ -376,7 +375,7 @@ pub fn create_invite(
 
 /// remove an invite
 #[delete("/<target>/invites/<code>")]
-pub fn remove_invite(user: UserRef, target: Guild, code: String) -> Option<Response> {
+pub fn remove_invite(user: User, target: Guild, code: String) -> Option<Response> {
     let (permissions, _) = with_permissions!(user, target);
 
     if let Some((guild_id, _, invite)) = get_invite(&code, None) {
@@ -417,7 +416,7 @@ pub fn remove_invite(user: UserRef, target: Guild, code: String) -> Option<Respo
 
 /// fetch all guild invites
 #[get("/<target>/invites")]
-pub fn fetch_invites(user: UserRef, target: Guild) -> Option<Response> {
+pub fn fetch_invites(user: User, target: Guild) -> Option<Response> {
     let (permissions, _) = with_permissions!(user, target);
 
     if !permissions.get_manage_server() {
@@ -429,7 +428,7 @@ pub fn fetch_invites(user: UserRef, target: Guild) -> Option<Response> {
 
 /// view an invite before joining
 #[get("/join/<code>", rank = 1)]
-pub fn fetch_invite(user: UserRef, code: String) -> Response {
+pub fn fetch_invite(user: User, code: String) -> Response {
     if let Some((guild_id, name, invite)) = get_invite(&code, user.id) {
         match fetch_channel(&invite.channel) {
             Ok(result) => {
@@ -457,7 +456,7 @@ pub fn fetch_invite(user: UserRef, code: String) -> Response {
 
 /// join a guild using an invite
 #[post("/join/<code>", rank = 1)]
-pub fn use_invite(user: UserRef, code: String) -> Response {
+pub fn use_invite(user: User, code: String) -> Response {
     if let Some((guild_id, _, invite)) = get_invite(&code, Some(user.id.clone())) {
         if let Ok(result) = database::get_collection("members").find_one(
             doc! {
@@ -521,8 +520,8 @@ pub struct CreateGuild {
 
 /// create a new guild
 #[post("/create", data = "<info>")]
-pub fn create_guild(user: UserRef, info: Json<CreateGuild>) -> Response {
-    if !user.email_verified {
+pub fn create_guild(user: User, info: Json<CreateGuild>) -> Response {
+    if !user.email_verification.verified {
         return Response::Unauthorized(json!({ "error": "Email not verified!" }));
     }
 
@@ -611,7 +610,7 @@ pub fn create_guild(user: UserRef, info: Json<CreateGuild>) -> Response {
 
 /// fetch a guild's member
 #[get("/<target>/members")]
-pub fn fetch_members(user: UserRef, target: Guild) -> Option<Response> {
+pub fn fetch_members(user: User, target: Guild) -> Option<Response> {
     with_permissions!(user, target);
 
     if let Ok(result) =
@@ -638,7 +637,7 @@ pub fn fetch_members(user: UserRef, target: Guild) -> Option<Response> {
 
 /// fetch a guild member
 #[get("/<target>/members/<other>")]
-pub fn fetch_member(user: UserRef, target: Guild, other: String) -> Option<Response> {
+pub fn fetch_member(user: User, target: Guild, other: String) -> Option<Response> {
     with_permissions!(user, target);
 
     if let Ok(result) = get_member(MemberKey(target.id, user.id)) {
@@ -661,7 +660,7 @@ pub fn fetch_member(user: UserRef, target: Guild, other: String) -> Option<Respo
 
 /// kick a guild member
 #[delete("/<target>/members/<other>")]
-pub fn kick_member(user: UserRef, target: Guild, other: String) -> Option<Response> {
+pub fn kick_member(user: User, target: Guild, other: String) -> Option<Response> {
     let (permissions, _) = with_permissions!(user, target);
 
     if user.id == other {
@@ -720,7 +719,7 @@ pub struct BanOptions {
 /// ban a guild member
 #[put("/<target>/members/<other>/ban?<options..>")]
 pub fn ban_member(
-    user: UserRef,
+    user: User,
     target: Guild,
     other: String,
     options: Form<BanOptions>,
@@ -804,7 +803,7 @@ pub fn ban_member(
 
 /// unban a guild member
 #[delete("/<target>/members/<other>/ban")]
-pub fn unban_member(user: UserRef, target: Guild, other: String) -> Option<Response> {
+pub fn unban_member(user: User, target: Guild, other: String) -> Option<Response> {
     let (permissions, _) = with_permissions!(user, target);
 
     if user.id == other {
