@@ -139,36 +139,54 @@ impl<'r> FromParam<'r> for Channel {
     }
 }
 
-/*pub fn test() {
-    use std::time::Instant;
+use crate::notifications::events::Notification;
 
-    let now = Instant::now();
-    let mut cache = CACHE.lock().unwrap();
-    println!("I'm about to write 4 million entries to cache.");
-    for i in 0..4_000_000 {
-        let c = Channel {
-            id: "potato".to_string(),
-            channel_type: 0,
+pub fn process_event(event: &Notification) {
+    match event {
+        Notification::group_user_join(ev) => {
+            let mut cache = CACHE.lock().unwrap();
+            let entry = cache.pop(&ev.id);
 
-            active: None,
-            last_message: None,
-            description: None,
-            guild: None,
-            name: None,
-            owner: None,
-            recipients: None
-        };
+            if entry.is_some() {
+                let mut channel = entry.unwrap();
+                channel.recipients.as_mut().unwrap().push(ev.user.clone());
+                cache.put(ev.id.clone(), channel);
+            }
+        }
+        Notification::group_user_leave(ev) => {
+            let mut cache = CACHE.lock().unwrap();
+            let entry = cache.pop(&ev.id);
 
-        cache.put(format!("{}", i), c);
+            if entry.is_some() {
+                let mut channel = entry.unwrap();
+                let recipients = channel.recipients.as_mut().unwrap();
+                if let Some(pos) = recipients.iter().position(|x| *x == ev.user) {
+                    recipients.remove(pos);
+                }
+                cache.put(ev.id.clone(), channel);
+            }
+        }
+        Notification::guild_channel_create(ev) => {
+            let mut cache = CACHE.lock().unwrap();
+            cache.put(
+                ev.id.clone(),
+                Channel {
+                    id: ev.channel.clone(),
+                    channel_type: 2,
+                    active: None,
+                    last_message: None,
+                    recipients: None,
+                    owner: None,
+                    guild: Some(ev.id.clone()),
+                    name: Some(ev.name.clone()),
+                    description: Some(ev.description.clone())
+                }
+            );
+        }
+        Notification::guild_channel_delete(ev) => {
+            let mut cache = CACHE.lock().unwrap();
+            cache.pop(&ev.channel);
+        }
+        _ => {}
     }
-
-    println!("It took {} seconds, roughly {}ms per entry.", now.elapsed().as_secs_f64(), now.elapsed().as_millis() as f64 / 1_000_000.0);
-
-    let now = Instant::now();
-    println!("Now I'm going to read every entry and immediately dispose of it.");
-    for i in 0..4_000_000 {
-        cache.get(&format!("{}", i));
-    }
-
-    println!("It took {} seconds, roughly {}ms per entry.", now.elapsed().as_secs_f64(), now.elapsed().as_millis() as f64 / 1_000_000.0);
-}*/
+}
