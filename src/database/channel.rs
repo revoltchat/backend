@@ -145,25 +145,17 @@ pub fn process_event(event: &Notification) {
     match event {
         Notification::group_user_join(ev) => {
             let mut cache = CACHE.lock().unwrap();
-            let entry = cache.pop(&ev.id);
-
-            if entry.is_some() {
-                let mut channel = entry.unwrap();
+            if let Some(channel) = cache.peek_mut(&ev.id) {
                 channel.recipients.as_mut().unwrap().push(ev.user.clone());
-                cache.put(ev.id.clone(), channel);
             }
         }
         Notification::group_user_leave(ev) => {
             let mut cache = CACHE.lock().unwrap();
-            let entry = cache.pop(&ev.id);
-
-            if entry.is_some() {
-                let mut channel = entry.unwrap();
+            if let Some(channel) = cache.peek_mut(&ev.id) {
                 let recipients = channel.recipients.as_mut().unwrap();
                 if let Some(pos) = recipients.iter().position(|x| *x == ev.user) {
                     recipients.remove(pos);
                 }
-                cache.put(ev.id.clone(), channel);
             }
         }
         Notification::guild_channel_create(ev) => {

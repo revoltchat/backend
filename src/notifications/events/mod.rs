@@ -41,5 +41,7 @@ impl Notification {
 
     pub fn push_to_cache(&self) {
         crate::database::channel::process_event(&self);
+        crate::database::guild::process_event(&self);
+        crate::database::user::process_event(&self);
     }
 }

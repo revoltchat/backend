@@ -268,7 +268,8 @@ pub fn add_friend(user: User, target: User) -> Response {
                         vec![target.id.clone()],
                         None,
                         Notification::user_friend_status(FriendStatus {
-                            id: user.id.clone(),
+                            id: target.id.clone(),
+                            user: user.id.clone(),
                             status: Relationship::Friend as i32,
                         }),
                     );
@@ -277,7 +278,8 @@ pub fn add_friend(user: User, target: User) -> Response {
                         vec![user.id.clone()],
                         None,
                         Notification::user_friend_status(FriendStatus {
-                            id: target.id.clone(),
+                            id: user.id.clone(),
+                            user: target.id.clone(),
                             status: Relationship::Friend as i32,
                         }),
                     );
@@ -339,7 +341,8 @@ pub fn add_friend(user: User, target: User) -> Response {
                         vec![user.id.clone()],
                         None,
                         Notification::user_friend_status(FriendStatus {
-                            id: target.id.clone(),
+                            id: user.id.clone(),
+                            user: target.id.clone(),
                             status: Relationship::Outgoing as i32,
                         }),
                     );
@@ -348,7 +351,8 @@ pub fn add_friend(user: User, target: User) -> Response {
                         vec![target.id.clone()],
                         None,
                         Notification::user_friend_status(FriendStatus {
-                            id: user.id.clone(),
+                            id: target.id.clone(),
+                            user: user.id.clone(),
                             status: Relationship::Incoming as i32,
                         }),
                     );
@@ -414,7 +418,8 @@ pub fn remove_friend(user: User, target: User) -> Response {
                         vec![user.id.clone()],
                         None,
                         Notification::user_friend_status(FriendStatus {
-                            id: target.id.clone(),
+                            id: user.id.clone(),
+                            user: target.id.clone(),
                             status: Relationship::NONE as i32,
                         }),
                     );
@@ -423,7 +428,8 @@ pub fn remove_friend(user: User, target: User) -> Response {
                         vec![target.id.clone()],
                         None,
                         Notification::user_friend_status(FriendStatus {
-                            id: user.id.clone(),
+                            id: target.id.clone(),
+                            user: user.id.clone(),
                             status: Relationship::NONE as i32,
                         }),
                     );
@@ -488,7 +494,8 @@ pub fn block_user(user: User, target: User) -> Response {
                         vec![user.id.clone()],
                         None,
                         Notification::user_friend_status(FriendStatus {
-                            id: target.id.clone(),
+                            id: user.id.clone(),
+                            user: target.id.clone(),
                             status: Relationship::Blocked as i32,
                         }),
                     );
@@ -497,7 +504,8 @@ pub fn block_user(user: User, target: User) -> Response {
                         vec![target.id.clone()],
                         None,
                         Notification::user_friend_status(FriendStatus {
-                            id: user.id.clone(),
+                            id: target.id.clone(),
+                            user: user.id.clone(),
                             status: Relationship::BlockedOther as i32,
                         }),
                     );
@@ -554,7 +562,8 @@ pub fn block_user(user: User, target: User) -> Response {
                         vec![user.id.clone()],
                         None,
                         Notification::user_friend_status(FriendStatus {
-                            id: target.id.clone(),
+                            id: user.id.clone(),
+                            user: target.id.clone(),
                             status: Relationship::Blocked as i32,
                         }),
                     );
@@ -563,7 +572,8 @@ pub fn block_user(user: User, target: User) -> Response {
                         vec![target.id.clone()],
                         None,
                         Notification::user_friend_status(FriendStatus {
-                            id: user.id.clone(),
+                            id: target.id.clone(),
+                            user: user.id.clone(),
                             status: Relationship::BlockedOther as i32,
                         }),
                     );
@@ -603,7 +613,8 @@ pub fn block_user(user: User, target: User) -> Response {
                     vec![user.id.clone()],
                     None,
                     Notification::user_friend_status(FriendStatus {
-                        id: target.id.clone(),
+                        id: user.id.clone(),
+                        user: target.id.clone(),
                         status: Relationship::Blocked as i32,
                     }),
                 );
@@ -646,7 +657,8 @@ pub fn unblock_user(user: User, target: User) -> Response {
                         vec![user.id.clone()],
                         None,
                         Notification::user_friend_status(FriendStatus {
-                            id: target.id.clone(),
+                            id: user.id.clone(),
+                            user: target.id.clone(),
                             status: Relationship::BlockedOther as i32,
                         }),
                     );
@@ -695,7 +707,8 @@ pub fn unblock_user(user: User, target: User) -> Response {
                             vec![user.id.clone()],
                             None,
                             Notification::user_friend_status(FriendStatus {
-                                id: target.id.clone(),
+                                id: user.id.clone(),
+                                user: target.id.clone(),
                                 status: Relationship::NONE as i32,
                             }),
                         );
@@ -704,7 +717,8 @@ pub fn unblock_user(user: User, target: User) -> Response {
                             vec![target.id.clone()],
                             None,
                             Notification::user_friend_status(FriendStatus {
-                                id: user.id.clone(),
+                                id: target.id.clone(),
+                                user: user.id.clone(),
                                 status: Relationship::NONE as i32,
                             }),
                         );

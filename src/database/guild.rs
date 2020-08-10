@@ -206,8 +206,8 @@ use crate::notifications::events::Notification;
 
 pub fn process_event(event: &Notification) {
     match event {
-        Notification::guild_channel_create(ev) => {} // ? for later use
-        Notification::guild_channel_delete(ev) => {} // ? for later use
+        Notification::guild_channel_create(_ev) => {} // ? for later use
+        Notification::guild_channel_delete(_ev) => {} // ? for later use
         Notification::guild_delete(ev) => {
             let mut cache = CACHE.lock().unwrap();
             cache.pop(&ev.id);

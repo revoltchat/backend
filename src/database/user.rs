@@ -84,7 +84,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
     type Error = AuthError;
 
     fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
-        let u = request.headers().get("x-user").next();
+        let u = request.headers().get("x-user").next(); 
         let t = request.headers().get("x-auth-token").next();
 
         if let Some(uid) = u {
@@ -128,5 +128,36 @@ impl<'r> FromParam<'r> for User {
         } else {
             Err(param)
         }
+    }
+}
+
+use crate::notifications::events::Notification;
+
+pub fn process_event(event: &Notification) {
+    match event {
+        Notification::user_friend_status(ev) => {
+            let mut cache = CACHE.lock().unwrap();
+            if let Some(user) = cache.peek_mut(&ev.id) {
+                if let Some(relations) = user.relations.as_mut() {
+                    if ev.status == 0 {
+                        if let Some(pos) = relations.iter().position(|x| x.id == ev.user) {
+                            relations.remove(pos);
+                        }
+                    } else {
+                        if let Some(entry) = relations.iter_mut().find(|x| x.id == ev.user) {
+                            entry.status = ev.status as u8;
+                        } else {
+                            relations.push(
+                                UserRelationship {
+                                    id: ev.id.clone(),
+                                    status: ev.status as u8
+                                }
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        _ => {}
     }
 }
