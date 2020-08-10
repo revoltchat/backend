@@ -207,54 +207,28 @@ use crate::notifications::events::Notification;
 pub fn process_event(event: &Notification) {
     match event {
         Notification::guild_channel_create(ev) => {} // ? for later use
-        Notification::guild_channel_create(ev) => {} // ? for later use
-        Notification::guild_delete(ev) => {}
-        Notification::guild_user_join(ev) => {}
-        Notification::guild_user_leave(ev) => {}
-        /*Notification::group_user_join(ev) => {
+        Notification::guild_channel_delete(ev) => {} // ? for later use
+        Notification::guild_delete(ev) => {
             let mut cache = CACHE.lock().unwrap();
-            let entry = cache.pop(&ev.id);
-
-            if entry.is_some() {
-                let mut channel = entry.unwrap();
-                channel.recipients.as_mut().unwrap().push(ev.user.clone());
-                cache.put(ev.id.clone(), channel);
-            }
+            cache.pop(&ev.id);
         }
-        Notification::group_user_leave(ev) => {
-            let mut cache = CACHE.lock().unwrap();
-            let entry = cache.pop(&ev.id);
-
-            if entry.is_some() {
-                let mut channel = entry.unwrap();
-                let recipients = channel.recipients.as_mut().unwrap();
-                if let Some(pos) = recipients.iter().position(|x| *x == ev.user) {
-                    recipients.remove(pos);
-                }
-                cache.put(ev.id.clone(), channel);
-            }
-        }
-        Notification::guild_channel_create(ev) => {
-            let mut cache = CACHE.lock().unwrap();
+        Notification::guild_user_join(ev) => {
+            let mut cache = MEMBER_CACHE.lock().unwrap();
             cache.put(
-                ev.id.clone(),
-                Channel {
-                    id: ev.channel.clone(),
-                    channel_type: 2,
-                    active: None,
-                    last_message: None,
-                    recipients: None,
-                    owner: None,
-                    guild: Some(ev.id.clone()),
-                    name: Some(ev.name.clone()),
-                    description: Some(ev.description.clone())
+                MemberKey ( ev.id.clone(), ev.user.clone() ),
+                Member {
+                    id: MemberRef {
+                        guild: ev.id.clone(),
+                        user: ev.user.clone()
+                    },
+                    nickname: None
                 }
             );
         }
-        Notification::guild_channel_delete(ev) => {
-            let mut cache = CACHE.lock().unwrap();
-            cache.pop(&ev.channel);
-        }*/
+        Notification::guild_user_leave(ev) => {
+            let mut cache = MEMBER_CACHE.lock().unwrap();
+            cache.pop(&MemberKey ( ev.id.clone(), ev.user.clone() ));
+        }
         _ => {}
     }
 }
