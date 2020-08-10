@@ -1,9 +1,8 @@
 use super::mutual::has_mutual_connection;
-use crate::database::guild::Member;
+use crate::database::channel::Channel;
+use crate::database::guild::{fetch_guild, fetch_member, Guild, Member, MemberKey};
 use crate::database::user::UserRelationship;
 use crate::guards::auth::UserRef;
-use crate::guards::channel::ChannelRef;
-use crate::guards::guild::{get_member, GuildRef};
 
 use num_enum::TryFromPrimitive;
 
@@ -88,8 +87,8 @@ pub fn get_relationship(a: &UserRef, b: &UserRef) -> Relationship {
 
 pub struct PermissionCalculator {
     pub user: UserRef,
-    pub channel: Option<ChannelRef>,
-    pub guild: Option<GuildRef>,
+    pub channel: Option<Channel>,
+    pub guild: Option<Guild>,
     pub member: Option<Member>,
 }
 
@@ -103,14 +102,14 @@ impl PermissionCalculator {
         }
     }
 
-    pub fn channel(self, channel: ChannelRef) -> PermissionCalculator {
+    pub fn channel(self, channel: Channel) -> PermissionCalculator {
         PermissionCalculator {
             channel: Some(channel),
             ..self
         }
     }
 
-    pub fn guild(self, guild: GuildRef) -> PermissionCalculator {
+    pub fn guild(self, guild: Guild) -> PermissionCalculator {
         PermissionCalculator {
             guild: Some(guild),
             ..self
@@ -125,7 +124,11 @@ impl PermissionCalculator {
                 0..=1 => None,
                 2 => {
                     if let Some(id) = &channel.guild {
-                        GuildRef::from(id.clone())
+                        if let Ok(result) = fetch_guild(id) {
+                            result
+                        } else {
+                            None
+                        }
                     } else {
                         None
                     }
@@ -137,7 +140,9 @@ impl PermissionCalculator {
         };
 
         if let Some(guild) = &guild {
-            self.member = get_member(&guild.id, &self.user.id);
+            if let Ok(result) = fetch_member(MemberKey(guild.id.clone(), self.user.id.clone())) {
+                self.member = result;
+            }
         }
 
         self.guild = guild;
@@ -161,32 +166,32 @@ impl PermissionCalculator {
             match channel.channel_type {
                 0 => {
                     if let Some(arr) = &channel.recipients {
-                        let mut other_user = "";
+                        let mut other_user = None;
                         for item in arr {
                             if item != &self.user.id {
-                                other_user = item;
+                                other_user = Some(item);
                             }
                         }
 
-                        // ? In this case, it is a "self DM".
-                        if other_user == "" {
-                            return 1024 + 128 + 32 + 16 + 1;
-                        }
-
-                        let relationships = self.user.fetch_relationships();
-                        let relationship =
-                            get_relationship_internal(&self.user.id, &other_user, &relationships);
-
-                        if relationship == Relationship::Friend {
-                            permissions = 1024 + 128 + 32 + 16 + 1;
-                        } else if relationship == Relationship::Blocked
-                            || relationship == Relationship::BlockedOther
-                        {
-                            permissions = 1;
-                        } else if has_mutual_connection(&self.user.id, other_user, true) {
-                            permissions = 1024 + 128 + 32 + 16 + 1;
+                        if let Some(other) = other_user {
+                            let relationships = self.user.fetch_relationships();
+                            let relationship =
+                                get_relationship_internal(&self.user.id, &other, &relationships);
+    
+                            if relationship == Relationship::Friend {
+                                permissions = 1024 + 128 + 32 + 16 + 1;
+                            } else if relationship == Relationship::Blocked
+                                || relationship == Relationship::BlockedOther
+                            {
+                                permissions = 1;
+                            } else if has_mutual_connection(&self.user.id, other, true) {
+                                permissions = 1024 + 128 + 32 + 16 + 1;
+                            } else {
+                                permissions = 1;
+                            }
                         } else {
-                            permissions = 1;
+                            // ? In this case, it is a "self DM".
+                            return 1024 + 128 + 32 + 16 + 1;
                         }
                     }
                 }

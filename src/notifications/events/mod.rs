@@ -38,4 +38,8 @@ impl Notification {
             unreachable!()
         }
     }
+
+    pub fn push_to_cache(&self) {
+        crate::database::channel::process_event(&self);
+    }
 }

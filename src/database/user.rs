@@ -1,12 +1,12 @@
-use bson::UtcDateTime;
+use mongodb::bson::DateTime;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UserEmailVerification {
     pub verified: bool,
     pub target: Option<String>,
-    pub expiry: Option<UtcDateTime>,
-    pub rate_limit: Option<UtcDateTime>,
+    pub expiry: Option<DateTime>,
+    pub rate_limit: Option<DateTime>,
     pub code: Option<String>,
 }
 

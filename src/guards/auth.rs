@@ -1,4 +1,4 @@
-use bson::{doc, from_bson, Document};
+use mongodb::bson::{doc, from_bson, Bson, Document};
 use mongodb::options::FindOneOptions;
 use rocket::http::{RawStr, Status};
 use rocket::request::{self, FromParam, FromRequest, Request};
@@ -143,7 +143,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
 
                 if let Some(user) = result {
                     Outcome::Success(
-                        from_bson(bson::Bson::Document(user)).expect("Failed to unwrap user."),
+                        from_bson(Bson::Document(user)).expect("Failed to unwrap user."),
                     )
                 } else {
                     Outcome::Failure((Status::Forbidden, AuthError::Invalid))

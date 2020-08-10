@@ -1,17 +1,20 @@
 use super::get_collection;
-use crate::guards::channel::ChannelRef;
+use crate::database::channel::Channel;
 use crate::notifications;
 use crate::notifications::events::message::Create;
 use crate::notifications::events::Notification;
 use crate::routes::channel::ChannelType;
 
-use bson::{doc, to_bson, UtcDateTime};
+use mongodb::bson::from_bson;
+use mongodb::bson::{doc, to_bson, Bson, DateTime};
+use rocket::http::RawStr;
+use rocket::request::FromParam;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PreviousEntry {
     pub content: String,
-    pub time: UtcDateTime,
+    pub time: DateTime,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -23,7 +26,7 @@ pub struct Message {
     pub author: String,
 
     pub content: String,
-    pub edited: Option<UtcDateTime>,
+    pub edited: Option<DateTime>,
 
     pub previous_content: Vec<PreviousEntry>,
 }
@@ -32,7 +35,7 @@ pub struct Message {
 // ? pub fn send_message();
 // ? handle websockets?
 impl Message {
-    pub fn send(&self, target: &ChannelRef) -> bool {
+    pub fn send(&self, target: &Channel) -> bool {
         if get_collection("messages")
             .insert_one(to_bson(&self).unwrap().as_document().unwrap().clone(), None)
             .is_ok()
@@ -84,6 +87,23 @@ impl Message {
             }
         } else {
             false
+        }
+    }
+}
+
+impl<'r> FromParam<'r> for Message {
+    type Error = &'r RawStr;
+
+    fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
+        let col = get_collection("messages");
+        let result = col
+            .find_one(doc! { "_id": param.to_string() }, None)
+            .unwrap();
+
+        if let Some(message) = result {
+            Ok(from_bson(Bson::Document(message)).expect("Failed to unwrap message."))
+        } else {
+            Err(param)
         }
     }
 }

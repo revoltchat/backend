@@ -1,18 +1,17 @@
 use super::Response;
 use crate::database::{
-    self, get_relationship, get_relationship_internal, message::Message, Permission,
-    PermissionCalculator, Relationship,
+    self, channel::Channel, get_relationship, get_relationship_internal, message::Message,
+    Permission, PermissionCalculator, Relationship,
 };
 use crate::guards::auth::UserRef;
-use crate::guards::channel::ChannelRef;
 use crate::notifications::{
     self,
     events::{groups::*, guilds::ChannelDelete, message::*, Notification},
 };
 use crate::util::vec_to_set;
 
-use bson::{doc, from_bson, Bson, Bson::UtcDatetime};
 use chrono::prelude::*;
+use mongodb::bson::{doc, from_bson, Bson};
 use mongodb::options::FindOptions;
 use num_enum::TryFromPrimitive;
 use rocket::request::Form;
@@ -130,7 +129,7 @@ pub fn create_group(user: UserRef, info: Json<CreateGroup>) -> Response {
 
 /// fetch channel information
 #[get("/<target>")]
-pub fn channel(user: UserRef, target: ChannelRef) -> Option<Response> {
+pub fn channel(user: UserRef, target: Channel) -> Option<Response> {
     with_permissions!(user, target);
 
     match target.channel_type {
@@ -141,39 +140,39 @@ pub fn channel(user: UserRef, target: ChannelRef) -> Option<Response> {
             "recipients": target.recipients,
         }))),
         1 => {
-            if let Some(info) = target.fetch_data(doc! {
+            /*if let Some(info) = target.fetch_data(doc! {
                 "name": 1,
                 "description": 1,
                 "owner": 1,
-            }) {
-                Some(Response::Success(json!({
-                    "id": target.id,
-                    "type": target.channel_type,
-                    "last_message": target.last_message,
-                    "recipients": target.recipients,
-                    "name": info.get_str("name").unwrap(),
-                    "owner": info.get_str("owner").unwrap(),
-                    "description": info.get_str("description").unwrap_or(""),
-                })))
-            } else {
+            }) {*/
+            Some(Response::Success(json!({
+                "id": target.id,
+                "type": target.channel_type,
+                "last_message": target.last_message,
+                "recipients": target.recipients,
+                "name": target.name,
+                "owner": target.owner,
+                "description": target.description,
+            })))
+            /*} else {
                 None
-            }
+            }*/
         }
         2 => {
-            if let Some(info) = target.fetch_data(doc! {
+            /*if let Some(info) = target.fetch_data(doc! {
                 "name": 1,
                 "description": 1,
-            }) {
-                Some(Response::Success(json!({
-                    "id": target.id,
-                    "type": target.channel_type,
-                    "guild": target.guild,
-                    "name": info.get_str("name").unwrap(),
-                    "description": info.get_str("description").unwrap_or(""),
-                })))
-            } else {
+            }) {*/
+            Some(Response::Success(json!({
+                "id": target.id,
+                "type": target.channel_type,
+                "guild": target.guild,
+                "name": target.name,
+                "description": target.description,
+            })))
+            /*} else {
                 None
-            }
+            }*/
         }
         _ => unreachable!(),
     }
@@ -181,7 +180,7 @@ pub fn channel(user: UserRef, target: ChannelRef) -> Option<Response> {
 
 /// [groups] add user to channel
 #[put("/<target>/recipients/<member>")]
-pub fn add_member(user: UserRef, target: ChannelRef, member: UserRef) -> Option<Response> {
+pub fn add_member(user: UserRef, target: Channel, member: UserRef) -> Option<Response> {
     if target.channel_type != 1 {
         return Some(Response::BadRequest(json!({ "error": "Not a group DM." })));
     }
@@ -255,7 +254,7 @@ pub fn add_member(user: UserRef, target: ChannelRef, member: UserRef) -> Option<
 
 /// [groups] remove user from channel
 #[delete("/<target>/recipients/<member>")]
-pub fn remove_member(user: UserRef, target: ChannelRef, member: UserRef) -> Option<Response> {
+pub fn remove_member(user: UserRef, target: Channel, member: UserRef) -> Option<Response> {
     if target.channel_type != 1 {
         return Some(Response::BadRequest(json!({ "error": "Not a group DM." })));
     }
@@ -327,7 +326,7 @@ pub fn remove_member(user: UserRef, target: ChannelRef, member: UserRef) -> Opti
 /// or leave group DM
 /// or close DM conversation
 #[delete("/<target>")]
-pub fn delete(user: UserRef, target: ChannelRef) -> Option<Response> {
+pub fn delete(user: UserRef, target: Channel) -> Option<Response> {
     let permissions = with_permissions!(user, target);
 
     if !permissions.get_manage_channels() {
@@ -490,7 +489,7 @@ pub struct MessageFetchOptions {
 #[get("/<target>/messages?<options..>")]
 pub fn messages(
     user: UserRef,
-    target: ChannelRef,
+    target: Channel,
     options: Form<MessageFetchOptions>,
 ) -> Option<Response> {
     let permissions = with_permissions!(user, target);
@@ -532,7 +531,7 @@ pub fn messages(
     let mut messages = Vec::new();
     for item in result {
         let message: Message =
-            from_bson(bson::Bson::Document(item.unwrap())).expect("Failed to unwrap message.");
+            from_bson(Bson::Document(item.unwrap())).expect("Failed to unwrap message.");
         messages.push(json!({
             "id": message.id,
             "author": message.author,
@@ -554,7 +553,7 @@ pub struct SendMessage {
 #[post("/<target>/messages", data = "<message>")]
 pub fn send_message(
     user: UserRef,
-    target: ChannelRef,
+    target: Channel,
     message: Json<SendMessage>,
 ) -> Option<Response> {
     let permissions = with_permissions!(user, target);
@@ -609,7 +608,7 @@ pub fn send_message(
 
 /// get a message
 #[get("/<target>/messages/<message>")]
-pub fn get_message(user: UserRef, target: ChannelRef, message: Message) -> Option<Response> {
+pub fn get_message(user: UserRef, target: Channel, message: Message) -> Option<Response> {
     let permissions = with_permissions!(user, target);
 
     if !permissions.get_read_messages() {
@@ -643,7 +642,7 @@ pub struct EditMessage {
 #[patch("/<target>/messages/<message>", data = "<edit>")]
 pub fn edit_message(
     user: UserRef,
-    target: ChannelRef,
+    target: Channel,
     message: Message,
     edit: Json<EditMessage>,
 ) -> Option<Response> {
@@ -668,7 +667,7 @@ pub fn edit_message(
         doc! {
             "$set": {
                 "content": &edit.content,
-                "edited": UtcDatetime(edited)
+                "edited": Bson::DateTime(edited)
             },
             "$push": {
                 "previous_content": {
@@ -700,7 +699,7 @@ pub fn edit_message(
 
 /// delete a message
 #[delete("/<target>/messages/<message>")]
-pub fn delete_message(user: UserRef, target: ChannelRef, message: Message) -> Option<Response> {
+pub fn delete_message(user: UserRef, target: Channel, message: Message) -> Option<Response> {
     let permissions = with_permissions!(user, target);
 
     if !permissions.get_manage_messages() {

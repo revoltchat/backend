@@ -1,7 +1,7 @@
 use super::events::Notification;
 use crate::database::get_collection;
 
-use bson::{doc, from_bson, to_bson, Bson};
+use mongodb::bson::{doc, from_bson, to_bson, Bson};
 use mongodb::options::{CursorType, FindOneOptions, FindOptions};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;

@@ -1,6 +1,6 @@
 use super::{get_collection, MemberPermissions};
 
-use bson::doc;
+use mongodb::bson::doc;
 use mongodb::options::FindOptions;
 
 pub fn find_mutual_guilds(user_id: &str, target_id: &str) -> Vec<String> {
