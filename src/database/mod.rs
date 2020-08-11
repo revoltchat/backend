@@ -10,13 +10,8 @@ pub fn connect() {
         Client::with_uri_str(&env::var("DB_URI").expect("DB_URI not in environment variables!"))
             .expect("Failed to init db connection.");
 
-    client
-        .database("revolt")
-        .collection("migrations")
-        .find(doc! {}, None)
-        .expect("Failed to get migration data from database.");
-
     DBCONN.set(client).unwrap();
+    migrations::run_migrations();
 }
 
 pub fn get_connection() -> &'static Client {
@@ -30,6 +25,8 @@ pub fn get_db() -> Database {
 pub fn get_collection(collection: &str) -> Collection {
     get_db().collection(collection)
 }
+
+pub mod migrations;
 
 pub mod channel;
 pub mod guild;

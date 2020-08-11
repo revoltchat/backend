@@ -38,7 +38,6 @@ impl Handler for Server {
                                 StateResult::Success(user_id) => {
                                     let user = crate::database::user::fetch_user(&user_id).unwrap().unwrap();
                                     
-                                    self.user_id = Some(user_id);
                                     self.sender.send(
                                         json!({
                                             "type": "authenticate",
@@ -47,12 +46,13 @@ impl Handler for Server {
                                         .to_string(),
                                     )?;
                                     
+                                    self.user_id = Some(user_id);
                                     self.sender.send(
                                         json!({
                                             "type": "ready",
                                             "data": {
                                                 // ! FIXME: rewrite
-                                                "user": user
+                                                "user": user,
                                             }
                                         })
                                         .to_string(),

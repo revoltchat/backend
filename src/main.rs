@@ -21,6 +21,7 @@ use std::thread;
 
 fn main() {
     dotenv::dotenv().ok();
+    env_logger::init();
     database::connect();
     notifications::start_worker();
 
