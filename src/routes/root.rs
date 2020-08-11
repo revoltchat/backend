@@ -6,7 +6,12 @@ use mongodb::bson::doc;
 #[get("/")]
 pub fn root() -> Response {
     Response::Success(json!({
-        "revolt": "0.2.6"
+        "revolt": "0.2.7",
+        "version": {
+            "major": 0,
+            "minor": 2,
+            "patch": 7
+        }
     }))
 }
 

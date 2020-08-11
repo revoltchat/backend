@@ -36,11 +36,24 @@ impl Handler for Server {
 
                             match state.try_authenticate(self.id.clone(), token.to_string()) {
                                 StateResult::Success(user_id) => {
+                                    let user = crate::database::user::fetch_user(&user_id).unwrap().unwrap();
+                                    
                                     self.user_id = Some(user_id);
                                     self.sender.send(
                                         json!({
                                             "type": "authenticate",
                                             "success": true,
+                                        })
+                                        .to_string(),
+                                    )?;
+                                    
+                                    self.sender.send(
+                                        json!({
+                                            "type": "ready",
+                                            "data": {
+                                                // ! FIXME: rewrite
+                                                "user": user
+                                            }
                                         })
                                         .to_string(),
                                     )
