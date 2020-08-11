@@ -640,7 +640,7 @@ pub fn fetch_members(user: User, target: Guild) -> Option<Response> {
 pub fn fetch_member(user: User, target: Guild, other: String) -> Option<Response> {
     with_permissions!(user, target);
 
-    if let Ok(result) = get_member(MemberKey(target.id, user.id)) {
+    if let Ok(result) = get_member(MemberKey(target.id, other)) {
         if let Some(member) = result {
             Some(Response::Success(json!({
                 "id": member.id.user,
@@ -653,7 +653,7 @@ pub fn fetch_member(user: User, target: Guild, other: String) -> Option<Response
         }
     } else {
         Some(Response::InternalServerError(
-            json!({ "error": "Failed to fetch member or user does not exist." }),
+            json!({ "error": "Failed to fetch member." }),
         ))
     }
 }
