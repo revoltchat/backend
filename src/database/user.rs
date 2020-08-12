@@ -130,13 +130,21 @@ impl User {
                 )
             })
             .collect();
+        
+        let guild_objects = fetch_guilds(&self.find_guilds()?)?;
+        let mut cids: Vec<String> = guild_objects
+            .iter()
+            .flat_map(|x| x.channels.clone())
+            .collect();
 
-        let channels: Vec<JsonValue> = fetch_channels(&self.find_dms()?)?
+        cids.append(&mut self.find_dms()?);
+
+        let channels: Vec<JsonValue> = fetch_channels(&cids)?
             .into_iter()
             .map(|x| x.serialise())
             .collect();
         
-        let guilds: Vec<JsonValue> = fetch_guilds(&self.find_guilds()?)?
+        let guilds: Vec<JsonValue> = guild_objects
             .into_iter()
             .map(|x| x.serialise())
             .collect();
