@@ -38,7 +38,7 @@ macro_rules! with_permissions {
 pub fn my_guilds(user: User) -> Response {
     if let Ok(gids) = user.find_guilds() {
         if let Ok(data) = serialise_guilds_with_channels(&gids) {
-            Response::Success(data)
+            Response::Success(json!(data))
         } else {
             Response::InternalServerError(json!({ "error": "Failed to fetch guilds." }))
         }
