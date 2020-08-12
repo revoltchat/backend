@@ -42,7 +42,7 @@ pub struct Guild {
     pub description: String,
     pub owner: String,
 
-    // ? FIXME: ADD: pub channels: Vec<Channel>,
+    pub channels: Vec<String>,
     pub invites: Vec<Invite>,
     pub bans: Vec<Ban>,
 

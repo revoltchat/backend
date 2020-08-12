@@ -1,4 +1,3 @@
-use mongodb::bson::doc;
 use mongodb::sync::{Client, Collection, Database};
 use std::env;
 

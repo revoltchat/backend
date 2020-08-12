@@ -2,7 +2,7 @@ use super::channel::ChannelType;
 use super::Response;
 use crate::database::guild::{fetch_member as get_member, get_invite, Guild, MemberKey};
 use crate::database::{
-    self, channel::fetch_channel, channel::Channel, Permission, PermissionCalculator, user::User
+    self, channel::{fetch_channel, fetch_channels}, channel::Channel, Permission, PermissionCalculator, user::User
 };
 use crate::notifications::{
     self,
@@ -10,7 +10,7 @@ use crate::notifications::{
 };
 use crate::util::gen_token;
 
-use mongodb::bson::{doc, from_bson, Bson};
+use mongodb::bson::{doc, Bson};
 use mongodb::options::{FindOneOptions, FindOptions};
 use rocket::request::Form;
 use rocket_contrib::json::Json;
@@ -95,26 +95,15 @@ pub fn my_guilds(user: User) -> Response {
 pub fn guild(user: User, target: Guild) -> Option<Response> {
     with_permissions!(user, target);
 
-    let col = database::get_collection("channels");
-    match col.find(
-        doc! {
-            "type": 2,
-            "guild": &target.id,
-        },
-        None,
-    ) {
+    match fetch_channels(&target.channels) {
         Ok(results) => {
             let mut channels = vec![];
             for item in results {
-                if let Ok(entry) = item {
-                    if let Ok(channel) = from_bson(Bson::Document(entry)) as Result<Channel, _> {
-                        channels.push(json!({
-                            "id": channel.id,
-                            "name": channel.name,
-                            "description": channel.description,
-                        }));
-                    }
-                }
+                channels.push(json!({
+                    "id": item.id,
+                    "name": item.name,
+                    "description": item.description,
+                }));
             }
 
             Some(Response::Success(json!({
@@ -127,7 +116,7 @@ pub fn guild(user: User, target: Guild) -> Option<Response> {
         }
         Err(_) => Some(Response::InternalServerError(
             json!({ "error": "Failed to fetch channels." }),
-        )),
+        ))
     }
 }
 
@@ -305,20 +294,39 @@ pub fn create_channel(user: User, target: Guild, info: Json<CreateChannel>) -> O
             )
             .is_ok()
         {
-            notifications::send_message_threaded(
-                None,
-                target.id.clone(),
-                Notification::guild_channel_create(ChannelCreate {
-                    id: target.id.clone(),
-                    channel: id.clone(),
-                    name: name.clone(),
-                    description: description.clone(),
-                }),
-            );
+            if database::get_collection("guilds")
+                .update_one(
+                    doc! {
+                        "_id": &target.id
+                    },
+                    doc! {
+                        "$addToSet": {
+                            "channels": &id
+                        }
+                    },
+                    None
+                )
+                .is_ok()
+            {
+                notifications::send_message_threaded(
+                    None,
+                    target.id.clone(),
+                    Notification::guild_channel_create(ChannelCreate {
+                        id: target.id.clone(),
+                        channel: id.clone(),
+                        name: name.clone(),
+                        description: description.clone(),
+                    }),
+                );
 
-            Some(Response::Success(json!({ "id": &id })))
+                Some(Response::Success(json!({ "id": &id })))
+            } else {
+                Some(Response::InternalServerError(
+                    json!({ "error": "Couldn't save channel list." }),
+                ))
+            }
         } else {
-            Some(Response::BadRequest(
+            Some(Response::InternalServerError(
                 json!({ "error": "Couldn't create channel." }),
             ))
         }

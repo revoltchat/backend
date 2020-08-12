@@ -77,7 +77,7 @@ pub fn fetch_channel(id: &str) -> Result<Option<Channel>, String> {
     }
 }
 
-pub fn fetch_channels(ids: &Vec<String>) -> Result<Option<Vec<Channel>>, String> {
+pub fn fetch_channels(ids: &Vec<String>) -> Result<Vec<Channel>, String> {
     let mut missing = vec![];
     let mut channels = vec![];
 
@@ -98,7 +98,7 @@ pub fn fetch_channels(ids: &Vec<String>) -> Result<Option<Vec<Channel>>, String>
     }
 
     if missing.len() == 0 {
-        return Ok(Some(channels));
+        return Ok(channels);
     }
 
     let col = get_collection("channels");
@@ -117,7 +117,7 @@ pub fn fetch_channels(ids: &Vec<String>) -> Result<Option<Vec<Channel>>, String>
             }
         }
 
-        Ok(Some(channels))
+        Ok(channels)
     } else {
         Err("Failed to fetch channel from database.".to_string())
     }

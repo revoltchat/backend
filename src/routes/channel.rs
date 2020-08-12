@@ -138,11 +138,6 @@ pub fn channel(user: User, target: Channel) -> Option<Response> {
             "recipients": target.recipients,
         }))),
         1 => {
-            /*if let Some(info) = target.fetch_data(doc! {
-                "name": 1,
-                "description": 1,
-                "owner": 1,
-            }) {*/
             Some(Response::Success(json!({
                 "id": target.id,
                 "type": target.channel_type,
@@ -152,15 +147,8 @@ pub fn channel(user: User, target: Channel) -> Option<Response> {
                 "owner": target.owner,
                 "description": target.description,
             })))
-            /*} else {
-                None
-            }*/
         }
         2 => {
-            /*if let Some(info) = target.fetch_data(doc! {
-                "name": 1,
-                "description": 1,
-            }) {*/
             Some(Response::Success(json!({
                 "id": target.id,
                 "type": target.channel_type,
@@ -168,9 +156,6 @@ pub fn channel(user: User, target: Channel) -> Option<Response> {
                 "name": target.name,
                 "description": target.description,
             })))
-            /*} else {
-                None
-            }*/
         }
         _ => unreachable!(),
     }
@@ -447,7 +432,8 @@ pub fn delete(user: User, target: Channel) -> Option<Response> {
                         "$pull": {
                             "invites": {
                                 "channel": &target.id
-                            }
+                            },
+                            "channels": &target.id
                         }
                     },
                     None,
