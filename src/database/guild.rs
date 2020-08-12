@@ -4,6 +4,7 @@ use lru::LruCache;
 use mongodb::bson::{doc, from_bson, Bson};
 use rocket::http::RawStr;
 use rocket::request::FromParam;
+use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 
@@ -49,6 +50,32 @@ pub struct Guild {
     pub default_permissions: u32,
 }
 
+impl Guild {
+    pub fn serialise(self) -> JsonValue {
+        json!({
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "owner": self.owner
+        })
+    }
+
+    pub fn fetch_channels(&self) -> Result<Vec<super::channel::Channel>, String> {
+        super::channel::fetch_channels(&self.channels)
+    }
+
+    pub fn seralise_with_channels(self) -> Result<JsonValue, String> {
+        let channels = self.fetch_channels()?
+            .into_iter()
+            .map(|x| x.serialise())
+            .collect();
+
+        let mut value = self.serialise();
+        value.as_object_mut().unwrap().insert("channels".to_string(), channels);
+        Ok(value)
+    }
+}
+
 #[derive(Hash, Eq, PartialEq)]
 pub struct MemberKey(pub String, pub String);
 
@@ -88,6 +115,52 @@ pub fn fetch_guild(id: &str) -> Result<Option<Guild>, String> {
         }
     } else {
         Err("Failed to fetch guild from database.".to_string())
+    }
+}
+
+pub fn fetch_guilds(ids: &Vec<String>) -> Result<Vec<Guild>, String> {
+    let mut missing = vec![];
+    let mut guilds = vec![];
+
+    {
+        if let Ok(mut cache) = CACHE.lock() {
+            for id in ids {
+                let existing = cache.get(id);
+
+                if let Some(guild) = existing {
+                    guilds.push((*guild).clone());
+                } else {
+                    missing.push(id);
+                }
+            }
+        } else {
+            return Err("Failed to lock cache.".to_string());
+        }
+    }
+
+    if missing.len() == 0 {
+        return Ok(guilds);
+    }
+
+    let col = get_collection("guilds");
+    if let Ok(result) = col.find(doc! { "_id": { "$in": missing } }, None) {
+        for item in result {
+            let mut cache = CACHE.lock().unwrap();
+            if let Ok(doc) = item {
+                if let Ok(guild) = from_bson(Bson::Document(doc)) as Result<Guild, _> {
+                    cache.put(guild.id.clone(), guild.clone());
+                    guilds.push(guild);
+                } else {
+                    return Err("Failed to deserialize guild!".to_string());
+                }
+            } else {
+                return Err("Failed to fetch guild.".to_string());
+            }
+        }
+
+        Ok(guilds)
+    } else {
+        Err("Failed to fetch channel from database.".to_string())
     }
 }
 

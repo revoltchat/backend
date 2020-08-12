@@ -2,7 +2,7 @@ use super::channel::ChannelType;
 use super::Response;
 use crate::database::guild::{fetch_member as get_member, get_invite, Guild, MemberKey};
 use crate::database::{
-    self, channel::{fetch_channel, fetch_channels}, channel::Channel, Permission, PermissionCalculator, user::User
+    self, channel::fetch_channel, guild::fetch_guilds, channel::Channel, Permission, PermissionCalculator, user::User
 };
 use crate::notifications::{
     self,
@@ -17,6 +17,7 @@ use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 
+// ! FIXME: GET RID OF THIS
 macro_rules! with_permissions {
     ($user: expr, $target: expr) => {{
         let permissions = PermissionCalculator::new($user.clone())
@@ -35,53 +36,34 @@ macro_rules! with_permissions {
 /// fetch your guilds
 #[get("/@me")]
 pub fn my_guilds(user: User) -> Response {
-    if let Ok(result) = database::get_collection("members").find(
-        doc! {
-            "_id.user": &user.id
-        },
-        None,
-    ) {
-        let mut guilds = vec![];
-        for item in result {
-            if let Ok(entry) = item {
-                guilds.push(Bson::String(
-                    entry
-                        .get_document("_id")
-                        .unwrap()
-                        .get_str("guild")
-                        .unwrap()
-                        .to_string(),
-                ));
-            }
-        }
+    if let Ok(gids) = user.find_guilds() {
+        if let Ok(guilds) = fetch_guilds(&gids) {
+            let cids: Vec<String> = guilds
+                .iter()
+                .flat_map(|x| x.channels.clone())
+                .collect();
 
-        if let Ok(result) = database::get_collection("guilds").find(
-            doc! {
-                "_id": {
-                    "$in": guilds
-                }
-            },
-            FindOptions::builder()
-                .projection(doc! {
-                    "_id": 1,
-                    "name": 1,
-                    "description": 1,
-                    "owner": 1,
-                })
-                .build(),
-        ) {
-            let mut parsed = vec![];
-            for item in result {
-                let doc = item.unwrap();
-                parsed.push(json!({
-                    "id": doc.get_str("_id").unwrap(),
-                    "name": doc.get_str("name").unwrap(),
-                    "description": doc.get_str("description").unwrap(),
-                    "owner": doc.get_str("owner").unwrap(),
-                }));
+            if let Ok(channels) = database::channel::fetch_channels(&cids) {
+                let data: Vec<rocket_contrib::json::JsonValue> = guilds
+                    .into_iter()
+                    .map(|x| {
+                        let id = x.id.clone();
+                        let mut obj = x.serialise();
+                        obj.as_object_mut().unwrap().insert(
+                            "channels".to_string(),
+                            channels.iter()
+                                .filter(|x| x.guild.is_some() && x.guild.as_ref().unwrap() == &id)
+                                .map(|x| x.clone().serialise())
+                                .collect()
+                        );
+                        obj
+                    })
+                    .collect();
+                
+                Response::Success(json!(data))
+            } else {
+                Response::InternalServerError(json!({ "error": "Failed to fetch channels." }))
             }
-
-            Response::Success(json!(parsed))
         } else {
             Response::InternalServerError(json!({ "error": "Failed to fetch guilds." }))
         }
@@ -94,29 +76,11 @@ pub fn my_guilds(user: User) -> Response {
 #[get("/<target>")]
 pub fn guild(user: User, target: Guild) -> Option<Response> {
     with_permissions!(user, target);
-
-    match fetch_channels(&target.channels) {
-        Ok(results) => {
-            let mut channels = vec![];
-            for item in results {
-                channels.push(json!({
-                    "id": item.id,
-                    "name": item.name,
-                    "description": item.description,
-                }));
-            }
-
-            Some(Response::Success(json!({
-                "id": target.id,
-                "name": target.name,
-                "description": target.description,
-                "owner": target.owner,
-                "channels": channels,
-            })))
-        }
-        Err(_) => Some(Response::InternalServerError(
-            json!({ "error": "Failed to fetch channels." }),
-        ))
+    
+    if let Ok(result) = target.seralise_with_channels() {
+        Some(Response::Success(result))
+    } else {
+        Some(Response::InternalServerError(json!({ "error": "Failed to fetch channels!" })))
     }
 }
 

@@ -1,9 +1,13 @@
 use super::get_collection;
+use super::guild::{Guild, fetch_guilds};
+use super::channel::{Channel, fetch_channels};
 
 use lru::LruCache;
 use mongodb::bson::{doc, from_bson, Bson, DateTime};
+use mongodb::options::FindOptions;
 use rocket::http::{RawStr, Status};
 use rocket::request::{self, FromParam, FromRequest, Request};
+use rocket_contrib::json::JsonValue;
 use rocket::Outcome;
 use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
@@ -34,6 +38,116 @@ pub struct User {
     pub access_token: Option<String>,
     pub email_verification: UserEmailVerification,
     pub relations: Option<Vec<UserRelationship>>,
+}
+
+impl User {
+    pub fn serialise(self, relationship: i32) -> JsonValue {
+        if relationship == super::Relationship::SELF as i32 {
+            json!({
+                "id": self.id,
+                "username": self.username,
+                "display_name": self.display_name,
+                "email": self.email,
+                "verified": self.email_verification.verified,
+            })
+        } else {
+            json!({
+                "id": self.id,
+                "username": self.username,
+                "display_name": self.display_name,
+                "relationship": relationship
+            })
+        }
+    }
+
+    pub fn find_guilds(&self) -> Result<Vec<String>, String> {
+        let members = get_collection("members")
+            .find(
+                doc! {
+                    "_id.user": &self.id
+                },
+                None
+            ).map_err(|_| "Failed to fetch members.")?;
+        
+        Ok(members.into_iter()
+            .filter_map(|x| match x {
+                Ok(doc) => {
+                    match doc.get_document("_id") {
+                        Ok(id) => {
+                            match id.get_str("guild") {
+                                Ok(value) => Some(value.to_string()),
+                                Err(_) => None
+                            }
+                        }
+                        Err(_) => None
+                    }
+                }
+                Err(_) => None
+            })
+            .collect())
+    }
+
+    pub fn find_dms(&self) -> Result<Vec<String>, String> {
+        let channels = get_collection("channels")
+            .find(
+                doc! {
+                    "recipients": &self.id
+                },
+                FindOptions::builder()
+                    .projection(doc! { "_id": 1 })
+                    .build()
+            ).map_err(|_| "Failed to fetch channel ids.")?;
+        
+        Ok(channels.into_iter()
+            .filter_map(|x| x.ok())
+            .filter_map(|x| {
+                match x.get_str("_id") {
+                    Ok(value) => Some(value.to_string()),
+                    Err(_) => None
+                }
+            })
+            .collect())
+    }
+
+    pub fn create_payload(self) -> Result<JsonValue, String> {
+        let v = vec![];
+        let relations = self.relations.as_ref().unwrap_or(&v);
+        
+        let users: Vec<JsonValue> = fetch_users(
+            &relations
+                .iter()
+                .map(|x| x.id.clone())
+                .collect()
+        )?
+            .into_iter()
+            .map(|x| {
+                let id = x.id.clone();
+                x.serialise(
+                    relations.iter()
+                        .find(|y| y.id == id)
+                        .unwrap()
+                        .status as i32
+                )
+            })
+            .collect();
+
+        let channels: Vec<JsonValue> = fetch_channels(&self.find_dms()?)?
+            .into_iter()
+            .map(|x| x.serialise())
+            .collect();
+        
+        let guilds: Vec<JsonValue> = fetch_guilds(&self.find_guilds()?)?
+            .into_iter()
+            .map(|x| x.serialise())
+            .collect();
+
+        Ok(json!({
+            "users": users,
+            "channels": channels,
+            "guilds": guilds,
+            "user": self.serialise(super::Relationship::SELF as i32)
+        }))
+    }
 }
 
 lazy_static! {
@@ -68,6 +182,52 @@ pub fn fetch_user(id: &str) -> Result<Option<User>, String> {
         } else {
             Ok(None)
         }
+    } else {
+        Err("Failed to fetch user from database.".to_string())
+    }
+}
+
+pub fn fetch_users(ids: &Vec<String>) -> Result<Vec<User>, String> {
+    let mut missing = vec![];
+    let mut users = vec![];
+
+    {
+        if let Ok(mut cache) = CACHE.lock() {
+            for id in ids {
+                let existing = cache.get(id);
+
+                if let Some(user) = existing {
+                    users.push((*user).clone());
+                } else {
+                    missing.push(id);
+                }
+            }
+        } else {
+            return Err("Failed to lock cache.".to_string());
+        }
+    }
+
+    if missing.len() == 0 {
+        return Ok(users);
+    }
+
+    let col = get_collection("users");
+    if let Ok(result) = col.find(doc! { "_id": { "$in": missing } }, None) {
+        for item in result {
+            let mut cache = CACHE.lock().unwrap();
+            if let Ok(doc) = item {
+                if let Ok(user) = from_bson(Bson::Document(doc)) as Result<User, _> {
+                    cache.put(user.id.clone(), user.clone());
+                    users.push(user);
+                } else {
+                    return Err("Failed to deserialize user!".to_string());
+                }
+            } else {
+                return Err("Failed to fetch user.".to_string());
+            }
+        }
+
+        Ok(users)
     } else {
         Err("Failed to fetch user from database.".to_string())
     }

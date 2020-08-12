@@ -129,36 +129,7 @@ pub fn create_group(user: User, info: Json<CreateGroup>) -> Response {
 #[get("/<target>")]
 pub fn channel(user: User, target: Channel) -> Option<Response> {
     with_permissions!(user, target);
-
-    match target.channel_type {
-        0 => Some(Response::Success(json!({
-            "id": target.id,
-            "type": target.channel_type,
-            "last_message": target.last_message,
-            "recipients": target.recipients,
-        }))),
-        1 => {
-            Some(Response::Success(json!({
-                "id": target.id,
-                "type": target.channel_type,
-                "last_message": target.last_message,
-                "recipients": target.recipients,
-                "name": target.name,
-                "owner": target.owner,
-                "description": target.description,
-            })))
-        }
-        2 => {
-            Some(Response::Success(json!({
-                "id": target.id,
-                "type": target.channel_type,
-                "guild": target.guild,
-                "name": target.name,
-                "description": target.description,
-            })))
-        }
-        _ => unreachable!(),
-    }
+    Some(Response::Success(target.serialise()))
 }
 
 /// [groups] add user to channel

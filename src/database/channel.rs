@@ -4,6 +4,7 @@ use lru::LruCache;
 use mongodb::bson::{doc, from_bson, Bson};
 use rocket::http::RawStr;
 use rocket::request::FromParam;
+use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 
@@ -38,6 +39,40 @@ pub struct Channel {
     pub name: Option<String>,
     // GUILD + GDM: channel description
     pub description: Option<String>,
+}
+
+impl Channel {
+    pub fn serialise(self) -> JsonValue {
+        match self.channel_type {
+            0 => json!({
+                "id": self.id,
+                "type": self.channel_type,
+                "last_message": self.last_message,
+                "recipients": self.recipients,
+            }),
+            1 => {
+                json!({
+                    "id": self.id,
+                    "type": self.channel_type,
+                    "last_message": self.last_message,
+                    "recipients": self.recipients,
+                    "name": self.name,
+                    "owner": self.owner,
+                    "description": self.description,
+                })
+            }
+            2 => {
+                json!({
+                    "id": self.id,
+                    "type": self.channel_type,
+                    "guild": self.guild,
+                    "name": self.name,
+                    "description": self.description,
+                })
+            }
+            _ => unreachable!(),
+        }
+    }
 }
 
 lazy_static! {
@@ -83,13 +118,13 @@ pub fn fetch_channels(ids: &Vec<String>) -> Result<Vec<Channel>, String> {
 
     {
         if let Ok(mut cache) = CACHE.lock() {
-            for gid in ids {
-                let existing = cache.get(gid);
+            for id in ids {
+                let existing = cache.get(id);
 
                 if let Some(channel) = existing {
                     channels.push((*channel).clone());
                 } else {
-                    missing.push(gid);
+                    missing.push(id);
                 }
             }
         } else {

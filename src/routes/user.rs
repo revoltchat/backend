@@ -15,29 +15,18 @@ use ulid::Ulid;
 /// retrieve your user information
 #[get("/@me")]
 pub fn me(user: User) -> Response {
-    Response::Success(json!({
-        "id": user.id,
-        "username": user.username,
-        "display_name": user.display_name,
-        "email": user.email,
-        "verified": user.email_verification.verified,
-    }))
+    Response::Success(
+        user.serialise(Relationship::SELF as i32)
+    )
 }
 
 /// retrieve another user's information
 #[get("/<target>")]
 pub fn user(user: User, target: User) -> Response {
-    Response::Success(json!({
-        "id": target.id,
-        "username": target.username,
-        "display_name": target.display_name,
-        "relationship": get_relationship(&user, &target) as i32,
-        "mutual": {
-            "guilds": mutual::find_mutual_guilds(&user.id, &target.id),
-            "friends": mutual::find_mutual_friends(&user.id, &target.id),
-            "groups": mutual::find_mutual_groups(&user.id, &target.id),
-        }
-    }))
+    let relationship = get_relationship(&user, &target) as i32;
+    Response::Success(
+        user.serialise(relationship)
+    )
 }
 
 #[derive(Serialize, Deserialize)]
