@@ -1,6 +1,6 @@
 use super::get_collection;
-use super::guild::{Guild, fetch_guilds};
-use super::channel::{Channel, fetch_channels};
+use super::guild::{serialise_guilds_with_channels};
+use super::channel::{fetch_channels};
 
 use lru::LruCache;
 use mongodb::bson::{doc, from_bson, Bson, DateTime};
@@ -130,29 +130,16 @@ impl User {
                 )
             })
             .collect();
-        
-        let guild_objects = fetch_guilds(&self.find_guilds()?)?;
-        let mut cids: Vec<String> = guild_objects
-            .iter()
-            .flat_map(|x| x.channels.clone())
-            .collect();
 
-        cids.append(&mut self.find_dms()?);
-
-        let channels: Vec<JsonValue> = fetch_channels(&cids)?
+        let channels: Vec<JsonValue> = fetch_channels(&self.find_dms()?)?
             .into_iter()
             .map(|x| x.serialise())
             .collect();
         
-        let guilds: Vec<JsonValue> = guild_objects
-            .into_iter()
-            .map(|x| x.serialise())
-            .collect();
-
         Ok(json!({
             "users": users,
             "channels": channels,
-            "guilds": guilds,
+            "guilds": serialise_guilds_with_channels(&self.find_guilds()?)?,
             "user": self.serialise(super::Relationship::SELF as i32)
         }))
     }

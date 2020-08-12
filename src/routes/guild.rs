@@ -2,7 +2,7 @@ use super::channel::ChannelType;
 use super::Response;
 use crate::database::guild::{fetch_member as get_member, get_invite, Guild, MemberKey};
 use crate::database::{
-    self, channel::fetch_channel, guild::fetch_guilds, channel::Channel, Permission, PermissionCalculator, user::User
+    self, channel::fetch_channel, guild::fetch_guilds, guild::serialise_guilds_with_channels, channel::Channel, Permission, PermissionCalculator, user::User
 };
 use crate::notifications::{
     self,
@@ -37,33 +37,8 @@ macro_rules! with_permissions {
 #[get("/@me")]
 pub fn my_guilds(user: User) -> Response {
     if let Ok(gids) = user.find_guilds() {
-        if let Ok(guilds) = fetch_guilds(&gids) {
-            let cids: Vec<String> = guilds
-                .iter()
-                .flat_map(|x| x.channels.clone())
-                .collect();
-
-            if let Ok(channels) = database::channel::fetch_channels(&cids) {
-                let data: Vec<rocket_contrib::json::JsonValue> = guilds
-                    .into_iter()
-                    .map(|x| {
-                        let id = x.id.clone();
-                        let mut obj = x.serialise();
-                        obj.as_object_mut().unwrap().insert(
-                            "channels".to_string(),
-                            channels.iter()
-                                .filter(|x| x.guild.is_some() && x.guild.as_ref().unwrap() == &id)
-                                .map(|x| x.clone().serialise())
-                                .collect()
-                        );
-                        obj
-                    })
-                    .collect();
-                
-                Response::Success(json!(data))
-            } else {
-                Response::InternalServerError(json!({ "error": "Failed to fetch channels." }))
-            }
+        if let Ok(data) = serialise_guilds_with_channels(&gids) {
+            Response::Success(data)
         } else {
             Response::InternalServerError(json!({ "error": "Failed to fetch guilds." }))
         }

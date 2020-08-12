@@ -1,4 +1,5 @@
 use super::get_collection;
+use super::channel::Channel;
 
 use lru::LruCache;
 use mongodb::bson::{doc, from_bson, Bson};
@@ -162,6 +163,31 @@ pub fn fetch_guilds(ids: &Vec<String>) -> Result<Vec<Guild>, String> {
     } else {
         Err("Failed to fetch channel from database.".to_string())
     }
+}
+
+pub fn serialise_guilds_with_channels(ids: &Vec<String>) -> Result<Vec<JsonValue>, String> {
+    let guilds = fetch_guilds(&gids)?;
+    let cids: Vec<String> = guilds
+        .iter()
+        .flat_map(|x| x.channels.clone())
+        .collect();
+
+    let channels = database::channel::fetch_channels(&cids)?;
+    let data: Vec<rocket_contrib::json::JsonValue> = guilds
+        .into_iter()
+        .map(|x| {
+            let id = x.id.clone();
+            let mut obj = x.serialise();
+            obj.as_object_mut().unwrap().insert(
+                "channels".to_string(),
+                channels.iter()
+                    .filter(|x| x.guild.is_some() && x.guild.as_ref().unwrap() == &id)
+                    .map(|x| x.clone().serialise())
+                    .collect()
+            );
+            obj
+        })
+        .collect()
 }
 
 pub fn fetch_member(key: MemberKey) -> Result<Option<Member>, String> {
