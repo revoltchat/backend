@@ -18,7 +18,7 @@ pub fn verify(user_token: &Option<String>) -> Result<(), String> {
             let client = Client::new();
             if let Ok(response) = client
                 .post("https://hcaptcha.com/siteverify")
-                .json(&map)
+                .form(&map)
                 .send()
             {
                 let result: CaptchaResponse = response
