@@ -2,6 +2,7 @@ use super::Response;
 use crate::database;
 use crate::email;
 use crate::util::gen_token;
+use crate::util::captcha;
 
 use bcrypt::{hash, verify};
 use chrono::prelude::*;
@@ -17,6 +18,7 @@ pub struct Create {
     username: String,
     password: String,
     email: String,
+    captcha: Option<String>,
 }
 
 /// create a new Revolt account
@@ -28,6 +30,12 @@ pub struct Create {
 /// (3) add user and send email verification
 #[post("/create", data = "<info>")]
 pub fn create(info: Json<Create>) -> Response {
+    if let Err(error) = captcha::verify(&info.captcha) {
+        return Response::BadRequest(
+            json!({ "error": error })
+        );
+    }
+
     let col = database::get_collection("users");
 
     if info.username.len() < 2 || info.username.len() > 32 {
@@ -150,6 +158,7 @@ pub fn verify_email(code: String) -> Response {
 #[derive(Serialize, Deserialize)]
 pub struct Resend {
     email: String,
+    captcha: Option<String>,
 }
 
 /// resend a verification email
@@ -158,6 +167,12 @@ pub struct Resend {
 /// (3) resend the email
 #[post("/resend", data = "<info>")]
 pub fn resend_email(info: Json<Resend>) -> Response {
+    if let Err(error) = captcha::verify(&info.captcha) {
+        return Response::BadRequest(
+            json!({ "error": error })
+        );
+    }
+
     let col = database::get_collection("users");
 
     if let Some(u) = col
@@ -218,6 +233,7 @@ pub fn resend_email(info: Json<Resend>) -> Response {
 pub struct Login {
     email: String,
     password: String,
+    captcha: Option<String>,
 }
 
 /// login to a Revolt account
@@ -226,6 +242,12 @@ pub struct Login {
 /// (3) return access token
 #[post("/login", data = "<info>")]
 pub fn login(info: Json<Login>) -> Response {
+    if let Err(error) = captcha::verify(&info.captcha) {
+        return Response::BadRequest(
+            json!({ "error": error })
+        );
+    }
+
     let col = database::get_collection("users");
 
     if let Some(u) = col

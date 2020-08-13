@@ -2,7 +2,7 @@ use super::channel::ChannelType;
 use super::Response;
 use crate::database::guild::{fetch_member as get_member, get_invite, Guild, MemberKey};
 use crate::database::{
-    self, channel::fetch_channel, guild::fetch_guilds, guild::serialise_guilds_with_channels, channel::Channel, Permission, PermissionCalculator, user::User
+    self, channel::fetch_channel, guild::serialise_guilds_with_channels, channel::Channel, Permission, PermissionCalculator, user::User
 };
 use crate::notifications::{
     self,
