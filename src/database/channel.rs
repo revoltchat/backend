@@ -1,12 +1,12 @@
 use super::get_collection;
 
 use lru::LruCache;
+use std::sync::{Arc, Mutex};
 use mongodb::bson::{doc, from_bson, Bson};
 use rocket::http::RawStr;
 use rocket::request::FromParam;
 use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LastMessage {

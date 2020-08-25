@@ -537,6 +537,7 @@ pub fn create_guild(user: User, info: Json<CreateGuild>) -> Response {
                 "name": name,
                 "description": description,
                 "owner": &user.id,
+                "channels": [ channel_id.clone() ],
                 "invites": [],
                 "bans": [],
                 "default_permissions": 51,

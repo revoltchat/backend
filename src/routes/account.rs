@@ -36,6 +36,12 @@ pub fn create(info: Json<Create>) -> Response {
         );
     }
 
+    if true {
+        return Response::BadRequest(
+            json!({ "error": "Registration disabled." })
+        );
+    }
+
     let col = database::get_collection("users");
 
     if info.username.len() < 2 || info.username.len() > 32 {
