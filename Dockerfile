@@ -10,7 +10,7 @@ RUN cargo build --release
 
 # Bundle Stage
 FROM scratch
-COPY --from=builder /home/rust/src/revolt/target/x86_64-unknown-linux-musl/release/revolt .
+COPY --from=builder /home/rust/src/revolt/target/x86_64-unknown-linux-musl/release/revolt ./
 EXPOSE 8000
 EXPOSE 9000
 CMD ["./revolt"]
