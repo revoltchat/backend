@@ -47,13 +47,20 @@ impl Handler for Server {
                                         .to_string(),
                                     )?;
                                     
-                                    self.sender.send(
-                                        json!({
-                                            "type": "ready",
-                                            "data": user.create_payload()
-                                        })
-                                        .to_string(),
-                                    )
+                                    if let Ok(payload) = user.create_payload() {
+                                        self.sender.send(
+                                            json!({
+                                                "type": "ready",
+                                                "data": payload
+                                            })
+                                            .to_string(),
+                                        )
+                                    } else {
+                                        // ! TODO: FIXME: ALL THE NOTIFICATIONS CODE NEEDS TO BE
+                                        // ! RESTRUCTURED, IT IS UTTER GARBAGE. :)))))
+
+                                        Ok(())
+                                    }
                                 }
                                 StateResult::DatabaseError => self.sender.send(
                                     json!({
