@@ -4,11 +4,15 @@ use std::env;
 use log::warn;
 
 lazy_static! {
-    // General Configuration
+    // Application Settings
     pub static ref MONGO_URI: String =
         env::var("REVOLT_MONGO_URI").expect("Missing REVOLT_MONGO_URI environment variable.");
     pub static ref PUBLIC_URL: String =
         env::var("REVOLT_PUBLIC_URL").expect("Missing REVOLT_PUBLIC_URL environment variable.");
+    pub static ref HCAPTCHA_KEY: String =
+        env::var("REVOLT_HCAPTCHA_KEY").unwrap_or_else(|_| "".to_string());
+    pub static ref WS_HOST: String =
+        env::var("REVOLT_WS_HOST").unwrap_or_else(|_| "0.0.0.0:9999".to_string());
     
     // Application Flags
     pub static ref DISABLE_REGISTRATION: bool = env::var("REVOLT_DISABLE_REGISTRATION").map_or(false, |v| v == "*1");
@@ -29,12 +33,6 @@ lazy_static! {
     pub static ref SMTP_PASSWORD: String =
         env::var("SMTP_PASSWORD").unwrap_or_else(|_| "".to_string());
     pub static ref SMTP_FROM: String = env::var("SMTP_FROM").unwrap_or_else(|_| "".to_string());
-
-    // Application Settings
-    pub static ref HCAPTCHA_KEY: String =
-        env::var("REVOLT_HCAPTCHA_KEY").unwrap_or_else(|_| "".to_string());
-    pub static ref WS_HOST: String =
-        env::var("REVOLT_WS_HOST").unwrap_or_else(|_| "0.0.0.0:9999".to_string());
 }
 
 pub fn preflight_checks() {
