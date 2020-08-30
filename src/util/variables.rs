@@ -1,5 +1,7 @@
-use log::warn;
 use std::env;
+
+#[cfg(debug_assertions)]
+use log::warn;
 
 lazy_static! {
     // General Configuration
