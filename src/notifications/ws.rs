@@ -125,7 +125,7 @@ pub fn launch_server() {
     state::init();
 
     listen(
-        env::var("WS_HOST").unwrap_or("0.0.0.0:9999".to_string()),
+        env::var("WS_HOST").unwrap_or("0.0.0.0:9000".to_string()),
         |sender| Server {
             sender,
             user_id: None,
