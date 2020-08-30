@@ -1,7 +1,7 @@
 use super::Response;
+use crate::util::variables::{USE_EMAIL_VERIFICATION, USE_HCAPTCHA};
 
 use mongodb::bson::doc;
-use std::env;
 
 /// root
 #[get("/")]
@@ -14,7 +14,8 @@ pub fn root() -> Response {
             "patch": 9
         },
         "features": {
-            "captcha": env::var("HCAPTCHA_KEY").is_ok()
+            "email_verification": USE_EMAIL_VERIFICATION.clone(),
+            "captcha": USE_HCAPTCHA.clone(),
         }
     }))
 }

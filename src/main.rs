@@ -9,13 +9,11 @@ extern crate bitfield;
 #[macro_use]
 extern crate lazy_static;
 
-pub mod notifications;
 pub mod database;
+pub mod notifications;
 pub mod routes;
-pub mod email;
 pub mod util;
 
-use dotenv;
 use rocket_cors::AllowedOrigins;
 use std::thread;
 

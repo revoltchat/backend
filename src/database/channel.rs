@@ -1,12 +1,12 @@
 use super::get_collection;
 
 use lru::LruCache;
-use std::sync::{Arc, Mutex};
 use mongodb::bson::{doc, from_bson, Bson};
 use rocket::http::RawStr;
 use rocket::request::FromParam;
 use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LastMessage {
@@ -50,26 +50,22 @@ impl Channel {
                 "last_message": self.last_message,
                 "recipients": self.recipients,
             }),
-            1 => {
-                json!({
-                    "id": self.id,
-                    "type": self.channel_type,
-                    "last_message": self.last_message,
-                    "recipients": self.recipients,
-                    "name": self.name,
-                    "owner": self.owner,
-                    "description": self.description,
-                })
-            }
-            2 => {
-                json!({
-                    "id": self.id,
-                    "type": self.channel_type,
-                    "guild": self.guild,
-                    "name": self.name,
-                    "description": self.description,
-                })
-            }
+            1 => json!({
+                "id": self.id,
+                "type": self.channel_type,
+                "last_message": self.last_message,
+                "recipients": self.recipients,
+                "name": self.name,
+                "owner": self.owner,
+                "description": self.description,
+            }),
+            2 => json!({
+                "id": self.id,
+                "type": self.channel_type,
+                "guild": self.guild,
+                "name": self.name,
+                "description": self.description,
+            }),
             _ => unreachable!(),
         }
     }

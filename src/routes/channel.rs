@@ -1,7 +1,7 @@
 use super::Response;
 use crate::database::{
     self, channel::Channel, get_relationship, get_relationship_internal, message::Message,
-    Permission, PermissionCalculator, Relationship, user::User
+    user::User, Permission, PermissionCalculator, Relationship,
 };
 use crate::notifications::{
     self,
@@ -506,11 +506,7 @@ pub struct SendMessage {
 
 /// send a message to a channel
 #[post("/<target>/messages", data = "<message>")]
-pub fn send_message(
-    user: User,
-    target: Channel,
-    message: Json<SendMessage>,
-) -> Option<Response> {
+pub fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> Option<Response> {
     let permissions = with_permissions!(user, target);
 
     if !permissions.get_send_messages() {
@@ -657,10 +653,8 @@ pub fn edit_message(
 pub fn delete_message(user: User, target: Channel, message: Message) -> Option<Response> {
     let permissions = with_permissions!(user, target);
 
-    if !permissions.get_manage_messages() {
-        if message.author != user.id {
-            return Some(Response::LackingPermission(Permission::ManageMessages));
-        }
+    if !permissions.get_manage_messages() && message.author != user.id {
+        return Some(Response::LackingPermission(Permission::ManageMessages));
     }
 
     let col = database::get_collection("messages");

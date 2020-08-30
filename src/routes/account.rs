@@ -1,12 +1,11 @@
 use super::Response;
 use crate::database;
-use crate::email;
-use crate::util::gen_token;
-use crate::util::captcha;
+use crate::util::{captcha, email, gen_token};
 
 use bcrypt::{hash, verify};
 use chrono::prelude::*;
 use database::user::User;
+use log::error;
 use mongodb::bson::{doc, from_bson, Bson};
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
@@ -31,15 +30,11 @@ pub struct Create {
 #[post("/create", data = "<info>")]
 pub fn create(info: Json<Create>) -> Response {
     if let Err(error) = captcha::verify(&info.captcha) {
-        return Response::BadRequest(
-            json!({ "error": error })
-        );
+        return Response::BadRequest(json!({ "error": error }));
     }
 
     if true {
-        return Response::BadRequest(
-            json!({ "error": "Registration disabled." })
-        );
+        return Response::BadRequest(json!({ "error": "Registration disabled." }));
     }
 
     let col = database::get_collection("users");
@@ -152,7 +147,9 @@ pub fn verify_email(code: String) -> Response {
             )
             .expect("Failed to update user!");
 
-            email::send_welcome_email(target.to_string(), user.username);
+            if let Err(err) = email::send_welcome_email(target.to_string(), user.username) {
+                error!("Failed to send welcome email! {}", err);
+            }
 
             Response::Redirect(super::Redirect::to("https://app.revolt.chat"))
         }
@@ -174,9 +171,7 @@ pub struct Resend {
 #[post("/resend", data = "<info>")]
 pub fn resend_email(info: Json<Resend>) -> Response {
     if let Err(error) = captcha::verify(&info.captcha) {
-        return Response::BadRequest(
-            json!({ "error": error })
-        );
+        return Response::BadRequest(json!({ "error": error }));
     }
 
     let col = database::get_collection("users");
@@ -223,12 +218,11 @@ pub fn resend_email(info: Json<Resend>) -> Response {
 					None,
 				).expect("Failed to update user!");
 
-            match email::send_verification_email(info.email.to_string(), code) {
-                true => Response::Result(super::Status::Ok),
-                false => Response::InternalServerError(
-                    json!({ "error": "Failed to send email! Likely an issue with the backend API." }),
-                ),
+            if let Err(err) = email::send_verification_email(info.email.clone(), code) {
+                return Response::InternalServerError(json!({ "error": err }));
             }
+
+            Response::Result(super::Status::Ok)
         }
     } else {
         Response::NotFound(json!({ "error": "Email not found or pending verification!" }))
@@ -249,9 +243,7 @@ pub struct Login {
 #[post("/login", data = "<info>")]
 pub fn login(info: Json<Login>) -> Response {
     if let Err(error) = captcha::verify(&info.captcha) {
-        return Response::BadRequest(
-            json!({ "error": error })
-        );
+        return Response::BadRequest(json!({ "error": error }));
     }
 
     let col = database::get_collection("users");

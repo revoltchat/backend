@@ -1,11 +1,11 @@
-use serde::{Serialize, Deserialize};
 use reqwest::blocking::Client;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
 
 #[derive(Serialize, Deserialize)]
 struct CaptchaResponse {
-    success: bool
+    success: bool,
 }
 
 pub fn verify(user_token: &Option<String>) -> Result<(), String> {

@@ -1,5 +1,5 @@
-use super::get_collection;
 use super::channel::fetch_channels;
+use super::get_collection;
 
 use lru::LruCache;
 use mongodb::bson::{doc, from_bson, Bson};
@@ -66,13 +66,17 @@ impl Guild {
     }
 
     pub fn seralise_with_channels(self) -> Result<JsonValue, String> {
-        let channels = self.fetch_channels()?
+        let channels = self
+            .fetch_channels()?
             .into_iter()
             .map(|x| x.serialise())
             .collect();
 
         let mut value = self.serialise();
-        value.as_object_mut().unwrap().insert("channels".to_string(), channels);
+        value
+            .as_object_mut()
+            .unwrap()
+            .insert("channels".to_string(), channels);
         Ok(value)
     }
 }
@@ -167,10 +171,7 @@ pub fn fetch_guilds(ids: &Vec<String>) -> Result<Vec<Guild>, String> {
 
 pub fn serialise_guilds_with_channels(ids: &Vec<String>) -> Result<Vec<JsonValue>, String> {
     let guilds = fetch_guilds(&ids)?;
-    let cids: Vec<String> = guilds
-        .iter()
-        .flat_map(|x| x.channels.clone())
-        .collect();
+    let cids: Vec<String> = guilds.iter().flat_map(|x| x.channels.clone()).collect();
 
     let channels = fetch_channels(&cids)?;
     Ok(guilds
@@ -180,10 +181,11 @@ pub fn serialise_guilds_with_channels(ids: &Vec<String>) -> Result<Vec<JsonValue
             let mut obj = x.serialise();
             obj.as_object_mut().unwrap().insert(
                 "channels".to_string(),
-                channels.iter()
+                channels
+                    .iter()
                     .filter(|x| x.guild.is_some() && x.guild.as_ref().unwrap() == &id)
                     .map(|x| x.clone().serialise())
-                    .collect()
+                    .collect(),
             );
             obj
         })
@@ -315,19 +317,19 @@ pub fn process_event(event: &Notification) {
         Notification::guild_user_join(ev) => {
             let mut cache = MEMBER_CACHE.lock().unwrap();
             cache.put(
-                MemberKey ( ev.id.clone(), ev.user.clone() ),
+                MemberKey(ev.id.clone(), ev.user.clone()),
                 Member {
                     id: MemberRef {
                         guild: ev.id.clone(),
-                        user: ev.user.clone()
+                        user: ev.user.clone(),
                     },
-                    nickname: None
-                }
+                    nickname: None,
+                },
             );
         }
         Notification::guild_user_leave(ev) => {
             let mut cache = MEMBER_CACHE.lock().unwrap();
-            cache.pop(&MemberKey ( ev.id.clone(), ev.user.clone() ));
+            cache.pop(&MemberKey(ev.id.clone(), ev.user.clone()));
         }
         _ => {}
     }

@@ -118,12 +118,10 @@ pub fn has_mutual_connection(user_id: &str, target_id: &str, with_permission: bo
             }
 
             false
+        } else if result.count() > 0 {
+            true
         } else {
-            if result.count() > 0 {
-                true
-            } else {
-                false
-            }
+            false
         }
     } else {
         false

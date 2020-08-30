@@ -2,7 +2,8 @@ use super::channel::ChannelType;
 use super::Response;
 use crate::database::guild::{fetch_member as get_member, get_invite, Guild, MemberKey};
 use crate::database::{
-    self, channel::fetch_channel, guild::serialise_guilds_with_channels, channel::Channel, Permission, PermissionCalculator, user::User
+    self, channel::fetch_channel, channel::Channel, guild::serialise_guilds_with_channels,
+    user::User, Permission, PermissionCalculator,
 };
 use crate::notifications::{
     self,
@@ -51,11 +52,13 @@ pub fn my_guilds(user: User) -> Response {
 #[get("/<target>")]
 pub fn guild(user: User, target: Guild) -> Option<Response> {
     with_permissions!(user, target);
-    
+
     if let Ok(result) = target.seralise_with_channels() {
         Some(Response::Success(result))
     } else {
-        Some(Response::InternalServerError(json!({ "error": "Failed to fetch channels!" })))
+        Some(Response::InternalServerError(
+            json!({ "error": "Failed to fetch channels!" }),
+        ))
     }
 }
 
@@ -153,33 +156,31 @@ pub fn remove_guild(user: User, target: Guild) -> Option<Response> {
                 json!({ "error": "Could not fetch channels." }),
             ))
         }
-    } else {
-        if database::get_collection("members")
-            .delete_one(
-                doc! {
-                    "_id.guild": &target.id,
-                    "_id.user": &user.id,
-                },
-                None,
-            )
-            .is_ok()
-        {
-            notifications::send_message_threaded(
-                None,
-                target.id.clone(),
-                Notification::guild_user_leave(UserLeave {
-                    id: target.id.clone(),
-                    user: user.id.clone(),
-                    banned: false,
-                }),
-            );
+    } else if database::get_collection("members")
+        .delete_one(
+            doc! {
+                "_id.guild": &target.id,
+                "_id.user": &user.id,
+            },
+            None,
+        )
+        .is_ok()
+    {
+        notifications::send_message_threaded(
+            None,
+            target.id.clone(),
+            Notification::guild_user_leave(UserLeave {
+                id: target.id.clone(),
+                user: user.id.clone(),
+                banned: false,
+            }),
+        );
 
-            Some(Response::Result(super::Status::Ok))
-        } else {
-            Some(Response::InternalServerError(
-                json!({ "error": "Failed to remove you from the guild." }),
-            ))
-        }
+        Some(Response::Result(super::Status::Ok))
+    } else {
+        Some(Response::InternalServerError(
+            json!({ "error": "Failed to remove you from the guild." }),
+        ))
     }
 }
 
@@ -243,7 +244,7 @@ pub fn create_channel(user: User, target: Guild, info: Json<CreateChannel>) -> O
                             "channels": &id
                         }
                     },
-                    None
+                    None,
                 )
                 .is_ok()
             {
@@ -326,10 +327,8 @@ pub fn remove_invite(user: User, target: Guild, code: String) -> Option<Response
     let (permissions, _) = with_permissions!(user, target);
 
     if let Some((guild_id, _, invite)) = get_invite(&code, None) {
-        if invite.creator != user.id {
-            if !permissions.get_manage_server() {
-                return Some(Response::LackingPermission(Permission::ManageServer));
-            }
+        if invite.creator != user.id && !permissions.get_manage_server() {
+            return Some(Response::LackingPermission(Permission::ManageServer));
         }
 
         if database::get_collection("guilds")
@@ -621,14 +620,16 @@ pub fn kick_member(user: User, target: Guild, other: String) -> Option<Response>
         return Some(Response::LackingPermission(Permission::KickMembers));
     }
 
-    if let Ok(result) = get_member(MemberKey( target.id.clone(), other.clone() )) {
+    if let Ok(result) = get_member(MemberKey(target.id.clone(), other.clone())) {
         if result.is_none() {
             return Some(Response::BadRequest(
                 json!({ "error": "User not part of guild." }),
             ));
         }
     } else {
-        return Some(Response::InternalServerError(json!({ "error": "Failed to fetch member." })))
+        return Some(Response::InternalServerError(
+            json!({ "error": "Failed to fetch member." }),
+        ));
     }
 
     if database::get_collection("members")
@@ -691,14 +692,16 @@ pub fn ban_member(
         return Some(Response::LackingPermission(Permission::BanMembers));
     }
 
-    if let Ok(result) = get_member(MemberKey( target.id.clone(), other.clone() )) {
+    if let Ok(result) = get_member(MemberKey(target.id.clone(), other.clone())) {
         if result.is_none() {
             return Some(Response::BadRequest(
                 json!({ "error": "User not part of guild." }),
             ));
         }
     } else {
-        return Some(Response::InternalServerError(json!({ "error": "Failed to fetch member." })))
+        return Some(Response::InternalServerError(
+            json!({ "error": "Failed to fetch member." }),
+        ));
     }
 
     if database::get_collection("guilds")

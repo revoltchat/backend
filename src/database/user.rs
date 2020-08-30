@@ -1,16 +1,16 @@
+use super::channel::fetch_channels;
 use super::get_collection;
-use super::guild::{serialise_guilds_with_channels};
-use super::channel::{fetch_channels};
+use super::guild::serialise_guilds_with_channels;
 
 use lru::LruCache;
 use mongodb::bson::{doc, from_bson, Bson, DateTime};
 use mongodb::options::FindOptions;
 use rocket::http::{RawStr, Status};
 use rocket::request::{self, FromParam, FromRequest, Request};
-use rocket_contrib::json::JsonValue;
 use rocket::Outcome;
-use std::sync::{Arc, Mutex};
+use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UserEmailVerification {
@@ -66,23 +66,21 @@ impl User {
                 doc! {
                     "_id.user": &self.id
                 },
-                None
-            ).map_err(|_| "Failed to fetch members.")?;
-        
-        Ok(members.into_iter()
+                None,
+            )
+            .map_err(|_| "Failed to fetch members.")?;
+
+        Ok(members
+            .into_iter()
             .filter_map(|x| match x {
-                Ok(doc) => {
-                    match doc.get_document("_id") {
-                        Ok(id) => {
-                            match id.get_str("guild") {
-                                Ok(value) => Some(value.to_string()),
-                                Err(_) => None
-                            }
-                        }
-                        Err(_) => None
-                    }
-                }
-                Err(_) => None
+                Ok(doc) => match doc.get_document("_id") {
+                    Ok(id) => match id.get_str("guild") {
+                        Ok(value) => Some(value.to_string()),
+                        Err(_) => None,
+                    },
+                    Err(_) => None,
+                },
+                Err(_) => None,
             })
             .collect())
     }
@@ -93,18 +91,16 @@ impl User {
                 doc! {
                     "recipients": &self.id
                 },
-                FindOptions::builder()
-                    .projection(doc! { "_id": 1 })
-                    .build()
-            ).map_err(|_| "Failed to fetch channel ids.")?;
-        
-        Ok(channels.into_iter()
+                FindOptions::builder().projection(doc! { "_id": 1 }).build(),
+            )
+            .map_err(|_| "Failed to fetch channel ids.")?;
+
+        Ok(channels
+            .into_iter()
             .filter_map(|x| x.ok())
-            .filter_map(|x| {
-                match x.get_str("_id") {
-                    Ok(value) => Some(value.to_string()),
-                    Err(_) => None
-                }
+            .filter_map(|x| match x.get_str("_id") {
+                Ok(value) => Some(value.to_string()),
+                Err(_) => None,
             })
             .collect())
     }
@@ -112,22 +108,12 @@ impl User {
     pub fn create_payload(self) -> Result<JsonValue, String> {
         let v = vec![];
         let relations = self.relations.as_ref().unwrap_or(&v);
-        
-        let users: Vec<JsonValue> = fetch_users(
-            &relations
-                .iter()
-                .map(|x| x.id.clone())
-                .collect()
-        )?
+
+        let users: Vec<JsonValue> = fetch_users(&relations.iter().map(|x| x.id.clone()).collect())?
             .into_iter()
             .map(|x| {
                 let id = x.id.clone();
-                x.serialise(
-                    relations.iter()
-                        .find(|y| y.id == id)
-                        .unwrap()
-                        .status as i32
-                )
+                x.serialise(relations.iter().find(|y| y.id == id).unwrap().status as i32)
             })
             .collect();
 
@@ -135,7 +121,7 @@ impl User {
             .into_iter()
             .map(|x| x.serialise())
             .collect();
-        
+
         Ok(json!({
             "users": users,
             "channels": channels,
@@ -239,7 +225,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
     type Error = AuthError;
 
     fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
-        let u = request.headers().get("x-user").next(); 
+        let u = request.headers().get("x-user").next();
         let t = request.headers().get("x-auth-token").next();
 
         if let Some(uid) = u {
@@ -298,17 +284,13 @@ pub fn process_event(event: &Notification) {
                         if let Some(pos) = relations.iter().position(|x| x.id == ev.user) {
                             relations.remove(pos);
                         }
+                    } else if let Some(entry) = relations.iter_mut().find(|x| x.id == ev.user) {
+                        entry.status = ev.status as u8;
                     } else {
-                        if let Some(entry) = relations.iter_mut().find(|x| x.id == ev.user) {
-                            entry.status = ev.status as u8;
-                        } else {
-                            relations.push(
-                                UserRelationship {
-                                    id: ev.id.clone(),
-                                    status: ev.status as u8
-                                }
-                            );
-                        }
+                        relations.push(UserRelationship {
+                            id: ev.id.clone(),
+                            status: ev.status as u8,
+                        });
                     }
                 }
             }

@@ -1,40 +1,43 @@
 use super::super::get_collection;
 
-use serde::{Serialize, Deserialize};
-use mongodb::bson::{Bson, from_bson, doc};
-use mongodb::options::FindOptions;
 use log::info;
+use mongodb::bson::{doc, from_bson, Bson};
+use mongodb::options::FindOptions;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 struct MigrationInfo {
     _id: i32,
-    revision: i32
+    revision: i32,
 }
 
 pub const LATEST_REVISION: i32 = 2;
 
 pub fn migrate_database() {
     let migrations = get_collection("migrations");
-    let data = migrations.find_one(None, None)
+    let data = migrations
+        .find_one(None, None)
         .expect("Failed to fetch migration data.");
-    
+
     if let Some(doc) = data {
-        let info: MigrationInfo = from_bson(Bson::Document(doc))
-            .expect("Failed to read migration information.");
-        
+        let info: MigrationInfo =
+            from_bson(Bson::Document(doc)).expect("Failed to read migration information.");
+
         let revision = run_migrations(info.revision);
 
-        migrations.update_one(
-            doc! {
-                "_id": info._id
-            },
-            doc! {
-                "$set": {
-                    "revision": revision
-                }
-            },
-            None
-        ).expect("Failed to commit migration information.");
+        migrations
+            .update_one(
+                doc! {
+                    "_id": info._id
+                },
+                doc! {
+                    "$set": {
+                        "revision": revision
+                    }
+                },
+                None,
+            )
+            .expect("Failed to commit migration information.");
 
         info!("Migration complete. Currently at revision {}.", revision);
     } else {
@@ -53,32 +56,39 @@ pub fn run_migrations(revision: i32) -> i32 {
         info!("Running migration [revision 1]: Add channels to guild object.");
 
         let col = get_collection("guilds");
-        let guilds = col.find(
-            None,
-            FindOptions::builder()
-                .projection(doc! { "_id": 1 })
-                .build()
-        )
+        let guilds = col
+            .find(
+                None,
+                FindOptions::builder().projection(doc! { "_id": 1 }).build(),
+            )
             .expect("Failed to fetch guilds.");
-        
-        let result = get_collection("channels").find(
-            doc! {
-                "type": 2
-            },
-            FindOptions::builder()
-                .projection(doc! { "_id": 1, "guild": 1 })
-                .build()
-        ).expect("Failed to fetch channels.");
+
+        let result = get_collection("channels")
+            .find(
+                doc! {
+                    "type": 2
+                },
+                FindOptions::builder()
+                    .projection(doc! { "_id": 1, "guild": 1 })
+                    .build(),
+            )
+            .expect("Failed to fetch channels.");
 
         let mut channels = vec![];
         for doc in result {
             let channel = doc.expect("Failed to fetch channel.");
-            let id  = channel.get_str("_id").expect("Failed to get channel id.").to_string();
-            let gid = channel.get_str("guild").expect("Failed to get guild id.").to_string();
+            let id = channel
+                .get_str("_id")
+                .expect("Failed to get channel id.")
+                .to_string();
+            let gid = channel
+                .get_str("guild")
+                .expect("Failed to get guild id.")
+                .to_string();
 
-            channels.push(( id, gid ));
+            channels.push((id, gid));
         }
-        
+
         for doc in guilds {
             let guild = doc.expect("Failed to fetch guild.");
             let id = guild.get_str("_id").expect("Failed to get guild id.");
@@ -88,7 +98,7 @@ pub fn run_migrations(revision: i32) -> i32 {
                 .filter(|x| x.1 == id)
                 .map(|x| x.0.clone())
                 .collect();
-            
+
             col.update_one(
                 doc! {
                     "_id": id
@@ -98,8 +108,9 @@ pub fn run_migrations(revision: i32) -> i32 {
                         "channels": list
                     }
                 },
-                None
-            ).expect("Failed to update guild.");
+                None,
+            )
+            .expect("Failed to update guild.");
         }
     }
 

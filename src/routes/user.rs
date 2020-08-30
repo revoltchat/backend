@@ -1,5 +1,7 @@
 use super::Response;
-use crate::database::{self, get_relationship, get_relationship_internal, mutual, Relationship, user::User};
+use crate::database::{
+    self, get_relationship, get_relationship_internal, user::User, Relationship,
+};
 use crate::notifications::{
     self,
     events::{users::*, Notification},
@@ -15,18 +17,14 @@ use ulid::Ulid;
 /// retrieve your user information
 #[get("/@me")]
 pub fn me(user: User) -> Response {
-    Response::Success(
-        user.serialise(Relationship::SELF as i32)
-    )
+    Response::Success(user.serialise(Relationship::SELF as i32))
 }
 
 /// retrieve another user's information
 #[get("/<target>")]
 pub fn user(user: User, target: User) -> Response {
     let relationship = get_relationship(&user, &target) as i32;
-    Response::Success(
-        user.serialise(relationship)
-    )
+    Response::Success(user.serialise(relationship))
 }
 
 #[derive(Serialize, Deserialize)]
