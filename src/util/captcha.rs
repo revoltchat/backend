@@ -1,7 +1,8 @@
+use crate::util::variables::{HCAPTCHA_KEY, USE_HCAPTCHA};
+
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::env;
 
 #[derive(Serialize, Deserialize)]
 struct CaptchaResponse {
@@ -9,10 +10,10 @@ struct CaptchaResponse {
 }
 
 pub fn verify(user_token: &Option<String>) -> Result<(), String> {
-    if let Ok(key) = env::var("HCAPTCHA_KEY") {
+    if *USE_HCAPTCHA {
         if let Some(token) = user_token {
             let mut map = HashMap::new();
-            map.insert("secret", key);
+            map.insert("secret", HCAPTCHA_KEY.to_string());
             map.insert("response", token.to_string());
 
             let client = Client::new();

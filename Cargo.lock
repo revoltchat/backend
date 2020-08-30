@@ -2031,7 +2031,7 @@ dependencies = [
 
 [[package]]
 name = "revolt"
-version = "0.2.9"
+version = "0.2.10"
 dependencies = [
  "bcrypt",
  "bitfield",

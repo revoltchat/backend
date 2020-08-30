@@ -1,13 +1,12 @@
-use mongodb::sync::{Client, Collection, Database};
-use std::env;
+use crate::util::variables::MONGO_URI;
 
+use mongodb::sync::{Client, Collection, Database};
 use once_cell::sync::OnceCell;
+
 static DBCONN: OnceCell<Client> = OnceCell::new();
 
 pub fn connect() {
-    let client =
-        Client::with_uri_str(&env::var("DB_URI").expect("DB_URI not in environment variables!"))
-            .expect("Failed to init db connection.");
+    let client = Client::with_uri_str(&MONGO_URI).expect("Failed to init db connection.");
 
     DBCONN.set(client).unwrap();
     migrations::run_migrations();

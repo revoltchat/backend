@@ -16,10 +16,18 @@ pub mod util;
 
 use rocket_cors::AllowedOrigins;
 use std::thread;
+use log::info;
 
 fn main() {
     dotenv::dotenv().ok();
-    env_logger::init();
+    env_logger::init_from_env(
+        env_logger::Env::default()
+            .filter_or("RUST_LOG", "info")
+    );
+
+    info!("Starting REVOLT server.");
+
+    util::variables::preflight_checks();
     database::connect();
     notifications::start_worker();
 

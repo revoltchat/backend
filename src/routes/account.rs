@@ -1,6 +1,7 @@
 use super::Response;
 use crate::database;
 use crate::util::{captcha, email, gen_token};
+use crate::util::variables::{DISABLE_REGISTRATION, USE_EMAIL};
 
 use bcrypt::{hash, verify};
 use chrono::prelude::*;
@@ -33,7 +34,7 @@ pub fn create(info: Json<Create>) -> Response {
         return Response::BadRequest(json!({ "error": error }));
     }
 
-    if true {
+    if *DISABLE_REGISTRATION {
         return Response::BadRequest(json!({ "error": "Registration disabled." }));
     }
 
@@ -73,30 +74,45 @@ pub fn create(info: Json<Create>) -> Response {
         let access_token = gen_token(92);
         let code = gen_token(48);
 
+        let email_verification = match *USE_EMAIL {
+            true => doc! {
+                "verified": false,
+                "target": info.email.clone(),
+                "expiry": Bson::DateTime(Utc::now() + chrono::Duration::days(1)),
+                "rate_limit": Bson::DateTime(Utc::now() + chrono::Duration::minutes(1)),
+                "code": code.clone(),
+            },
+            false => doc! {
+                "verified": true
+            }
+        };
+
+        let id = Ulid::new().to_string();
         match col.insert_one(
             doc! {
-                "_id": Ulid::new().to_string(),
+                "_id": &id,
                 "email": info.email.clone(),
                 "username": info.username.clone(),
                 "display_name": info.username.clone(),
                 "password": hashed,
-                "access_token": access_token,
-                "email_verification": {
-                    "verified": false,
-                    "target": info.email.clone(),
-                    "expiry": Bson::DateTime(Utc::now() + chrono::Duration::days(1)),
-                    "rate_limit": Bson::DateTime(Utc::now() + chrono::Duration::minutes(1)),
-                    "code": code.clone(),
-                }
+                "access_token": &access_token,
+                "email_verification": email_verification
             },
             None,
         ) {
             Ok(_) => {
-                let sent = email::send_verification_email(info.email.clone(), code);
+                if *USE_EMAIL {
+                    let sent = email::send_verification_email(info.email.clone(), code);
 
-                Response::Success(json!({
-                    "email_sent": sent,
-                }))
+                    Response::Success(json!({
+                        "email_sent": sent,
+                    }))
+                } else {
+                    Response::Success(json!({
+                        "id": id,
+                        "access_token": access_token
+                    }))
+                }
             }
             Err(_) => {
                 Response::InternalServerError(json!({ "error": "Failed to create account." }))
@@ -147,8 +163,10 @@ pub fn verify_email(code: String) -> Response {
             )
             .expect("Failed to update user!");
 
-            if let Err(err) = email::send_welcome_email(target.to_string(), user.username) {
-                error!("Failed to send welcome email! {}", err);
+            if *USE_EMAIL {
+                if let Err(err) = email::send_welcome_email(target.to_string(), user.username) {
+                    error!("Failed to send welcome email! {}", err);
+                }
             }
 
             Response::Redirect(super::Redirect::to("https://app.revolt.chat"))

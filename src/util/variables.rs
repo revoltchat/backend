@@ -1,11 +1,16 @@
+use log::warn;
 use std::env;
 
 lazy_static! {
+    // General Configuration
     pub static ref MONGO_URI: String =
         env::var("REVOLT_MONGO_URI").expect("Missing REVOLT_MONGO_URI environment variable.");
     pub static ref PUBLIC_URL: String =
         env::var("REVOLT_PUBLIC_URL").expect("Missing REVOLT_PUBLIC_URL environment variable.");
-    pub static ref USE_EMAIL_VERIFICATION: bool = env::var("REVOLT_USE_EMAIL_VERIFICATION").map_or(
+    
+    // Application Flags
+    pub static ref DISABLE_REGISTRATION: bool = env::var("REVOLT_DISABLE_REGISTRATION").map_or(false, |v| v == "*1");
+    pub static ref USE_EMAIL: bool = env::var("REVOLT_USE_EMAIL_VERIFICATION").map_or(
         env::var("REVOLT_SMTP_HOST").is_ok()
             && env::var("REVOLT_SMTP_USERNAME").is_ok()
             && env::var("REVOLT_SMTP_PASSWORD").is_ok()
@@ -13,6 +18,8 @@ lazy_static! {
         |v| v == *"1"
     );
     pub static ref USE_HCAPTCHA: bool = env::var("REVOLT_HCAPTCHA_KEY").is_ok();
+
+    // SMTP Settings
     pub static ref SMTP_HOST: String =
         env::var("REVOLT_SMTP_HOST").unwrap_or_else(|_| "".to_string());
     pub static ref SMTP_USERNAME: String =
@@ -20,8 +27,40 @@ lazy_static! {
     pub static ref SMTP_PASSWORD: String =
         env::var("SMTP_PASSWORD").unwrap_or_else(|_| "".to_string());
     pub static ref SMTP_FROM: String = env::var("SMTP_FROM").unwrap_or_else(|_| "".to_string());
+
+    // Application Settings
     pub static ref HCAPTCHA_KEY: String =
         env::var("REVOLT_HCAPTCHA_KEY").unwrap_or_else(|_| "".to_string());
     pub static ref WS_HOST: String =
         env::var("REVOLT_WS_HOST").unwrap_or_else(|_| "0.0.0.0:9999".to_string());
+}
+
+pub fn preflight_checks() {
+    if *USE_EMAIL == false {
+        #[cfg(not(debug_assertions))]
+        {
+            if !env::var("REVOLT_UNSAFE_NO_EMAIL")
+                .map_or(false, |v| v == *"1") {
+                panic!(
+                    "Not letting you run this in production, set REVOLT_UNSAFE_NO_EMAIL=1 to run."
+                );
+            }
+        }
+
+        #[cfg(debug_assertions)]
+        warn!("No SMTP settings specified! Remember to configure email.");
+    }
+
+    if *USE_HCAPTCHA == false {
+        #[cfg(not(debug_assertions))]
+        {
+            if !env::var("REVOLT_UNSAFE_NO_CAPTCHA")
+                .map_or(false, |v| v == *"1") {
+                panic!("Not letting you run this in production, set REVOLT_UNSAFE_NO_CAPTCHA=1 to run.");
+            }
+        }
+
+        #[cfg(debug_assertions)]
+        warn!("No Captcha key specified! Remember to add hCaptcha key.");
+    }
 }

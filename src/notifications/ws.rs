@@ -1,7 +1,7 @@
 use super::state::{self, StateResult};
+use crate::util::variables::WS_HOST;
 
 use serde_json::{from_str, json, Value};
-use std::env;
 use ulid::Ulid;
 use ws::{listen, CloseCode, Error, Handler, Handshake, Message, Result, Sender};
 
@@ -126,13 +126,10 @@ impl Handler for Server {
 pub fn launch_server() {
     state::init();
 
-    listen(
-        env::var("WS_HOST").unwrap_or("0.0.0.0:9000".to_string()),
-        |sender| Server {
-            sender,
-            user_id: None,
-            id: Ulid::new().to_string(),
-        },
-    )
+    listen(WS_HOST.to_string(), |sender| Server {
+        sender,
+        user_id: None,
+        id: Ulid::new().to_string(),
+    })
     .unwrap()
 }

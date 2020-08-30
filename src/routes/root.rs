@@ -1,5 +1,5 @@
 use super::Response;
-use crate::util::variables::{USE_EMAIL_VERIFICATION, USE_HCAPTCHA};
+use crate::util::variables::{USE_EMAIL, DISABLE_REGISTRATION, USE_HCAPTCHA};
 
 use mongodb::bson::doc;
 
@@ -7,15 +7,16 @@ use mongodb::bson::doc;
 #[get("/")]
 pub fn root() -> Response {
     Response::Success(json!({
-        "revolt": "0.2.9",
+        "revolt": "0.2.10",
         "version": {
             "major": 0,
             "minor": 2,
-            "patch": 9
+            "patch": 10
         },
         "features": {
-            "email_verification": USE_EMAIL_VERIFICATION.clone(),
-            "captcha": USE_HCAPTCHA.clone(),
+            "registration": !*DISABLE_REGISTRATION,
+            "captcha": *USE_HCAPTCHA,
+            "email": *USE_EMAIL,
         }
     }))
 }
