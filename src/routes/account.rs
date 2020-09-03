@@ -1,7 +1,7 @@
 use super::Response;
 use crate::database;
-use crate::util::{captcha, email, gen_token};
 use crate::util::variables::{DISABLE_REGISTRATION, USE_EMAIL};
+use crate::util::{captcha, email, gen_token};
 
 use bcrypt::{hash, verify};
 use chrono::prelude::*;
@@ -84,7 +84,7 @@ pub fn create(info: Json<Create>) -> Response {
             },
             false => doc! {
                 "verified": true
-            }
+            },
         };
 
         let id = Ulid::new().to_string();

@@ -14,17 +14,15 @@ pub enum StateResult {
     Success(String),
 }
 
-static mut CONNECTIONS: OnceCell<RwLock<HashMap<String, Sender>>> = OnceCell::new();
+static CONNECTIONS: OnceCell<RwLock<HashMap<String, Sender>>> = OnceCell::new();
 
 pub fn add_connection(id: String, sender: Sender) {
-    unsafe {
-        CONNECTIONS
-            .get()
-            .unwrap()
-            .write()
-            .unwrap()
-            .insert(id, sender);
-    }
+    CONNECTIONS
+        .get()
+        .unwrap()
+        .write()
+        .unwrap()
+        .insert(id, sender);
 }
 
 pub struct User {
@@ -148,33 +146,29 @@ impl GlobalState {
             }
         }
 
-        unsafe {
-            CONNECTIONS
-                .get()
-                .unwrap()
-                .write()
-                .unwrap()
-                .remove(&connection);
-        }
+        CONNECTIONS
+            .get()
+            .unwrap()
+            .write()
+            .unwrap()
+            .remove(&connection);
     }
 }
 
-pub static mut DATA: OnceCell<RwLock<GlobalState>> = OnceCell::new();
+pub static DATA: OnceCell<RwLock<GlobalState>> = OnceCell::new();
 
 pub fn init() {
-    unsafe {
-        if CONNECTIONS.set(RwLock::new(HashMap::new())).is_err() {
-            panic!("Failed to set global connections map.");
-        }
+    if CONNECTIONS.set(RwLock::new(HashMap::new())).is_err() {
+        panic!("Failed to set global connections map.");
+    }
 
-        if DATA.set(RwLock::new(GlobalState::new())).is_err() {
-            panic!("Failed to set global state.");
-        }
+    if DATA.set(RwLock::new(GlobalState::new())).is_err() {
+        panic!("Failed to set global state.");
     }
 }
 
 pub fn send_message(users: Option<Vec<String>>, guild: Option<String>, data: String) {
-    let state = unsafe { DATA.get().unwrap().read().unwrap() };
+    let state = DATA.get().unwrap().read().unwrap();
     let mut connections = HashSet::new();
 
     let mut users = vec_to_set(&users.unwrap_or(vec![]));
@@ -194,7 +188,7 @@ pub fn send_message(users: Option<Vec<String>>, guild: Option<String>, data: Str
         }
     }
 
-    let targets = unsafe { CONNECTIONS.get().unwrap().read().unwrap() };
+    let targets = CONNECTIONS.get().unwrap().read().unwrap();
     for conn in connections {
         if let Some(sender) = targets.get(&conn) {
             if sender.send(data.clone()).is_err() {

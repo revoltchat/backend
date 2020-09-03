@@ -836,6 +836,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "644f9158b2f133fd50f5fb3242878846d9eb792e445c893805ff0e3824006e35"
 
 [[package]]
+name = "hive_pubsub"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e2b08d5028b638db3f5eb475dc7c5e5aad1b0a5b4f737b2c394883034330853e"
+dependencies = [
+ "many-to-many",
+ "mongodb",
+ "serde",
+ "serde_json",
+ "ulid",
+]
+
+[[package]]
 name = "hmac"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1219,6 +1232,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "many-to-many"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "28806b11671f3ae32bfcacf1948d77af5bddf1aa4ac518207615f11abe31df19"
+
+[[package]]
 name = "match_cfg"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1326,9 +1345,9 @@ dependencies = [
 
 [[package]]
 name = "mongodb"
-version = "1.1.0"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8cb54f85e6380c8cfe130a55a85cfc2584e8317f4bb8bda464d367fd4f24957"
+checksum = "a726495d7418c4579ecc9465b53ddade8187c0299e5db0e7250672b67d196913"
 dependencies = [
  "async-std",
  "async-trait",
@@ -2031,7 +2050,7 @@ dependencies = [
 
 [[package]]
 name = "revolt"
-version = "0.2.10"
+version = "0.2.11"
 dependencies = [
  "bcrypt",
  "bitfield",
@@ -2039,10 +2058,12 @@ dependencies = [
  "dotenv",
  "env_logger",
  "hashbrown",
+ "hive_pubsub",
  "lazy_static",
  "lettre",
  "log 0.4.11",
  "lru",
+ "many-to-many",
  "mongodb",
  "num_enum",
  "once_cell",

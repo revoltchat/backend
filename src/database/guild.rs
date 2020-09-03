@@ -107,6 +107,7 @@ pub fn fetch_guild(id: &str) -> Result<Option<Guild>, String> {
     let col = get_collection("guilds");
     if let Ok(result) = col.find_one(doc! { "_id": id }, None) {
         if let Some(doc) = result {
+            dbg!(doc.to_string());
             if let Ok(guild) = from_bson(Bson::Document(doc)) as Result<Guild, _> {
                 let mut cache = CACHE.lock().unwrap();
                 cache.put(id.to_string(), guild.clone());
@@ -152,6 +153,7 @@ pub fn fetch_guilds(ids: &Vec<String>) -> Result<Vec<Guild>, String> {
         for item in result {
             let mut cache = CACHE.lock().unwrap();
             if let Ok(doc) = item {
+                dbg!(doc.to_string());
                 if let Ok(guild) = from_bson(Bson::Document(doc)) as Result<Guild, _> {
                     cache.put(guild.id.clone(), guild.clone());
                     guilds.push(guild);

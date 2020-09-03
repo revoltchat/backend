@@ -3,6 +3,7 @@ use crate::database::channel::Channel;
 use crate::notifications;
 use crate::notifications::events::message::Create;
 use crate::notifications::events::Notification;
+use crate::pubsub::hive;
 use crate::routes::channel::ChannelType;
 
 use mongodb::bson::from_bson;
@@ -10,6 +11,8 @@ use mongodb::bson::{doc, to_bson, Bson, DateTime};
 use rocket::http::RawStr;
 use rocket::request::FromParam;
 use serde::{Deserialize, Serialize};
+
+use log::warn;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PreviousEntry {
@@ -50,6 +53,23 @@ impl Message {
                 }),
                 &target,
             );
+
+            if hive::publish(
+                &target.id,
+                crate::pubsub::events::Notification::message_create(
+                    crate::pubsub::events::message::Create {
+                        id: self.id.clone(),
+                        nonce: self.nonce.clone(),
+                        channel: self.channel.clone(),
+                        author: self.author.clone(),
+                        content: self.content.clone(),
+                    },
+                ),
+            )
+            .is_err()
+            {
+                warn!("Saved message but couldn't send notification.");
+            }
 
             let short_content: String = self.content.chars().take(24).collect();
 
