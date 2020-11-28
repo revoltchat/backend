@@ -104,6 +104,7 @@ impl Handler for Client {
                                             }
 
                                             if let Err(err) = hive::subscribe(self.user_id.as_ref().unwrap().clone(), ids) {
+                                                error!("Failed to subscribe someone to the Hive! {}", err);
                                                 self.sender.send(
                                                     json!({
                                                         "type": "warn",

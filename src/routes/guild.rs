@@ -5,10 +5,6 @@ use crate::database::{
     self, channel::fetch_channel, channel::Channel, guild::serialise_guilds_with_channels,
     user::User, Permission, PermissionCalculator,
 };
-use crate::notifications::{
-    self,
-    events::{guilds::*, Notification},
-};
 use crate::util::gen_token;
 
 use mongodb::bson::{doc, Bson};
@@ -122,13 +118,13 @@ pub fn remove_guild(user: User, target: Guild) -> Option<Response> {
                             )
                             .is_ok()
                         {
-                            notifications::send_message_threaded(
+                            /*notifications::send_message_threaded(
                                 None,
                                 target.id.clone(),
                                 Notification::guild_delete(Delete {
                                     id: target.id.clone(),
-                                }),
-                            );
+                                }), FIXME
+                            );*/
 
                             Some(Response::Result(super::Status::Ok))
                         } else {
@@ -166,15 +162,15 @@ pub fn remove_guild(user: User, target: Guild) -> Option<Response> {
         )
         .is_ok()
     {
-        notifications::send_message_threaded(
+        /*notifications::send_message_threaded(
             None,
             target.id.clone(),
             Notification::guild_user_leave(UserLeave {
                 id: target.id.clone(),
                 user: user.id.clone(),
                 banned: false,
-            }),
-        );
+            }), FIXME
+        );*/
 
         Some(Response::Result(super::Status::Ok))
     } else {
@@ -248,7 +244,7 @@ pub fn create_channel(user: User, target: Guild, info: Json<CreateChannel>) -> O
                 )
                 .is_ok()
             {
-                notifications::send_message_threaded(
+                /*notifications::send_message_threaded(
                     None,
                     target.id.clone(),
                     Notification::guild_channel_create(ChannelCreate {
@@ -256,8 +252,8 @@ pub fn create_channel(user: User, target: Guild, info: Json<CreateChannel>) -> O
                         channel: id.clone(),
                         name: name.clone(),
                         description: description.clone(),
-                    }),
-                );
+                    }), FIXME
+                );*/
 
                 Some(Response::Success(json!({ "id": &id })))
             } else {
@@ -426,14 +422,14 @@ pub fn use_invite(user: User, code: String) -> Response {
                     )
                     .is_ok()
                 {
-                    notifications::send_message_threaded(
+                    /*notifications::send_message_threaded(
                         None,
                         guild_id.clone(),
                         Notification::guild_user_join(UserJoin {
                             id: guild_id.clone(),
                             user: user.id.clone(),
-                        }),
-                    );
+                        }), FIXME
+                    );*/
 
                     Response::Success(json!({
                         "guild": &guild_id,
@@ -642,15 +638,15 @@ pub fn kick_member(user: User, target: Guild, other: String) -> Option<Response>
         )
         .is_ok()
     {
-        notifications::send_message_threaded(
+        /*notifications::send_message_threaded(
             None,
             target.id.clone(),
             Notification::guild_user_leave(UserLeave {
                 id: target.id.clone(),
                 user: other.clone(),
                 banned: false,
-            }),
-        );
+            }), FIXME
+        );*/
 
         Some(Response::Result(super::Status::Ok))
     } else {
@@ -734,15 +730,15 @@ pub fn ban_member(
         )
         .is_ok()
     {
-        notifications::send_message_threaded(
+        /*notifications::send_message_threaded(
             None,
             target.id.clone(),
             Notification::guild_user_leave(UserLeave {
                 id: target.id.clone(),
                 user: other.clone(),
                 banned: true,
-            }),
-        );
+            }), FIXME
+        );*/
 
         Some(Response::Result(super::Status::Ok))
     } else {

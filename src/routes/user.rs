@@ -2,10 +2,6 @@ use super::Response;
 use crate::database::{
     self, get_relationship, get_relationship_internal, user::User, Relationship,
 };
-use crate::notifications::{
-    self,
-    events::{users::*, Notification},
-};
 use crate::routes::channel;
 
 use mongodb::bson::doc;
@@ -251,7 +247,7 @@ pub fn add_friend(user: User, target: User) -> Response {
                     )
                     .is_ok()
                 {
-                    notifications::send_message_threaded(
+                    /*notifications::send_message_threaded(
                         vec![target.id.clone()],
                         None,
                         Notification::user_friend_status(FriendStatus {
@@ -268,8 +264,8 @@ pub fn add_friend(user: User, target: User) -> Response {
                             id: user.id.clone(),
                             user: target.id.clone(),
                             status: Relationship::Friend as i32,
-                        }),
-                    );
+                        }), FIXME
+                    );*/
 
                     Response::Success(json!({ "status": Relationship::Friend as i32 }))
                 } else {
@@ -324,7 +320,7 @@ pub fn add_friend(user: User, target: User) -> Response {
                     )
                     .is_ok()
                 {
-                    notifications::send_message_threaded(
+                    /*notifications::send_message_threaded(
                         vec![user.id.clone()],
                         None,
                         Notification::user_friend_status(FriendStatus {
@@ -341,8 +337,8 @@ pub fn add_friend(user: User, target: User) -> Response {
                             id: target.id.clone(),
                             user: user.id.clone(),
                             status: Relationship::Incoming as i32,
-                        }),
-                    );
+                        }), FIXME
+                    );*/
 
                     Response::Success(json!({ "status": Relationship::Outgoing as i32 }))
                 } else {
@@ -401,7 +397,7 @@ pub fn remove_friend(user: User, target: User) -> Response {
                     )
                     .is_ok()
                 {
-                    notifications::send_message_threaded(
+                    /*notifications::send_message_threaded(
                         vec![user.id.clone()],
                         None,
                         Notification::user_friend_status(FriendStatus {
@@ -418,8 +414,8 @@ pub fn remove_friend(user: User, target: User) -> Response {
                             id: target.id.clone(),
                             user: user.id.clone(),
                             status: Relationship::NONE as i32,
-                        }),
-                    );
+                        }), FIXME
+                    );*/
 
                     Response::Success(json!({ "status": Relationship::NONE as i32 }))
                 } else {
@@ -477,7 +473,7 @@ pub fn block_user(user: User, target: User) -> Response {
                     )
                     .is_ok()
                 {
-                    notifications::send_message_threaded(
+                    /*notifications::send_message_threaded(
                         vec![user.id.clone()],
                         None,
                         Notification::user_friend_status(FriendStatus {
@@ -494,8 +490,8 @@ pub fn block_user(user: User, target: User) -> Response {
                             id: target.id.clone(),
                             user: user.id.clone(),
                             status: Relationship::BlockedOther as i32,
-                        }),
-                    );
+                        }), FIXME
+                    );*/
 
                     Response::Success(json!({ "status": Relationship::Blocked as i32 }))
                 } else {
@@ -545,7 +541,7 @@ pub fn block_user(user: User, target: User) -> Response {
                     )
                     .is_ok()
                 {
-                    notifications::send_message_threaded(
+                    /*notifications::send_message_threaded(
                         vec![user.id.clone()],
                         None,
                         Notification::user_friend_status(FriendStatus {
@@ -562,8 +558,8 @@ pub fn block_user(user: User, target: User) -> Response {
                             id: target.id.clone(),
                             user: user.id.clone(),
                             status: Relationship::BlockedOther as i32,
-                        }),
-                    );
+                        }), FIXME
+                    );*/
 
                     Response::Success(json!({ "status": Relationship::Blocked as i32 }))
                 } else {
@@ -596,15 +592,15 @@ pub fn block_user(user: User, target: User) -> Response {
                 )
                 .is_ok()
             {
-                notifications::send_message_threaded(
+                /*notifications::send_message_threaded(
                     vec![user.id.clone()],
                     None,
                     Notification::user_friend_status(FriendStatus {
                         id: user.id.clone(),
                         user: target.id.clone(),
                         status: Relationship::Blocked as i32,
-                    }),
-                );
+                    }), FIXME
+                );*/
 
                 Response::Success(json!({ "status": Relationship::Blocked as i32 }))
             } else {
@@ -640,15 +636,15 @@ pub fn unblock_user(user: User, target: User) -> Response {
                     )
                     .is_ok()
                 {
-                    notifications::send_message_threaded(
+                    /*notifications::send_message_threaded(
                         vec![user.id.clone()],
                         None,
                         Notification::user_friend_status(FriendStatus {
                             id: user.id.clone(),
                             user: target.id.clone(),
                             status: Relationship::BlockedOther as i32,
-                        }),
-                    );
+                        }), FIXME
+                    );*/
 
                     Response::Success(json!({ "status": Relationship::BlockedOther as i32 }))
                 } else {
@@ -690,7 +686,7 @@ pub fn unblock_user(user: User, target: User) -> Response {
                         )
                         .is_ok()
                     {
-                        notifications::send_message_threaded(
+                        /*notifications::send_message_threaded(
                             vec![user.id.clone()],
                             None,
                             Notification::user_friend_status(FriendStatus {
@@ -707,8 +703,8 @@ pub fn unblock_user(user: User, target: User) -> Response {
                                 id: target.id.clone(),
                                 user: user.id.clone(),
                                 status: Relationship::NONE as i32,
-                            }),
-                        );
+                            }), FIXME
+                        );*/
 
                         Response::Success(json!({ "status": Relationship::NONE as i32 }))
                     } else {

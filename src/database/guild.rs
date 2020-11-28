@@ -306,7 +306,7 @@ pub fn get_invite<U: Into<Option<String>>>(
     }
 }
 
-use crate::notifications::events::Notification;
+/*use crate::notifications::events::Notification;
 
 pub fn process_event(event: &Notification) {
     match event {
@@ -335,4 +335,4 @@ pub fn process_event(event: &Notification) {
         }
         _ => {}
     }
-}
+}*/

@@ -7,7 +7,7 @@ pub mod users;
 
 #[allow(non_camel_case_types)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "type", content = "data")]
+#[serde(tag = "type")]
 pub enum Notification {
     message_create(message::Create),
     message_edit(message::Edit),

@@ -3,10 +3,6 @@ use crate::database::{
     self, channel::Channel, get_relationship, get_relationship_internal, message::Message,
     user::User, Permission, PermissionCalculator, Relationship,
 };
-use crate::notifications::{
-    self,
-    events::{groups::*, guilds::ChannelDelete, message::*, Notification},
-};
 use crate::util::vec_to_set;
 
 use chrono::prelude::*;
@@ -180,13 +176,13 @@ pub fn add_member(user: User, target: Channel, member: User) -> Option<Response>
                 })
                 .send(&target)
                 {
-                    notifications::send_message_given_channel(
+                    /*notifications::send_message_given_channel(
                         Notification::group_user_join(UserJoin {
                             id: target.id.clone(),
                             user: member.id.clone(),
                         }),
-                        &target,
-                    );
+                        &target, FIXME
+                    );*/
 
                     Some(Response::Result(super::Status::Ok))
                 } else {
@@ -255,13 +251,13 @@ pub fn remove_member(user: User, target: Channel, member: User) -> Option<Respon
         })
         .send(&target)
         {
-            notifications::send_message_given_channel(
+            /*notifications::send_message_given_channel(
                 Notification::group_user_leave(UserLeave {
                     id: target.id.clone(),
                     user: member.id.clone(),
                 }),
-                &target,
-            );
+                &target, FIXME
+            );*/
 
             Some(Response::Result(super::Status::Ok))
         } else {
@@ -373,13 +369,13 @@ pub fn delete(user: User, target: Channel) -> Option<Response> {
                     })
                     .send(&target)
                     {
-                        notifications::send_message_given_channel(
+                        /*notifications::send_message_given_channel(
                             Notification::group_user_leave(UserLeave {
                                 id: target.id.clone(),
                                 user: user.id.clone(),
                             }),
-                            &target,
-                        );
+                            &target, FIXME
+                        );*/
 
                         Some(Response::Result(super::Status::Ok))
                     } else {
@@ -411,14 +407,14 @@ pub fn delete(user: User, target: Channel) -> Option<Response> {
                 )
                 .is_ok()
             {
-                notifications::send_message_threaded(
+                /*notifications::send_message_threaded(
                     None,
                     guild_id.clone(),
                     Notification::guild_channel_delete(ChannelDelete {
                         id: guild_id.clone(),
                         channel: target.id.clone(),
-                    }),
-                );
+                    }), FIXME
+                );*/
 
                 try_delete()
             } else {
@@ -630,15 +626,15 @@ pub fn edit_message(
         None,
     ) {
         Ok(_) => {
-            notifications::send_message_given_channel(
+            /*notifications::send_message_given_channel(
                 Notification::message_edit(Edit {
                     id: message.id.clone(),
                     channel: target.id.clone(),
                     author: message.author.clone(),
                     content: edit.content.clone(),
                 }),
-                &target,
-            );
+                &target, FIXME
+            );*/
 
             Some(Response::Result(super::Status::Ok))
         }
@@ -661,12 +657,12 @@ pub fn delete_message(user: User, target: Channel, message: Message) -> Option<R
 
     match col.delete_one(doc! { "_id": &message.id }, None) {
         Ok(_) => {
-            notifications::send_message_given_channel(
+            /*notifications::send_message_given_channel(
                 Notification::message_delete(Delete {
                     id: message.id.clone(),
                 }),
-                &target,
-            );
+                &target, FIXME
+            );*/
 
             Some(Response::Result(super::Status::Ok))
         }

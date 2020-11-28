@@ -1,8 +1,5 @@
 use super::get_collection;
 use crate::database::channel::Channel;
-use crate::notifications;
-use crate::notifications::events::message::Create;
-use crate::notifications::events::Notification;
 use crate::pubsub::hive;
 use crate::routes::channel::ChannelType;
 
@@ -43,7 +40,7 @@ impl Message {
             .insert_one(to_bson(&self).unwrap().as_document().unwrap().clone(), None)
             .is_ok()
         {
-            notifications::send_message_given_channel(
+            /*notifications::send_message_given_channel(
                 Notification::message_create(Create {
                     id: self.id.clone(),
                     nonce: self.nonce.clone(),
@@ -52,7 +49,7 @@ impl Message {
                     content: self.content.clone(),
                 }),
                 &target,
-            );
+            );*/
 
             if hive::publish(
                 &target.id,

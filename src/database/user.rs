@@ -272,9 +272,7 @@ impl<'r> FromParam<'r> for User {
     }
 }
 
-use crate::notifications::events::Notification;
-
-pub fn process_event(event: &Notification) {
+/*pub fn process_event(event: &Notification) {
     match event {
         Notification::user_friend_status(ev) => {
             let mut cache = CACHE.lock().unwrap();
@@ -297,4 +295,4 @@ pub fn process_event(event: &Notification) {
         }
         _ => {}
     }
-}
+}*/
