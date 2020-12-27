@@ -6,11 +6,12 @@ use crate::database::{
 use crate::util::vec_to_set;
 
 use chrono::prelude::*;
-use mongodb::bson::{doc, from_bson, Bson};
+use mongodb::bson::{doc, from_bson, Bson, Document};
 use mongodb::options::FindOptions;
 use num_enum::TryFromPrimitive;
 use rocket::request::Form;
 use rocket_contrib::json::Json;
+use rocket::futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 
@@ -28,9 +29,10 @@ macro_rules! with_permissions {
     ($user: expr, $target: expr) => {{
         let permissions = PermissionCalculator::new($user.clone())
             .channel($target.clone())
-            .fetch_data();
+            .fetch_data()
+            .await;
 
-        let value = permissions.as_permission();
+        let value = permissions.as_permission().await;
         if !value.get_access() {
             return None;
         }
@@ -48,7 +50,7 @@ pub struct CreateGroup {
 
 /// create a new group
 #[post("/create", data = "<info>")]
-pub fn create_group(user: User, info: Json<CreateGroup>) -> Response {
+pub async fn create_group(user: User, info: Json<CreateGroup>) -> Response {
     let name: String = info.name.chars().take(32).collect();
     let nonce: String = info.nonce.chars().take(32).collect();
 
@@ -60,7 +62,7 @@ pub fn create_group(user: User, info: Json<CreateGroup>) -> Response {
     }
 
     let col = database::get_collection("channels");
-    if let Some(_) = col.find_one(doc! { "nonce": nonce.clone() }, None).unwrap() {
+    if let Some(_) = col.find_one(doc! { "nonce": nonce.clone() }, None).await.unwrap() {
         return Response::BadRequest(json!({ "error": "Group already created!" }));
     }
 
@@ -80,8 +82,8 @@ pub fn create_group(user: User, info: Json<CreateGroup>) -> Response {
             }
         },
         FindOptions::builder().limit(query.len() as i64).build(),
-    ) {
-        if result.count() != query.len() {
+    ).await {
+        if result.collect::<Vec<Result<Document, _>>>().await.len() != query.len() {
             return Response::BadRequest(json!({ "error": "Specified non-existant user(s)." }));
         }
 
@@ -110,6 +112,7 @@ pub fn create_group(user: User, info: Json<CreateGroup>) -> Response {
                 },
                 None,
             )
+            .await
             .is_ok()
         {
             Response::Success(json!({ "id": id }))
@@ -123,14 +126,14 @@ pub fn create_group(user: User, info: Json<CreateGroup>) -> Response {
 
 /// fetch channel information
 #[get("/<target>")]
-pub fn channel(user: User, target: Channel) -> Option<Response> {
+pub async fn channel(user: User, target: Channel) -> Option<Response> {
     with_permissions!(user, target);
     Some(Response::Success(target.serialise()))
 }
 
 /// [groups] add user to channel
 #[put("/<target>/recipients/<member>")]
-pub fn add_member(user: User, target: Channel, member: User) -> Option<Response> {
+pub async fn add_member(user: User, target: Channel, member: User) -> Option<Response> {
     if target.channel_type != 1 {
         return Some(Response::BadRequest(json!({ "error": "Not a group DM." })));
     }
@@ -163,6 +166,7 @@ pub fn add_member(user: User, target: Channel, member: User) -> Option<Response>
                     },
                     None,
                 )
+                .await
                 .is_ok()
             {
                 if (Message {
@@ -175,6 +179,7 @@ pub fn add_member(user: User, target: Channel, member: User) -> Option<Response>
                     previous_content: vec![],
                 })
                 .send(&target)
+                .await
                 {
                     /*notifications::send_message_given_channel(
                         Notification::group_user_join(UserJoin {
@@ -204,7 +209,7 @@ pub fn add_member(user: User, target: Channel, member: User) -> Option<Response>
 
 /// [groups] remove user from channel
 #[delete("/<target>/recipients/<member>")]
-pub fn remove_member(user: User, target: Channel, member: User) -> Option<Response> {
+pub async fn remove_member(user: User, target: Channel, member: User) -> Option<Response> {
     if target.channel_type != 1 {
         return Some(Response::BadRequest(json!({ "error": "Not a group DM." })));
     }
@@ -238,6 +243,7 @@ pub fn remove_member(user: User, target: Channel, member: User) -> Option<Respon
             },
             None,
         )
+        .await
         .is_ok()
     {
         if (Message {
@@ -250,6 +256,7 @@ pub fn remove_member(user: User, target: Channel, member: User) -> Option<Respon
             previous_content: vec![],
         })
         .send(&target)
+        .await
         {
             /*notifications::send_message_given_channel(
                 Notification::group_user_leave(UserLeave {
@@ -276,7 +283,7 @@ pub fn remove_member(user: User, target: Channel, member: User) -> Option<Respon
 /// or leave group DM
 /// or close DM conversation
 #[delete("/<target>")]
-pub fn delete(user: User, target: Channel) -> Option<Response> {
+pub async fn delete(user: User, target: Channel) -> Option<Response> {
     let permissions = with_permissions!(user, target);
 
     if !permissions.get_manage_channels() {
@@ -286,14 +293,15 @@ pub fn delete(user: User, target: Channel) -> Option<Response> {
     let col = database::get_collection("channels");
     let target_id = target.id.clone();
 
-    let try_delete = || {
+    let try_delete = async || {
         let messages = database::get_collection("messages");
 
         if messages
             .delete_many(doc! { "channel": &target_id }, None)
+            .await
             .is_ok()
         {
-            if col.delete_one(doc! { "_id": &target_id }, None).is_ok() {
+            if col.delete_one(doc! { "_id": &target_id }, None).await.is_ok() {
                 Some(Response::Result(super::Status::Ok))
             } else {
                 Some(Response::InternalServerError(
@@ -315,6 +323,7 @@ pub fn delete(user: User, target: Channel) -> Option<Response> {
                     doc! { "$set": { "active": false } },
                     None,
                 )
+                .await
                 .is_ok()
             {
                 Some(Response::Result(super::Status::Ok))
@@ -334,7 +343,7 @@ pub fn delete(user: User, target: Channel) -> Option<Response> {
             let owner = target.owner.as_ref().expect("Missing owner on Group DM.");
 
             if recipients.len() == 1 {
-                try_delete()
+                try_delete().await
             } else {
                 recipients.remove(&user.id);
                 let new_owner = if owner == &user.id {
@@ -356,6 +365,7 @@ pub fn delete(user: User, target: Channel) -> Option<Response> {
                         },
                         None,
                     )
+                    .await
                     .is_ok()
                 {
                     if (Message {
@@ -368,6 +378,7 @@ pub fn delete(user: User, target: Channel) -> Option<Response> {
                         previous_content: vec![],
                     })
                     .send(&target)
+                    .await
                     {
                         /*notifications::send_message_given_channel(
                             Notification::group_user_leave(UserLeave {
@@ -405,6 +416,7 @@ pub fn delete(user: User, target: Channel) -> Option<Response> {
                     },
                     None,
                 )
+                .await
                 .is_ok()
             {
                 /*notifications::send_message_threaded(
@@ -416,7 +428,7 @@ pub fn delete(user: User, target: Channel) -> Option<Response> {
                     }), FIXME
                 );*/
 
-                try_delete()
+                try_delete().await
             } else {
                 Some(Response::InternalServerError(
                     json!({ "error": "Failed to remove invites." }),
@@ -438,7 +450,7 @@ pub struct MessageFetchOptions {
 
 /// fetch channel messages
 #[get("/<target>/messages?<options..>")]
-pub fn messages(
+pub async fn messages(
     user: User,
     target: Channel,
     options: Form<MessageFetchOptions>,
@@ -467,7 +479,7 @@ pub fn messages(
     };
 
     let col = database::get_collection("messages");
-    let result = col
+    let mut result = col
         .find(
             query,
             FindOptions::builder()
@@ -477,10 +489,11 @@ pub fn messages(
                 })
                 .build(),
         )
+        .await
         .unwrap();
 
     let mut messages = Vec::new();
-    for item in result {
+    while let Some(item) = result.next().await {
         let message: Message =
             from_bson(Bson::Document(item.unwrap())).expect("Failed to unwrap message.");
         messages.push(json!({
@@ -502,7 +515,7 @@ pub struct SendMessage {
 
 /// send a message to a channel
 #[post("/<target>/messages", data = "<message>")]
-pub fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> Option<Response> {
+pub async fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> Option<Response> {
     let permissions = with_permissions!(user, target);
 
     if !permissions.get_send_messages() {
@@ -525,6 +538,7 @@ pub fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> 
     let col = database::get_collection("messages");
     if col
         .find_one(doc! { "nonce": nonce.clone() }, None)
+        .await
         .unwrap()
         .is_some()
     {
@@ -544,7 +558,7 @@ pub fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> 
         previous_content: vec![],
     };
 
-    if message.send(&target) {
+    if message.send(&target).await {
         Some(Response::Success(json!({ "id": id })))
     } else {
         Some(Response::BadRequest(
@@ -555,7 +569,7 @@ pub fn send_message(user: User, target: Channel, message: Json<SendMessage>) -> 
 
 /// get a message
 #[get("/<target>/messages/<message>")]
-pub fn get_message(user: User, target: Channel, message: Message) -> Option<Response> {
+pub async fn get_message(user: User, target: Channel, message: Message) -> Option<Response> {
     let permissions = with_permissions!(user, target);
 
     if !permissions.get_read_messages() {
@@ -587,7 +601,7 @@ pub struct EditMessage {
 
 /// edit a message
 #[patch("/<target>/messages/<message>", data = "<edit>")]
-pub fn edit_message(
+pub async fn edit_message(
     user: User,
     target: Channel,
     message: Message,
@@ -624,7 +638,8 @@ pub fn edit_message(
             },
         },
         None,
-    ) {
+    )
+    .await {
         Ok(_) => {
             /*notifications::send_message_given_channel(
                 Notification::message_edit(Edit {
@@ -646,7 +661,7 @@ pub fn edit_message(
 
 /// delete a message
 #[delete("/<target>/messages/<message>")]
-pub fn delete_message(user: User, target: Channel, message: Message) -> Option<Response> {
+pub async fn delete_message(user: User, target: Channel, message: Message) -> Option<Response> {
     let permissions = with_permissions!(user, target);
 
     if !permissions.get_manage_messages() && message.author != user.id {
@@ -655,7 +670,7 @@ pub fn delete_message(user: User, target: Channel, message: Message) -> Option<R
 
     let col = database::get_collection("messages");
 
-    match col.delete_one(doc! { "_id": &message.id }, None) {
+    match col.delete_one(doc! { "_id": &message.id }, None).await {
         Ok(_) => {
             /*notifications::send_message_given_channel(
                 Notification::message_delete(Delete {
@@ -670,25 +685,4 @@ pub fn delete_message(user: User, target: Channel, message: Message) -> Option<R
             json!({ "error": "Failed to delete message." }),
         )),
     }
-}
-
-#[options("/create")]
-pub fn create_group_preflight() -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/<_target>")]
-pub fn channel_preflight(_target: String) -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/<_target>/recipients/<_member>")]
-pub fn member_preflight(_target: String, _member: String) -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/<_target>/messages")]
-pub fn messages_preflight(_target: String) -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/<_target>/messages/<_message>")]
-pub fn message_preflight(_target: String, _message: String) -> Response {
-    Response::Result(super::Status::Ok)
 }

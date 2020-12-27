@@ -7,6 +7,7 @@ use rocket::request::FromParam;
 use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
+use rocket::futures::StreamExt;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LastMessage {
@@ -76,7 +77,7 @@ lazy_static! {
         Arc::new(Mutex::new(LruCache::new(4_000_000)));
 }
 
-pub fn fetch_channel(id: &str) -> Result<Option<Channel>, String> {
+pub async fn fetch_channel(id: &str) -> Result<Option<Channel>, String> {
     {
         if let Ok(mut cache) = CACHE.lock() {
             let existing = cache.get(&id.to_string());
@@ -90,7 +91,7 @@ pub fn fetch_channel(id: &str) -> Result<Option<Channel>, String> {
     }
 
     let col = get_collection("channels");
-    if let Ok(result) = col.find_one(doc! { "_id": id }, None) {
+    if let Ok(result) = col.find_one(doc! { "_id": id }, None).await {
         if let Some(doc) = result {
             if let Ok(channel) = from_bson(Bson::Document(doc)) as Result<Channel, _> {
                 let mut cache = CACHE.lock().unwrap();
@@ -108,7 +109,7 @@ pub fn fetch_channel(id: &str) -> Result<Option<Channel>, String> {
     }
 }
 
-pub fn fetch_channels(ids: &Vec<String>) -> Result<Vec<Channel>, String> {
+pub async fn fetch_channels(ids: &Vec<String>) -> Result<Vec<Channel>, String> {
     let mut missing = vec![];
     let mut channels = vec![];
 
@@ -133,8 +134,8 @@ pub fn fetch_channels(ids: &Vec<String>) -> Result<Vec<Channel>, String> {
     }
 
     let col = get_collection("channels");
-    if let Ok(result) = col.find(doc! { "_id": { "$in": missing } }, None) {
-        for item in result {
+    if let Ok(mut result) = col.find(doc! { "_id": { "$in": missing } }, None).await {
+        while let Some(item) = result.next().await {
             let mut cache = CACHE.lock().unwrap();
             if let Ok(doc) = item {
                 if let Ok(channel) = from_bson(Bson::Document(doc)) as Result<Channel, _> {
@@ -158,7 +159,8 @@ impl<'r> FromParam<'r> for Channel {
     type Error = &'r RawStr;
 
     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-        if let Ok(result) = fetch_channel(param) {
+        Err(param)
+        /*if let Ok(result) = fetch_channel(param).await {
             if let Some(channel) = result {
                 Ok(channel)
             } else {
@@ -166,7 +168,7 @@ impl<'r> FromParam<'r> for Channel {
             }
         } else {
             Err(param)
-        }
+        }*/
     }
 }
 

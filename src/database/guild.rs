@@ -2,6 +2,7 @@ use super::channel::fetch_channels;
 use super::get_collection;
 
 use lru::LruCache;
+use rocket::futures::StreamExt;
 use mongodb::bson::{doc, from_bson, Bson};
 use rocket::http::RawStr;
 use rocket::request::FromParam;
@@ -61,13 +62,14 @@ impl Guild {
         })
     }
 
-    pub fn fetch_channels(&self) -> Result<Vec<super::channel::Channel>, String> {
-        super::channel::fetch_channels(&self.channels)
+    pub async fn fetch_channels(&self) -> Result<Vec<super::channel::Channel>, String> {
+        super::channel::fetch_channels(&self.channels).await
     }
 
-    pub fn seralise_with_channels(self) -> Result<JsonValue, String> {
+    pub async fn seralise_with_channels(self) -> Result<JsonValue, String> {
         let channels = self
-            .fetch_channels()?
+            .fetch_channels()
+            .await?
             .into_iter()
             .map(|x| x.serialise())
             .collect();
@@ -91,7 +93,7 @@ lazy_static! {
         Arc::new(Mutex::new(LruCache::new(4_000_000)));
 }
 
-pub fn fetch_guild(id: &str) -> Result<Option<Guild>, String> {
+pub async fn fetch_guild(id: &str) -> Result<Option<Guild>, String> {
     {
         if let Ok(mut cache) = CACHE.lock() {
             let existing = cache.get(&id.to_string());
@@ -105,7 +107,7 @@ pub fn fetch_guild(id: &str) -> Result<Option<Guild>, String> {
     }
 
     let col = get_collection("guilds");
-    if let Ok(result) = col.find_one(doc! { "_id": id }, None) {
+    if let Ok(result) = col.find_one(doc! { "_id": id }, None).await {
         if let Some(doc) = result {
             dbg!(doc.to_string());
             if let Ok(guild) = from_bson(Bson::Document(doc)) as Result<Guild, _> {
@@ -124,7 +126,7 @@ pub fn fetch_guild(id: &str) -> Result<Option<Guild>, String> {
     }
 }
 
-pub fn fetch_guilds(ids: &Vec<String>) -> Result<Vec<Guild>, String> {
+pub async fn fetch_guilds(ids: &Vec<String>) -> Result<Vec<Guild>, String> {
     let mut missing = vec![];
     let mut guilds = vec![];
 
@@ -149,8 +151,8 @@ pub fn fetch_guilds(ids: &Vec<String>) -> Result<Vec<Guild>, String> {
     }
 
     let col = get_collection("guilds");
-    if let Ok(result) = col.find(doc! { "_id": { "$in": missing } }, None) {
-        for item in result {
+    if let Ok(mut result) = col.find(doc! { "_id": { "$in": missing } }, None).await {
+        if let Some(item) = result.next().await {
             let mut cache = CACHE.lock().unwrap();
             if let Ok(doc) = item {
                 dbg!(doc.to_string());
@@ -171,11 +173,11 @@ pub fn fetch_guilds(ids: &Vec<String>) -> Result<Vec<Guild>, String> {
     }
 }
 
-pub fn serialise_guilds_with_channels(ids: &Vec<String>) -> Result<Vec<JsonValue>, String> {
-    let guilds = fetch_guilds(&ids)?;
+pub async fn serialise_guilds_with_channels(ids: &Vec<String>) -> Result<Vec<JsonValue>, String> {
+    let guilds = fetch_guilds(&ids).await?;
     let cids: Vec<String> = guilds.iter().flat_map(|x| x.channels.clone()).collect();
 
-    let channels = fetch_channels(&cids)?;
+    let channels = fetch_channels(&cids).await?;
     Ok(guilds
         .into_iter()
         .map(|x| {
@@ -194,7 +196,7 @@ pub fn serialise_guilds_with_channels(ids: &Vec<String>) -> Result<Vec<JsonValue
         .collect())
 }
 
-pub fn fetch_member(key: MemberKey) -> Result<Option<Member>, String> {
+pub async fn fetch_member(key: MemberKey) -> Result<Option<Member>, String> {
     {
         if let Ok(mut cache) = MEMBER_CACHE.lock() {
             let existing = cache.get(&key);
@@ -214,7 +216,7 @@ pub fn fetch_member(key: MemberKey) -> Result<Option<Member>, String> {
             "_id.user": &key.1,
         },
         None,
-    ) {
+    ).await {
         if let Some(doc) = result {
             if let Ok(member) = from_bson(Bson::Document(doc)) as Result<Member, _> {
                 let mut cache = MEMBER_CACHE.lock().unwrap();
@@ -236,7 +238,8 @@ impl<'r> FromParam<'r> for Guild {
     type Error = &'r RawStr;
 
     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-        if let Ok(result) = fetch_guild(param) {
+        Err(param)
+        /*if let Ok(result) = fetch_guild(param) {
             if let Some(channel) = result {
                 Ok(channel)
             } else {
@@ -244,11 +247,11 @@ impl<'r> FromParam<'r> for Guild {
             }
         } else {
             Err(param)
-        }
+        }*/
     }
 }
 
-pub fn get_invite<U: Into<Option<String>>>(
+pub async fn get_invite<U: Into<Option<String>>>(
     code: &String,
     user: U,
 ) -> Option<(String, String, Invite)> {
@@ -282,7 +285,7 @@ pub fn get_invite<U: Into<Option<String>>>(
                 "invites.$": 1,
             })
             .build(),
-    ) {
+    ).await {
         if let Some(doc) = result {
             let invite = doc
                 .get_array("invites")

@@ -29,8 +29,8 @@ pub struct Create {
 /// (2) check email existence
 /// (3) add user and send email verification
 #[post("/create", data = "<info>")]
-pub fn create(info: Json<Create>) -> Response {
-    if let Err(error) = captcha::verify(&info.captcha) {
+pub async fn create(info: Json<Create>) -> Response {
+    if let Err(error) = captcha::verify(&info.captcha).await {
         return Response::BadRequest(json!({ "error": error }));
     }
 
@@ -58,6 +58,7 @@ pub fn create(info: Json<Create>) -> Response {
 
     if let Some(_) = col
         .find_one(doc! { "email": info.email.clone() }, None)
+        .await
         .expect("Failed user lookup")
     {
         return Response::Conflict(json!({ "error": "Email already in use!" }));
@@ -65,6 +66,7 @@ pub fn create(info: Json<Create>) -> Response {
 
     if let Some(_) = col
         .find_one(doc! { "username": info.username.clone() }, None)
+        .await
         .expect("Failed user lookup")
     {
         return Response::Conflict(json!({ "error": "Username already in use!" }));
@@ -99,7 +101,8 @@ pub fn create(info: Json<Create>) -> Response {
                 "email_verification": email_verification
             },
             None,
-        ) {
+        )
+        .await {
             Ok(_) => {
                 if *USE_EMAIL {
                     let sent = email::send_verification_email(info.email.clone(), code);
@@ -128,11 +131,12 @@ pub fn create(info: Json<Create>) -> Response {
 /// (2) check if it expired yet
 /// (3) set account as verified
 #[get("/verify/<code>")]
-pub fn verify_email(code: String) -> Response {
+pub async fn verify_email(code: String) -> Response {
     let col = database::get_collection("users");
 
     if let Some(u) = col
         .find_one(doc! { "email_verification.code": code.clone() }, None)
+        .await
         .expect("Failed user lookup")
     {
         let user: User = from_bson(Bson::Document(u)).expect("Failed to unwrap user.");
@@ -161,6 +165,7 @@ pub fn verify_email(code: String) -> Response {
                 },
                 None,
             )
+            .await
             .expect("Failed to update user!");
 
             if *USE_EMAIL {
@@ -187,8 +192,8 @@ pub struct Resend {
 /// (2) check for rate limit
 /// (3) resend the email
 #[post("/resend", data = "<info>")]
-pub fn resend_email(info: Json<Resend>) -> Response {
-    if let Err(error) = captcha::verify(&info.captcha) {
+pub async fn resend_email(info: Json<Resend>) -> Response {
+    if let Err(error) = captcha::verify(&info.captcha).await {
         return Response::BadRequest(json!({ "error": error }));
     }
 
@@ -199,6 +204,7 @@ pub fn resend_email(info: Json<Resend>) -> Response {
             doc! { "email_verification.target": info.email.clone() },
             None,
         )
+        .await
         .expect("Failed user lookup.")
     {
         let user: User = from_bson(Bson::Document(u)).expect("Failed to unwrap user.");
@@ -234,7 +240,9 @@ pub fn resend_email(info: Json<Resend>) -> Response {
 						},
 					},
 					None,
-				).expect("Failed to update user!");
+				)
+                .await
+                .expect("Failed to update user!");
 
             if let Err(err) = email::send_verification_email(info.email.clone(), code) {
                 return Response::InternalServerError(json!({ "error": err }));
@@ -259,8 +267,8 @@ pub struct Login {
 /// (2) verify password
 /// (3) return access token
 #[post("/login", data = "<info>")]
-pub fn login(info: Json<Login>) -> Response {
-    if let Err(error) = captcha::verify(&info.captcha) {
+pub async fn login(info: Json<Login>) -> Response {
+    if let Err(error) = captcha::verify(&info.captcha).await {
         return Response::BadRequest(json!({ "error": error }));
     }
 
@@ -268,6 +276,7 @@ pub fn login(info: Json<Login>) -> Response {
 
     if let Some(u) = col
         .find_one(doc! { "email": info.email.clone() }, None)
+        .await
         .expect("Failed user lookup")
     {
         let user: User = from_bson(Bson::Document(u)).expect("Failed to unwrap user.");
@@ -286,6 +295,7 @@ pub fn login(info: Json<Login>) -> Response {
                                 doc! { "$set": { "access_token": token.clone() } },
                                 None,
                             )
+                            .await
                             .is_err()
                         {
                             return Response::InternalServerError(
@@ -313,10 +323,10 @@ pub struct Token {
 
 /// login to a Revolt account via token
 #[post("/token", data = "<info>")]
-pub fn token(info: Json<Token>) -> Response {
+pub async fn token(info: Json<Token>) -> Response {
     let col = database::get_collection("users");
 
-    if let Ok(result) = col.find_one(doc! { "access_token": info.token.clone() }, None) {
+    if let Ok(result) = col.find_one(doc! { "access_token": info.token.clone() }, None).await {
         if let Some(user) = result {
             Response::Success(json!({
                 "id": user.get_str("_id").unwrap(),
@@ -331,25 +341,4 @@ pub fn token(info: Json<Token>) -> Response {
             "error": "Failed database query.",
         }))
     }
-}
-
-#[options("/create")]
-pub fn create_preflight() -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/verify/<_code>")]
-pub fn verify_email_preflight(_code: String) -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/resend")]
-pub fn resend_email_preflight() -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/login")]
-pub fn login_preflight() -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/token")]
-pub fn token_preflight() -> Response {
-    Response::Result(super::Status::Ok)
 }

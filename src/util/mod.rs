@@ -1,5 +1,5 @@
-use hashbrown::HashSet;
 use rand::{distributions::Alphanumeric, Rng};
+use std::collections::HashSet;
 use std::iter::FromIterator;
 
 pub mod captcha;

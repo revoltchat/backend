@@ -1,6 +1,6 @@
 use crate::util::variables::{HCAPTCHA_KEY, USE_HCAPTCHA};
 
-use reqwest::blocking::Client;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -9,7 +9,7 @@ struct CaptchaResponse {
     success: bool,
 }
 
-pub fn verify(user_token: &Option<String>) -> Result<(), String> {
+pub async fn verify(user_token: &Option<String>) -> Result<(), String> {
     if *USE_HCAPTCHA {
         if let Some(token) = user_token {
             let mut map = HashMap::new();
@@ -21,9 +21,11 @@ pub fn verify(user_token: &Option<String>) -> Result<(), String> {
                 .post("https://hcaptcha.com/siteverify")
                 .form(&map)
                 .send()
+                .await
             {
                 let result: CaptchaResponse = response
                     .json()
+                    .await
                     .map_err(|_| "Failed to deserialise captcha result.".to_string())?;
 
                 if result.success {

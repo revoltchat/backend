@@ -1,9 +1,10 @@
 use super::super::get_collection;
 
 use log::info;
-use mongodb::bson::{doc, from_bson, Bson};
 use mongodb::options::FindOptions;
 use serde::{Deserialize, Serialize};
+use crate::rocket::futures::StreamExt;
+use mongodb::bson::{doc, from_bson, Bson};
 
 #[derive(Serialize, Deserialize)]
 struct MigrationInfo {
@@ -13,17 +14,18 @@ struct MigrationInfo {
 
 pub const LATEST_REVISION: i32 = 2;
 
-pub fn migrate_database() {
+pub async fn migrate_database() {
     let migrations = get_collection("migrations");
     let data = migrations
         .find_one(None, None)
+        .await
         .expect("Failed to fetch migration data.");
 
     if let Some(doc) = data {
         let info: MigrationInfo =
             from_bson(Bson::Document(doc)).expect("Failed to read migration information.");
 
-        let revision = run_migrations(info.revision);
+        let revision = run_migrations(info.revision).await;
 
         migrations
             .update_one(
@@ -37,6 +39,7 @@ pub fn migrate_database() {
                 },
                 None,
             )
+            .await
             .expect("Failed to commit migration information.");
 
         info!("Migration complete. Currently at revision {}.", revision);
@@ -45,7 +48,7 @@ pub fn migrate_database() {
     }
 }
 
-pub fn run_migrations(revision: i32) -> i32 {
+pub async fn run_migrations(revision: i32) -> i32 {
     info!("Starting database migration.");
 
     if revision <= 0 {
@@ -56,14 +59,15 @@ pub fn run_migrations(revision: i32) -> i32 {
         info!("Running migration [revision 1]: Add channels to guild object.");
 
         let col = get_collection("guilds");
-        let guilds = col
+        let mut guilds = col
             .find(
                 None,
                 FindOptions::builder().projection(doc! { "_id": 1 }).build(),
             )
+            .await
             .expect("Failed to fetch guilds.");
 
-        let result = get_collection("channels")
+        let mut result = get_collection("channels")
             .find(
                 doc! {
                     "type": 2
@@ -72,15 +76,17 @@ pub fn run_migrations(revision: i32) -> i32 {
                     .projection(doc! { "_id": 1, "guild": 1 })
                     .build(),
             )
+            .await
             .expect("Failed to fetch channels.");
 
         let mut channels = vec![];
-        for doc in result {
+        while let Some(doc) = result.next().await {
             let channel = doc.expect("Failed to fetch channel.");
             let id = channel
                 .get_str("_id")
                 .expect("Failed to get channel id.")
                 .to_string();
+            
             let gid = channel
                 .get_str("guild")
                 .expect("Failed to get guild id.")
@@ -89,7 +95,7 @@ pub fn run_migrations(revision: i32) -> i32 {
             channels.push((id, gid));
         }
 
-        for doc in guilds {
+        while let Some(doc) = guilds.next().await {
             let guild = doc.expect("Failed to fetch guild.");
             let id = guild.get_str("_id").expect("Failed to get guild id.");
 
@@ -110,6 +116,7 @@ pub fn run_migrations(revision: i32) -> i32 {
                 },
                 None,
             )
+            .await
             .expect("Failed to update guild.");
         }
     }

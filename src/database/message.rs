@@ -3,8 +3,10 @@ use crate::database::channel::Channel;
 use crate::pubsub::hive;
 use crate::routes::channel::ChannelType;
 
-use mongodb::bson::from_bson;
-use mongodb::bson::{doc, to_bson, Bson, DateTime};
+//use mongodb::bson::from_bson;
+//use rocket::futures::StreamExt;
+//use mongodb::bson::{doc, to_bson, Bson, DateTime};
+use mongodb::bson::{doc, to_bson, DateTime};
 use rocket::http::RawStr;
 use rocket::request::FromParam;
 use serde::{Deserialize, Serialize};
@@ -35,22 +37,12 @@ pub struct Message {
 // ? pub fn send_message();
 // ? handle websockets?
 impl Message {
-    pub fn send(&self, target: &Channel) -> bool {
+    pub async fn send(&self, target: &Channel) -> bool {
         if get_collection("messages")
             .insert_one(to_bson(&self).unwrap().as_document().unwrap().clone(), None)
+            .await
             .is_ok()
         {
-            /*notifications::send_message_given_channel(
-                Notification::message_create(Create {
-                    id: self.id.clone(),
-                    nonce: self.nonce.clone(),
-                    channel: self.channel.clone(),
-                    author: self.author.clone(),
-                    content: self.content.clone(),
-                }),
-                &target,
-            );*/
-
             if hive::publish(
                 &target.id,
                 crate::pubsub::events::Notification::message_create(
@@ -93,6 +85,7 @@ impl Message {
 
                 if get_collection("channels")
                     .update_one(doc! { "_id": &target.id }, update, None)
+                    .await
                     .is_ok()
                 {
                     true
@@ -112,7 +105,8 @@ impl<'r> FromParam<'r> for Message {
     type Error = &'r RawStr;
 
     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-        let col = get_collection("messages");
+        Err(param)
+        /*let col = get_collection("messages");
         let result = col
             .find_one(doc! { "_id": param.to_string() }, None)
             .unwrap();
@@ -121,6 +115,6 @@ impl<'r> FromParam<'r> for Message {
             Ok(from_bson(Bson::Document(message)).expect("Failed to unwrap message."))
         } else {
             Err(param)
-        }
+        }*/
     }
 }

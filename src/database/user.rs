@@ -1,15 +1,16 @@
-use super::channel::fetch_channels;
 use super::get_collection;
+use super::channel::fetch_channels;
 use super::guild::serialise_guilds_with_channels;
 
 use lru::LruCache;
-use mongodb::bson::{doc, from_bson, Bson, DateTime};
+use rocket::futures::StreamExt;
 use mongodb::options::FindOptions;
 use rocket::http::{RawStr, Status};
-use rocket::request::{self, FromParam, FromRequest, Request};
-use rocket::Outcome;
-use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
+use rocket_contrib::json::JsonValue;
+use mongodb::bson::{doc, from_bson, Bson, DateTime, Document};
+use rocket::request::{self, FromParam, FromRequest, Request, Outcome};
+
 use std::sync::{Arc, Mutex};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -60,7 +61,7 @@ impl User {
         }
     }
 
-    pub fn find_guilds(&self) -> Result<Vec<String>, String> {
+    pub async fn find_guilds(&self) -> Result<Vec<String>, String> {
         let members = get_collection("members")
             .find(
                 doc! {
@@ -68,9 +69,12 @@ impl User {
                 },
                 None,
             )
+            .await
             .map_err(|_| "Failed to fetch members.")?;
 
         Ok(members
+            .collect::<Vec<Result<Document, _>>>()
+            .await
             .into_iter()
             .filter_map(|x| match x {
                 Ok(doc) => match doc.get_document("_id") {
@@ -85,7 +89,7 @@ impl User {
             .collect())
     }
 
-    pub fn find_dms(&self) -> Result<Vec<String>, String> {
+    pub async fn find_dms(&self) -> Result<Vec<String>, String> {
         let channels = get_collection("channels")
             .find(
                 doc! {
@@ -93,9 +97,12 @@ impl User {
                 },
                 FindOptions::builder().projection(doc! { "_id": 1 }).build(),
             )
+            .await
             .map_err(|_| "Failed to fetch channel ids.")?;
 
         Ok(channels
+            .collect::<Vec<Result<Document, _>>>()
+            .await
             .into_iter()
             .filter_map(|x| x.ok())
             .filter_map(|x| match x.get_str("_id") {
@@ -105,11 +112,11 @@ impl User {
             .collect())
     }
 
-    pub fn create_payload(self) -> Result<JsonValue, String> {
+    pub async fn create_payload(self) -> Result<JsonValue, String> {
         let v = vec![];
         let relations = self.relations.as_ref().unwrap_or(&v);
 
-        let users: Vec<JsonValue> = fetch_users(&relations.iter().map(|x| x.id.clone()).collect())?
+        let users: Vec<JsonValue> = fetch_users(&relations.iter().map(|x| x.id.clone()).collect()).await?
             .into_iter()
             .map(|x| {
                 let id = x.id.clone();
@@ -117,7 +124,7 @@ impl User {
             })
             .collect();
 
-        let channels: Vec<JsonValue> = fetch_channels(&self.find_dms()?)?
+        let channels: Vec<JsonValue> = fetch_channels(&self.find_dms().await?).await?
             .into_iter()
             .map(|x| x.serialise())
             .collect();
@@ -125,7 +132,7 @@ impl User {
         Ok(json!({
             "users": users,
             "channels": channels,
-            "guilds": serialise_guilds_with_channels(&self.find_guilds()?)?,
+            "guilds": serialise_guilds_with_channels(&self.find_guilds().await?).await?,
             "user": self.serialise(super::Relationship::SELF as i32)
         }))
     }
@@ -136,7 +143,7 @@ lazy_static! {
         Arc::new(Mutex::new(LruCache::new(4_000_000)));
 }
 
-pub fn fetch_user(id: &str) -> Result<Option<User>, String> {
+pub async fn fetch_user(id: &str) -> Result<Option<User>, String> {
     {
         if let Ok(mut cache) = CACHE.lock() {
             let existing = cache.get(&id.to_string());
@@ -150,7 +157,7 @@ pub fn fetch_user(id: &str) -> Result<Option<User>, String> {
     }
 
     let col = get_collection("users");
-    if let Ok(result) = col.find_one(doc! { "_id": id }, None) {
+    if let Ok(result) = col.find_one(doc! { "_id": id }, None).await {
         if let Some(doc) = result {
             if let Ok(user) = from_bson(Bson::Document(doc)) as Result<User, _> {
                 let mut cache = CACHE.lock().unwrap();
@@ -168,7 +175,7 @@ pub fn fetch_user(id: &str) -> Result<Option<User>, String> {
     }
 }
 
-pub fn fetch_users(ids: &Vec<String>) -> Result<Vec<User>, String> {
+pub async fn fetch_users(ids: &Vec<String>) -> Result<Vec<User>, String> {
     let mut missing = vec![];
     let mut users = vec![];
 
@@ -193,8 +200,8 @@ pub fn fetch_users(ids: &Vec<String>) -> Result<Vec<User>, String> {
     }
 
     let col = get_collection("users");
-    if let Ok(result) = col.find(doc! { "_id": { "$in": missing } }, None) {
-        for item in result {
+    if let Ok(mut result) = col.find(doc! { "_id": { "$in": missing } }, None).await {
+        while let Some(item) = result.next().await {
             let mut cache = CACHE.lock().unwrap();
             if let Ok(doc) = item {
                 if let Ok(user) = from_bson(Bson::Document(doc)) as Result<User, _> {
@@ -221,16 +228,17 @@ pub enum AuthError {
     Invalid,
 }
 
+#[rocket::async_trait]
 impl<'a, 'r> FromRequest<'a, 'r> for User {
     type Error = AuthError;
 
-    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
+    async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
         let u = request.headers().get("x-user").next();
         let t = request.headers().get("x-auth-token").next();
 
         if let Some(uid) = u {
             if let Some(token) = t {
-                if let Ok(result) = fetch_user(uid) {
+                if let Ok(result) = fetch_user(uid).await {
                     if let Some(user) = result {
                         if let Some(access_token) = &user.access_token {
                             if access_token == token {
@@ -260,7 +268,8 @@ impl<'r> FromParam<'r> for User {
     type Error = &'r RawStr;
 
     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-        if let Ok(result) = fetch_user(&param.to_string()) {
+        Err(param)
+        /*if let Ok(result) = fetch_user(&param.to_string()).await {
             if let Some(user) = result {
                 Ok(user)
             } else {
@@ -268,7 +277,7 @@ impl<'r> FromParam<'r> for User {
             }
         } else {
             Err(param)
-        }
+        }*/
     }
 }
 

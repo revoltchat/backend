@@ -1,8 +1,8 @@
 use super::events::Notification;
-use super::websocket;
+// use super::websocket;
 use crate::database::get_collection;
 
-use hive_pubsub::backend::mongo::{listen_thread, MongodbPubSub};
+use hive_pubsub::backend::mongo::MongodbPubSub;
 use hive_pubsub::PubSub;
 use once_cell::sync::OnceCell;
 use serde_json::to_string;
@@ -12,12 +12,12 @@ static HIVE: OnceCell<MongodbPubSub<String, String, Notification>> = OnceCell::n
 
 pub fn init_hive() {
     let hive = MongodbPubSub::new(
-        |ids, notification| {
+        |_ids, notification| {
             if let Ok(data) = to_string(&notification) {
                 debug!("Pushing out notification. {}", data);
-                if let Err(err) = websocket::publish(ids, data) {
-                    error!("Failed to publish notification through WebSocket! {}", err);
-                }
+                // if let Err(err) = websocket::publish(ids, data) {
+                //     error!("Failed to publish notification through WebSocket! {}", err);
+                // }
             } else {
                 error!("Failed to serialise notification.");
             }
@@ -25,7 +25,7 @@ pub fn init_hive() {
         get_collection("hive"),
     );
 
-    listen_thread(hive.clone());
+    //listen_thread(hive.clone());
 
     if HIVE.set(hive).is_err() {
         panic!("Failed to set global pubsub instance.");

@@ -115,7 +115,7 @@ impl PermissionCalculator {
         }
     }
 
-    pub fn fetch_data(mut self) -> PermissionCalculator {
+    pub async fn fetch_data(mut self) -> PermissionCalculator {
         let guild = if let Some(value) = self.guild {
             Some(value)
         } else if let Some(channel) = &self.channel {
@@ -123,7 +123,7 @@ impl PermissionCalculator {
                 0..=1 => None,
                 2 => {
                     if let Some(id) = &channel.guild {
-                        if let Ok(result) = fetch_guild(id) {
+                        if let Ok(result) = fetch_guild(id).await {
                             result
                         } else {
                             None
@@ -139,7 +139,7 @@ impl PermissionCalculator {
         };
 
         if let Some(guild) = &guild {
-            if let Ok(result) = fetch_member(MemberKey(guild.id.clone(), self.user.id.clone())) {
+            if let Ok(result) = fetch_member(MemberKey(guild.id.clone(), self.user.id.clone())).await {
                 self.member = result;
             }
         }
@@ -148,7 +148,7 @@ impl PermissionCalculator {
         self
     }
 
-    pub fn calculate(&self) -> u32 {
+    pub async fn calculate(&self) -> u32 {
         let mut permissions: u32 = 0;
         if let Some(guild) = &self.guild {
             if let Some(_member) = &self.member {
@@ -185,7 +185,7 @@ impl PermissionCalculator {
                                 || relationship == Relationship::BlockedOther
                             {
                                 permissions = 1;
-                            } else if has_mutual_connection(&self.user.id, other, true) {
+                            } else if has_mutual_connection(&self.user.id, other, true).await {
                                 permissions = 1024 + 128 + 32 + 16 + 1;
                             } else {
                                 permissions = 1;
@@ -222,7 +222,7 @@ impl PermissionCalculator {
         permissions
     }
 
-    pub fn as_permission(&self) -> MemberPermissions<[u32; 1]> {
-        MemberPermissions([self.calculate()])
+    pub async fn as_permission(&self) -> MemberPermissions<[u32; 1]> {
+        MemberPermissions([self.calculate().await])
     }
 }

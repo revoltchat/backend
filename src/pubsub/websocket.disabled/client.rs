@@ -57,7 +57,7 @@ impl Handler for Client {
                                 FindOneOptions::builder()
                                     .projection(doc! { "_id": 1 })
                                     .build(),
-                            );
+                            ).await;
 
                             if let Ok(result) = user {
                                 if let Some(doc) = result {

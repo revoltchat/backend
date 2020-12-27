@@ -8,17 +8,18 @@ use mongodb::bson::doc;
 use mongodb::options::{Collation, FindOneOptions, FindOptions};
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
+use rocket::futures::StreamExt;
 use ulid::Ulid;
 
 /// retrieve your user information
 #[get("/@me")]
-pub fn me(user: User) -> Response {
+pub async fn me(user: User) -> Response {
     Response::Success(user.serialise(Relationship::SELF as i32))
 }
 
 /// retrieve another user's information
 #[get("/<target>")]
-pub fn user(user: User, target: User) -> Response {
+pub async fn user(user: User, target: User) -> Response {
     let relationship = get_relationship(&user, &target) as i32;
     Response::Success(user.serialise(relationship))
 }
@@ -30,7 +31,7 @@ pub struct UserQuery {
 
 /// find a user by their username
 #[post("/query", data = "<query>")]
-pub fn query(user: User, query: Json<UserQuery>) -> Response {
+pub async fn query(user: User, query: Json<UserQuery>) -> Response {
     let col = database::get_collection("users");
 
     if let Ok(result) = col.find_one(
@@ -38,7 +39,8 @@ pub fn query(user: User, query: Json<UserQuery>) -> Response {
         FindOneOptions::builder()
             .collation(Collation::builder().locale("en").strength(2).build())
             .build(),
-    ) {
+    )
+    .await {
         if let Some(doc) = result {
             let id = doc.get_str("_id").unwrap();
             Response::Success(json!({
@@ -96,10 +98,10 @@ pub fn lookup(user: User, query: Json<LookupQuery>) -> Response {
 
 /// retrieve all of your DMs
 #[get("/@me/dms")]
-pub fn dms(user: User) -> Response {
+pub async fn dms(user: User) -> Response {
     let col = database::get_collection("channels");
 
-    if let Ok(results) = col.find(
+    if let Ok(mut results) = col.find(
         doc! {
             "$or": [
                 {
@@ -113,9 +115,10 @@ pub fn dms(user: User) -> Response {
             "recipients": user.id
         },
         FindOptions::builder().projection(doc! {}).build(),
-    ) {
+    )
+    .await {
         let mut channels = Vec::new();
-        for item in results {
+        while let Some(item) = results.next().await {
             if let Ok(doc) = item {
                 let id = doc.get_str("_id").unwrap();
                 let last_message = doc.get_document("last_message").unwrap();
@@ -153,13 +156,14 @@ pub fn dms(user: User) -> Response {
 
 /// open a DM with a user
 #[get("/<target>/dm")]
-pub fn dm(user: User, target: User) -> Response {
+pub async fn dm(user: User, target: User) -> Response {
     let col = database::get_collection("channels");
 
     if let Ok(result) = col.find_one(
 		doc! { "type": channel::ChannelType::DM as i32, "recipients": { "$all": [ user.id.clone(), target.id.clone() ] } },
 		None
-	) {
+	)
+    .await {
         if let Some(channel) = result {
             Response::Success( json!({ "id": channel.get_str("_id").unwrap() }))
         } else {
@@ -173,7 +177,9 @@ pub fn dm(user: User, target: User) -> Response {
 					"active": false
 				},
 				None
-			).is_ok() {
+			)
+            .await
+            .is_ok() {
                 Response::Success(json!({ "id": id.to_string() }))
             } else {
                 Response::InternalServerError(json!({ "error": "Failed to create new channel." }))
@@ -186,7 +192,7 @@ pub fn dm(user: User, target: User) -> Response {
 
 /// retrieve all of your friends
 #[get("/@me/friend")]
-pub fn get_friends(user: User) -> Response {
+pub async fn get_friends(user: User) -> Response {
     let mut results = Vec::new();
     if let Some(arr) = user.relations {
         for item in arr {
@@ -202,13 +208,13 @@ pub fn get_friends(user: User) -> Response {
 
 /// retrieve friend status with user
 #[get("/<target>/friend")]
-pub fn get_friend(user: User, target: User) -> Response {
+pub async fn get_friend(user: User, target: User) -> Response {
     Response::Success(json!({ "status": get_relationship(&user, &target) as i32 }))
 }
 
 /// create or accept a friend request
 #[put("/<target>/friend")]
-pub fn add_friend(user: User, target: User) -> Response {
+pub async fn add_friend(user: User, target: User) -> Response {
     let col = database::get_collection("users");
 
     match get_relationship(&user, &target) {
@@ -230,6 +236,7 @@ pub fn add_friend(user: User, target: User) -> Response {
                     },
                     None,
                 )
+                .await
                 .is_ok()
             {
                 if col
@@ -245,6 +252,7 @@ pub fn add_friend(user: User, target: User) -> Response {
                         },
                         None,
                     )
+                    .await
                     .is_ok()
                 {
                     /*notifications::send_message_threaded(
@@ -301,6 +309,7 @@ pub fn add_friend(user: User, target: User) -> Response {
                     },
                     None,
                 )
+                .await
                 .is_ok()
             {
                 if col
@@ -318,6 +327,7 @@ pub fn add_friend(user: User, target: User) -> Response {
                         },
                         None,
                     )
+                    .await
                     .is_ok()
                 {
                     /*notifications::send_message_threaded(
@@ -360,7 +370,7 @@ pub fn add_friend(user: User, target: User) -> Response {
 
 /// remove a friend or deny a request
 #[delete("/<target>/friend")]
-pub fn remove_friend(user: User, target: User) -> Response {
+pub async fn remove_friend(user: User, target: User) -> Response {
     let col = database::get_collection("users");
 
     match get_relationship(&user, &target) {
@@ -379,6 +389,7 @@ pub fn remove_friend(user: User, target: User) -> Response {
                     },
                     None,
                 )
+                .await
                 .is_ok()
             {
                 if col
@@ -395,6 +406,7 @@ pub fn remove_friend(user: User, target: User) -> Response {
                         },
                         None,
                     )
+                    .await
                     .is_ok()
                 {
                     /*notifications::send_message_threaded(
@@ -438,7 +450,7 @@ pub fn remove_friend(user: User, target: User) -> Response {
 
 /// block a user
 #[put("/<target>/block")]
-pub fn block_user(user: User, target: User) -> Response {
+pub async fn block_user(user: User, target: User) -> Response {
     let col = database::get_collection("users");
 
     match get_relationship(&user, &target) {
@@ -456,6 +468,7 @@ pub fn block_user(user: User, target: User) -> Response {
                     },
                     None,
                 )
+                .await
                 .is_ok()
             {
                 if col
@@ -471,6 +484,7 @@ pub fn block_user(user: User, target: User) -> Response {
                         },
                         None,
                     )
+                    .await
                     .is_ok()
                 {
                     /*notifications::send_message_threaded(
@@ -522,6 +536,7 @@ pub fn block_user(user: User, target: User) -> Response {
                     },
                     None,
                 )
+                .await
                 .is_ok()
             {
                 if col
@@ -539,6 +554,7 @@ pub fn block_user(user: User, target: User) -> Response {
                         },
                         None,
                     )
+                    .await
                     .is_ok()
                 {
                     /*notifications::send_message_threaded(
@@ -590,6 +606,7 @@ pub fn block_user(user: User, target: User) -> Response {
                     },
                     None,
                 )
+                .await
                 .is_ok()
             {
                 /*notifications::send_message_threaded(
@@ -615,7 +632,7 @@ pub fn block_user(user: User, target: User) -> Response {
 
 /// unblock a user
 #[delete("/<target>/block")]
-pub fn unblock_user(user: User, target: User) -> Response {
+pub async fn unblock_user(user: User, target: User) -> Response {
     let col = database::get_collection("users");
 
     match get_relationship(&user, &target) {
@@ -634,6 +651,7 @@ pub fn unblock_user(user: User, target: User) -> Response {
                         },
                         None,
                     )
+                    .await
                     .is_ok()
                 {
                     /*notifications::send_message_threaded(
@@ -668,6 +686,7 @@ pub fn unblock_user(user: User, target: User) -> Response {
                         },
                         None,
                     )
+                    .await
                     .is_ok()
                 {
                     if col
@@ -684,6 +703,7 @@ pub fn unblock_user(user: User, target: User) -> Response {
                             },
                             None,
                         )
+                        .await
                         .is_ok()
                     {
                         /*notifications::send_message_threaded(
@@ -729,29 +749,4 @@ pub fn unblock_user(user: User, target: User) -> Response {
         | Relationship::SELF
         | Relationship::NONE => Response::BadRequest(json!({ "error": "This has no effect." })),
     }
-}
-
-#[options("/<_target>")]
-pub fn user_preflight(_target: String) -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/query")]
-pub fn query_preflight() -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/@me/dms")]
-pub fn dms_preflight() -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/<_target>/dm")]
-pub fn dm_preflight(_target: String) -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/<_target>/friend")]
-pub fn friend_preflight(_target: String) -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/<_target>/block")]
-pub fn block_user_preflight(_target: String) -> Response {
-    Response::Result(super::Status::Ok)
 }

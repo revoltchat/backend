@@ -12,6 +12,7 @@ use mongodb::options::{FindOneOptions, FindOptions};
 use rocket::request::Form;
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
+use rocket::futures::StreamExt;
 use ulid::Ulid;
 
 // ! FIXME: GET RID OF THIS
@@ -19,9 +20,10 @@ macro_rules! with_permissions {
     ($user: expr, $target: expr) => {{
         let permissions = PermissionCalculator::new($user.clone())
             .guild($target.clone())
-            .fetch_data();
+            .fetch_data()
+            .await;
 
-        let value = permissions.as_permission();
+        let value = permissions.as_permission().await;
         if !value.get_access() {
             return None;
         }
@@ -32,9 +34,9 @@ macro_rules! with_permissions {
 
 /// fetch your guilds
 #[get("/@me")]
-pub fn my_guilds(user: User) -> Response {
-    if let Ok(gids) = user.find_guilds() {
-        if let Ok(data) = serialise_guilds_with_channels(&gids) {
+pub async fn my_guilds(user: User) -> Response {
+    if let Ok(gids) = user.find_guilds().await {
+        if let Ok(data) = serialise_guilds_with_channels(&gids).await {
             Response::Success(json!(data))
         } else {
             Response::InternalServerError(json!({ "error": "Failed to fetch guilds." }))
@@ -46,10 +48,10 @@ pub fn my_guilds(user: User) -> Response {
 
 /// fetch a guild
 #[get("/<target>")]
-pub fn guild(user: User, target: Guild) -> Option<Response> {
+pub async fn guild(user: User, target: Guild) -> Option<Response> {
     with_permissions!(user, target);
 
-    if let Ok(result) = target.seralise_with_channels() {
+    if let Ok(result) = target.seralise_with_channels().await {
         Some(Response::Success(result))
     } else {
         Some(Response::InternalServerError(
@@ -60,20 +62,20 @@ pub fn guild(user: User, target: Guild) -> Option<Response> {
 
 /// delete or leave a guild
 #[delete("/<target>")]
-pub fn remove_guild(user: User, target: Guild) -> Option<Response> {
+pub async fn remove_guild(user: User, target: Guild) -> Option<Response> {
     with_permissions!(user, target);
 
     if user.id == target.owner {
         let channels = database::get_collection("channels");
-        if let Ok(result) = channels.find(
+        if let Ok(mut result) = channels.find(
             doc! {
                 "type": 2,
                 "guild": &target.id
             },
             FindOptions::builder().projection(doc! { "_id": 1 }).build(),
-        ) {
+        ).await {
             let mut values = vec![];
-            for item in result {
+            while let Some(item) = result.next().await {
                 if let Ok(doc) = item {
                     values.push(Bson::String(doc.get_str("_id").unwrap().to_string()));
                 }
@@ -88,6 +90,7 @@ pub fn remove_guild(user: User, target: Guild) -> Option<Response> {
                     },
                     None,
                 )
+                .await
                 .is_ok()
             {
                 if channels
@@ -98,6 +101,7 @@ pub fn remove_guild(user: User, target: Guild) -> Option<Response> {
                         },
                         None,
                     )
+                    .await
                     .is_ok()
                 {
                     if database::get_collection("members")
@@ -107,6 +111,7 @@ pub fn remove_guild(user: User, target: Guild) -> Option<Response> {
                             },
                             None,
                         )
+                        .await
                         .is_ok()
                     {
                         if database::get_collection("guilds")
@@ -116,6 +121,7 @@ pub fn remove_guild(user: User, target: Guild) -> Option<Response> {
                                 },
                                 None,
                             )
+                            .await
                             .is_ok()
                         {
                             /*notifications::send_message_threaded(
@@ -160,6 +166,7 @@ pub fn remove_guild(user: User, target: Guild) -> Option<Response> {
             },
             None,
         )
+        .await
         .is_ok()
     {
         /*notifications::send_message_threaded(
@@ -189,7 +196,7 @@ pub struct CreateChannel {
 
 /// create a new channel
 #[post("/<target>/channels", data = "<info>")]
-pub fn create_channel(user: User, target: Guild, info: Json<CreateChannel>) -> Option<Response> {
+pub async fn create_channel(user: User, target: Guild, info: Json<CreateChannel>) -> Option<Response> {
     let (permissions, _) = with_permissions!(user, target);
 
     if !permissions.get_manage_channels() {
@@ -208,6 +215,7 @@ pub fn create_channel(user: User, target: Guild, info: Json<CreateChannel>) -> O
 
     if let Ok(result) =
         database::get_collection("channels").find_one(doc! { "nonce": &nonce }, None)
+        .await
     {
         if result.is_some() {
             return Some(Response::BadRequest(
@@ -228,6 +236,7 @@ pub fn create_channel(user: User, target: Guild, info: Json<CreateChannel>) -> O
                 },
                 None,
             )
+            .await
             .is_ok()
         {
             if database::get_collection("guilds")
@@ -242,6 +251,7 @@ pub fn create_channel(user: User, target: Guild, info: Json<CreateChannel>) -> O
                     },
                     None,
                 )
+                .await
                 .is_ok()
             {
                 /*notifications::send_message_threaded(
@@ -280,7 +290,7 @@ pub struct InviteOptions {
 
 /// create a new invite
 #[post("/<target>/channels/<channel>/invite", data = "<_options>")]
-pub fn create_invite(
+pub async fn create_invite(
     user: User,
     target: Guild,
     channel: Channel,
@@ -307,6 +317,7 @@ pub fn create_invite(
             },
             None,
         )
+        .await
         .is_ok()
     {
         Some(Response::Success(json!({ "code": code })))
@@ -319,10 +330,10 @@ pub fn create_invite(
 
 /// remove an invite
 #[delete("/<target>/invites/<code>")]
-pub fn remove_invite(user: User, target: Guild, code: String) -> Option<Response> {
+pub async fn remove_invite(user: User, target: Guild, code: String) -> Option<Response> {
     let (permissions, _) = with_permissions!(user, target);
 
-    if let Some((guild_id, _, invite)) = get_invite(&code, None) {
+    if let Some((guild_id, _, invite)) = get_invite(&code, None).await {
         if invite.creator != user.id && !permissions.get_manage_server() {
             return Some(Response::LackingPermission(Permission::ManageServer));
         }
@@ -341,6 +352,7 @@ pub fn remove_invite(user: User, target: Guild, code: String) -> Option<Response
                 },
                 None,
             )
+            .await
             .is_ok()
         {
             Some(Response::Result(super::Status::Ok))
@@ -358,7 +370,7 @@ pub fn remove_invite(user: User, target: Guild, code: String) -> Option<Response
 
 /// fetch all guild invites
 #[get("/<target>/invites")]
-pub fn fetch_invites(user: User, target: Guild) -> Option<Response> {
+pub async fn fetch_invites(user: User, target: Guild) -> Option<Response> {
     let (permissions, _) = with_permissions!(user, target);
 
     if !permissions.get_manage_server() {
@@ -370,9 +382,9 @@ pub fn fetch_invites(user: User, target: Guild) -> Option<Response> {
 
 /// view an invite before joining
 #[get("/join/<code>", rank = 1)]
-pub fn fetch_invite(user: User, code: String) -> Response {
-    if let Some((guild_id, name, invite)) = get_invite(&code, user.id) {
-        match fetch_channel(&invite.channel) {
+pub async fn fetch_invite(user: User, code: String) -> Response {
+    if let Some((guild_id, name, invite)) = get_invite(&code, user.id).await {
+        match fetch_channel(&invite.channel).await {
             Ok(result) => {
                 if let Some(channel) = result {
                     Response::Success(json!({
@@ -398,8 +410,8 @@ pub fn fetch_invite(user: User, code: String) -> Response {
 
 /// join a guild using an invite
 #[post("/join/<code>", rank = 1)]
-pub fn use_invite(user: User, code: String) -> Response {
-    if let Some((guild_id, _, invite)) = get_invite(&code, Some(user.id.clone())) {
+pub async fn use_invite(user: User, code: String) -> Response {
+    if let Some((guild_id, _, invite)) = get_invite(&code, Some(user.id.clone())).await {
         if let Ok(result) = database::get_collection("members").find_one(
             doc! {
                 "_id.guild": &guild_id,
@@ -408,7 +420,8 @@ pub fn use_invite(user: User, code: String) -> Response {
             FindOneOptions::builder()
                 .projection(doc! { "_id": 1 })
                 .build(),
-        ) {
+        )
+        .await {
             if result.is_none() {
                 if database::get_collection("members")
                     .insert_one(
@@ -420,6 +433,7 @@ pub fn use_invite(user: User, code: String) -> Response {
                         },
                         None,
                     )
+                    .await
                     .is_ok()
                 {
                     /*notifications::send_message_threaded(
@@ -462,7 +476,7 @@ pub struct CreateGuild {
 
 /// create a new guild
 #[post("/create", data = "<info>")]
-pub fn create_guild(user: User, info: Json<CreateGuild>) -> Response {
+pub async fn create_guild(user: User, info: Json<CreateGuild>) -> Response {
     if !user.email_verification.verified {
         return Response::Unauthorized(json!({ "error": "Email not verified!" }));
     }
@@ -481,6 +495,7 @@ pub fn create_guild(user: User, info: Json<CreateGuild>) -> Response {
     let col = database::get_collection("guilds");
     if col
         .find_one(doc! { "nonce": nonce.clone() }, None)
+        .await
         .unwrap()
         .is_some()
     {
@@ -500,6 +515,7 @@ pub fn create_guild(user: User, info: Json<CreateGuild>) -> Response {
             },
             None,
         )
+        .await
         .is_err()
     {
         return Response::InternalServerError(
@@ -517,6 +533,7 @@ pub fn create_guild(user: User, info: Json<CreateGuild>) -> Response {
             },
             None,
         )
+        .await
         .is_err()
     {
         return Response::InternalServerError(
@@ -539,12 +556,14 @@ pub fn create_guild(user: User, info: Json<CreateGuild>) -> Response {
             },
             None,
         )
+        .await
         .is_ok()
     {
         Response::Success(json!({ "id": id }))
     } else {
         channels
             .delete_one(doc! { "_id": channel_id }, None)
+            .await
             .expect("Failed to delete the channel we just made.");
 
         Response::InternalServerError(json!({ "error": "Failed to create guild." }))
@@ -553,15 +572,16 @@ pub fn create_guild(user: User, info: Json<CreateGuild>) -> Response {
 
 /// fetch a guild's member
 #[get("/<target>/members")]
-pub fn fetch_members(user: User, target: Guild) -> Option<Response> {
+pub async fn fetch_members(user: User, target: Guild) -> Option<Response> {
     with_permissions!(user, target);
 
-    if let Ok(result) =
+    if let Ok(mut result) =
         database::get_collection("members").find(doc! { "_id.guild": target.id }, None)
+        .await
     {
         let mut users = vec![];
 
-        for item in result {
+        while let Some(item) = result.next().await {
             if let Ok(doc) = item {
                 users.push(json!({
                     "id": doc.get_document("_id").unwrap().get_str("user").unwrap(),
@@ -580,10 +600,10 @@ pub fn fetch_members(user: User, target: Guild) -> Option<Response> {
 
 /// fetch a guild member
 #[get("/<target>/members/<other>")]
-pub fn fetch_member(user: User, target: Guild, other: String) -> Option<Response> {
+pub async fn fetch_member(user: User, target: Guild, other: String) -> Option<Response> {
     with_permissions!(user, target);
 
-    if let Ok(result) = get_member(MemberKey(target.id, other)) {
+    if let Ok(result) = get_member(MemberKey(target.id, other)).await {
         if let Some(member) = result {
             Some(Response::Success(json!({
                 "id": member.id.user,
@@ -603,7 +623,7 @@ pub fn fetch_member(user: User, target: Guild, other: String) -> Option<Response
 
 /// kick a guild member
 #[delete("/<target>/members/<other>")]
-pub fn kick_member(user: User, target: Guild, other: String) -> Option<Response> {
+pub async fn kick_member(user: User, target: Guild, other: String) -> Option<Response> {
     let (permissions, _) = with_permissions!(user, target);
 
     if user.id == other {
@@ -616,7 +636,7 @@ pub fn kick_member(user: User, target: Guild, other: String) -> Option<Response>
         return Some(Response::LackingPermission(Permission::KickMembers));
     }
 
-    if let Ok(result) = get_member(MemberKey(target.id.clone(), other.clone())) {
+    if let Ok(result) = get_member(MemberKey(target.id.clone(), other.clone())).await {
         if result.is_none() {
             return Some(Response::BadRequest(
                 json!({ "error": "User not part of guild." }),
@@ -636,6 +656,7 @@ pub fn kick_member(user: User, target: Guild, other: String) -> Option<Response>
             },
             None,
         )
+        .await
         .is_ok()
     {
         /*notifications::send_message_threaded(
@@ -663,7 +684,7 @@ pub struct BanOptions {
 
 /// ban a guild member
 #[put("/<target>/members/<other>/ban?<options..>")]
-pub fn ban_member(
+pub async fn ban_member(
     user: User,
     target: Guild,
     other: String,
@@ -688,7 +709,7 @@ pub fn ban_member(
         return Some(Response::LackingPermission(Permission::BanMembers));
     }
 
-    if let Ok(result) = get_member(MemberKey(target.id.clone(), other.clone())) {
+    if let Ok(result) = get_member(MemberKey(target.id.clone(), other.clone())).await {
         if result.is_none() {
             return Some(Response::BadRequest(
                 json!({ "error": "User not part of guild." }),
@@ -713,6 +734,7 @@ pub fn ban_member(
             },
             None,
         )
+        .await
         .is_err()
     {
         return Some(Response::BadRequest(
@@ -728,6 +750,7 @@ pub fn ban_member(
             },
             None,
         )
+        .await
         .is_ok()
     {
         /*notifications::send_message_threaded(
@@ -750,7 +773,7 @@ pub fn ban_member(
 
 /// unban a guild member
 #[delete("/<target>/members/<other>/ban")]
-pub fn unban_member(user: User, target: Guild, other: String) -> Option<Response> {
+pub async fn unban_member(user: User, target: Guild, other: String) -> Option<Response> {
     let (permissions, _) = with_permissions!(user, target);
 
     if user.id == other {
@@ -783,6 +806,7 @@ pub fn unban_member(user: User, target: Guild, other: String) -> Option<Response
             },
             None,
         )
+        .await
         .is_ok()
     {
         Some(Response::Result(super::Status::Ok))
@@ -791,45 +815,4 @@ pub fn unban_member(user: User, target: Guild, other: String) -> Option<Response
             json!({ "error": "Failed to remove ban." }),
         ))
     }
-}
-
-#[options("/<_target>")]
-pub fn guild_preflight(_target: String) -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/<_target>/channels")]
-pub fn create_channel_preflight(_target: String) -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/<_target>/channels/<_channel>/invite")]
-pub fn create_invite_preflight(_target: String, _channel: String) -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/<_target>/invites/<_code>")]
-pub fn remove_invite_preflight(_target: String, _code: String) -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/<_target>/invites")]
-pub fn fetch_invites_preflight(_target: String) -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/join/<_code>", rank = 1)]
-pub fn invite_preflight(_code: String) -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/create")]
-pub fn create_guild_preflight() -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/<_target>/members")]
-pub fn fetch_members_preflight(_target: String) -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/<_target>/members/<_other>")]
-pub fn fetch_member_preflight(_target: String, _other: String) -> Response {
-    Response::Result(super::Status::Ok)
-}
-#[options("/<_target>/members/<_other>/ban")]
-pub fn ban_member_preflight(_target: String, _other: String) -> Response {
-    Response::Result(super::Status::Ok)
 }

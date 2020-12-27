@@ -5,7 +5,7 @@ use mongodb::bson::doc;
 
 /// root
 #[get("/")]
-pub fn root() -> Response {
+pub async fn root() -> Response {
     Response::Success(json!({
         "revolt": "0.2.11",
         "features": {
@@ -19,14 +19,9 @@ pub fn root() -> Response {
     }))
 }
 
-#[options("/")]
-pub fn root_preflight() -> Response {
-    Response::Result(super::Status::Ok)
-}
-
 /// I'm a teapot.
 #[delete("/")]
-pub fn teapot() -> Response {
+pub async fn teapot() -> Response {
     Response::Teapot(json!({
         "teapot": true,
         "can_delete": false
