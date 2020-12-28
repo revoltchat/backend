@@ -2,71 +2,20 @@ pub use rocket::http::Status;
 pub use rocket::response::Redirect;
 use rocket::Rocket;
 
-// use crate::database::Permission;
-// use rocket_contrib::json::JsonValue;
-
-/* pub mod channel;
-pub mod guild;
-pub mod user; */
-pub mod root;
-
-/* #[derive(Responder)]
-pub enum Response {
-    #[response()]
-    Result(Status),
-    #[response()]
-    Success(JsonValue),
-    #[response()]
-    Redirect(Redirect),
-    #[response(status = 207)]
-    PartialStatus(JsonValue),
-    #[response(status = 400)]
-    BadRequest(JsonValue),
-    #[response(status = 401)]
-    Unauthorized(JsonValue),
-    #[response(status = 401)]
-    LackingPermission(Permission),
-    #[response(status = 404)]
-    NotFound(JsonValue),
-    #[response(status = 406)]
-    NotAcceptable(JsonValue),
-    #[response(status = 409)]
-    Conflict(JsonValue),
-    #[response(status = 410)]
-    Gone(JsonValue),
-    #[response(status = 418)]
-    Teapot(JsonValue),
-    #[response(status = 422)]
-    UnprocessableEntity(JsonValue),
-    #[response(status = 429)]
-    TooManyRequests(JsonValue),
-    #[response(status = 500)]
-    InternalServerError(JsonValue),
-}
-
-use rocket::http::ContentType;
-use rocket::request::Request;
-use std::io::Cursor;
-
-use rocket::response::{Responder, Result};
-
-impl<'a> Responder<'a, 'static> for Permission {
-    fn respond_to(self, _: &Request) -> Result<'static> {
-        let body = format!(
-            "{{\"error\":\"Lacking permission: {:?}.\",\"permission\":{}}}",
-            self, self as u32,
-        );
-
-        rocket::response::Response::build()
-            .header(ContentType::JSON)
-            .sized_body(body.len(), Cursor::new(body))
-            .ok()
-    }
-} */
+mod root;
+mod users;
+mod guild;
+mod onboard;
+mod channels;
 
 pub fn mount(rocket: Rocket) -> Rocket {
     rocket
         .mount("/", routes![root::root, root::teapot])
+        .mount("/onboard", onboard::routes())
+        .mount("/users", users::routes())
+        .mount("/channels", channels::routes())
+        .mount("/guild", guild::routes())
+
         /*.mount(
             "/users",
             routes![
