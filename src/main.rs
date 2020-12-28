@@ -36,9 +36,11 @@ async fn main() {
         ..Default::default()
     }
     .to_cors()
-    .unwrap();
+    .expect("Failed to create CORS.");
 
     routes::mount(rocket::ignite())
+        .mount("/", rocket_cors::catch_all_options_routes())
+        .manage(cors.clone())
         .attach(cors)
         .launch()
         .await

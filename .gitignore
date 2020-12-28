@@ -1,4 +1,5 @@
 Rocket.toml
 /target
 **/*.rs.bk
+.mongo
 .env

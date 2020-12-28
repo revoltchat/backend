@@ -7,7 +7,7 @@ use mongodb::bson::doc;
 #[get("/")]
 pub async fn root() -> Response {
     Response::Success(json!({
-        "revolt": "0.2.11",
+        "revolt": "0.3.0-alpha",
         "features": {
             "registration": !*DISABLE_REGISTRATION,
             "captcha": {
