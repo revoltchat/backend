@@ -28,3 +28,4 @@ pub fn get_collection(collection: &str) -> Collection {
 
 pub mod migrations;
 pub mod entities;
+pub mod guards;

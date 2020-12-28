@@ -1,5 +1,6 @@
 use rocket::response::{self, Responder, Response};
 use rocket::http::{ContentType, Status};
+use validator::ValidationErrors;
 use rocket::request::Request;
 use serde::Serialize;
 use std::io::Cursor;
@@ -12,6 +13,25 @@ pub enum Error {
     #[snafu(display("This error has not been labelled."))]
     #[serde(rename = "unlabelled_error")]
     LabelMe,
+
+    // ? Onboarding related errors.
+    #[snafu(display("Already finished onboarding."))]
+    #[serde(rename = "already_onboarded")]
+    AlreadyOnboarded,
+    
+    // ? User related errors.
+    #[snafu(display("Username has already been taken."))]
+    #[serde(rename = "username_taken")]
+    UsernameTaken,
+
+    // ? General errors.
+    #[snafu(display("Failed to validate fields."))]
+    #[serde(rename = "failed_validation")]
+    FailedValidation { error: ValidationErrors },
+    #[snafu(display("Encountered a database error."))]
+    #[serde(rename = "database_error")]
+    DatabaseError { operation: &'static str, with: &'static str },
+
     /* #[snafu(display("Failed to validate fields."))]
     #[serde(rename = "failed_validation")]
     FailedValidation { error: ValidationErrors },
@@ -50,7 +70,11 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 impl<'r> Responder<'r, 'static> for Error {
     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         let status = match self {
-            Error::LabelMe => Status::InternalServerError
+            Error::AlreadyOnboarded => Status::Forbidden,
+            Error::DatabaseError { .. } => Status::InternalServerError,
+            Error::FailedValidation { .. } => Status::UnprocessableEntity,
+            Error::LabelMe => Status::InternalServerError,
+            Error::UsernameTaken => Status::Conflict,
         };
 
         // Serialize the error data structure into JSON.

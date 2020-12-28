@@ -1,4 +1,7 @@
-/**
+pub mod user;
+pub mod reference;
+
+/*
 // ! FIXME
 impl<'r> FromParam<'r> for User {
     type Error = &'r RawStr;

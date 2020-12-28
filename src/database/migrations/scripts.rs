@@ -1,4 +1,4 @@
-use super::super::get_collection;
+use super::super::{get_db, get_collection};
 
 use log::info;
 use mongodb::options::FindOptions;
@@ -12,7 +12,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 2;
+pub const LATEST_REVISION: i32 = 3;
 
 pub async fn migrate_database() {
     let migrations = get_collection("migrations");
@@ -119,6 +119,32 @@ pub async fn run_migrations(revision: i32) -> i32 {
             .await
             .expect("Failed to update guild.");
         }
+    }
+
+    if revision <= 2 {
+        info!("Running migration [revision 2]: Add username index to users.");
+
+        get_db().run_command(
+            doc! {
+                "createIndexes": "users",
+                "indexes": [
+                    {
+                        "key": {
+                            "username": 1
+                        },
+                        "name": "username",
+                        "unique": true,
+                        "collation": {
+                            "locale": "en",
+                            "strength": 2
+                        }
+                    }
+                ]
+            },
+            None
+        )
+        .await
+        .expect("Failed to create username index.");
     }
 
     // Reminder to update LATEST_REVISION when adding new migrations.
