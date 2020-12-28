@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 tokio = "0.2.22"
 many-to-many = "0.1.2"
-#rauth = { git = "https://gitlab.insrt.uk/insert/rauth" }
+rauth = { git = "https://gitlab.insrt.uk/insert/rauth" }
 
 hive_pubsub = { version = "0.4.1", features = ["mongo"] }
 rocket_cors = { git = "https://github.com/lawliet89/rocket_cors", branch = "master" }
@@ -22,8 +22,9 @@ dotenv = "0.15.0"
 ulid = "0.4.1"
 
 serde = { version = "1.0.115", features = ["derive"] }
+validator = { version = "0.11", features = ["derive"] }
+snafu = { version = "0.6.9" }
 serde_json = "1.0.57"
-validator = "0.10.1"
 bitfield = "0.13.2"
 
 reqwest = { version = "0.10.8", features = ["json"] }

@@ -15,6 +15,7 @@ pub mod pubsub;
 pub mod routes;
 pub mod util;
 
+use rauth;
 use log::info;
 use rocket_cors::AllowedOrigins;
 
@@ -27,18 +28,20 @@ async fn main() {
 
     util::variables::preflight_checks();
     database::connect().await;
-
+    
     pubsub::hive::init_hive();
     //pubsub::websocket::launch_server();
-
+    
     let cors = rocket_cors::CorsOptions {
         allowed_origins: AllowedOrigins::All,
         ..Default::default()
     }
     .to_cors()
     .expect("Failed to create CORS.");
+    
+    let auth = rauth::auth::Auth::new(database::get_collection("accounts"));
 
-    routes::mount(rocket::ignite())
+    routes::mount(rauth::routes::mount(rocket::ignite(), "/auth", auth))
         .mount("/", rocket_cors::catch_all_options_routes())
         .manage(cors.clone())
         .attach(cors)
