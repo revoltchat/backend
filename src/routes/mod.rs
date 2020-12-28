@@ -1,17 +1,16 @@
 pub use rocket::http::Status;
 pub use rocket::response::Redirect;
 use rocket::Rocket;
-use rocket_contrib::json::JsonValue;
 
-use crate::database::Permission;
+// use crate::database::Permission;
+// use rocket_contrib::json::JsonValue;
 
-pub mod account;
-pub mod channel;
+/* pub mod channel;
 pub mod guild;
+pub mod user; */
 pub mod root;
-pub mod user;
 
-#[derive(Responder)]
+/* #[derive(Responder)]
 pub enum Response {
     #[response()]
     Result(Status),
@@ -63,22 +62,12 @@ impl<'a> Responder<'a, 'static> for Permission {
             .sized_body(body.len(), Cursor::new(body))
             .ok()
     }
-}
+} */
 
 pub fn mount(rocket: Rocket) -> Rocket {
     rocket
         .mount("/", routes![root::root, root::teapot])
-        .mount(
-            "/account",
-            routes![
-                account::create,
-                account::verify_email,
-                account::resend_email,
-                account::login,
-                account::token,
-            ],
-        )
-        .mount(
+        /*.mount(
             "/users",
             routes![
                 user::me,
@@ -128,5 +117,5 @@ pub fn mount(rocket: Rocket) -> Rocket {
                 guild::ban_member,
                 guild::unban_member,
             ],
-        )
+        )*/
 }
