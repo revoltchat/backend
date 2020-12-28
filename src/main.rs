@@ -6,21 +6,25 @@ extern crate rocket;
 #[macro_use]
 extern crate rocket_contrib;
 #[macro_use]
-extern crate bitfield;
-#[macro_use]
 extern crate lazy_static;
+extern crate ctrlc;
 
+pub mod notifications;
 pub mod database;
-pub mod pubsub;
 pub mod routes;
 pub mod util;
 
 use rauth;
 use log::info;
+use futures::join;
+use async_std::task;
 use rocket_cors::AllowedOrigins;
 
-#[tokio::main]
-async fn main() {
+fn main() {
+    task::block_on(entry())
+}
+
+async fn entry() {
     dotenv::dotenv().ok();
     env_logger::init_from_env(env_logger::Env::default().filter_or("RUST_LOG", "info"));
 
@@ -28,10 +32,16 @@ async fn main() {
 
     util::variables::preflight_checks();
     database::connect().await;
+
+    ctrlc::set_handler(move || {
+        // Force ungraceful exit to avoid hang.
+        std::process::exit(0);
+    }).expect("Error setting Ctrl-C handler");
     
-    pubsub::hive::init_hive();
-    //pubsub::websocket::launch_server();
-    
+    join!(launch_web(), notifications::websocket::launch_server());
+}
+
+async fn launch_web() {
     let cors = rocket_cors::CorsOptions {
         allowed_origins: AllowedOrigins::All,
         ..Default::default()

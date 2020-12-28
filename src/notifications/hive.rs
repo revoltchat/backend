@@ -10,14 +10,12 @@ use log::{error, debug};
 
 static HIVE: OnceCell<MongodbPubSub<String, String, Notification>> = OnceCell::new();
 
-pub fn init_hive() {
+pub async fn init_hive() {
     let hive = MongodbPubSub::new(
         |_ids, notification| {
             if let Ok(data) = to_string(&notification) {
                 debug!("Pushing out notification. {}", data);
-                // if let Err(err) = websocket::publish(ids, data) {
-                //     error!("Failed to publish notification through WebSocket! {}", err);
-                // }
+                // ! FIXME: push to websocket
             } else {
                 error!("Failed to serialise notification.");
             }
@@ -25,20 +23,18 @@ pub fn init_hive() {
         get_collection("hive"),
     );
 
-    //listen_thread(hive.clone());
-
     if HIVE.set(hive).is_err() {
         panic!("Failed to set global pubsub instance.");
     }
 }
 
 pub fn publish(topic: &String, data: Notification) -> Result<(), String> {
-    let hive = HIVE.get().expect("Global pubsub instance not available.");
+    let hive = HIVE.get().unwrap();
     hive.publish(topic, data)
 }
 
 pub fn subscribe(user: String, topics: Vec<String>) -> Result<(), String> {
-    let hive = HIVE.get().expect("Global pubsub instance not available.");
+    let hive = HIVE.get().unwrap();
     for topic in topics {
         hive.subscribe(user.clone(), topic)?;
     }
@@ -47,14 +43,14 @@ pub fn subscribe(user: String, topics: Vec<String>) -> Result<(), String> {
 }
 
 pub fn drop_user(user: &String) -> Result<(), String> {
-    let hive = HIVE.get().expect("Global pubsub instance not available.");
+    let hive = HIVE.get().unwrap();
     hive.drop_client(user)?;
 
     Ok(())
 }
 
 pub fn drop_topic(topic: &String) -> Result<(), String> {
-    let hive = HIVE.get().expect("Global pubsub instance not available.");
+    let hive = HIVE.get().unwrap();
     hive.drop_topic(topic)?;
 
     Ok(())
