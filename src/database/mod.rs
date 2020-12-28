@@ -27,12 +27,4 @@ pub fn get_collection(collection: &str) -> Collection {
 }
 
 pub mod migrations;
-
-// pub mod channel;
-// pub mod guild;
-// pub mod message;
-// pub mod mutual;
-// pub mod permissions;
-// pub mod user;
-
-// pub use permissions::*;
+pub mod entities;
