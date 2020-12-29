@@ -26,13 +26,10 @@ pub async fn req(user: User) -> Result<JsonValue> {
         .await
         .map_err(|_| Error::DatabaseError { operation: "find", with: "channels" })?;
     
-    let mut channels: Vec<Channel> = vec![];
+    let mut channels = vec![];
     while let Some(result) = cursor.next().await {
         if let Ok(doc) = result {
-            channels.push(
-                from_bson(Bson::Document(doc))
-                    .map_err(|_| Error::DatabaseError { operation: "from_bson", with: "channel" })?
-            );
+            channels.push(doc);
         }
     }
 

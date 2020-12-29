@@ -18,8 +18,8 @@ bitfield! {
     pub get_invite, _: 29;
 }
 
-impl_op_ex!(+ |a: &UserPermission, b: &UserPermission| -> u32 { *a + *b });
-impl_op_ex!(+ |a: &u32, b: &UserPermission| -> u32 { *a + *b });
+impl_op_ex!(+ |a: &UserPermission, b: &UserPermission| -> u32 { *a as u32 | *b as u32 });
+impl_op_ex_commutative!(+ |a: &u32, b: &UserPermission| -> u32 { *a | *b as u32 });
 
 pub async fn temp_calc_perm(_user: &User, _target: &User) -> UserPermissions<[u32; 1]> {
     // if friends; Access + Message + Invite

@@ -7,6 +7,7 @@ use rocket::request::{self, FromRequest, Outcome, Request};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Relationship {
+    #[serde(rename = "_id")]
     pub id: String,
     pub status: u8,
 }

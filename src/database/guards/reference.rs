@@ -10,7 +10,7 @@ use validator::Validate;
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Ref {
     #[validate(length(min = 26, max = 26))]
-    id: String,
+    pub id: String,
 }
 
 impl Ref {
