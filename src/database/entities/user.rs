@@ -2,14 +2,26 @@ use mongodb::bson::{doc, from_bson, Bson};
 use rauth::auth::Session;
 use rocket::http::Status;
 use serde::{Deserialize, Serialize};
+use crate::database::guards::reference::Ref;
 use crate::database::get_collection;
 use rocket::request::{self, FromRequest, Outcome, Request};
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum RelationshipStatus {
+    None,
+    User,
+    Friend,
+    Outgoing,
+    Incoming,
+    Blocked,
+    BlockedOther
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Relationship {
     #[serde(rename = "_id")]
     pub id: String,
-    pub status: u8,
+    pub status: RelationshipStatus,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -45,5 +57,11 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
         } else {
             Outcome::Failure((Status::InternalServerError, rauth::util::Error::DatabaseError))
         }
+    }
+}
+
+impl User {
+    pub fn as_ref(&self) -> Ref {
+        Ref { id: self.id.to_string() }
     }
 }

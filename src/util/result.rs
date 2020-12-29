@@ -11,60 +11,35 @@ use json;
 #[serde(tag = "type")]
 pub enum Error {
     #[snafu(display("This error has not been labelled."))]
-    #[serde(rename = "unlabelled_error")]
     LabelMe,
 
     // ? Onboarding related errors.
     #[snafu(display("Already finished onboarding."))]
-    #[serde(rename = "already_onboarded")]
     AlreadyOnboarded,
     
     // ? User related errors.
     #[snafu(display("Username has already been taken."))]
-    #[serde(rename = "username_taken")]
     UsernameTaken,
     #[snafu(display("This user does not exist!"))]
-    #[serde(rename = "unknown_user")]
     UnknownUser,
+    #[snafu(display("Already friends with this user."))]
+    AlreadyFriends,
+    #[snafu(display("Already sent a request to this user."))]
+    AlreadySentRequest,
+    #[snafu(display("You have blocked this user."))]
+    Blocked,
+    #[snafu(display("You have been blocked by this user."))]
+    BlockedByOther,
 
     // ? General errors.
     #[snafu(display("Failed to validate fields."))]
-    #[serde(rename = "failed_validation")]
     FailedValidation { error: ValidationErrors },
     #[snafu(display("Encountered a database error."))]
-    #[serde(rename = "database_error")]
     DatabaseError { operation: &'static str, with: &'static str },
-
-    /* #[snafu(display("Failed to validate fields."))]
-    #[serde(rename = "failed_validation")]
-    FailedValidation { error: ValidationErrors },
-    #[snafu(display("Encountered a database error."))]
-    #[serde(rename = "database_error")]
-    DatabaseError,
-    #[snafu(display("Encountered an internal error."))]
-    #[serde(rename = "internal_error")]
+    #[snafu(display("Internal server error."))]
     InternalError,
-    #[snafu(display("Operation did not succeed."))]
-    #[serde(rename = "operation_failed")]
-    OperationFailed,
-    #[snafu(display("Missing authentication headers."))]
-    #[serde(rename = "missing_headers")]
-    MissingHeaders,
-    #[snafu(display("Invalid session information."))]
-    #[serde(rename = "invalid_session")]
-    InvalidSession,
-    #[snafu(display("User account has not been verified."))]
-    #[serde(rename = "unverified_account")]
-    UnverifiedAccount,
-    #[snafu(display("This user does not exist!"))]
-    #[serde(rename = "unknown_user")]
-    UnknownUser,
-    #[snafu(display("Email is use."))]
-    #[serde(rename = "email_in_use")]
-    EmailInUse,
-    #[snafu(display("Wrong password."))]
-    #[serde(rename = "wrong_password")]
-    WrongPassword, */
+    #[snafu(display("This request had no effect."))]
+    NoEffect,
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
@@ -73,12 +48,21 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 impl<'r> Responder<'r, 'static> for Error {
     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         let status = match self {
-            Error::AlreadyOnboarded => Status::Forbidden,
-            Error::DatabaseError { .. } => Status::InternalServerError,
-            Error::FailedValidation { .. } => Status::UnprocessableEntity,
             Error::LabelMe => Status::InternalServerError,
+
+            Error::AlreadyOnboarded => Status::Forbidden,
+
             Error::UnknownUser => Status::NotFound,
             Error::UsernameTaken => Status::Conflict,
+            Error::AlreadyFriends => Status::Conflict,
+            Error::AlreadySentRequest => Status::Conflict,
+            Error::Blocked => Status::Conflict,
+            Error::BlockedByOther => Status::Forbidden,
+
+            Error::FailedValidation { .. } => Status::UnprocessableEntity,
+            Error::DatabaseError { .. } => Status::InternalServerError,
+            Error::InternalError => Status::InternalServerError,
+            Error::NoEffect => Status::Ok,
         };
 
         // Serialize the error data structure into JSON.

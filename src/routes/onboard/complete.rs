@@ -7,10 +7,15 @@ use rocket_contrib::json::Json;
 use rauth::auth::Session;
 use validator::Validate;
 use mongodb::bson::doc;
+use regex::Regex;
+
+lazy_static! {
+    static ref RE_USERNAME: Regex = Regex::new(r"^[a-zA-Z0-9-_]+$").unwrap();
+}
 
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
-    #[validate(length(min = 2, max = 32))]
+    #[validate(length(min = 2, max = 32), regex = "RE_USERNAME")]
     username: String
 }
 

@@ -35,11 +35,9 @@ reqwest = { version = "0.10.8", features = ["json"] }
 lazy_static = "1.4.0"
 num_enum = "0.5.1"
 chrono = "0.4.15"
-bcrypt = "0.8.2"
 time = "0.2.16"
 rand = "0.7.3"
-lru = "0.6.0"
-ws = "0.9.1"
+regex = "1"
 
 lettre = "0.10.0-alpha.1"
 env_logger = "0.7.1"

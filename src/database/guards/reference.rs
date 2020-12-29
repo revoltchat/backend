@@ -18,11 +18,11 @@ impl Ref {
         Ok(Ref { id })
     }
 
-    pub async fn fetch_user(self) -> Result<User> {
+    pub async fn fetch_user(&self) -> Result<User> {
         let doc = get_collection("users")
             .find_one(
                 doc! {
-                    "_id": self.id
+                    "_id": &self.id
                 },
                 None
             )

@@ -30,3 +30,22 @@ pub async fn temp_calc_perm(_user: &User, _target: &User) -> UserPermissions<[u3
 
     UserPermissions([UserPermission::Access + UserPermission::SendMessage + UserPermission::Invite])
 }
+
+use crate::database::entities::RelationshipStatus;
+use crate::database::guards::reference::Ref;
+
+pub fn get_relationship(a: &User, b: &Ref) -> RelationshipStatus {
+    if a.id == b.id {
+        return RelationshipStatus::Friend;
+    }
+
+    if let Some(relations) = &a.relations {
+        if let Some(relationship) = relations
+            .iter()
+            .find(|x| x.id == b.id) {
+            return relationship.status.clone();
+        }
+    }
+
+    RelationshipStatus::None
+}
