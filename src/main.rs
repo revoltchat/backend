@@ -7,6 +7,10 @@ extern crate rocket;
 extern crate rocket_contrib;
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate impl_ops;
+#[macro_use]
+extern crate bitfield;
 extern crate ctrlc;
 
 pub mod notifications;

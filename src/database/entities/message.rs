@@ -1,7 +1,7 @@
-use mongodb::bson::DateTime;
-use serde::{Deserialize, Serialize};
+// use mongodb::bson::DateTime;
+// use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+/*#[derive(Serialize, Deserialize, Debug)]
 pub struct PreviousEntry {
     pub content: String,
     pub time: DateTime,
@@ -19,4 +19,4 @@ pub struct Message {
     pub edited: Option<DateTime>,
 
     pub previous_content: Vec<PreviousEntry>,
-}
+}*/

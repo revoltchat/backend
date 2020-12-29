@@ -1204,6 +1204,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f7280c75fb2e2fc47080ec80ccc481376923acb04501957fc38f935c3de5088"
 
 [[package]]
+name = "impl_ops"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90f97a5f38dd3ccfbe7aa80f4a0c00930f21b922c74195be0201c51028f22dcf"
+
+[[package]]
 name = "indexmap"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2346,6 +2352,7 @@ dependencies = [
  "env_logger",
  "futures",
  "hive_pubsub",
+ "impl_ops",
  "lazy_static",
  "lettre",
  "log",

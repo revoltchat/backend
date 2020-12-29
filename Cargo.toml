@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 futures = "0.3.8"
 many-to-many = "0.1.2"
+impl_ops = "0.1.1"
 ctrlc = { version = "3.0", features = ["termination"] }
 async-tungstenite = { version = "0.10.0", features = ["async-std-runtime"] }
 rauth = { git = "https://gitlab.insrt.uk/insert/rauth" }

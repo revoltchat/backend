@@ -5,17 +5,18 @@ use serde::{Deserialize, Serialize};
 use crate::database::get_collection;
 use rocket::request::{self, FromRequest, Outcome, Request};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Relationship {
     pub id: String,
     pub status: u8,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct User {
     #[serde(rename = "_id")]
     pub id: String,
     pub username: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub relations: Option<Vec<Relationship>>,
 }
 
@@ -43,35 +44,5 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
         } else {
             Outcome::Failure((Status::InternalServerError, rauth::util::Error::DatabaseError))
         }
-
-        /*Outcome::Success(
-            User {
-                id: "gaming".to_string(),
-                username: None,
-                relations: None
-            }
-        )*/
-
-        /*match (
-            request.managed_state::<Auth>(),
-            header_user_id,
-            header_session_token,
-        ) {
-            (Some(auth), Some(user_id), Some(session_token)) => {
-                let session = Session {
-                    id: None,
-                    user_id,
-                    session_token,
-                };
-
-                if let Ok(session) = auth.verify_session(session).await {
-                    Outcome::Success(session)
-                } else {
-                    Outcome::Failure((Status::Forbidden, Error::InvalidSession))
-                }
-            }
-            (None, _, _) => Outcome::Failure((Status::InternalServerError, Error::InternalError)),
-            (_, _, _) => Outcome::Failure((Status::Forbidden, Error::MissingHeaders)),
-        }*/
     }
 }

@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
+// use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+/*#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MemberCompositeKey {
     pub guild: String,
     pub user: String,
@@ -40,4 +40,4 @@ pub struct Guild {
     pub bans: Vec<Ban>,
 
     pub default_permissions: u32,
-}
+}*/

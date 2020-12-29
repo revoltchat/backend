@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+/*#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LastMessage {
     id: String,
     user_id: String,
@@ -28,4 +28,23 @@ pub struct Channel {
     pub name: Option<String>,
     // GUILD + GDM: channel description
     pub description: Option<String>,
+}*/
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(tag = "type")]
+pub enum Channel {
+    DirectMessage {
+        #[serde(rename = "_id")]
+        id: String,
+        active: bool,
+        recipients: Vec<String>,
+    },
+    Group {
+        #[serde(rename = "_id")]
+        id: String,
+        name: String,
+        owner: String,
+        description: String,
+        recipients: Vec<String>,
+    }
 }

@@ -23,6 +23,9 @@ pub enum Error {
     #[snafu(display("Username has already been taken."))]
     #[serde(rename = "username_taken")]
     UsernameTaken,
+    #[snafu(display("This user does not exist!"))]
+    #[serde(rename = "unknown_user")]
+    UnknownUser,
 
     // ? General errors.
     #[snafu(display("Failed to validate fields."))]
@@ -74,6 +77,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::DatabaseError { .. } => Status::InternalServerError,
             Error::FailedValidation { .. } => Status::UnprocessableEntity,
             Error::LabelMe => Status::InternalServerError,
+            Error::UnknownUser => Status::NotFound,
             Error::UsernameTaken => Status::Conflict,
         };
 
