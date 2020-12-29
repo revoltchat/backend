@@ -36,13 +36,18 @@ async fn entry() {
 
     util::variables::preflight_checks();
     database::connect().await;
+    notifications::hive::init_hive().await;
 
     ctrlc::set_handler(move || {
         // Force ungraceful exit to avoid hang.
         std::process::exit(0);
     }).expect("Error setting Ctrl-C handler");
-    
-    join!(launch_web(), notifications::websocket::launch_server());
+
+    join!(
+        launch_web(),
+        notifications::websocket::launch_server(),
+        notifications::hive::listen(),
+    );
 }
 
 async fn launch_web() {

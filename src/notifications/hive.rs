@@ -1,14 +1,14 @@
-use super::events::Notification;
-// use super::websocket;
+use super::events::ClientboundNotification;
 use crate::database::get_collection;
 
 use hive_pubsub::backend::mongo::MongodbPubSub;
 use hive_pubsub::PubSub;
 use once_cell::sync::OnceCell;
 use serde_json::to_string;
+use futures::FutureExt;
 use log::{error, debug};
 
-static HIVE: OnceCell<MongodbPubSub<String, String, Notification>> = OnceCell::new();
+static HIVE: OnceCell<MongodbPubSub<String, String, ClientboundNotification>> = OnceCell::new();
 
 pub async fn init_hive() {
     let hive = MongodbPubSub::new(
@@ -20,7 +20,7 @@ pub async fn init_hive() {
                 error!("Failed to serialise notification.");
             }
         },
-        get_collection("hive"),
+        get_collection("pubsub"),
     );
 
     if HIVE.set(hive).is_err() {
@@ -28,7 +28,18 @@ pub async fn init_hive() {
     }
 }
 
-pub fn publish(topic: &String, data: Notification) -> Result<(), String> {
+pub async fn listen() {
+    HIVE.get()
+        .unwrap()
+        .listen()
+        .fuse()
+        .await
+        .expect("Hive hit an error");
+    
+    dbg!("a");
+}
+
+pub fn publish(topic: &String, data: ClientboundNotification) -> Result<(), String> {
     let hive = HIVE.get().unwrap();
     hive.publish(topic, data)
 }

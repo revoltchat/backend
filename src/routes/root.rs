@@ -3,7 +3,6 @@ use crate::util::variables::{DISABLE_REGISTRATION, HCAPTCHA_SITEKEY, USE_EMAIL, 
 use rocket_contrib::json::JsonValue;
 use mongodb::bson::doc;
 
-/// root
 #[get("/")]
 pub async fn root() -> JsonValue {
     json!({
@@ -16,14 +15,5 @@ pub async fn root() -> JsonValue {
             },
             "email": *USE_EMAIL,
         }
-    })
-}
-
-/// I'm a teapot.
-#[delete("/")]
-pub async fn teapot() -> JsonValue {
-    json!({
-        "teapot": true,
-        "can_delete": false
     })
 }

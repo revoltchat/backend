@@ -1,9 +1,29 @@
 use serde::{Deserialize, Serialize};
+use rauth::auth::Session;
+use snafu::Snafu;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Snafu)]
 #[serde(tag = "type")]
-pub enum Notification {
-    MessageCreate {
+pub enum WebSocketError {
+    #[snafu(display("This error has not been labelled."))]
+    LabelMe,
+
+    #[snafu(display("Internal server error."))]
+    InternalError,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(tag = "type")]
+pub enum ServerboundNotification {
+    Authenticate(Session)
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(tag = "type")]
+pub enum ClientboundNotification {
+    Error(WebSocketError),
+
+    /*MessageCreate {
         id: String,
         nonce: Option<String>,
         channel: String,
@@ -57,7 +77,7 @@ pub enum Notification {
 
     GuildDelete {
         id: String,
-    },
+    },*/
 
     UserRelationship {
         id: String,
