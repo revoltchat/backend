@@ -1,10 +1,10 @@
-use super::super::{get_db, get_collection};
+use super::super::{get_collection, get_db};
 
+use crate::rocket::futures::StreamExt;
 use log::info;
+use mongodb::bson::{doc, from_bson, Bson};
 use mongodb::options::FindOptions;
 use serde::{Deserialize, Serialize};
-use crate::rocket::futures::StreamExt;
-use mongodb::bson::{doc, from_bson, Bson};
 
 #[derive(Serialize, Deserialize)]
 struct MigrationInfo {
@@ -86,7 +86,7 @@ pub async fn run_migrations(revision: i32) -> i32 {
                 .get_str("_id")
                 .expect("Failed to get channel id.")
                 .to_string();
-            
+
             let gid = channel
                 .get_str("guild")
                 .expect("Failed to get guild id.")
@@ -124,27 +124,28 @@ pub async fn run_migrations(revision: i32) -> i32 {
     if revision <= 2 {
         info!("Running migration [revision 2]: Add username index to users.");
 
-        get_db().run_command(
-            doc! {
-                "createIndexes": "users",
-                "indexes": [
-                    {
-                        "key": {
-                            "username": 1
-                        },
-                        "name": "username",
-                        "unique": true,
-                        "collation": {
-                            "locale": "en",
-                            "strength": 2
+        get_db()
+            .run_command(
+                doc! {
+                    "createIndexes": "users",
+                    "indexes": [
+                        {
+                            "key": {
+                                "username": 1
+                            },
+                            "name": "username",
+                            "unique": true,
+                            "collation": {
+                                "locale": "en",
+                                "strength": 2
+                            }
                         }
-                    }
-                ]
-            },
-            None
-        )
-        .await
-        .expect("Failed to create username index.");
+                    ]
+                },
+                None,
+            )
+            .await
+            .expect("Failed to create username index.");
     }
 
     // Reminder to update LATEST_REVISION when adding new migrations.

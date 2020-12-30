@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use rauth::auth::Session;
+use serde::{Deserialize, Serialize};
 use snafu::Snafu;
 
 #[derive(Serialize, Deserialize, Debug, Snafu)]
@@ -15,7 +15,7 @@ pub enum WebSocketError {
 #[derive(Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum ServerboundNotification {
-    Authenticate(Session)
+    Authenticate(Session),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -78,10 +78,9 @@ pub enum ClientboundNotification {
     GuildDelete {
         id: String,
     },*/
-
     UserRelationship {
         id: String,
         user: String,
         status: i32,
-    }
+    },
 }

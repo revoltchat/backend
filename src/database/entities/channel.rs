@@ -1,6 +1,9 @@
-use serde::{Deserialize, Serialize};
-use crate::{database::get_collection, util::result::{Error, Result}};
+use crate::{
+    database::get_collection,
+    util::result::{Error, Result},
+};
 use mongodb::bson::to_document;
+use serde::{Deserialize, Serialize};
 
 /*#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LastMessage {
@@ -38,7 +41,7 @@ pub enum Channel {
     SavedMessages {
         #[serde(rename = "_id")]
         id: String,
-        user: String
+        user: String,
     },
     DirectMessage {
         #[serde(rename = "_id")]
@@ -53,20 +56,25 @@ pub enum Channel {
         owner: String,
         description: String,
         recipients: Vec<String>,
-    }
+    },
 }
 
 impl Channel {
     pub async fn save(&self) -> Result<()> {
         get_collection("channels")
             .insert_one(
-                to_document(&self)
-                    .map_err(|_| Error::DatabaseError { operation: "to_bson", with: "channel" })?,
-                None
+                to_document(&self).map_err(|_| Error::DatabaseError {
+                    operation: "to_bson",
+                    with: "channel",
+                })?,
+                None,
             )
             .await
-            .map_err(|_| Error::DatabaseError { operation: "insert_one", with: "channel" })?;
-        
+            .map_err(|_| Error::DatabaseError {
+                operation: "insert_one",
+                with: "channel",
+            })?;
+
         Ok(())
     }
 }

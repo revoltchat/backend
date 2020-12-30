@@ -1,12 +1,12 @@
 use super::events::ClientboundNotification;
 use crate::database::get_collection;
 
+use futures::FutureExt;
 use hive_pubsub::backend::mongo::MongodbPubSub;
 use hive_pubsub::PubSub;
+use log::{debug, error};
 use once_cell::sync::OnceCell;
 use serde_json::to_string;
-use futures::FutureExt;
-use log::{error, debug};
 
 static HIVE: OnceCell<MongodbPubSub<String, String, ClientboundNotification>> = OnceCell::new();
 
@@ -35,7 +35,7 @@ pub async fn listen() {
         .fuse()
         .await
         .expect("Hive hit an error");
-    
+
     dbg!("a");
 }
 

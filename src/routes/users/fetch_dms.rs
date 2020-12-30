@@ -1,9 +1,9 @@
 use crate::database::entities::{Channel, User};
-use mongodb::bson::{Bson, doc, from_bson};
-use crate::util::result::{Error, Result};
 use crate::database::get_collection;
-use rocket_contrib::json::JsonValue;
+use crate::util::result::{Error, Result};
 use futures::StreamExt;
+use mongodb::bson::{doc, from_bson, Bson};
+use rocket_contrib::json::JsonValue;
 
 #[get("/dms")]
 pub async fn req(user: User) -> Result<JsonValue> {
@@ -21,11 +21,14 @@ pub async fn req(user: User) -> Result<JsonValue> {
                 ],
                 "recipients": user.id
             },
-            None
+            None,
         )
         .await
-        .map_err(|_| Error::DatabaseError { operation: "find", with: "channels" })?;
-    
+        .map_err(|_| Error::DatabaseError {
+            operation: "find",
+            with: "channels",
+        })?;
+
     let mut channels = vec![];
     while let Some(result) = cursor.next().await {
         if let Ok(doc) = result {
@@ -33,7 +36,5 @@ pub async fn req(user: User) -> Result<JsonValue> {
         }
     }
 
-    Ok(json!(
-        channels
-    ))
+    Ok(json!(channels))
 }

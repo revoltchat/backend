@@ -10,28 +10,28 @@ pub async fn create_database() {
     let db = get_db();
 
     db.create_collection("users", None)
-    .await
-    .expect("Failed to create users collection.");
-    
+        .await
+        .expect("Failed to create users collection.");
+
     db.create_collection("channels", None)
-    .await
-    .expect("Failed to create channels collection.");
-    
+        .await
+        .expect("Failed to create channels collection.");
+
     db.create_collection("guilds", None)
-    .await
-    .expect("Failed to create guilds collection.");
-    
+        .await
+        .expect("Failed to create guilds collection.");
+
     db.create_collection("members", None)
-    .await
-    .expect("Failed to create members collection.");
-    
+        .await
+        .expect("Failed to create members collection.");
+
     db.create_collection("messages", None)
-    .await
-    .expect("Failed to create messages collection.");
-    
+        .await
+        .expect("Failed to create messages collection.");
+
     db.create_collection("migrations", None)
-    .await
-    .expect("Failed to create migrations collection.");
+        .await
+        .expect("Failed to create migrations collection.");
 
     db.create_collection(
         "pubsub",
@@ -60,21 +60,21 @@ pub async fn create_database() {
                 }
             ]
         },
-        None
+        None,
     )
     .await
     .expect("Failed to create username index.");
 
     db.collection("migrations")
-    .insert_one(
-        doc! {
-            "_id": 0,
-            "revision": LATEST_REVISION
-        },
-        None,
-    )
-    .await
-    .expect("Failed to save migration info.");
+        .insert_one(
+            doc! {
+                "_id": 0,
+                "revision": LATEST_REVISION
+            },
+            None,
+        )
+        .await
+        .expect("Failed to save migration info.");
 
     info!("Created database.");
 }

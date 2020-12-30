@@ -26,7 +26,7 @@ pub fn get_collection(collection: &str) -> Collection {
     get_db().collection(collection)
 }
 
-pub mod permissions;
-pub mod migrations;
 pub mod entities;
 pub mod guards;
+pub mod migrations;
+pub mod permissions;

@@ -13,15 +13,15 @@ extern crate impl_ops;
 extern crate bitfield;
 extern crate ctrlc;
 
-pub mod notifications;
 pub mod database;
+pub mod notifications;
 pub mod routes;
 pub mod util;
 
-use rauth;
-use log::info;
-use futures::join;
 use async_std::task;
+use futures::join;
+use log::info;
+use rauth;
 use rocket_cors::AllowedOrigins;
 
 fn main() {
@@ -41,7 +41,8 @@ async fn entry() {
     ctrlc::set_handler(move || {
         // Force ungraceful exit to avoid hang.
         std::process::exit(0);
-    }).expect("Error setting Ctrl-C handler");
+    })
+    .expect("Error setting Ctrl-C handler");
 
     join!(
         launch_web(),
@@ -57,7 +58,7 @@ async fn launch_web() {
     }
     .to_cors()
     .expect("Failed to create CORS.");
-    
+
     let auth = rauth::auth::Auth::new(database::get_collection("accounts"));
 
     routes::mount(rauth::routes::mount(rocket::ignite(), "/auth", auth))

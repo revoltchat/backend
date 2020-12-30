@@ -2,11 +2,11 @@ pub use rocket::http::Status;
 pub use rocket::response::Redirect;
 use rocket::Rocket;
 
-mod root;
-mod users;
+mod channels;
 mod guild;
 mod onboard;
-mod channels;
+mod root;
+mod users;
 
 pub fn mount(rocket: Rocket) -> Rocket {
     rocket

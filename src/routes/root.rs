@@ -1,7 +1,7 @@
 use crate::util::variables::{DISABLE_REGISTRATION, HCAPTCHA_SITEKEY, USE_EMAIL, USE_HCAPTCHA};
 
-use rocket_contrib::json::JsonValue;
 use mongodb::bson::doc;
+use rocket_contrib::json::JsonValue;
 
 #[get("/")]
 pub async fn root() -> JsonValue {

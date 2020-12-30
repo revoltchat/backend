@@ -1,8 +1,16 @@
-use crate::{database::{entities::{User, RelationshipStatus}, get_collection, guards::reference::Ref, permissions::get_relationship}, util::result::Error};
-use rocket_contrib::json::JsonValue;
 use crate::util::result::Result;
-use mongodb::bson::doc;
+use crate::{
+    database::{
+        entities::{RelationshipStatus, User},
+        get_collection,
+        guards::reference::Ref,
+        permissions::get_relationship,
+    },
+    util::result::Error,
+};
 use futures::try_join;
+use mongodb::bson::doc;
+use rocket_contrib::json::JsonValue;
 
 #[put("/<target>/friend")]
 pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
@@ -42,7 +50,10 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                 )
             ) {
                 Ok(_) => Ok(json!({ "status": "Friend" })),
-                Err(_) => Err(Error::DatabaseError { operation: "update_one", with: "user" })
+                Err(_) => Err(Error::DatabaseError {
+                    operation: "update_one",
+                    with: "user",
+                }),
             }
         }
         RelationshipStatus::None => {
@@ -77,7 +88,10 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                 )
             ) {
                 Ok(_) => Ok(json!({ "status": "Outgoing" })),
-                Err(_) => Err(Error::DatabaseError { operation: "update_one", with: "user" })
+                Err(_) => Err(Error::DatabaseError {
+                    operation: "update_one",
+                    with: "user",
+                }),
             }
         }
     }

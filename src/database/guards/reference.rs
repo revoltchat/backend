@@ -1,10 +1,10 @@
-use mongodb::bson::{doc, from_bson, Bson};
-use crate::util::result::{Error, Result};
-use serde::{Deserialize, Serialize};
-use crate::database::get_collection;
 use crate::database::entities::*;
-use rocket::request::FromParam;
+use crate::database::get_collection;
+use crate::util::result::{Error, Result};
+use mongodb::bson::{doc, from_bson, Bson};
 use rocket::http::RawStr;
+use rocket::request::FromParam;
+use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 #[derive(Validate, Serialize, Deserialize)]
@@ -24,15 +24,20 @@ impl Ref {
                 doc! {
                     "_id": &self.id
                 },
-                None
+                None,
             )
             .await
-            .map_err(|_| Error::DatabaseError { operation: "find_one", with: "user" })?
+            .map_err(|_| Error::DatabaseError {
+                operation: "find_one",
+                with: "user",
+            })?
             .ok_or_else(|| Error::UnknownUser)?;
-        
+
         Ok(
-            from_bson(Bson::Document(doc))
-                .map_err(|_| Error::DatabaseError { operation: "from_bson", with: "user" })?
+            from_bson(Bson::Document(doc)).map_err(|_| Error::DatabaseError {
+                operation: "from_bson",
+                with: "user",
+            })?,
         )
     }
 }

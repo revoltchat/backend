@@ -1,6 +1,6 @@
+use crate::database::entities::User;
 use crate::database::guards::reference::Ref;
 use crate::util::result::{Error, Result};
-use crate::database::entities::User;
 use rocket_contrib::json::JsonValue;
 
 #[get("/<target>")]
@@ -13,7 +13,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
         if !perm.get_access() {
             Err(Error::LabelMe)?
         }
-        
+
         // Only return user relationships if the target is the caller.
         target.relations = None;
     }

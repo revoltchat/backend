@@ -1,9 +1,9 @@
 mod channel;
-mod message;
 mod guild;
+mod message;
 mod user;
 
 pub use channel::*;
-pub use message::*;
 pub use guild::*;
+pub use message::*;
 pub use user::*;

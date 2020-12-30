@@ -7,7 +7,7 @@ use std::ops;
 pub enum UserPermission {
     Access = 1,
     SendMessage = 2,
-    Invite = 4
+    Invite = 4,
 }
 
 bitfield! {
@@ -40,9 +40,7 @@ pub fn get_relationship(a: &User, b: &Ref) -> RelationshipStatus {
     }
 
     if let Some(relations) = &a.relations {
-        if let Some(relationship) = relations
-            .iter()
-            .find(|x| x.id == b.id) {
+        if let Some(relationship) = relations.iter().find(|x| x.id == b.id) {
             return relationship.status.clone();
         }
     }

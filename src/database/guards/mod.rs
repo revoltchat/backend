@@ -1,5 +1,5 @@
-pub mod user;
 pub mod reference;
+pub mod user;
 
 /*
 // ! FIXME

@@ -1,10 +1,10 @@
+use crate::database::get_collection;
+use crate::database::guards::reference::Ref;
 use mongodb::bson::{doc, from_bson, Bson};
 use rauth::auth::Session;
 use rocket::http::Status;
-use serde::{Deserialize, Serialize};
-use crate::database::guards::reference::Ref;
-use crate::database::get_collection;
 use rocket::request::{self, FromRequest, Outcome, Request};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum RelationshipStatus {
@@ -14,7 +14,7 @@ pub enum RelationshipStatus {
     Outgoing,
     Incoming,
     Blocked,
-    BlockedOther
+    BlockedOther,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -44,24 +44,29 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
             .find_one(
                 doc! {
                     "_id": &session.user_id
-                }, None
+                },
+                None,
             )
-            .await {
+            .await
+        {
             if let Some(doc) = result {
-                Outcome::Success(
-                    from_bson(Bson::Document(doc)).unwrap()
-                )
+                Outcome::Success(from_bson(Bson::Document(doc)).unwrap())
             } else {
                 Outcome::Failure((Status::Forbidden, rauth::util::Error::InvalidSession))
             }
         } else {
-            Outcome::Failure((Status::InternalServerError, rauth::util::Error::DatabaseError))
+            Outcome::Failure((
+                Status::InternalServerError,
+                rauth::util::Error::DatabaseError,
+            ))
         }
     }
 }
 
 impl User {
     pub fn as_ref(&self) -> Ref {
-        Ref { id: self.id.to_string() }
+        Ref {
+            id: self.id.to_string(),
+        }
     }
 }

@@ -1,11 +1,11 @@
-use rocket::response::{self, Responder, Response};
-use rocket::http::{ContentType, Status};
-use validator::ValidationErrors;
-use rocket::request::Request;
-use serde::Serialize;
-use std::io::Cursor;
-use snafu::Snafu;
 use json;
+use rocket::http::{ContentType, Status};
+use rocket::request::Request;
+use rocket::response::{self, Responder, Response};
+use serde::Serialize;
+use snafu::Snafu;
+use std::io::Cursor;
+use validator::ValidationErrors;
 
 #[derive(Serialize, Debug, Snafu)]
 #[serde(tag = "type")]
@@ -16,7 +16,7 @@ pub enum Error {
     // ? Onboarding related errors.
     #[snafu(display("Already finished onboarding."))]
     AlreadyOnboarded,
-    
+
     // ? User related errors.
     #[snafu(display("Username has already been taken."))]
     UsernameTaken,
@@ -35,7 +35,10 @@ pub enum Error {
     #[snafu(display("Failed to validate fields."))]
     FailedValidation { error: ValidationErrors },
     #[snafu(display("Encountered a database error."))]
-    DatabaseError { operation: &'static str, with: &'static str },
+    DatabaseError {
+        operation: &'static str,
+        with: &'static str,
+    },
     #[snafu(display("Internal server error."))]
     InternalError,
     #[snafu(display("This request had no effect."))]

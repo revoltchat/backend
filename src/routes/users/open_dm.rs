@@ -1,9 +1,9 @@
 use crate::database::entities::{Channel, User};
+use crate::database::get_collection;
 use crate::database::guards::reference::Ref;
 use crate::util::result::{Error, Result};
-use crate::database::get_collection;
-use rocket_contrib::json::JsonValue;
 use mongodb::bson::doc;
+use rocket_contrib::json::JsonValue;
 use ulid::Ulid;
 
 #[get("/<target>/dm")]
@@ -25,25 +25,22 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
     let existing_channel = get_collection("channels")
         .find_one(query, None)
         .await
-        .map_err(|_| Error::DatabaseError { operation: "find_one", with: "channel" })?;
+        .map_err(|_| Error::DatabaseError {
+            operation: "find_one",
+            with: "channel",
+        })?;
 
     if let Some(doc) = existing_channel {
         Ok(json!(doc))
     } else {
         let id = Ulid::new().to_string();
         let channel = if user.id == target.id {
-            Channel::SavedMessages {
-                id,
-                user: user.id
-            }
+            Channel::SavedMessages { id, user: user.id }
         } else {
             Channel::DirectMessage {
                 id,
                 active: false,
-                recipients: vec! [
-                    user.id,
-                    target.id
-                ]
+                recipients: vec![user.id, target.id],
             }
         };
 
