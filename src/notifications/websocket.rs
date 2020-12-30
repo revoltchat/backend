@@ -1,6 +1,6 @@
 use crate::database::get_collection;
-use crate::{database::entities::User, util::variables::WS_HOST};
 use crate::database::guards::reference::Ref;
+use crate::util::variables::WS_HOST;
 
 use super::subscriptions;
 
@@ -10,15 +10,18 @@ use async_tungstenite::tungstenite::Message;
 use futures::channel::mpsc::{unbounded, UnboundedSender};
 use futures::stream::TryStreamExt;
 use futures::{pin_mut, prelude::*};
+use hive_pubsub::PubSub;
 use log::{debug, info};
 use many_to_many::ManyToMany;
 use rauth::auth::{Auth, Session};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex, RwLock};
-use hive_pubsub::PubSub;
 
-use super::{events::{ClientboundNotification, ServerboundNotification, WebSocketError}, hive::get_hive};
+use super::{
+    events::{ClientboundNotification, ServerboundNotification, WebSocketError},
+    hive::get_hive,
+};
 
 type Tx = UnboundedSender<Message>;
 type PeerMap = Arc<Mutex<HashMap<SocketAddr, Tx>>>;
@@ -54,9 +57,7 @@ async fn accept(stream: TcpStream) {
     CONNECTIONS.lock().unwrap().insert(addr, tx.clone());
 
     let send = |notification: ClientboundNotification| {
-        if let Ok(response) = serde_json::to_string(
-            &notification,
-        ) {
+        if let Ok(response) = serde_json::to_string(&notification) {
             if let Err(_) = tx.unbounded_send(Message::Text(response)) {
                 debug!("Failed unbounded_send to websocket stream.");
             }
@@ -71,8 +72,10 @@ async fn accept(stream: TcpStream) {
                 match notification {
                     ServerboundNotification::Authenticate(new_session) => {
                         if session.is_some() {
-                            send(ClientboundNotification::Error(WebSocketError::AlreadyAuthenticated));
-                            return future::ok(())
+                            send(ClientboundNotification::Error(
+                                WebSocketError::AlreadyAuthenticated,
+                            ));
+                            return future::ok(());
                         }
 
                         match task::block_on(
@@ -80,29 +83,41 @@ async fn accept(stream: TcpStream) {
                         ) {
                             Ok(validated_session) => {
                                 match task::block_on(
-                                    Ref { id: validated_session.user_id.clone() }
-                                    .fetch_user()
+                                    Ref {
+                                        id: validated_session.user_id.clone(),
+                                    }
+                                    .fetch_user(),
                                 ) {
                                     Ok(user) => {
                                         if let Ok(mut map) = USERS.write() {
                                             map.insert(validated_session.user_id.clone(), addr);
                                             session = Some(validated_session);
-                                            if let Ok(_) = task::block_on(subscriptions::generate_subscriptions(&user)) {
+                                            if let Ok(_) = task::block_on(
+                                                subscriptions::generate_subscriptions(&user),
+                                            ) {
                                                 send(ClientboundNotification::Authenticated);
                                             } else {
-                                                send(ClientboundNotification::Error(WebSocketError::InternalError));
+                                                send(ClientboundNotification::Error(
+                                                    WebSocketError::InternalError,
+                                                ));
                                             }
                                         } else {
-                                            send(ClientboundNotification::Error(WebSocketError::InternalError));
+                                            send(ClientboundNotification::Error(
+                                                WebSocketError::InternalError,
+                                            ));
                                         }
-                                    },
+                                    }
                                     Err(_) => {
-                                        send(ClientboundNotification::Error(WebSocketError::OnboardingNotFinished));
+                                        send(ClientboundNotification::Error(
+                                            WebSocketError::OnboardingNotFinished,
+                                        ));
                                     }
                                 }
                             }
                             Err(_) => {
-                                send(ClientboundNotification::Error(WebSocketError::InvalidSession));
+                                send(ClientboundNotification::Error(
+                                    WebSocketError::InvalidSession,
+                                ));
                             }
                         }
                     }

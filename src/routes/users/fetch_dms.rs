@@ -1,8 +1,8 @@
-use crate::database::entities::{Channel, User};
+use crate::database::entities::User;
 use crate::database::get_collection;
 use crate::util::result::{Error, Result};
 use futures::StreamExt;
-use mongodb::bson::{doc, from_bson, Bson};
+use mongodb::bson::doc;
 use rocket_contrib::json::JsonValue;
 
 #[get("/dms")]

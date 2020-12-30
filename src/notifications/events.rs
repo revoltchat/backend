@@ -1,7 +1,6 @@
 use rauth::auth::Session;
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
-use hive_pubsub::PubSub;
 
 use crate::database::entities::RelationshipStatus;
 
@@ -89,7 +88,6 @@ pub enum ClientboundNotification {
     GuildDelete {
         id: String,
     },*/
-    
     UserRelationship {
         id: String,
         user: String,
