@@ -1,4 +1,4 @@
-use crate::util::result::Result;
+use crate::{notifications::{events::ClientboundNotification, hive}, util::result::Result};
 use crate::{
     database::entities::RelationshipStatus, database::entities::User, database::get_collection,
     database::guards::reference::Ref, database::permissions::get_relationship, util::result::Error,
@@ -31,6 +31,12 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                 operation: "update_one",
                 with: "user",
             })?;
+
+            ClientboundNotification::UserRelationship {
+                id: user.id.clone(),
+                user: target.id.clone(),
+                status: RelationshipStatus::Blocked
+            }.publish(user.id.clone()).await.ok();
 
             Ok(json!({ "status": "Blocked" }))
         }
@@ -65,7 +71,25 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                     None
                 )
             ) {
-                Ok(_) => Ok(json!({ "status": "Blocked" })),
+                Ok(_) => {
+                    try_join!(
+                        ClientboundNotification::UserRelationship {
+                            id: user.id.clone(),
+                            user: target.id.clone(),
+                            status: RelationshipStatus::Blocked
+                        }.publish(user.id.clone()),
+                        ClientboundNotification::UserRelationship {
+                            id: target.id.clone(),
+                            user: user.id.clone(),
+                            status: RelationshipStatus::BlockedOther
+                        }.publish(target.id.clone())
+                    ).ok();
+
+                    hive::subscribe_if_exists(user.id.clone(), target.id.clone()).ok();
+                    hive::subscribe_if_exists(target.id.clone(), user.id.clone()).ok();
+
+                    Ok(json!({ "status": "Blocked" }))
+                },
                 Err(_) => Err(Error::DatabaseError {
                     operation: "update_one",
                     with: "user",
@@ -101,7 +125,22 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                     None
                 )
             ) {
-                Ok(_) => Ok(json!({ "status": "Blocked" })),
+                Ok(_) => {
+                    try_join!(
+                        ClientboundNotification::UserRelationship {
+                            id: user.id.clone(),
+                            user: target.id.clone(),
+                            status: RelationshipStatus::Blocked
+                        }.publish(user.id.clone()),
+                        ClientboundNotification::UserRelationship {
+                            id: target.id.clone(),
+                            user: user.id.clone(),
+                            status: RelationshipStatus::BlockedOther
+                        }.publish(target.id.clone())
+                    ).ok();
+                    
+                    Ok(json!({ "status": "Blocked" }))
+                },
                 Err(_) => Err(Error::DatabaseError {
                     operation: "update_one",
                     with: "user",

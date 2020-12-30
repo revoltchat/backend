@@ -1,4 +1,4 @@
-use crate::util::result::Result;
+use crate::{notifications::{events::ClientboundNotification, hive}, util::result::Result};
 use crate::{
     database::entities::RelationshipStatus, database::entities::User, database::get_collection,
     database::guards::reference::Ref, database::permissions::get_relationship, util::result::Error,
@@ -39,6 +39,12 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                         with: "user",
                     })?;
 
+                    ClientboundNotification::UserRelationship {
+                        id: user.id.clone(),
+                        user: target.id.clone(),
+                        status: RelationshipStatus::BlockedOther
+                    }.publish(user.id.clone()).await.ok();
+
                     Ok(json!({ "status": "BlockedOther" }))
                 }
                 RelationshipStatus::BlockedOther => {
@@ -70,7 +76,26 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                             None
                         )
                     ) {
-                        Ok(_) => Ok(json!({ "status": "None" })),
+                        Ok(_) => {
+                            try_join!(
+                                ClientboundNotification::UserRelationship {
+                                    id: user.id.clone(),
+                                    user: target.id.clone(),
+                                    status: RelationshipStatus::None
+                                }.publish(user.id.clone()),
+                                ClientboundNotification::UserRelationship {
+                                    id: target.id.clone(),
+                                    user: user.id.clone(),
+                                    status: RelationshipStatus::None
+                                }.publish(target.id.clone())
+                            ).ok();
+                            
+                            let hive = hive::get_hive();
+                            hive.unsubscribe(&user.id, &target.id).ok();
+                            hive.unsubscribe(&target.id, &user.id).ok();
+                            
+                            Ok(json!({ "status": "None" }))
+                        },
                         Err(_) => Err(Error::DatabaseError {
                             operation: "update_one",
                             with: "user",
