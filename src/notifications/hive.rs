@@ -1,4 +1,4 @@
-use super::events::ClientboundNotification;
+use super::{events::ClientboundNotification, websocket};
 use crate::database::get_collection;
 
 use futures::FutureExt;
@@ -8,14 +8,15 @@ use log::{debug, error};
 use once_cell::sync::OnceCell;
 use serde_json::to_string;
 
-static HIVE: OnceCell<MongodbPubSub<String, String, ClientboundNotification>> = OnceCell::new();
+type Hive = MongodbPubSub<String, String, ClientboundNotification>;
+static HIVE: OnceCell<Hive> = OnceCell::new();
 
 pub async fn init_hive() {
     let hive = MongodbPubSub::new(
-        |_ids, notification| {
+        |ids, notification| {
             if let Ok(data) = to_string(&notification) {
                 debug!("Pushing out notification. {}", data);
-                // ! FIXME: push to websocket
+                websocket::publish(ids, notification);
             } else {
                 error!("Failed to serialise notification.");
             }
@@ -39,12 +40,7 @@ pub async fn listen() {
     dbg!("a");
 }
 
-pub fn publish(topic: &String, data: ClientboundNotification) -> Result<(), String> {
-    let hive = HIVE.get().unwrap();
-    hive.publish(topic, data)
-}
-
-pub fn subscribe(user: String, topics: Vec<String>) -> Result<(), String> {
+pub fn subscribe_multiple(user: String, topics: Vec<String>) -> Result<(), String> {
     let hive = HIVE.get().unwrap();
     for topic in topics {
         hive.subscribe(user.clone(), topic)?;
@@ -53,16 +49,15 @@ pub fn subscribe(user: String, topics: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
-pub fn drop_user(user: &String) -> Result<(), String> {
+pub fn subscribe_if_exists(user: String, topic: String) -> Result<(), String> {
     let hive = HIVE.get().unwrap();
-    hive.drop_client(user)?;
+    if hive.hive.map.lock().unwrap().get_left(&user).is_some() {
+        hive.subscribe(user, topic)?;
+    }
 
     Ok(())
 }
 
-pub fn drop_topic(topic: &String) -> Result<(), String> {
-    let hive = HIVE.get().unwrap();
-    hive.drop_topic(topic)?;
-
-    Ok(())
+pub fn get_hive() -> &'static Hive {
+    HIVE.get().unwrap()
 }

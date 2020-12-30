@@ -1,15 +1,25 @@
 use rauth::auth::Session;
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
+use hive_pubsub::PubSub;
+
+use crate::database::entities::RelationshipStatus;
+
+use super::hive::get_hive;
 
 #[derive(Serialize, Deserialize, Debug, Snafu)]
 #[serde(tag = "type")]
 pub enum WebSocketError {
     #[snafu(display("This error has not been labelled."))]
     LabelMe,
-
     #[snafu(display("Internal server error."))]
     InternalError,
+    #[snafu(display("Invalid session."))]
+    InvalidSession,
+    #[snafu(display("User hasn't completed onboarding."))]
+    OnboardingNotFinished,
+    #[snafu(display("Already authenticated with server."))]
+    AlreadyAuthenticated,
 }
 
 #[derive(Deserialize, Debug)]
@@ -22,6 +32,7 @@ pub enum ServerboundNotification {
 #[serde(tag = "type")]
 pub enum ClientboundNotification {
     Error(WebSocketError),
+    Authenticated,
 
     /*MessageCreate {
         id: String,
@@ -78,9 +89,16 @@ pub enum ClientboundNotification {
     GuildDelete {
         id: String,
     },*/
+    
     UserRelationship {
         id: String,
         user: String,
-        status: i32,
+        status: RelationshipStatus,
     },
+}
+
+impl ClientboundNotification {
+    pub async fn publish(self, topic: String) -> Result<(), String> {
+        hive_pubsub::backend::mongo::publish(get_hive(), &topic, self).await
+    }
 }

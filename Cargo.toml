@@ -15,7 +15,7 @@ async-tungstenite = { version = "0.10.0", features = ["async-std-runtime"] }
 rauth = { git = "https://gitlab.insrt.uk/insert/rauth" }
 async-std = { version = "1.8.0", features = ["tokio02"] }
 
-hive_pubsub = { version = "0.4.1", features = ["mongo"] }
+hive_pubsub = { git = "https://gitlab.insrt.uk/insert/hive", features = ["mongo"] }
 rocket_cors = { git = "https://github.com/lawliet89/rocket_cors", branch = "master" }
 rocket_contrib = { git = "https://github.com/SergioBenitez/Rocket", branch = "master" }
 rocket = { git = "https://github.com/SergioBenitez/Rocket", branch = "master", default-features = false }
