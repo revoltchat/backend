@@ -1,4 +1,4 @@
-use crate::util::variables::{DISABLE_REGISTRATION, HCAPTCHA_SITEKEY, USE_EMAIL, USE_HCAPTCHA};
+use crate::util::variables::{DISABLE_REGISTRATION, HCAPTCHA_SITEKEY, USE_EMAIL, USE_HCAPTCHA, EXTERNAL_WS_URL};
 
 use mongodb::bson::doc;
 use rocket_contrib::json::JsonValue;
@@ -14,6 +14,7 @@ pub async fn root() -> JsonValue {
                 "key": HCAPTCHA_SITEKEY.to_string()
             },
             "email": *USE_EMAIL,
-        }
+        },
+        "ws": *EXTERNAL_WS_URL,
     })
 }
