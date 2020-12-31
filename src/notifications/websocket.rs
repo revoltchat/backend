@@ -96,6 +96,7 @@ async fn accept(stream: TcpStream) {
                                                 subscriptions::generate_subscriptions(&user),
                                             ) {
                                                 send(ClientboundNotification::Authenticated);
+                                                send(ClientboundNotification::Ready { user });
                                             } else {
                                                 send(ClientboundNotification::Error(
                                                     WebSocketError::InternalError,

@@ -13,13 +13,29 @@ use crate::{
 };
 use futures::try_join;
 use mongodb::bson::doc;
+use mongodb::options::{FindOneOptions, Collation};
 use rocket_contrib::json::JsonValue;
 
-#[put("/<target>/friend")]
-pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
+#[put("/<username>/friend")]
+pub async fn req(user: User, username: String) -> Result<JsonValue> {
     let col = get_collection("users");
+    let doc = col.find_one(
+        doc! {
+            "username": username
+        },
+        FindOneOptions::builder()
+            .collation(Collation::builder().locale("en").strength(2).build())
+            .build(),
+    )
+    .await
+    .map_err(|_| Error::DatabaseError { operation: "find_one", with: "user" })?
+    .ok_or_else(|| Error::UnknownUser)?;
 
-    match get_relationship(&user, &target) {
+    let target_id = doc
+        .get_str("_id")
+        .map_err(|_| Error::DatabaseError { operation: "get_str(_id)", with: "user" })?;
+
+    match get_relationship(&user, &Ref { id: target_id.to_string() }) {
         RelationshipStatus::User => return Err(Error::NoEffect),
         RelationshipStatus::Friend => return Err(Error::AlreadyFriends),
         RelationshipStatus::Outgoing => return Err(Error::AlreadySentRequest),
@@ -30,7 +46,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                 col.update_one(
                     doc! {
                         "_id": &user.id,
-                        "relations._id": &target.id
+                        "relations._id": target_id
                     },
                     doc! {
                         "$set": {
@@ -41,7 +57,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                 ),
                 col.update_one(
                     doc! {
-                        "_id": &target.id,
+                        "_id": target_id,
                         "relations._id": &user.id
                     },
                     doc! {
@@ -56,16 +72,16 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                     try_join!(
                         ClientboundNotification::UserRelationship {
                             id: user.id.clone(),
-                            user: target.id.clone(),
+                            user: target_id.to_string(),
                             status: RelationshipStatus::Friend
                         }
                         .publish(user.id.clone()),
                         ClientboundNotification::UserRelationship {
-                            id: target.id.clone(),
+                            id: target_id.to_string(),
                             user: user.id.clone(),
                             status: RelationshipStatus::Friend
                         }
-                        .publish(target.id.clone())
+                        .publish(target_id.to_string())
                     )
                     .ok();
 
@@ -86,7 +102,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                     doc! {
                         "$push": {
                             "relations": {
-                                "_id": &target.id,
+                                "_id": target_id,
                                 "status": "Outgoing"
                             }
                         }
@@ -95,7 +111,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                 ),
                 col.update_one(
                     doc! {
-                        "_id": &target.id
+                        "_id": target_id
                     },
                     doc! {
                         "$push": {
@@ -112,21 +128,21 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                     try_join!(
                         ClientboundNotification::UserRelationship {
                             id: user.id.clone(),
-                            user: target.id.clone(),
+                            user: target_id.to_string(),
                             status: RelationshipStatus::Outgoing
                         }
                         .publish(user.id.clone()),
                         ClientboundNotification::UserRelationship {
-                            id: target.id.clone(),
+                            id: target_id.to_string(),
                             user: user.id.clone(),
                             status: RelationshipStatus::Incoming
                         }
-                        .publish(target.id.clone())
+                        .publish(target_id.to_string())
                     )
                     .ok();
 
-                    hive::subscribe_if_exists(user.id.clone(), target.id.clone()).ok();
-                    hive::subscribe_if_exists(target.id.clone(), user.id.clone()).ok();
+                    hive::subscribe_if_exists(user.id.clone(), target_id.to_string()).ok();
+                    hive::subscribe_if_exists(target_id.to_string(), user.id.clone()).ok();
 
                     Ok(json!({ "status": "Outgoing" }))
                 }

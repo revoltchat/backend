@@ -3,3 +3,4 @@ Rocket.toml
 **/*.rs.bk
 .mongo
 .env
+avatar.png

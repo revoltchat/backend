@@ -2,12 +2,12 @@ use rauth::auth::Session;
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
 
-use crate::database::entities::RelationshipStatus;
+use crate::database::entities::{RelationshipStatus, User};
 
 use super::hive::get_hive;
 
 #[derive(Serialize, Deserialize, Debug, Snafu)]
-#[serde(tag = "type")]
+#[serde(tag = "error")]
 pub enum WebSocketError {
     #[snafu(display("This error has not been labelled."))]
     LabelMe,
@@ -32,6 +32,9 @@ pub enum ServerboundNotification {
 pub enum ClientboundNotification {
     Error(WebSocketError),
     Authenticated,
+    Ready {
+        user: User
+    },
 
     /*MessageCreate {
         id: String,

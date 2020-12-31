@@ -1,6 +1,7 @@
 use rocket::Route;
 
 mod add_friend;
+mod get_avatar;
 mod block_user;
 mod fetch_dms;
 mod fetch_relationship;
@@ -14,9 +15,12 @@ pub fn routes() -> Vec<Route> {
     routes![
         // User Information
         fetch_user::req,
+        get_avatar::req,
+
         // Direct Messaging
         fetch_dms::req,
         open_dm::req,
+
         // Relationships
         fetch_relationships::req,
         fetch_relationship::req,

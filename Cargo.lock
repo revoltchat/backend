@@ -983,8 +983,9 @@ checksum = "644f9158b2f133fd50f5fb3242878846d9eb792e445c893805ff0e3824006e35"
 
 [[package]]
 name = "hive_pubsub"
-version = "0.4.2"
-source = "git+https://gitlab.insrt.uk/insert/hive#7ab66da23bc86b6fa6497aac928d29d4b885a878"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "83760410241f6db418bb15e54b506a0887e7240286e29e5b0d2d88f5d1659b24"
 dependencies = [
  "futures",
  "many-to-many",
