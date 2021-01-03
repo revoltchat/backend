@@ -1,4 +1,4 @@
-use crate::database::entities::User;
+use crate::database::entities::{RelationshipStatus, User};
 use crate::database::guards::reference::Ref;
 use crate::util::result::{Error, Result};
 use rocket_contrib::json::JsonValue;
@@ -16,6 +16,19 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
 
         // Only return user relationships if the target is the caller.
         target.relations = None;
+
+        // Add relevant relationship
+        if let Some(relationships) = &user.relations {
+            target.relationship = relationships
+                .iter()
+                .find(|x| x.id == user.id)
+                .map(|x| x.status.clone())
+                .or_else(|| Some(RelationshipStatus::None));
+        } else {
+            target.relationship = Some(RelationshipStatus::None);
+        }
+    } else {
+        target.relationship = Some(RelationshipStatus::User);
     }
 
     Ok(json!(target))
