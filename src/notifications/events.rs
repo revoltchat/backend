@@ -33,7 +33,7 @@ pub enum ClientboundNotification {
     Error(WebSocketError),
     Authenticated,
     Ready {
-        user: User
+        users: Vec<User>
     },
 
     /*MessageCreate {

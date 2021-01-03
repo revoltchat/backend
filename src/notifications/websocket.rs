@@ -96,7 +96,19 @@ async fn accept(stream: TcpStream) {
                                                 subscriptions::generate_subscriptions(&user),
                                             ) {
                                                 send(ClientboundNotification::Authenticated);
-                                                send(ClientboundNotification::Ready { user });
+
+                                                match task::block_on(
+                                                    user.generate_ready_payload()
+                                                ) {
+                                                    Ok(payload) => {
+                                                    send(payload);
+                                                    }
+                                                    Err(_) => {
+                                                        send(ClientboundNotification::Error(
+                                                            WebSocketError::InternalError,
+                                                        ));
+                                                    }
+                                                }
                                             } else {
                                                 send(ClientboundNotification::Error(
                                                     WebSocketError::InternalError,
