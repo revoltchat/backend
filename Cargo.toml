@@ -13,7 +13,7 @@ impl_ops = "0.1.1"
 ctrlc = { version = "3.0", features = ["termination"] }
 async-tungstenite = { version = "0.10.0", features = ["async-std-runtime"] }
 rauth = { git = "https://gitlab.insrt.uk/insert/rauth" }
-async-std = { version = "1.8.0", features = ["tokio02"] }
+async-std = { version = "1.8.0", features = ["tokio02", "attributes"] }
 
 hive_pubsub = { version = "0.4.3", features = ["mongo"] }
 rocket_cors = { git = "https://github.com/lawliet89/rocket_cors", branch = "master" }

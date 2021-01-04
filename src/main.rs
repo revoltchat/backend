@@ -18,17 +18,13 @@ pub mod notifications;
 pub mod routes;
 pub mod util;
 
-use async_std::task;
 use futures::join;
 use log::info;
 use rauth;
 use rocket_cors::AllowedOrigins;
 
-fn main() {
-    task::block_on(entry())
-}
-
-async fn entry() {
+#[async_std::main]
+async fn main() {
     dotenv::dotenv().ok();
     env_logger::init_from_env(env_logger::Env::default().filter_or("RUST_LOG", "info"));
 
