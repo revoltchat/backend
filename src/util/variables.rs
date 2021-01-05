@@ -42,12 +42,8 @@ lazy_static! {
 pub fn preflight_checks() {
     if *USE_EMAIL == false {
         #[cfg(not(debug_assertions))]
-        {
-            if !env::var("REVOLT_UNSAFE_NO_EMAIL").map_or(false, |v| v == *"1") {
-                panic!(
-                    "Not letting you run this in production, set REVOLT_UNSAFE_NO_EMAIL=1 to run."
-                );
-            }
+        if !env::var("REVOLT_UNSAFE_NO_EMAIL").map_or(false, |v| v == *"1") {
+            panic!("Running in production without email is not recommended, set REVOLT_UNSAFE_NO_EMAIL=1 to override.");
         }
 
         #[cfg(debug_assertions)]
@@ -56,10 +52,8 @@ pub fn preflight_checks() {
 
     if *USE_HCAPTCHA == false {
         #[cfg(not(debug_assertions))]
-        {
-            if !env::var("REVOLT_UNSAFE_NO_CAPTCHA").map_or(false, |v| v == *"1") {
-                panic!("Not letting you run this in production, set REVOLT_UNSAFE_NO_CAPTCHA=1 to run.");
-            }
+        if !env::var("REVOLT_UNSAFE_NO_CAPTCHA").map_or(false, |v| v == *"1") {
+            panic!("Running in production without CAPTCHA is not recommended, set REVOLT_UNSAFE_NO_CAPTCHA=1 to override.");
         }
 
         #[cfg(debug_assertions)]

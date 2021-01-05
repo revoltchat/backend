@@ -16,10 +16,6 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
     let col = get_collection("users");
 
     match get_relationship(&user, &target) {
-        RelationshipStatus::Blocked
-        | RelationshipStatus::BlockedOther
-        | RelationshipStatus::User
-        | RelationshipStatus::None => Err(Error::NoEffect),
         RelationshipStatus::Friend
         | RelationshipStatus::Outgoing
         | RelationshipStatus::Incoming => {
@@ -80,5 +76,6 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                 }),
             }
         }
+        _ => Err(Error::NoEffect),
     }
 }

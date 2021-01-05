@@ -13,29 +13,39 @@ use crate::{
 };
 use futures::try_join;
 use mongodb::bson::doc;
-use mongodb::options::{FindOneOptions, Collation};
+use mongodb::options::{Collation, FindOneOptions};
 use rocket_contrib::json::JsonValue;
 
 #[put("/<username>/friend")]
 pub async fn req(user: User, username: String) -> Result<JsonValue> {
     let col = get_collection("users");
-    let doc = col.find_one(
-        doc! {
-            "username": username
+    let doc = col
+        .find_one(
+            doc! {
+                "username": username
+            },
+            FindOneOptions::builder()
+                .collation(Collation::builder().locale("en").strength(2).build())
+                .build(),
+        )
+        .await
+        .map_err(|_| Error::DatabaseError {
+            operation: "find_one",
+            with: "user",
+        })?
+        .ok_or_else(|| Error::UnknownUser)?;
+
+    let target_id = doc.get_str("_id").map_err(|_| Error::DatabaseError {
+        operation: "get_str(_id)",
+        with: "user",
+    })?;
+
+    match get_relationship(
+        &user,
+        &Ref {
+            id: target_id.to_string(),
         },
-        FindOneOptions::builder()
-            .collation(Collation::builder().locale("en").strength(2).build())
-            .build(),
-    )
-    .await
-    .map_err(|_| Error::DatabaseError { operation: "find_one", with: "user" })?
-    .ok_or_else(|| Error::UnknownUser)?;
-
-    let target_id = doc
-        .get_str("_id")
-        .map_err(|_| Error::DatabaseError { operation: "get_str(_id)", with: "user" })?;
-
-    match get_relationship(&user, &Ref { id: target_id.to_string() }) {
+    ) {
         RelationshipStatus::User => return Err(Error::NoEffect),
         RelationshipStatus::Friend => return Err(Error::AlreadyFriends),
         RelationshipStatus::Outgoing => return Err(Error::AlreadySentRequest),
