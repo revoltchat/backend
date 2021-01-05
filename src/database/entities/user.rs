@@ -1,11 +1,18 @@
-use crate::{database::get_collection, notifications::events::ClientboundNotification, util::result::{Error, Result}};
 use crate::database::guards::reference::Ref;
-use mongodb::{bson::{doc, from_bson, Bson}, options::FindOptions};
+use crate::{
+    database::get_collection,
+    notifications::events::ClientboundNotification,
+    util::result::{Error, Result},
+};
+use futures::StreamExt;
+use mongodb::{
+    bson::{doc, from_bson, Bson},
+    options::FindOptions,
+};
 use rauth::auth::Session;
 use rocket::http::Status;
 use rocket::request::{self, FromRequest, Outcome, Request};
 use serde::{Deserialize, Serialize};
-use futures::StreamExt;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum RelationshipStatus {
@@ -35,7 +42,7 @@ pub struct User {
 
     // ? This should never be pushed to the collection.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub relationship: Option<RelationshipStatus>
+    pub relationship: Option<RelationshipStatus>,
 }
 
 #[rocket::async_trait]
@@ -77,13 +84,13 @@ impl User {
 
     pub async fn generate_ready_payload(self) -> Result<ClientboundNotification> {
         let mut users = vec![];
-        
+
         if let Some(relationships) = &self.relations {
             let user_ids: Vec<String> = relationships
                 .iter()
                 .map(|relationship| relationship.id.clone())
                 .collect();
-            
+
             let mut cursor = get_collection("users")
                 .find(
                     doc! {
@@ -93,23 +100,29 @@ impl User {
                     },
                     FindOptions::builder()
                         .projection(doc! { "_id": 1, "username": 1 })
-                        .build()
+                        .build(),
                 )
                 .await
-                .map_err(|_| Error::DatabaseError { operation: "find", with: "users" })?;
-            
+                .map_err(|_| Error::DatabaseError {
+                    operation: "find",
+                    with: "users",
+                })?;
+
             while let Some(result) = cursor.next().await {
                 if let Ok(doc) = result {
-                    let mut user: User = from_bson(Bson::Document(doc))
-                        .map_err(|_| Error::DatabaseError { operation: "from_bson", with: "user" })?;
-                    
+                    let mut user: User =
+                        from_bson(Bson::Document(doc)).map_err(|_| Error::DatabaseError {
+                            operation: "from_bson",
+                            with: "user",
+                        })?;
+
                     user.relationship = Some(
                         relationships
                             .iter()
                             .find(|x| user.id == x.id)
                             .ok_or_else(|| Error::InternalError)?
                             .status
-                            .clone()
+                            .clone(),
                     );
 
                     users.push(user);

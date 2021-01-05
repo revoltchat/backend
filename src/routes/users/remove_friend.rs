@@ -75,7 +75,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                     with: "user",
                 }),
             }
-        },
+        }
         _ => Err(Error::NoEffect),
     }
 }

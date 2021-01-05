@@ -97,11 +97,10 @@ async fn accept(stream: TcpStream) {
                                             ) {
                                                 send(ClientboundNotification::Authenticated);
 
-                                                match task::block_on(
-                                                    user.generate_ready_payload()
-                                                ) {
+                                                match task::block_on(user.generate_ready_payload())
+                                                {
                                                     Ok(payload) => {
-                                                    send(payload);
+                                                        send(payload);
                                                     }
                                                     Err(_) => {
                                                         send(ClientboundNotification::Error(

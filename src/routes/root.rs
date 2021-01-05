@@ -1,4 +1,6 @@
-use crate::util::variables::{DISABLE_REGISTRATION, HCAPTCHA_SITEKEY, USE_EMAIL, USE_HCAPTCHA, EXTERNAL_WS_URL};
+use crate::util::variables::{
+    DISABLE_REGISTRATION, EXTERNAL_WS_URL, HCAPTCHA_SITEKEY, USE_EMAIL, USE_HCAPTCHA,
+};
 
 use mongodb::bson::doc;
 use rocket_contrib::json::JsonValue;

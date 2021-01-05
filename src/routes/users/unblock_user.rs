@@ -108,7 +108,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                 }
                 _ => Err(Error::InternalError),
             }
-        },
+        }
         _ => Err(Error::NoEffect),
     }
 }
