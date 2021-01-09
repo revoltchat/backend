@@ -9,7 +9,9 @@ use mongodb::{
     options::FindOptions,
 };
 
-pub async fn generate_ready(user: User) -> Result<ClientboundNotification> {
+use super::websocket::is_online;
+
+pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
     let mut users = vec![];
 
     if let Some(relationships) = &user.relations {
@@ -52,11 +54,14 @@ pub async fn generate_ready(user: User) -> Result<ClientboundNotification> {
                         .clone(),
                 );
 
+                user.online = Some(is_online(&user.id));
+
                 users.push(user);
             }
         }
     }
 
+    user.online = Some(is_online(&user.id));
     users.push(user);
 
     Ok(ClientboundNotification::Ready { users })

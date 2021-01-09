@@ -1,4 +1,4 @@
-use crate::database::*;
+use crate::{database::*, notifications::websocket::is_online};
 use crate::util::result::{Error, Result};
 
 use rocket_contrib::json::JsonValue;
@@ -30,6 +30,8 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
     } else {
         target.relationship = Some(RelationshipStatus::User);
     }
+
+    target.online = Some(is_online(&target.id));
 
     Ok(json!(target))
 }

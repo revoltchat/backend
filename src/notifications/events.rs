@@ -11,7 +11,7 @@ pub enum WebSocketError {
     #[snafu(display("This error has not been labelled."))]
     LabelMe,
     #[snafu(display("Internal server error."))]
-    InternalError,
+    InternalError { at: String },
     #[snafu(display("Invalid session."))]
     InvalidSession,
     #[snafu(display("User hasn't completed onboarding."))]
@@ -90,11 +90,17 @@ pub enum ClientboundNotification {
     GuildDelete {
         id: String,
     },*/
+
     UserRelationship {
         id: String,
         user: String,
         status: RelationshipStatus,
     },
+
+    UserPresence {
+        id: String,
+        online: bool
+    }
 }
 
 impl ClientboundNotification {

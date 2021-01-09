@@ -63,81 +63,104 @@ async fn accept(stream: TcpStream) {
         }
     };
 
-    let mut session: Option<Session> = None;
+    let session: Arc<Mutex<Option<Session>>> = Arc::new(Mutex::new(None));
+    let mutex_generator = || { session.clone() };
     let fwd = rx.map(Ok).forward(write);
-    let incoming = read.try_for_each(|msg| {
+    let incoming = read.try_for_each(async move |msg| {
+        let mutex = mutex_generator();
+        //dbg!(&mutex.lock().unwrap());
+
         if let Message::Text(text) = msg {
             if let Ok(notification) = serde_json::from_str::<ServerboundNotification>(&text) {
                 match notification {
                     ServerboundNotification::Authenticate(new_session) => {
-                        if session.is_some() {
-                            send(ClientboundNotification::Error(
-                                WebSocketError::AlreadyAuthenticated,
-                            ));
-                            return future::ok(());
+                        {
+                            if mutex.lock().unwrap().is_some() {
+                                send(ClientboundNotification::Error(
+                                    WebSocketError::AlreadyAuthenticated,
+                                ));
+                                
+                                return Ok(())
+                            }
                         }
 
-                        match task::block_on(
-                            Auth::new(get_collection("accounts")).verify_session(new_session),
-                        ) {
-                            Ok(validated_session) => {
-                                match task::block_on(
-                                    Ref {
-                                        id: validated_session.user_id.clone(),
-                                    }
-                                    .fetch_user(),
-                                ) {
-                                    Ok(user) => {
-                                        if let Ok(mut map) = USERS.write() {
-                                            map.insert(validated_session.user_id.clone(), addr);
-                                            session = Some(validated_session);
-                                            if let Ok(_) = task::block_on(
-                                                subscriptions::generate_subscriptions(&user),
-                                            ) {
-                                                send(ClientboundNotification::Authenticated);
-
-                                                match task::block_on(
-                                                    super::payload::generate_ready(user),
-                                                ) {
-                                                    Ok(payload) => {
-                                                        send(payload);
-                                                    }
-                                                    Err(_) => {
-                                                        send(ClientboundNotification::Error(
-                                                            WebSocketError::InternalError,
-                                                        ));
-                                                    }
-                                                }
-                                            } else {
-                                                send(ClientboundNotification::Error(
-                                                    WebSocketError::InternalError,
-                                                ));
-                                            }
-                                        } else {
+                        if let Ok(validated_session) = Auth::new(get_collection("accounts"))
+                            .verify_session(new_session)
+                            .await {
+                            let id = validated_session.user_id.clone();
+                            if let Ok(user) = (
+                                Ref {
+                                    id: id.clone()
+                                }
+                            )
+                            .fetch_user()
+                            .await {
+                                let was_online = is_online(&id);
+                                {
+                                    match USERS.write() {
+                                        Ok(mut map) => {
+                                            map.insert(id.clone(), addr);
+                                        }
+                                        Err(_) => {
                                             send(ClientboundNotification::Error(
-                                                WebSocketError::InternalError,
+                                                WebSocketError::InternalError { at: "Writing users map.".to_string() },
                                             ));
+
+                                            return Ok(())
+                                        }
+                                    }
+                                }
+
+                                *mutex.lock().unwrap() = Some(validated_session);
+
+                                if let Err(_) = subscriptions::generate_subscriptions(&user).await {
+                                    send(ClientboundNotification::Error(
+                                        WebSocketError::InternalError { at: "Generating subscriptions.".to_string() },
+                                    ));
+
+                                    return Ok(())
+                                }
+
+                                send(ClientboundNotification::Authenticated);
+
+                                match super::payload::generate_ready(user).await {
+                                    Ok(payload) => {
+                                        send(payload);
+
+                                        if !was_online {
+                                            ClientboundNotification::UserPresence {
+                                                id: id.clone(),
+                                                online: true
+                                            }
+                                            .publish(id)
+                                            .await
+                                            .ok();
                                         }
                                     }
                                     Err(_) => {
                                         send(ClientboundNotification::Error(
-                                            WebSocketError::OnboardingNotFinished,
+                                            WebSocketError::InternalError { at: "Generating payload.".to_string() },
                                         ));
+
+                                        return Ok(())
                                     }
                                 }
-                            }
-                            Err(_) => {
+                            } else {
                                 send(ClientboundNotification::Error(
-                                    WebSocketError::InvalidSession,
+                                    WebSocketError::OnboardingNotFinished,
                                 ));
                             }
+                        } else {
+                            send(ClientboundNotification::Error(
+                                WebSocketError::InvalidSession,
+                            ));
                         }
                     }
                 }
             }
         }
 
-        future::ok(())
+        Ok(())
     });
 
     pin_mut!(fwd, incoming);
@@ -146,7 +169,8 @@ async fn accept(stream: TcpStream) {
     info!("User {} disconnected.", &addr);
     CONNECTIONS.lock().unwrap().remove(&addr);
 
-    if let Some(session) = session {
+    let session = session.lock().unwrap();
+    if let Some(session) = session.as_ref() {
         let mut users = USERS.write().unwrap();
         users.remove(&session.user_id, &addr);
         if users.get_left(&session.user_id).is_none() {
@@ -183,4 +207,8 @@ pub fn publish(ids: Vec<String>, notification: ClientboundNotification) {
             }
         }
     }
+}
+
+pub fn is_online(user: &String) -> bool {
+    USERS.read().unwrap().get_left(&user).is_some()
 }
