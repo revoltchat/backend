@@ -42,6 +42,14 @@ impl Ref {
     }
 }
 
+impl User {
+    pub fn as_ref(&self) -> Ref {
+        Ref {
+            id: self.id.to_string(),
+        }
+    }
+}
+
 impl<'r> FromParam<'r> for Ref {
     type Error = &'r RawStr;
 
