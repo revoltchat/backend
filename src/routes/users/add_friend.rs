@@ -1,16 +1,7 @@
-use crate::{
-    database::{
-        entities::{RelationshipStatus, User},
-        get_collection,
-        guards::reference::Ref,
-        permissions::get_relationship,
-    },
-    util::result::Error,
-};
-use crate::{
-    notifications::{events::ClientboundNotification, hive},
-    util::result::Result,
-};
+use crate::database::*;
+use crate::notifications::{events::ClientboundNotification, hive};
+use crate::util::result::{Error, Result};
+
 use futures::try_join;
 use mongodb::bson::doc;
 use mongodb::options::{Collation, FindOneOptions};

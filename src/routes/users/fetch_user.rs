@@ -1,6 +1,6 @@
-use crate::database::entities::{RelationshipStatus, User};
-use crate::database::guards::reference::Ref;
+use crate::database::*;
 use crate::util::result::{Error, Result};
+
 use rocket_contrib::json::JsonValue;
 
 #[get("/<target>")]

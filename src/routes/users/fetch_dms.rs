@@ -1,6 +1,6 @@
-use crate::database::entities::User;
-use crate::database::get_collection;
+use crate::database::*;
 use crate::util::result::{Error, Result};
+
 use futures::StreamExt;
 use mongodb::bson::doc;
 use rocket_contrib::json::JsonValue;

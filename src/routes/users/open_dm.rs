@@ -1,7 +1,6 @@
-use crate::database::entities::{Channel, User};
-use crate::database::get_collection;
-use crate::database::guards::reference::Ref;
+use crate::database::*;
 use crate::util::result::{Error, Result};
+
 use mongodb::bson::doc;
 use rocket_contrib::json::JsonValue;
 use ulid::Ulid;

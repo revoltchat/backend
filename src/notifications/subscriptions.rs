@@ -1,4 +1,4 @@
-use crate::database::entities::User;
+use crate::database::*;
 
 use super::hive::get_hive;
 use hive_pubsub::PubSub;

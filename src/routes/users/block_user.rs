@@ -1,11 +1,7 @@
-use crate::{
-    database::entities::RelationshipStatus, database::entities::User, database::get_collection,
-    database::guards::reference::Ref, database::permissions::get_relationship, util::result::Error,
-};
-use crate::{
-    notifications::{events::ClientboundNotification, hive},
-    util::result::Result,
-};
+use crate::database::*;
+use crate::notifications::{events::ClientboundNotification, hive};
+use crate::util::result::{Error, Result};
+
 use futures::try_join;
 use mongodb::bson::doc;
 use rocket_contrib::json::JsonValue;

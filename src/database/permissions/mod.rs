@@ -1,4 +1,4 @@
-use crate::database::entities::User;
+use crate::database::*;
 use num_enum::TryFromPrimitive;
 use std::ops;
 
@@ -30,9 +30,6 @@ pub async fn temp_calc_perm(_user: &User, _target: &User) -> UserPermissions<[u3
 
     UserPermissions([UserPermission::Access + UserPermission::SendMessage + UserPermission::Invite])
 }
-
-use crate::database::entities::RelationshipStatus;
-use crate::database::guards::reference::Ref;
 
 pub fn get_relationship(a: &User, b: &Ref) -> RelationshipStatus {
     if a.id == b.id {

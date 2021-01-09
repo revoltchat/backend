@@ -1,5 +1,4 @@
-use crate::database::get_collection;
-use crate::database::guards::reference::Ref;
+use crate::database::*;
 use mongodb::bson::{doc, from_bson, Bson};
 use rauth::auth::Session;
 use rocket::http::Status;

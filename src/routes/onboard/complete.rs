@@ -1,6 +1,6 @@
-use crate::database::entities::User;
-use crate::database::get_collection;
+use crate::database::*;
 use crate::util::result::{Error, Result};
+
 use mongodb::bson::doc;
 use mongodb::options::{Collation, FindOneOptions};
 use rauth::auth::Session;

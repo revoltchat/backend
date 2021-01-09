@@ -1,5 +1,6 @@
-use crate::database::entities::User;
+use crate::database::*;
 use crate::util::result::Result;
+
 use rocket_contrib::json::JsonValue;
 
 #[get("/relationships")]

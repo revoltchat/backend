@@ -1,6 +1,6 @@
-use crate::database::entities::*;
-use crate::database::get_collection;
+use crate::database::*;
 use crate::util::result::{Error, Result};
+
 use mongodb::bson::{doc, from_bson, Bson};
 use rocket::http::RawStr;
 use rocket::request::FromParam;

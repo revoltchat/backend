@@ -1,4 +1,5 @@
-use crate::database::entities::User;
+use crate::database::*;
+
 use rauth::auth::Session;
 use rocket_contrib::json::JsonValue;
 

@@ -1,5 +1,5 @@
 use super::{events::ClientboundNotification, websocket};
-use crate::database::get_collection;
+use crate::database::*;
 
 use futures::FutureExt;
 use hive_pubsub::backend::mongo::MongodbPubSub;

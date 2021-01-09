@@ -30,3 +30,7 @@ pub mod entities;
 pub mod guards;
 pub mod migrations;
 pub mod permissions;
+
+pub use entities::*;
+pub use guards::*;
+pub use permissions::*;

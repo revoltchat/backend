@@ -2,9 +2,8 @@ use rauth::auth::Session;
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
 
-use crate::database::entities::{RelationshipStatus, User};
-
 use super::hive::get_hive;
+use crate::database::*;
 
 #[derive(Serialize, Deserialize, Debug, Snafu)]
 #[serde(tag = "error")]
