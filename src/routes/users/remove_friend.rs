@@ -11,7 +11,7 @@ use rocket_contrib::json::JsonValue;
 pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
     let col = get_collection("users");
 
-    match get_relationship(&user, &target) {
+    match get_relationship(&user, &target.id) {
         RelationshipStatus::Friend
         | RelationshipStatus::Outgoing
         | RelationshipStatus::Incoming => {

@@ -9,7 +9,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
 
     if user.id != target.id {
         // Check whether we are allowed to fetch this user.
-        let perm = crate::database::permissions::temp_calc_perm(&user, &target).await;
+        let perm = permissions::user::calculate(&user, &target.id).await;
         if !perm.get_access() {
             Err(Error::LabelMe)?
         }
