@@ -97,8 +97,9 @@ async fn accept(stream: TcpStream) {
                                             ) {
                                                 send(ClientboundNotification::Authenticated);
 
-                                                match task::block_on(user.generate_ready_payload())
-                                                {
+                                                match task::block_on(
+                                                    super::payload::generate_ready(user),
+                                                ) {
                                                     Ok(payload) => {
                                                         send(payload);
                                                     }
