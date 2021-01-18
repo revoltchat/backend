@@ -1,5 +1,9 @@
 use rocket::Route;
 
+mod fetch_channel;
+
 pub fn routes() -> Vec<Route> {
-    routes![]
+    routes![
+        fetch_channel::req
+    ]
 }

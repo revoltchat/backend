@@ -1,11 +1,11 @@
 use crate::database::*;
 use crate::util::result::{Error, Result};
 
-use mongodb::bson::{doc, from_bson, Bson};
+use validator::Validate;
 use rocket::http::RawStr;
 use rocket::request::FromParam;
-use serde::{Deserialize, Serialize};
-use validator::Validate;
+use mongodb::bson::{doc, from_bson, Bson};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Ref {
@@ -18,8 +18,8 @@ impl Ref {
         Ok(Ref { id })
     }
 
-    pub async fn fetch_user(&self) -> Result<User> {
-        let doc = get_collection("users")
+    pub async fn fetch<T: DeserializeOwned>(&self, collection: &'static str) -> Result<T> {
+        let doc = get_collection(&collection)
             .find_one(
                 doc! {
                     "_id": &self.id
@@ -29,16 +29,24 @@ impl Ref {
             .await
             .map_err(|_| Error::DatabaseError {
                 operation: "find_one",
-                with: "user",
+                with: &collection,
             })?
             .ok_or_else(|| Error::UnknownUser)?;
 
         Ok(
-            from_bson(Bson::Document(doc)).map_err(|_| Error::DatabaseError {
+            from_bson::<T>(Bson::Document(doc)).map_err(|_| Error::DatabaseError {
                 operation: "from_bson",
-                with: "user",
+                with: &collection,
             })?,
         )
+    }
+
+    pub async fn fetch_user(&self) -> Result<User> {
+        self.fetch("users").await
+    }
+
+    pub async fn fetch_channel(&self) -> Result<Channel> {
+        self.fetch("channels").await
     }
 }
 
