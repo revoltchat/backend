@@ -2,7 +2,7 @@ use crate::database::*;
 use crate::util::result::{Error, Result};
 
 use mongodb::bson::doc;
-use rocket_contrib::json::Json;
+use rocket_contrib::json::{Json, JsonValue};
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use validator::Validate;
@@ -17,7 +17,7 @@ pub struct Data {
 }
 
 #[post("/<target>/messages", data = "<message>")]
-pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<()> {
+pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonValue> {
     message
         .validate()
         .map_err(|error| Error::FailedValidation { error })?;
@@ -43,10 +43,10 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<()> {
         })?
         .is_some()
     {
-        Err(Error::AlreadySentMessage)?
+        Err(Error::DuplicateNonce)?
     }
 
-    Message {
+    let msg = Message {
         id: Ulid::new().to_string(),
         channel: target.id().to_string(),
         author: user.id,
@@ -54,9 +54,12 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<()> {
         content: message.content.clone(),
         nonce: Some(message.nonce.clone()),
         edited: None,
-    }
-    .send()
-    .await?;
+    };
+    
+    msg
+        .clone()
+        .publish()
+        .await?;
 
-    Ok(())
+    Ok(json!(msg))
 }

@@ -43,7 +43,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
             }
         };
 
-        channel.save().await?;
+        channel.clone().publish().await?;
         Ok(json!(channel))
     }
 }

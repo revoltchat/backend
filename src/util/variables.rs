@@ -33,10 +33,14 @@ lazy_static! {
     pub static ref SMTP_HOST: String =
         env::var("REVOLT_SMTP_HOST").unwrap_or_else(|_| "".to_string());
     pub static ref SMTP_USERNAME: String =
-        env::var("SMTP_USERNAME").unwrap_or_else(|_| "".to_string());
+        env::var("REVOLT_SMTP_USERNAME").unwrap_or_else(|_| "".to_string());
     pub static ref SMTP_PASSWORD: String =
-        env::var("SMTP_PASSWORD").unwrap_or_else(|_| "".to_string());
-    pub static ref SMTP_FROM: String = env::var("SMTP_FROM").unwrap_or_else(|_| "".to_string());
+        env::var("REVOLT_SMTP_PASSWORD").unwrap_or_else(|_| "".to_string());
+    pub static ref SMTP_FROM: String = env::var("REVOLT_SMTP_FROM").unwrap_or_else(|_| "".to_string());
+
+    // Application Logic Settings
+    pub static ref MAX_GROUP_SIZE: usize =
+        env::var("REVOLT_MAX_GROUP_SIZE").unwrap_or_else(|_| "50".to_string()).parse().unwrap();
 }
 
 pub fn preflight_checks() {

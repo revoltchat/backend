@@ -7,6 +7,7 @@ mod message_edit;
 mod message_fetch;
 mod message_query;
 mod message_send;
+mod group_create;
 
 pub fn routes() -> Vec<Route> {
     routes![
@@ -16,6 +17,7 @@ pub fn routes() -> Vec<Route> {
         message_query::req,
         message_fetch::req,
         message_edit::req,
-        message_delete::req
+        message_delete::req,
+        group_create::req
     ]
 }

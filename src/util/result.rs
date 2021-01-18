@@ -30,13 +30,17 @@ pub enum Error {
     Blocked,
     #[snafu(display("You have been blocked by this user."))]
     BlockedByOther,
+    #[snafu(display("Not friends with target user."))]
+    NotFriends,
 
     // ? Channel related errors.
-    #[snafu(display("Already sent a message with this nonce."))]
-    AlreadySentMessage,
     #[snafu(display("Cannot edit someone else's message."))]
     CannotEditMessage,
-
+    #[snafu(display("Group size is too large."))]
+    GroupTooLarge {
+        max: usize
+    },
+    
     // ? General errors.
     #[snafu(display("Failed to validate fields."))]
     FailedValidation { error: ValidationErrors },
@@ -47,6 +51,8 @@ pub enum Error {
     },
     #[snafu(display("Internal server error."))]
     InternalError,
+    #[snafu(display("Already created an object with this nonce."))]
+    DuplicateNonce,
     #[snafu(display("This request had no effect."))]
     NoEffect,
 }
@@ -67,13 +73,15 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::AlreadySentRequest => Status::Conflict,
             Error::Blocked => Status::Conflict,
             Error::BlockedByOther => Status::Forbidden,
+            Error::NotFriends => Status::Forbidden,
 
-            Error::AlreadySentMessage => Status::Conflict,
             Error::CannotEditMessage => Status::Forbidden,
-
+            Error::GroupTooLarge { .. } => Status::Forbidden,
+            
             Error::FailedValidation { .. } => Status::UnprocessableEntity,
             Error::DatabaseError { .. } => Status::InternalServerError,
             Error::InternalError => Status::InternalServerError,
+            Error::DuplicateNonce => Status::Conflict,
             Error::NoEffect => Status::Ok,
         };
 

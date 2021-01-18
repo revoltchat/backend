@@ -26,7 +26,7 @@ pub struct Message {
     pub previous_content: Vec<PreviousEntry>,
 }*/
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Message {
     #[serde(rename = "_id")]
     pub id: String,
@@ -41,7 +41,7 @@ pub struct Message {
 }
 
 impl Message {
-    pub async fn send(self) -> Result<()> {
+    pub async fn publish(self) -> Result<()> {
         get_collection("messages")
             .insert_one(to_bson(&self).unwrap().as_document().unwrap().clone(), None)
             .await

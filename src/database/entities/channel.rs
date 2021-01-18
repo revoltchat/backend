@@ -1,9 +1,9 @@
-use crate::database::*;
+use crate::{database::*, notifications::{events::ClientboundNotification, hive}};
 use crate::util::result::{Error, Result};
-use mongodb::bson::to_document;
 use serde::{Deserialize, Serialize};
+use mongodb::bson::to_document;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum Channel {
     SavedMessages {
@@ -20,6 +20,8 @@ pub enum Channel {
     Group {
         #[serde(rename = "_id")]
         id: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        nonce: Option<String>,
         name: String,
         owner: String,
         description: String,
@@ -36,7 +38,7 @@ impl Channel {
         }
     }
 
-    pub async fn save(&self) -> Result<()> {
+    pub async fn publish(self) -> Result<()> {
         get_collection("channels")
             .insert_one(
                 to_document(&self).map_err(|_| Error::DatabaseError {
@@ -50,6 +52,25 @@ impl Channel {
                 operation: "insert_one",
                 with: "channel",
             })?;
+        
+        // ! IMPORTANT FIXME: THESE SUBSCRIPTIONS SHOULD BE DONE FROM HIVE NOT HERE!!!
+        let channel_id = self.id().to_string();
+        match &self {
+            Channel::SavedMessages { user, .. } => {
+                hive::subscribe_if_exists(user.clone(), channel_id.clone()).ok();
+            }
+            Channel::DirectMessage { recipients, .. } |
+            Channel::Group { recipients, .. } => {
+                for recipient in recipients {
+                    hive::subscribe_if_exists(recipient.clone(), channel_id.clone()).ok();
+                }
+            }
+        }
+
+        ClientboundNotification::ChannelCreate(self)
+            .publish(channel_id)
+            .await
+            .ok();
 
         Ok(())
     }

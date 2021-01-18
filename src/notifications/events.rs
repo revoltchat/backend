@@ -42,6 +42,8 @@ pub enum ClientboundNotification {
         id: String,
     },
 
+    ChannelCreate(Channel),
+
     /*MessageCreate {
         id: String,
         nonce: Option<String>,
