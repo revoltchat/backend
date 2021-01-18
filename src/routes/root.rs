@@ -8,7 +8,7 @@ use rocket_contrib::json::JsonValue;
 #[get("/")]
 pub async fn root() -> JsonValue {
     json!({
-        "revolt": "0.3.0-alpha",
+        "revolt": "0.3.1-alpha.0",
         "features": {
             "registration": !*DISABLE_REGISTRATION,
             "captcha": {
