@@ -19,20 +19,21 @@ pub struct Data {
     // Maximum length of 36 allows both ULIDs and UUIDs.
     #[validate(length(min = 1, max = 36))]
     nonce: String,
-    users: Vec<String>
+    users: Vec<String>,
 }
 
 #[post("/create", data = "<info>")]
 pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
-    info
-        .validate()
+    info.validate()
         .map_err(|error| Error::FailedValidation { error })?;
-    
+
     let mut set: HashSet<String> = HashSet::from_iter(info.users.iter().cloned());
     set.insert(user.id.clone());
 
     if set.len() > *MAX_GROUP_SIZE {
-        Err(Error::GroupTooLarge { max: *MAX_GROUP_SIZE })?
+        Err(Error::GroupTooLarge {
+            max: *MAX_GROUP_SIZE,
+        })?
     }
 
     if get_collection("channels")
@@ -63,9 +64,12 @@ pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
         id,
         nonce: Some(info.nonce.clone()),
         name: info.name.clone(),
-        description: info.description.clone().unwrap_or_else(|| "A group.".to_string()),
+        description: info
+            .description
+            .clone()
+            .unwrap_or_else(|| "A group.".to_string()),
         owner: user.id,
-        recipients: set.into_iter().collect::<Vec<String>>()
+        recipients: set.into_iter().collect::<Vec<String>>(),
     };
 
     channel.clone().publish().await?;

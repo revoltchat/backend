@@ -2,12 +2,12 @@ use rocket::Route;
 
 mod delete_channel;
 mod fetch_channel;
+mod group_create;
 mod message_delete;
 mod message_edit;
 mod message_fetch;
 mod message_query;
 mod message_send;
-mod group_create;
 
 pub fn routes() -> Vec<Route> {
     routes![

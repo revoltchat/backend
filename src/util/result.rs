@@ -37,10 +37,8 @@ pub enum Error {
     #[snafu(display("Cannot edit someone else's message."))]
     CannotEditMessage,
     #[snafu(display("Group size is too large."))]
-    GroupTooLarge {
-        max: usize
-    },
-    
+    GroupTooLarge { max: usize },
+
     // ? General errors.
     #[snafu(display("Failed to validate fields."))]
     FailedValidation { error: ValidationErrors },
@@ -77,7 +75,7 @@ impl<'r> Responder<'r, 'static> for Error {
 
             Error::CannotEditMessage => Status::Forbidden,
             Error::GroupTooLarge { .. } => Status::Forbidden,
-            
+
             Error::FailedValidation { .. } => Status::UnprocessableEntity,
             Error::DatabaseError { .. } => Status::InternalServerError,
             Error::InternalError => Status::InternalServerError,

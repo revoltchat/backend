@@ -1,7 +1,10 @@
-use crate::{database::*, notifications::{events::ClientboundNotification, hive}};
 use crate::util::result::{Error, Result};
-use serde::{Deserialize, Serialize};
+use crate::{
+    database::*,
+    notifications::{events::ClientboundNotification, hive},
+};
 use mongodb::bson::to_document;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
@@ -52,15 +55,14 @@ impl Channel {
                 operation: "insert_one",
                 with: "channel",
             })?;
-        
+
         // ! IMPORTANT FIXME: THESE SUBSCRIPTIONS SHOULD BE DONE FROM HIVE NOT HERE!!!
         let channel_id = self.id().to_string();
         match &self {
             Channel::SavedMessages { user, .. } => {
                 hive::subscribe_if_exists(user.clone(), channel_id.clone()).ok();
             }
-            Channel::DirectMessage { recipients, .. } |
-            Channel::Group { recipients, .. } => {
+            Channel::DirectMessage { recipients, .. } | Channel::Group { recipients, .. } => {
                 for recipient in recipients {
                     hive::subscribe_if_exists(recipient.clone(), channel_id.clone()).ok();
                 }
