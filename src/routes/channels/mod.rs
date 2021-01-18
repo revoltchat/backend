@@ -1,9 +1,9 @@
 use rocket::Route;
 
-mod fetch_channel;
 mod delete_channel;
-mod message_send;
+mod fetch_channel;
 mod message_fetch;
+mod message_send;
 
 pub fn routes() -> Vec<Route> {
     routes![

@@ -25,13 +25,16 @@ pub async fn req(user: User, target: Ref) -> Result<()> {
                             "active": false
                         }
                     },
-                    None
+                    None,
                 )
                 .await
-                .map_err(|_| Error::DatabaseError { operation: "update_one", with: "channel" })?;
-            
+                .map_err(|_| Error::DatabaseError {
+                    operation: "update_one",
+                    with: "channel",
+                })?;
+
             Ok(())
-        },
-        _ => unimplemented!()
+        }
+        _ => unimplemented!(),
     }
 }

@@ -31,10 +31,7 @@ pub async fn req(user: User, username: String) -> Result<JsonValue> {
         with: "user",
     })?;
 
-    match get_relationship(
-        &user,
-        &target_id,
-    ) {
+    match get_relationship(&user, &target_id) {
         RelationshipStatus::User => return Err(Error::NoEffect),
         RelationshipStatus::Friend => return Err(Error::AlreadyFriends),
         RelationshipStatus::Outgoing => return Err(Error::AlreadySentRequest),

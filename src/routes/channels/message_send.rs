@@ -1,11 +1,11 @@
 use crate::database::*;
 use crate::util::result::{Error, Result};
 
-use serde::{Serialize, Deserialize};
-use rocket_contrib::json::Json;
-use validator::Validate;
 use mongodb::bson::doc;
+use rocket_contrib::json::Json;
+use serde::{Deserialize, Serialize};
 use ulid::Ulid;
+use validator::Validate;
 
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
@@ -18,7 +18,8 @@ pub struct Data {
 
 #[post("/<target>/messages", data = "<message>")]
 pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<()> {
-    message.validate()
+    message
+        .validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
     let target = target.fetch_channel().await?;
@@ -33,11 +34,15 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<()> {
             doc! {
                 "nonce": &message.nonce
             },
-            None
+            None,
         )
         .await
-        .map_err(|_| Error::DatabaseError { operation: "find_one", with: "message" })?
-        .is_some() {
+        .map_err(|_| Error::DatabaseError {
+            operation: "find_one",
+            with: "message",
+        })?
+        .is_some()
+    {
         Err(Error::AlreadySentMessage)?
     }
 

@@ -64,7 +64,7 @@ async fn accept(stream: TcpStream) {
     };
 
     let session: Arc<Mutex<Option<Session>>> = Arc::new(Mutex::new(None));
-    let mutex_generator = || { session.clone() };
+    let mutex_generator = || session.clone();
     let fwd = rx.map(Ok).forward(write);
     let incoming = read.try_for_each(async move |msg| {
         let mutex = mutex_generator();
@@ -79,22 +79,17 @@ async fn accept(stream: TcpStream) {
                                 send(ClientboundNotification::Error(
                                     WebSocketError::AlreadyAuthenticated,
                                 ));
-                                
-                                return Ok(())
+
+                                return Ok(());
                             }
                         }
 
                         if let Ok(validated_session) = Auth::new(get_collection("accounts"))
                             .verify_session(new_session)
-                            .await {
+                            .await
+                        {
                             let id = validated_session.user_id.clone();
-                            if let Ok(user) = (
-                                Ref {
-                                    id: id.clone()
-                                }
-                            )
-                            .fetch_user()
-                            .await {
+                            if let Ok(user) = (Ref { id: id.clone() }).fetch_user().await {
                                 let was_online = is_online(&id);
                                 {
                                     match USERS.write() {
@@ -103,10 +98,12 @@ async fn accept(stream: TcpStream) {
                                         }
                                         Err(_) => {
                                             send(ClientboundNotification::Error(
-                                                WebSocketError::InternalError { at: "Writing users map.".to_string() },
+                                                WebSocketError::InternalError {
+                                                    at: "Writing users map.".to_string(),
+                                                },
                                             ));
 
-                                            return Ok(())
+                                            return Ok(());
                                         }
                                     }
                                 }
@@ -115,10 +112,12 @@ async fn accept(stream: TcpStream) {
 
                                 if let Err(_) = subscriptions::generate_subscriptions(&user).await {
                                     send(ClientboundNotification::Error(
-                                        WebSocketError::InternalError { at: "Generating subscriptions.".to_string() },
+                                        WebSocketError::InternalError {
+                                            at: "Generating subscriptions.".to_string(),
+                                        },
                                     ));
 
-                                    return Ok(())
+                                    return Ok(());
                                 }
 
                                 send(ClientboundNotification::Authenticated);
@@ -130,7 +129,7 @@ async fn accept(stream: TcpStream) {
                                         if !was_online {
                                             ClientboundNotification::UserPresence {
                                                 id: id.clone(),
-                                                online: true
+                                                online: true,
                                             }
                                             .publish(id)
                                             .await
@@ -139,10 +138,12 @@ async fn accept(stream: TcpStream) {
                                     }
                                     Err(_) => {
                                         send(ClientboundNotification::Error(
-                                            WebSocketError::InternalError { at: "Generating payload.".to_string() },
+                                            WebSocketError::InternalError {
+                                                at: "Generating payload.".to_string(),
+                                            },
                                         ));
 
-                                        return Ok(())
+                                        return Ok(());
                                     }
                                 }
                             } else {

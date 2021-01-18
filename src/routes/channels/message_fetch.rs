@@ -2,11 +2,14 @@ use crate::database::*;
 use crate::util::result::{Error, Result};
 
 use futures::StreamExt;
-use validator::Validate;
+use mongodb::{
+    bson::{doc, from_document},
+    options::FindOptions,
+};
 use rocket::request::Form;
-use serde::{Serialize, Deserialize};
 use rocket_contrib::json::JsonValue;
-use mongodb::{bson::{doc, from_document}, options::FindOptions};
+use serde::{Deserialize, Serialize};
+use validator::Validate;
 
 #[derive(Validate, Serialize, Deserialize, FromForm)]
 pub struct Options {
@@ -20,7 +23,8 @@ pub struct Options {
 
 #[get("/<target>/messages?<options..>")]
 pub async fn req(user: User, target: Ref, options: Form<Options>) -> Result<JsonValue> {
-    options.validate()
+    options
+        .validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
     let target = target.fetch_channel().await?;
@@ -51,14 +55,19 @@ pub async fn req(user: User, target: Ref, options: Form<Options>) -> Result<Json
                 .build(),
         )
         .await
-        .map_err(|_| Error::DatabaseError { operation: "find", with: "messages" })?;
-    
+        .map_err(|_| Error::DatabaseError {
+            operation: "find",
+            with: "messages",
+        })?;
+
     let mut messages = vec![];
     while let Some(result) = cursor.next().await {
         if let Ok(doc) = result {
             messages.push(
-                from_document::<Message>(doc)
-                    .map_err(|_| Error::DatabaseError { operation: "from_document", with: "message" })?
+                from_document::<Message>(doc).map_err(|_| Error::DatabaseError {
+                    operation: "from_document",
+                    with: "message",
+                })?,
             );
         }
     }

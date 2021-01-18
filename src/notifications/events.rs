@@ -33,7 +33,7 @@ pub enum ClientboundNotification {
     Authenticated,
     Ready {
         users: Vec<User>,
-        channels: Vec<Channel>
+        channels: Vec<Channel>,
     },
 
     Message(Message),
@@ -93,7 +93,6 @@ pub enum ClientboundNotification {
     GuildDelete {
         id: String,
     },*/
-
     UserRelationship {
         id: String,
         user: String,
@@ -102,8 +101,8 @@ pub enum ClientboundNotification {
 
     UserPresence {
         id: String,
-        online: bool
-    }
+        online: bool,
+    },
 }
 
 impl ClientboundNotification {

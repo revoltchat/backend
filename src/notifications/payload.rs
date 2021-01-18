@@ -4,7 +4,10 @@ use crate::{
     util::result::{Error, Result},
 };
 use futures::StreamExt;
-use mongodb::{bson::{Bson, doc, from_bson, from_document}, options::FindOptions};
+use mongodb::{
+    bson::{doc, from_bson, from_document, Bson},
+    options::FindOptions,
+};
 
 use super::websocket::is_online;
 
@@ -36,11 +39,10 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
 
         while let Some(result) = cursor.next().await {
             if let Ok(doc) = result {
-                let mut user: User =
-                    from_document(doc).map_err(|_| Error::DatabaseError {
-                        operation: "from_document",
-                        with: "user",
-                    })?;
+                let mut user: User = from_document(doc).map_err(|_| Error::DatabaseError {
+                    operation: "from_document",
+                    with: "user",
+                })?;
 
                 user.relationship = Some(
                     relationships
@@ -77,24 +79,21 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
                     }
                 ]
             },
-            None
+            None,
         )
         .await
         .map_err(|_| Error::DatabaseError {
             operation: "find",
             with: "channels",
         })?;
-    
+
     let mut channels = vec![];
     while let Some(result) = cursor.next().await {
         if let Ok(doc) = result {
-            channels.push(
-                from_document(doc)
-                    .map_err(|_| Error::DatabaseError {
-                        operation: "from_document",
-                        with: "channel",
-                    })?
-            );
+            channels.push(from_document(doc).map_err(|_| Error::DatabaseError {
+                operation: "from_document",
+                with: "channel",
+            })?);
         }
     }
 

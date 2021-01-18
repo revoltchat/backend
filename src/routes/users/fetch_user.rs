@@ -1,5 +1,5 @@
-use crate::{database::*, notifications::websocket::is_online};
 use crate::util::result::{Error, Result};
+use crate::{database::*, notifications::websocket::is_online};
 
 use rocket_contrib::json::JsonValue;
 

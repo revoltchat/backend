@@ -31,20 +31,20 @@ pub async fn calculate(user: &User, target: &str) -> UserPermissions<[u32; 1]> {
     let mut permissions: u32 = 0;
     match get_relationship(&user, &target) {
         RelationshipStatus::Friend => {
-            return UserPermissions([ UserPermission::Access + UserPermission::SendMessage + UserPermission::Invite ])
+            return UserPermissions([UserPermission::Access
+                + UserPermission::SendMessage
+                + UserPermission::Invite])
         }
-        RelationshipStatus::Blocked |
-        RelationshipStatus::BlockedOther => {
-            return UserPermissions([ UserPermission::Access as u32 ])
+        RelationshipStatus::Blocked | RelationshipStatus::BlockedOther => {
+            return UserPermissions([UserPermission::Access as u32])
         }
-        RelationshipStatus::Incoming |
-        RelationshipStatus::Outgoing => {
+        RelationshipStatus::Incoming | RelationshipStatus::Outgoing => {
             permissions = UserPermission::Access as u32;
         }
         _ => {}
     }
 
-    UserPermissions([ permissions ])
+    UserPermissions([permissions])
 }
 
 pub fn get_relationship(a: &User, b: &str) -> RelationshipStatus {

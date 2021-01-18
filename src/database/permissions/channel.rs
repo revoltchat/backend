@@ -23,28 +23,28 @@ pub async fn calculate(user: &User, target: &Channel) -> ChannelPermissions<[u32
     match target {
         Channel::SavedMessages { user: owner, .. } => {
             if &user.id == owner {
-                ChannelPermissions([ ChannelPermission::View + ChannelPermission::SendMessage ])
+                ChannelPermissions([ChannelPermission::View + ChannelPermission::SendMessage])
             } else {
-                ChannelPermissions([ 0 ])
+                ChannelPermissions([0])
             }
         }
         Channel::DirectMessage { recipients, .. } => {
             if recipients.iter().find(|x| *x == &user.id).is_some() {
-                if let Some(recipient) = recipients
-                    .iter()
-                    .find(|x| *x != &user.id) {
+                if let Some(recipient) = recipients.iter().find(|x| *x != &user.id) {
                     let perms = super::user::calculate(&user, recipient).await;
 
                     if perms.get_send_message() {
-                        return ChannelPermissions([ ChannelPermission::View + ChannelPermission::SendMessage ]);
+                        return ChannelPermissions([
+                            ChannelPermission::View + ChannelPermission::SendMessage
+                        ]);
                     }
-                    
-                    return ChannelPermissions([ ChannelPermission::View as u32 ]);
+
+                    return ChannelPermissions([ChannelPermission::View as u32]);
                 }
             }
 
-            ChannelPermissions([ 0 ])
+            ChannelPermissions([0])
         }
-        _ => unreachable!()
+        _ => unreachable!(),
     }
 }

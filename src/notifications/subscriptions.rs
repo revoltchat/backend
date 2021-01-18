@@ -1,9 +1,9 @@
 use crate::database::*;
 
-use futures::StreamExt;
-use mongodb::bson::doc;
-use hive_pubsub::PubSub;
 use super::hive::get_hive;
+use futures::StreamExt;
+use hive_pubsub::PubSub;
+use mongodb::bson::doc;
 use mongodb::options::FindOptions;
 
 pub async fn generate_subscriptions(user: &User) -> Result<(), String> {
@@ -35,13 +35,11 @@ pub async fn generate_subscriptions(user: &User) -> Result<(), String> {
                     }
                 ]
             },
-            FindOptions::builder()
-                .projection(doc! { "_id": 1 })
-                .build()
+            FindOptions::builder().projection(doc! { "_id": 1 }).build(),
         )
         .await
         .map_err(|_| "Failed to fetch channels.".to_string())?;
-    
+
     while let Some(result) = cursor.next().await {
         if let Ok(doc) = result {
             hive.subscribe(user.id.clone(), doc.get_str("_id").unwrap().to_string())?;

@@ -1,5 +1,9 @@
-use crate::{database::*, notifications::events::ClientboundNotification, util::result::{Error, Result}};
-use mongodb::bson::{DateTime, to_bson};
+use crate::{
+    database::*,
+    notifications::events::ClientboundNotification,
+    util::result::{Error, Result},
+};
+use mongodb::bson::{to_bson, DateTime};
 use serde::{Deserialize, Serialize};
 
 /*#[derive(Serialize, Deserialize, Debug)]
@@ -39,13 +43,13 @@ pub struct Message {
 impl Message {
     pub async fn send(self) -> Result<()> {
         get_collection("messages")
-            .insert_one(
-                to_bson(&self).unwrap().as_document().unwrap().clone(),
-                None
-            )
+            .insert_one(to_bson(&self).unwrap().as_document().unwrap().clone(), None)
             .await
-            .map_err(|_| Error::DatabaseError { operation: "insert_one", with: "messages" })?;
-        
+            .map_err(|_| Error::DatabaseError {
+                operation: "insert_one",
+                with: "messages",
+            })?;
+
         let channel = self.channel.clone();
         ClientboundNotification::Message(self)
             .publish(channel)

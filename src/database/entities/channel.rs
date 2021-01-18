@@ -1,7 +1,7 @@
 use crate::database::*;
+use crate::util::result::{Error, Result};
 use mongodb::bson::to_document;
 use serde::{Deserialize, Serialize};
-use crate::util::result::{Error, Result};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
