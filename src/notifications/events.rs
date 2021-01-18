@@ -37,6 +37,8 @@ pub enum ClientboundNotification {
     },
 
     Message(Message),
+    MessageEdit(Message),
+    MessageDelete(String),
 
     /*MessageCreate {
         id: String,

@@ -1,7 +1,7 @@
 use crate::database::*;
 use crate::util::result::{Error, Result};
 
-use mongodb::bson::{doc, from_bson, from_document, Bson};
+use mongodb::bson::{doc, from_document};
 use rocket::http::RawStr;
 use rocket::request::FromParam;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};

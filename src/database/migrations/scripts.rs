@@ -2,7 +2,7 @@ use super::super::{get_collection, get_db};
 
 use crate::rocket::futures::StreamExt;
 use log::info;
-use mongodb::bson::{doc, from_bson, from_document, Bson};
+use mongodb::bson::{doc, from_document};
 use mongodb::options::FindOptions;
 use serde::{Deserialize, Serialize};
 

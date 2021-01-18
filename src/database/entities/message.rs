@@ -58,4 +58,24 @@ impl Message {
 
         Ok(())
     }
+
+    pub async fn publish_edit(self) -> Result<()> {
+        let channel = self.channel.clone();
+        ClientboundNotification::MessageEdit(self)
+            .publish(channel)
+            .await
+            .ok();
+
+        Ok(())
+    }
+
+    pub async fn publish_delete(self) -> Result<()> {
+        let channel = self.channel.clone();
+        ClientboundNotification::MessageDelete(self.id)
+            .publish(channel)
+            .await
+            .ok();
+
+        Ok(())
+    }
 }

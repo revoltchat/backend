@@ -34,6 +34,8 @@ pub enum Error {
     // ? Channel related errors.
     #[snafu(display("Already sent a message with this nonce."))]
     AlreadySentMessage,
+    #[snafu(display("Cannot edit someone else's message."))]
+    CannotEditMessage,
 
     // ? General errors.
     #[snafu(display("Failed to validate fields."))]
@@ -67,6 +69,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::BlockedByOther => Status::Forbidden,
 
             Error::AlreadySentMessage => Status::Conflict,
+            Error::CannotEditMessage => Status::Forbidden,
 
             Error::FailedValidation { .. } => Status::UnprocessableEntity,
             Error::DatabaseError { .. } => Status::InternalServerError,

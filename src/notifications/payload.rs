@@ -5,7 +5,7 @@ use crate::{
 };
 use futures::StreamExt;
 use mongodb::{
-    bson::{doc, from_bson, from_document, Bson},
+    bson::{doc, from_document},
     options::FindOptions,
 };
 

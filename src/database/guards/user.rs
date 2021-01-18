@@ -1,6 +1,6 @@
 use crate::database::*;
 
-use mongodb::bson::{doc, from_bson, from_document, Bson};
+use mongodb::bson::{doc, from_document};
 use rauth::auth::Session;
 use rocket::http::Status;
 use rocket::request::{self, FromRequest, Outcome, Request};
