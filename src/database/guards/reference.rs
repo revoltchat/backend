@@ -46,6 +46,10 @@ impl Ref {
     pub async fn fetch_channel(&self) -> Result<Channel> {
         self.fetch("channels").await
     }
+
+    pub async fn fetch_message(&self) -> Result<Message> {
+        self.fetch("messages").await
+    }
 }
 
 impl User {

@@ -3,6 +3,7 @@ use rocket::Route;
 mod delete_channel;
 mod fetch_channel;
 mod message_fetch;
+mod message_query;
 mod message_send;
 
 pub fn routes() -> Vec<Route> {
@@ -10,6 +11,7 @@ pub fn routes() -> Vec<Route> {
         fetch_channel::req,
         delete_channel::req,
         message_send::req,
+        message_query::req,
         message_fetch::req
     ]
 }
