@@ -33,6 +33,7 @@ pub enum ClientboundNotification {
     Authenticated,
     Ready {
         users: Vec<User>,
+        channels: Vec<Channel>
     },
 
     /*MessageCreate {

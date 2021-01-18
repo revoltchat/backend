@@ -4,10 +4,7 @@ use crate::{
     util::result::{Error, Result},
 };
 use futures::StreamExt;
-use mongodb::{
-    bson::{doc, from_bson, Bson},
-    options::FindOptions,
-};
+use mongodb::{bson::{Bson, doc, from_bson}, options::FindOptions};
 
 use super::websocket::is_online;
 
@@ -61,8 +58,48 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
         }
     }
 
-    user.online = Some(is_online(&user.id));
+    let mut cursor = get_collection("channels")
+        .find(
+            doc! {
+                "$or": [
+                    {
+                        "type": "SavedMessages",
+                        "user": &user.id
+                    },
+                    {
+                        "type": "DirectMessage",
+                        "recipients": &user.id,
+                        "active": true
+                    },
+                    {
+                        "type": "Group",
+                        "recipients": &user.id
+                    }
+                ]
+            },
+            None
+        )
+        .await
+        .map_err(|_| Error::DatabaseError {
+            operation: "find",
+            with: "channels",
+        })?;
+    
+    let mut channels = vec![];
+    while let Some(result) = cursor.next().await {
+        if let Ok(doc) = result {
+            channels.push(
+                from_bson(Bson::Document(doc))
+                    .map_err(|_| Error::DatabaseError {
+                        operation: "from_bson",
+                        with: "channel",
+                    })?
+            );
+        }
+    }
+
+    user.online = Some(true);
     users.push(user);
 
-    Ok(ClientboundNotification::Ready { users })
+    Ok(ClientboundNotification::Ready { users, channels })
 }
