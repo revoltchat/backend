@@ -31,6 +31,10 @@ pub enum Error {
     #[snafu(display("You have been blocked by this user."))]
     BlockedByOther,
 
+    // ? Channel related errors.
+    #[snafu(display("Already sent a message with this nonce."))]
+    AlreadySentMessage,
+
     // ? General errors.
     #[snafu(display("Failed to validate fields."))]
     FailedValidation { error: ValidationErrors },
@@ -61,6 +65,8 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::AlreadySentRequest => Status::Conflict,
             Error::Blocked => Status::Conflict,
             Error::BlockedByOther => Status::Forbidden,
+
+            Error::AlreadySentMessage => Status::Conflict,
 
             Error::FailedValidation { .. } => Status::UnprocessableEntity,
             Error::DatabaseError { .. } => Status::InternalServerError,
