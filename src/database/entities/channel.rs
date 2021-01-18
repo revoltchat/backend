@@ -28,6 +28,14 @@ pub enum Channel {
 }
 
 impl Channel {
+    pub fn id(&self) -> &str {
+        match self {
+            Channel::SavedMessages { id, .. } => id,
+            Channel::DirectMessage { id, .. } => id,
+            Channel::Group { id, .. } => id,
+        }
+    }
+
     pub async fn save(&self) -> Result<()> {
         get_collection("channels")
             .insert_one(

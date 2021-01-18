@@ -36,6 +36,8 @@ pub enum ClientboundNotification {
         channels: Vec<Channel>
     },
 
+    Message(Message),
+
     /*MessageCreate {
         id: String,
         nonce: Option<String>,
