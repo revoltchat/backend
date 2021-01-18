@@ -71,7 +71,7 @@ impl Message {
 
     pub async fn publish_delete(self) -> Result<()> {
         let channel = self.channel.clone();
-        ClientboundNotification::MessageDelete(self.id)
+        ClientboundNotification::MessageDelete { id: self.id }
             .publish(channel)
             .await
             .ok();

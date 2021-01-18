@@ -7,6 +7,7 @@ use std::ops;
 pub enum ChannelPermission {
     View = 1,
     SendMessage = 2,
+    ManageMessages = 4,
 }
 
 bitfield! {
@@ -14,6 +15,7 @@ bitfield! {
     u32;
     pub get_view, _: 31;
     pub get_send_message, _: 30;
+    pub get_manage_messages, _: 29;
 }
 
 impl_op_ex!(+ |a: &ChannelPermission, b: &ChannelPermission| -> u32 { *a as u32 | *b as u32 });
@@ -23,7 +25,9 @@ pub async fn calculate(user: &User, target: &Channel) -> ChannelPermissions<[u32
     match target {
         Channel::SavedMessages { user: owner, .. } => {
             if &user.id == owner {
-                ChannelPermissions([ChannelPermission::View + ChannelPermission::SendMessage])
+                ChannelPermissions([ChannelPermission::View
+                    + ChannelPermission::SendMessage
+                    + ChannelPermission::ManageMessages])
             } else {
                 ChannelPermissions([0])
             }
