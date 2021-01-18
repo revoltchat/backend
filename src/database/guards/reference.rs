@@ -4,7 +4,7 @@ use crate::util::result::{Error, Result};
 use validator::Validate;
 use rocket::http::RawStr;
 use rocket::request::FromParam;
-use mongodb::bson::{doc, from_bson, Bson};
+use mongodb::bson::{Bson, doc, from_bson, from_document};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 #[derive(Validate, Serialize, Deserialize)]
@@ -34,8 +34,8 @@ impl Ref {
             .ok_or_else(|| Error::UnknownUser)?;
 
         Ok(
-            from_bson::<T>(Bson::Document(doc)).map_err(|_| Error::DatabaseError {
-                operation: "from_bson",
+            from_document::<T>(doc).map_err(|_| Error::DatabaseError {
+                operation: "from_document",
                 with: &collection,
             })?,
         )

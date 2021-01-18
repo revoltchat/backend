@@ -4,7 +4,7 @@ use crate::{
     util::result::{Error, Result},
 };
 use futures::StreamExt;
-use mongodb::{bson::{Bson, doc, from_bson}, options::FindOptions};
+use mongodb::{bson::{Bson, doc, from_bson, from_document}, options::FindOptions};
 
 use super::websocket::is_online;
 
@@ -37,8 +37,8 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
         while let Some(result) = cursor.next().await {
             if let Ok(doc) = result {
                 let mut user: User =
-                    from_bson(Bson::Document(doc)).map_err(|_| Error::DatabaseError {
-                        operation: "from_bson",
+                    from_document(doc).map_err(|_| Error::DatabaseError {
+                        operation: "from_document",
                         with: "user",
                     })?;
 
@@ -89,9 +89,9 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
     while let Some(result) = cursor.next().await {
         if let Ok(doc) = result {
             channels.push(
-                from_bson(Bson::Document(doc))
+                from_document(doc)
                     .map_err(|_| Error::DatabaseError {
-                        operation: "from_bson",
+                        operation: "from_document",
                         with: "channel",
                     })?
             );

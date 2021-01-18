@@ -1,6 +1,6 @@
 use crate::database::*;
 
-use mongodb::bson::{doc, from_bson, Bson};
+use mongodb::bson::{Bson, doc, from_bson, from_document};
 use rauth::auth::Session;
 use rocket::http::Status;
 use rocket::request::{self, FromRequest, Outcome, Request};
@@ -22,7 +22,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
             .await
         {
             if let Some(doc) = result {
-                Outcome::Success(from_bson(Bson::Document(doc)).unwrap())
+                Outcome::Success(from_document(doc).unwrap())
             } else {
                 Outcome::Failure((Status::Forbidden, rauth::util::Error::InvalidSession))
             }

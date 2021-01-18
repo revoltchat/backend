@@ -2,7 +2,7 @@ use super::super::{get_collection, get_db};
 
 use crate::rocket::futures::StreamExt;
 use log::info;
-use mongodb::bson::{doc, from_bson, Bson};
+use mongodb::bson::{Bson, doc, from_bson, from_document};
 use mongodb::options::FindOptions;
 use serde::{Deserialize, Serialize};
 
@@ -23,7 +23,7 @@ pub async fn migrate_database() {
 
     if let Some(doc) = data {
         let info: MigrationInfo =
-            from_bson(Bson::Document(doc)).expect("Failed to read migration information.");
+            from_document(doc).expect("Failed to read migration information.");
 
         let revision = run_migrations(info.revision).await;
 
