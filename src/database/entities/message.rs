@@ -1,4 +1,4 @@
-use crate::{database::*, notifications::events::ClientboundNotification, util::result::Result};
+use crate::{database::*, notifications::events::ClientboundNotification, util::result::{Error, Result}};
 use mongodb::bson::{DateTime, to_bson};
 use serde::{Deserialize, Serialize};
 
@@ -43,7 +43,8 @@ impl Message {
                 to_bson(&self).unwrap().as_document().unwrap().clone(),
                 None
             )
-            .await;
+            .await
+            .map_err(|_| Error::DatabaseError { operation: "insert_one", with: "messages" })?;
         
         let channel = self.channel.clone();
         ClientboundNotification::Message(self)
