@@ -90,9 +90,6 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                     )
                     .ok();
 
-                    hive::subscribe_if_exists(user.id.clone(), target.id.clone()).ok();
-                    hive::subscribe_if_exists(target.id.clone(), user.id.clone()).ok();
-
                     Ok(json!({ "status": "Blocked" }))
                 }
                 Err(_) => Err(Error::DatabaseError {

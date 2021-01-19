@@ -90,10 +90,6 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                             )
                             .ok();
 
-                            let hive = hive::get_hive();
-                            hive.unsubscribe(&user.id, &target.id).ok();
-                            hive.unsubscribe(&target.id, &user.id).ok();
-
                             Ok(json!({ "status": "None" }))
                         }
                         Err(_) => Err(Error::DatabaseError {

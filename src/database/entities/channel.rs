@@ -56,19 +56,7 @@ impl Channel {
                 with: "channel",
             })?;
 
-        // ! IMPORTANT FIXME: THESE SUBSCRIPTIONS SHOULD BE DONE FROM HIVE NOT HERE!!!
         let channel_id = self.id().to_string();
-        match &self {
-            Channel::SavedMessages { user, .. } => {
-                hive::subscribe_if_exists(user.clone(), channel_id.clone()).ok();
-            }
-            Channel::DirectMessage { recipients, .. } | Channel::Group { recipients, .. } => {
-                for recipient in recipients {
-                    hive::subscribe_if_exists(recipient.clone(), channel_id.clone()).ok();
-                }
-            }
-        }
-
         ClientboundNotification::ChannelCreate(self)
             .publish(channel_id)
             .await

@@ -36,8 +36,6 @@ pub async fn listen() {
         .fuse()
         .await
         .expect("Hive hit an error");
-
-    dbg!("a");
 }
 
 pub fn subscribe_multiple(user: String, topics: Vec<String>) -> Result<(), String> {

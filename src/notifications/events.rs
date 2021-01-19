@@ -1,8 +1,9 @@
-use rauth::auth::Session;
 use serde::{Deserialize, Serialize};
+use rauth::auth::Session;
+use hive_pubsub::PubSub;
 use snafu::Snafu;
 
-use super::hive::get_hive;
+use super::hive::{get_hive, subscribe_if_exists};
 use crate::database::*;
 
 #[derive(Serialize, Deserialize, Debug, Snafu)]
@@ -65,6 +66,48 @@ pub enum ClientboundNotification {
 
 impl ClientboundNotification {
     pub async fn publish(self, topic: String) -> Result<(), String> {
+        prehandle_hook(&self); // ! TODO: this should be moved to pubsub
         hive_pubsub::backend::mongo::publish(get_hive(), &topic, self).await
+    }
+}
+
+pub fn prehandle_hook(notification: &ClientboundNotification) {
+    match &notification {
+        ClientboundNotification::ChannelGroupJoin { id, user } => {
+            subscribe_if_exists(user.clone(), id.clone()).ok();
+        }
+        ClientboundNotification::ChannelCreate(channel) => {
+            let channel_id = channel.id();
+            match &channel {
+                Channel::SavedMessages { user, .. } => {
+                    subscribe_if_exists(user.clone(), channel_id.to_string()).ok();
+                }
+                Channel::DirectMessage { recipients, .. } | Channel::Group { recipients, .. } => {
+                    for recipient in recipients {
+                        subscribe_if_exists(recipient.clone(), channel_id.to_string()).ok();
+                    }
+                }
+            }
+        }
+        ClientboundNotification::ChannelGroupLeave { id, user } => {
+            get_hive()
+                .hive
+                .unsubscribe(&user.to_string(), &id.to_string())
+                .ok();
+        }
+        ClientboundNotification::UserRelationship { id, user, status } => {
+            match status {
+                RelationshipStatus::None => {
+                    get_hive()
+                        .hive
+                        .unsubscribe(&id.to_string(), &user.to_string())
+                        .ok();
+                },
+                _ => {
+                    subscribe_if_exists(id.clone(), user.clone()).ok();
+                }
+            }
+        }
+        _ => {}
     }
 }

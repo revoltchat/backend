@@ -137,9 +137,6 @@ pub async fn req(user: User, username: String) -> Result<JsonValue> {
                     )
                     .ok();
 
-                    hive::subscribe_if_exists(user.id.clone(), target_id.to_string()).ok();
-                    hive::subscribe_if_exists(target_id.to_string(), user.id.clone()).ok();
-
                     Ok(json!({ "status": "Outgoing" }))
                 }
                 Err(_) => Err(Error::DatabaseError {
