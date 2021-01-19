@@ -36,6 +36,12 @@ pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
         })?
     }
 
+    for target in &set {
+        if get_relationship(&user, target) != RelationshipStatus::Friend {
+            Err(Error::NotFriends)?
+        }
+    }
+
     if get_collection("channels")
         .find_one(
             doc! {
@@ -51,12 +57,6 @@ pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
         .is_some()
     {
         Err(Error::DuplicateNonce)?
-    }
-
-    for target in &set {
-        if get_relationship(&user, target) != RelationshipStatus::Friend {
-            Err(Error::NotFriends)?
-        }
     }
 
     let id = Ulid::new().to_string();

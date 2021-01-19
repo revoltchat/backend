@@ -36,8 +36,14 @@ pub enum Error {
     // ? Channel related errors.
     #[snafu(display("Cannot edit someone else's message."))]
     CannotEditMessage,
+    #[snafu(display("Cannot remove yourself from a group, use delete channel instead."))]
+    CannotRemoveYourself,
     #[snafu(display("Group size is too large."))]
     GroupTooLarge { max: usize },
+    #[snafu(display("User already part of group."))]
+    AlreadyInGroup,
+    #[snafu(display("User is not part of the group."))]
+    NotInGroup,
 
     // ? General errors.
     #[snafu(display("Failed to validate fields."))]
@@ -49,6 +55,8 @@ pub enum Error {
     },
     #[snafu(display("Internal server error."))]
     InternalError,
+    #[snafu(display("Operation cannot be performed on this object."))]
+    InvalidOperation,
     #[snafu(display("Already created an object with this nonce."))]
     DuplicateNonce,
     #[snafu(display("This request had no effect."))]
@@ -74,11 +82,15 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::NotFriends => Status::Forbidden,
 
             Error::CannotEditMessage => Status::Forbidden,
+            Error::CannotRemoveYourself => Status::BadRequest,
             Error::GroupTooLarge { .. } => Status::Forbidden,
+            Error::AlreadyInGroup => Status::Conflict,
+            Error::NotInGroup => Status::NotFound,
 
             Error::FailedValidation { .. } => Status::UnprocessableEntity,
             Error::DatabaseError { .. } => Status::InternalServerError,
             Error::InternalError => Status::InternalServerError,
+            Error::InvalidOperation => Status::BadRequest,
             Error::DuplicateNonce => Status::Conflict,
             Error::NoEffect => Status::Ok,
         };

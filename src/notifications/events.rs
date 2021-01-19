@@ -43,68 +43,20 @@ pub enum ClientboundNotification {
     },
 
     ChannelCreate(Channel),
-
-    /*MessageCreate {
+    ChannelGroupJoin {
         id: String,
-        nonce: Option<String>,
-        channel: String,
-        author: String,
-        content: String,
+        user: String,
     },
-
-    MessageEdit {
-        id: String,
-        channel: String,
-        author: String,
-        content: String,
-    },
-
-    MessageDelete {
-        id: String,
-    },
-
-    GroupUserJoin {
+    ChannelGroupLeave {
         id: String,
         user: String,
     },
 
-    GroupUserLeave {
-        id: String,
-        user: String,
-    },
-
-    GuildUserJoin {
-        id: String,
-        user: String,
-    },
-
-    GuildUserLeave {
-        id: String,
-        user: String,
-        banned: bool,
-    },
-
-    GuildChannelCreate {
-        id: String,
-        channel: String,
-        name: String,
-        description: String,
-    },
-
-    GuildChannelDelete {
-        id: String,
-        channel: String,
-    },
-
-    GuildDelete {
-        id: String,
-    },*/
     UserRelationship {
         id: String,
         user: String,
         status: RelationshipStatus,
     },
-
     UserPresence {
         id: String,
         online: bool,

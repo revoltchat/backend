@@ -5,6 +5,7 @@ use crate::{
 };
 use mongodb::bson::{to_bson, DateTime};
 use serde::{Deserialize, Serialize};
+use ulid::Ulid;
 
 /*#[derive(Serialize, Deserialize, Debug)]
 pub struct PreviousEntry {
@@ -41,6 +42,18 @@ pub struct Message {
 }
 
 impl Message {
+    pub fn create(author: String, channel: String, content: String) -> Message {
+        Message {
+            id: Ulid::new().to_string(),
+            nonce: None,
+            channel,
+            author,
+
+            content,
+            edited: None,
+        }
+    }
+
     pub async fn publish(self) -> Result<()> {
         get_collection("messages")
             .insert_one(to_bson(&self).unwrap().as_document().unwrap().clone(), None)

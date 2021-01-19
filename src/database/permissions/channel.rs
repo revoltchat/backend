@@ -49,6 +49,12 @@ pub async fn calculate(user: &User, target: &Channel) -> ChannelPermissions<[u32
 
             ChannelPermissions([0])
         }
-        _ => unreachable!(),
+        Channel::Group { recipients, .. } => {
+            if recipients.iter().find(|x| *x == &user.id).is_some() {
+                ChannelPermissions([ChannelPermission::View + ChannelPermission::SendMessage])
+            } else {
+                ChannelPermissions([0])
+            }
+        }
     }
 }
