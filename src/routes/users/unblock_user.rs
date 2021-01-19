@@ -1,9 +1,8 @@
 use crate::database::*;
-use crate::notifications::{events::ClientboundNotification, hive};
+use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
 
 use futures::try_join;
-use hive_pubsub::PubSub;
 use mongodb::bson::doc;
 use rocket_contrib::json::JsonValue;
 

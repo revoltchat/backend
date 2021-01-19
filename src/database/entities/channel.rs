@@ -1,8 +1,6 @@
+use crate::database::*;
+use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
-use crate::{
-    database::*,
-    notifications::{events::ClientboundNotification, hive},
-};
 use mongodb::bson::to_document;
 use serde::{Deserialize, Serialize};
 

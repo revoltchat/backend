@@ -1,5 +1,5 @@
 use crate::database::*;
-use crate::notifications::{events::ClientboundNotification, hive};
+use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
 
 use futures::try_join;

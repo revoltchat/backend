@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
-use rauth::auth::Session;
 use hive_pubsub::PubSub;
+use rauth::auth::Session;
+use serde::{Deserialize, Serialize};
 use snafu::Snafu;
 
 use super::hive::{get_hive, subscribe_if_exists};
@@ -95,19 +95,17 @@ pub fn prehandle_hook(notification: &ClientboundNotification) {
                 .unsubscribe(&user.to_string(), &id.to_string())
                 .ok();
         }
-        ClientboundNotification::UserRelationship { id, user, status } => {
-            match status {
-                RelationshipStatus::None => {
-                    get_hive()
-                        .hive
-                        .unsubscribe(&id.to_string(), &user.to_string())
-                        .ok();
-                },
-                _ => {
-                    subscribe_if_exists(id.clone(), user.clone()).ok();
-                }
+        ClientboundNotification::UserRelationship { id, user, status } => match status {
+            RelationshipStatus::None => {
+                get_hive()
+                    .hive
+                    .unsubscribe(&id.to_string(), &user.to_string())
+                    .ok();
             }
-        }
+            _ => {
+                subscribe_if_exists(id.clone(), user.clone()).ok();
+            }
+        },
         _ => {}
     }
 }
