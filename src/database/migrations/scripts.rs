@@ -12,7 +12,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 3;
+pub const LATEST_REVISION: i32 = 4;
 
 pub async fn migrate_database() {
     let migrations = get_collection("migrations");
@@ -146,6 +146,23 @@ pub async fn run_migrations(revision: i32) -> i32 {
             )
             .await
             .expect("Failed to create username index.");
+    }
+
+    if revision <= 3 {
+        info!("Running migration [revision 3]: Changed enum tag type to channel_type.");
+
+        get_collection("channels")
+            .update_many(
+                doc! { },
+                doc! {
+                    "$rename": {
+                        "type": "channel_type"
+                    }
+                },
+                None
+            )
+            .await
+            .expect("Failed to migrate channel type.");
     }
 
     // Reminder to update LATEST_REVISION when adding new migrations.
