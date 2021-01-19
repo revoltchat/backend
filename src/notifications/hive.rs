@@ -14,6 +14,8 @@ static HIVE: OnceCell<Hive> = OnceCell::new();
 pub async fn init_hive() {
     let hive = MongodbPubSub::new(
         |ids, notification| {
+            super::events::posthandle_hook(&notification);
+
             if let Ok(data) = to_string(&notification) {
                 debug!("Pushing out notification. {}", data);
                 websocket::publish(ids, notification);

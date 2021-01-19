@@ -20,20 +20,5 @@ pub async fn req(user: User, target: Ref, msg: Ref) -> Result<()> {
         }
     }
 
-    get_collection("messages")
-        .delete_one(
-            doc! {
-                "_id": &message.id
-            },
-            None,
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "delete_one",
-            with: "message",
-        })?;
-
-    message.publish_delete().await?;
-
-    Ok(())
+    message.delete().await
 }

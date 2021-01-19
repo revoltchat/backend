@@ -25,7 +25,7 @@ pub async fn req(user: User, target: Ref, msg: Ref, edit: Json<Data>) -> Result<
         Err(Error::LabelMe)?
     }
 
-    let mut message = msg.fetch_message().await?;
+    let message = msg.fetch_message().await?;
     if message.author != user.id {
         Err(Error::CannotEditMessage)?
     }
@@ -50,9 +50,5 @@ pub async fn req(user: User, target: Ref, msg: Ref, edit: Json<Data>) -> Result<
             with: "message",
         })?;
 
-    message.content = edit.content.clone();
-    message.edited = Some(DateTime(edited));
-    message.publish_edit().await?;
-
-    Ok(())
+    message.publish_update(json!({ "content": edit.content, "edited": DateTime(edited) })).await
 }

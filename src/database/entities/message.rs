@@ -3,29 +3,10 @@ use crate::{
     notifications::events::ClientboundNotification,
     util::result::{Error, Result},
 };
-use mongodb::bson::{to_bson, DateTime};
+use mongodb::bson::{doc, to_bson, DateTime};
+use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
-
-/*#[derive(Serialize, Deserialize, Debug)]
-pub struct PreviousEntry {
-    pub content: String,
-    pub time: DateTime,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Message {
-    #[serde(rename = "_id")]
-    pub id: String,
-    pub nonce: Option<String>,
-    pub channel: String,
-    pub author: String,
-
-    pub content: String,
-    pub edited: Option<DateTime>,
-
-    pub previous_content: Vec<PreviousEntry>,
-}*/
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Message {
@@ -72,9 +53,9 @@ impl Message {
         Ok(())
     }
 
-    pub async fn publish_edit(self) -> Result<()> {
+    pub async fn publish_update(&self, partial: JsonValue) -> Result<()> {
         let channel = self.channel.clone();
-        ClientboundNotification::MessageEdit(self)
+        ClientboundNotification::MessageUpdate(partial)
             .publish(channel)
             .await
             .ok();
@@ -82,9 +63,22 @@ impl Message {
         Ok(())
     }
 
-    pub async fn publish_delete(self) -> Result<()> {
+    pub async fn delete(&self) -> Result<()> {
+        get_collection("messages")
+            .delete_one(
+                doc! {
+                    "_id": &self.id
+                },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "delete_one",
+                with: "message",
+            })?;
+
         let channel = self.channel.clone();
-        ClientboundNotification::MessageDelete { id: self.id }
+        ClientboundNotification::MessageDelete { id: self.id.clone() }
             .publish(channel)
             .await
             .ok();

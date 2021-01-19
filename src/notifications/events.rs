@@ -1,5 +1,6 @@
 use hive_pubsub::PubSub;
 use rauth::auth::Session;
+use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
 
@@ -38,12 +39,13 @@ pub enum ClientboundNotification {
     },
 
     Message(Message),
-    MessageEdit(Message),
+    MessageUpdate(JsonValue),
     MessageDelete {
         id: String,
     },
 
     ChannelCreate(Channel),
+    ChannelUpdate(JsonValue),
     ChannelGroupJoin {
         id: String,
         user: String,
@@ -51,6 +53,9 @@ pub enum ClientboundNotification {
     ChannelGroupLeave {
         id: String,
         user: String,
+    },
+    ChannelDelete {
+        id: String,
     },
 
     UserRelationship {
@@ -95,17 +100,31 @@ pub fn prehandle_hook(notification: &ClientboundNotification) {
                 .unsubscribe(&user.to_string(), &id.to_string())
                 .ok();
         }
-        ClientboundNotification::UserRelationship { id, user, status } => match status {
-            RelationshipStatus::None => {
+        ClientboundNotification::UserRelationship { id, user, status } => {
+            if status != &RelationshipStatus::None {
+                subscribe_if_exists(id.clone(), user.clone()).ok();
+            }
+        }
+        _ => {}
+    }
+}
+
+pub fn posthandle_hook(notification: &ClientboundNotification) {
+    match &notification {
+        ClientboundNotification::ChannelDelete { id } => {
+            get_hive()
+                .hive
+                .drop_topic(&id)
+                .ok();
+        }
+        ClientboundNotification::UserRelationship { id, user, status } => {
+            if status == &RelationshipStatus::None {
                 get_hive()
                     .hive
                     .unsubscribe(&id.to_string(), &user.to_string())
                     .ok();
-            }
-            _ => {
-                subscribe_if_exists(id.clone(), user.clone()).ok();
-            }
-        },
+            }   
+        }
         _ => {}
     }
 }

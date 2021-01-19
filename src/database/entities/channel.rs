@@ -1,7 +1,8 @@
 use crate::database::*;
 use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
-use mongodb::bson::to_document;
+use mongodb::bson::{doc, to_document};
+use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -57,6 +58,52 @@ impl Channel {
         let channel_id = self.id().to_string();
         ClientboundNotification::ChannelCreate(self)
             .publish(channel_id)
+            .await
+            .ok();
+
+        Ok(())
+    }
+
+    pub async fn publish_update(&self, partial: JsonValue) -> Result<()> {
+        let id = self.id().to_string();
+        ClientboundNotification::ChannelUpdate(partial)
+            .publish(id)
+            .await
+            .ok();
+
+        Ok(())
+    }
+
+    pub async fn delete(&self) -> Result<()> {
+        let id = self.id();
+        get_collection("messages")
+            .delete_many(
+                doc! {
+                    "channel": id
+                },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "delete_many",
+                with: "messages",
+            })?;
+
+        get_collection("channels")
+            .delete_one(
+                doc! {
+                    "_id": id
+                },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "delete_one",
+                with: "channel",
+            })?;
+
+        ClientboundNotification::ChannelDelete { id: id.to_string() }
+            .publish(id.to_string())
             .await
             .ok();
 
