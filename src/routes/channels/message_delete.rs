@@ -12,7 +12,7 @@ pub async fn req(user: User, target: Ref, msg: Ref) -> Result<()> {
         Err(Error::LabelMe)?
     }
 
-    let message = msg.fetch_message().await?;
+    let message = msg.fetch_message(&channel).await?;
     if message.author != user.id && !perm.get_manage_messages() {
         match channel {
             Channel::SavedMessages { .. } => unreachable!(),

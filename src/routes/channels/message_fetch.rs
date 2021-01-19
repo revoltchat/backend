@@ -12,6 +12,6 @@ pub async fn req(user: User, target: Ref, msg: Ref) -> Result<JsonValue> {
         Err(Error::LabelMe)?
     }
 
-    let message = msg.fetch_message().await?;
+    let message = msg.fetch_message(&channel).await?;
     Ok(json!(message))
 }

@@ -6,7 +6,7 @@ use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "type")]
+#[serde(tag = "channel_type")]
 pub enum Channel {
     SavedMessages {
         #[serde(rename = "_id")]

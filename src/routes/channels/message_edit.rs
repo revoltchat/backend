@@ -25,7 +25,7 @@ pub async fn req(user: User, target: Ref, msg: Ref, edit: Json<Data>) -> Result<
         Err(Error::LabelMe)?
     }
 
-    let message = msg.fetch_message().await?;
+    let message = msg.fetch_message(&channel).await?;
     if message.author != user.id {
         Err(Error::CannotEditMessage)?
     }
