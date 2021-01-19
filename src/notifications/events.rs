@@ -112,10 +112,7 @@ pub fn prehandle_hook(notification: &ClientboundNotification) {
 pub fn posthandle_hook(notification: &ClientboundNotification) {
     match &notification {
         ClientboundNotification::ChannelDelete { id } => {
-            get_hive()
-                .hive
-                .drop_topic(&id)
-                .ok();
+            get_hive().hive.drop_topic(&id).ok();
         }
         ClientboundNotification::UserRelationship { id, user, status } => {
             if status == &RelationshipStatus::None {
@@ -123,7 +120,7 @@ pub fn posthandle_hook(notification: &ClientboundNotification) {
                     .hive
                     .unsubscribe(&id.to_string(), &user.to_string())
                     .ok();
-            }   
+            }
         }
         _ => {}
     }

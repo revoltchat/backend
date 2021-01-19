@@ -50,5 +50,7 @@ pub async fn req(user: User, target: Ref, msg: Ref, edit: Json<Data>) -> Result<
             with: "message",
         })?;
 
-    message.publish_update(json!({ "content": edit.content, "edited": DateTime(edited) })).await
+    message
+        .publish_update(json!({ "content": edit.content, "edited": DateTime(edited) }))
+        .await
 }

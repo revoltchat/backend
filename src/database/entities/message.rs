@@ -78,10 +78,12 @@ impl Message {
             })?;
 
         let channel = self.channel.clone();
-        ClientboundNotification::MessageDelete { id: self.id.clone() }
-            .publish(channel)
-            .await
-            .ok();
+        ClientboundNotification::MessageDelete {
+            id: self.id.clone(),
+        }
+        .publish(channel)
+        .await
+        .ok();
 
         Ok(())
     }

@@ -66,7 +66,7 @@ pub async fn req(user: User, target: Ref) -> Result<()> {
 
                     target.publish_update(json!({ "owner": new_owner })).await?;
                 } else {
-                    return target.delete().await
+                    return target.delete().await;
                 }
             } else {
                 get_collection("channels")
