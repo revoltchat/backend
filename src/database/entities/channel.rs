@@ -6,7 +6,7 @@ use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "channel_type")]
+#[serde(tag = "type")]
 pub enum Channel {
     SavedMessages {
         #[serde(rename = "_id")]
@@ -64,12 +64,11 @@ impl Channel {
         Ok(())
     }
 
-    pub async fn publish_update(&self, partial: JsonValue) -> Result<()> {
+    pub async fn publish_update(&self, data: JsonValue) -> Result<()> {
         let id = self.id().to_string();
-        ClientboundNotification::ChannelUpdate(partial)
-            .publish(id)
-            .await
-            .ok();
+        ClientboundNotification::ChannelUpdate {
+            id: id.clone(), data
+        }.publish(id).await.ok();
 
         Ok(())
     }

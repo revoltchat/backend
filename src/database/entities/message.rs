@@ -53,12 +53,11 @@ impl Message {
         Ok(())
     }
 
-    pub async fn publish_update(&self, partial: JsonValue) -> Result<()> {
+    pub async fn publish_update(&self, data: JsonValue) -> Result<()> {
         let channel = self.channel.clone();
-        ClientboundNotification::MessageUpdate(partial)
-            .publish(channel)
-            .await
-            .ok();
+        ClientboundNotification::MessageUpdate {
+            id: self.id.clone(), data
+        }.publish(channel).await.ok();
 
         Ok(())
     }
