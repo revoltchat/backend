@@ -12,11 +12,11 @@ pub async fn req(user: User) -> Result<JsonValue> {
             doc! {
                 "$or": [
                     {
-                        "type": "DirectMessage",
+                        "channel_type": "DirectMessage",
                         "active": true
                     },
                     {
-                        "type": "Group"
+                        "channel_type": "Group"
                     }
                 ],
                 "recipients": user.id

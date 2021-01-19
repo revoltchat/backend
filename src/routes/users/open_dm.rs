@@ -9,12 +9,12 @@ use ulid::Ulid;
 pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
     let query = if user.id == target.id {
         doc! {
-            "type": "SavedMessages",
+            "channel_type": "SavedMessages",
             "user": &user.id
         }
     } else {
         doc! {
-            "type": "DirectMessage",
+            "channel_type": "DirectMessage",
             "recipients": {
                 "$all": [ &user.id, &target.id ]
             }

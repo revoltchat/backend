@@ -65,16 +65,16 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
             doc! {
                 "$or": [
                     {
-                        "type": "SavedMessages",
+                        "channel_type": "SavedMessages",
                         "user": &user.id
                     },
                     {
-                        "type": "DirectMessage",
+                        "channel_type": "DirectMessage",
                         "recipients": &user.id,
                         "active": true
                     },
                     {
-                        "type": "Group",
+                        "channel_type": "Group",
                         "recipients": &user.id
                     }
                 ]
