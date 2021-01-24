@@ -100,12 +100,6 @@ pub fn prehandle_hook(notification: &ClientboundNotification) {
                 }
             }
         }
-        ClientboundNotification::ChannelGroupLeave { id, user } => {
-            get_hive()
-                .hive
-                .unsubscribe(&user.to_string(), &id.to_string())
-                .ok();
-        }
         ClientboundNotification::UserRelationship { id, user, status } => {
             if status != &RelationshipStatus::None {
                 subscribe_if_exists(id.clone(), user.clone()).ok();
@@ -127,6 +121,12 @@ pub fn posthandle_hook(notification: &ClientboundNotification) {
                     .unsubscribe(&id.to_string(), &user.to_string())
                     .ok();
             }
+        }
+        ClientboundNotification::ChannelGroupLeave { id, user } => {
+            get_hive()
+                .hive
+                .unsubscribe(&user.to_string(), &id.to_string())
+                .ok();
         }
         _ => {}
     }
