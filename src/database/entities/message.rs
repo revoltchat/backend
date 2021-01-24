@@ -51,11 +51,13 @@ impl Message {
                 channels.update_one(
                     doc! { "_id": id },
                     doc! {
-                        "active": true,
-                        "last_message": {
-                            "_id": self.id.clone(),
-                            "author": self.author.clone(),
-                            "short": self.content.chars().take(24).collect::<String>()
+                        "$set": {
+                            "active": true,
+                            "last_message": {
+                                "_id": self.id.clone(),
+                                "author": self.author.clone(),
+                                "short": self.content.chars().take(24).collect::<String>()
+                            }
                         }
                     },
                     None
@@ -70,10 +72,12 @@ impl Message {
                 channels.update_one(
                     doc! { "_id": id },
                     doc! {
-                        "last_message": {
-                            "_id": self.id.clone(),
-                            "author": self.author.clone(),
-                            "short": self.content.chars().take(24).collect::<String>()
+                        "$set": {
+                            "last_message": {
+                                "_id": self.id.clone(),
+                                "author": self.author.clone(),
+                                "short": self.content.chars().take(24).collect::<String>()
+                            }
                         }
                     },
                     None
