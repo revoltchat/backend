@@ -27,6 +27,10 @@ pub async fn req(session: Session, user: Option<User>, data: Json<Data>) -> Resu
 
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
+    
+    if data.username == "revolt" {
+        Err(Error::UsernameTaken)?
+    }
 
     let col = get_collection("users");
     if col
