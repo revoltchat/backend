@@ -26,8 +26,7 @@ pub async fn generate_subscriptions(user: &User) -> Result<(), String> {
                     },
                     {
                         "channel_type": "DirectMessage",
-                        "recipients": &user.id,
-                        "active": true
+                        "recipients": &user.id
                     },
                     {
                         "channel_type": "Group",

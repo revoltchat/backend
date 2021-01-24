@@ -70,8 +70,7 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
                     },
                     {
                         "channel_type": "DirectMessage",
-                        "recipients": &user.id,
-                        "active": true
+                        "recipients": &user.id
                     },
                     {
                         "channel_type": "Group",
