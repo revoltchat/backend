@@ -101,7 +101,7 @@ pub async fn req(user: User, target: Ref) -> Result<()> {
                 id.clone(),
                 format!("<@{}> left the group.", user.id),
             )
-            .publish()
+            .publish(&target)
             .await
             .ok();
 

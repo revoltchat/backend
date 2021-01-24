@@ -56,7 +56,7 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
         edited: None,
     };
 
-    msg.clone().publish().await?;
+    msg.clone().publish(&target).await?;
 
     Ok(json!(msg))
 }

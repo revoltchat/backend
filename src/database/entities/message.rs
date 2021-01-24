@@ -35,18 +35,60 @@ impl Message {
         }
     }
 
-    pub async fn publish(self) -> Result<()> {
+    pub async fn publish(self, channel: &Channel) -> Result<()> {
         get_collection("messages")
             .insert_one(to_bson(&self).unwrap().as_document().unwrap().clone(), None)
             .await
             .map_err(|_| Error::DatabaseError {
                 operation: "insert_one",
-                with: "messages",
+                with: "message",
             })?;
 
-        let channel = self.channel.clone();
+        // ! temp code
+        let channels = get_collection("channels");
+        match channel {
+            Channel::DirectMessage { id, .. } => {
+                channels.update_one(
+                    doc! { "_id": id },
+                    doc! {
+                        "active": true,
+                        "last_message": {
+                            "_id": self.id.clone(),
+                            "author": self.author.clone(),
+                            "short": self.content.chars().take(24).collect::<String>()
+                        }
+                    },
+                    None
+                )
+                .await
+                .map_err(|_| Error::DatabaseError {
+                    operation: "update_one",
+                    with: "channel",
+                })?;
+            },
+            Channel::Group { id, .. } => {
+                channels.update_one(
+                    doc! { "_id": id },
+                    doc! {
+                        "last_message": {
+                            "_id": self.id.clone(),
+                            "author": self.author.clone(),
+                            "short": self.content.chars().take(24).collect::<String>()
+                        }
+                    },
+                    None
+                )
+                .await
+                .map_err(|_| Error::DatabaseError {
+                    operation: "update_one",
+                    with: "channel",
+                })?;
+            },
+            _ => {}
+        }
+
         ClientboundNotification::Message(self)
-            .publish(channel)
+            .publish(channel.id().to_string())
             .await
             .ok();
 

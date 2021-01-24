@@ -17,7 +17,7 @@ pub async fn req(user: User, target: Ref, member: Ref) -> Result<()> {
         Err(Error::LabelMe)?
     }
 
-    if let Channel::Group { id, recipients, .. } = channel {
+    if let Channel::Group { id, recipients, .. } = &channel {
         if recipients.len() >= *MAX_GROUP_SIZE {
             Err(Error::GroupTooLarge {
                 max: *MAX_GROUP_SIZE,
@@ -56,10 +56,10 @@ pub async fn req(user: User, target: Ref, member: Ref) -> Result<()> {
 
         Message::create(
             "00000000000000000000000000".to_string(),
-            id,
+            id.clone(),
             format!("<@{}> added <@{}> to the group.", user.id, member.id),
         )
-        .publish()
+        .publish(&channel)
         .await
         .ok();
 

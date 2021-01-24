@@ -6,6 +6,14 @@ use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct LastMessage {
+    #[serde(rename = "_id")]
+    id: String,
+    author: String,
+    short: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "channel_type")]
 pub enum Channel {
     SavedMessages {
@@ -18,6 +26,8 @@ pub enum Channel {
         id: String,
         active: bool,
         recipients: Vec<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        last_message: Option<LastMessage>,
     },
     Group {
         #[serde(rename = "_id")]
@@ -28,6 +38,8 @@ pub enum Channel {
         owner: String,
         description: String,
         recipients: Vec<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        last_message: Option<LastMessage>,
     },
 }
 

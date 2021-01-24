@@ -70,6 +70,7 @@ pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
             .unwrap_or_else(|| "A group.".to_string()),
         owner: user.id,
         recipients: set.into_iter().collect::<Vec<String>>(),
+        last_message: None
     };
 
     channel.clone().publish().await?;

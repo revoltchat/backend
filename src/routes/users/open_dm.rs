@@ -40,6 +40,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                 id,
                 active: false,
                 recipients: vec![user.id, target.id],
+                last_message: None
             }
         };
 

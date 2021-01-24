@@ -16,9 +16,9 @@ pub async fn req(user: User, target: Ref, member: Ref) -> Result<()> {
         owner,
         recipients,
         ..
-    } = channel
+    } = &channel
     {
-        if &user.id != &owner {
+        if &user.id != owner {
             // figure out if we want to use perm system here
             Err(Error::LabelMe)?
         }
@@ -55,10 +55,10 @@ pub async fn req(user: User, target: Ref, member: Ref) -> Result<()> {
 
         Message::create(
             "00000000000000000000000000".to_string(),
-            id,
+            id.clone(),
             format!("<@{}> removed <@{}> from the group.", user.id, member.id),
         )
-        .publish()
+        .publish(&channel)
         .await
         .ok();
 
