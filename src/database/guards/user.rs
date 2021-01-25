@@ -29,7 +29,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
         } else {
             Outcome::Failure((
                 Status::InternalServerError,
-                rauth::util::Error::DatabaseError,
+                rauth::util::Error::DatabaseError { operation: "find_one", with: "user" },
             ))
         }
     }

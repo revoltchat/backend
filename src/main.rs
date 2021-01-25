@@ -20,7 +20,7 @@ pub mod util;
 
 use futures::join;
 use log::info;
-use rauth;
+use rauth::{self, options::Options};
 use rocket_cors::AllowedOrigins;
 
 #[async_std::main]
@@ -55,10 +55,12 @@ async fn launch_web() {
     .to_cors()
     .expect("Failed to create CORS.");
 
-    let auth = rauth::auth::Auth::new(database::get_collection("accounts"));
+    let auth = rauth::auth::Auth::new(database::get_collection("accounts"), Options::new());
 
-    routes::mount(rauth::routes::mount(rocket::ignite(), "/auth", auth))
+    routes::mount(rocket::ignite())
         .mount("/", rocket_cors::catch_all_options_routes())
+        .mount("/auth", rauth::routes::routes())
+        .manage(auth)
         .manage(cors.clone())
         .attach(cors)
         .launch()

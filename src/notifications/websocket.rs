@@ -12,7 +12,7 @@ use futures::{pin_mut, prelude::*};
 use hive_pubsub::PubSub;
 use log::{debug, info};
 use many_to_many::ManyToMany;
-use rauth::auth::{Auth, Session};
+use rauth::{auth::{Auth, Session}, options::Options};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex, RwLock};
@@ -84,7 +84,7 @@ async fn accept(stream: TcpStream) {
                             }
                         }
 
-                        if let Ok(validated_session) = Auth::new(get_collection("accounts"))
+                        if let Ok(validated_session) = Auth::new(get_collection("accounts"), Options::new())
                             .verify_session(new_session)
                             .await
                         {

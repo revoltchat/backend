@@ -12,13 +12,13 @@ many-to-many = "0.1.2"
 impl_ops = "0.1.1"
 ctrlc = { version = "3.0", features = ["termination"] }
 async-tungstenite = { version = "0.10.0", features = ["async-std-runtime"] }
-rauth = { git = "https://gitlab.insrt.uk/insert/rauth" }
+rauth = { git = "https://gitlab.insrt.uk/insert/rauth", rev = "8f3ea627" }
 async-std = { version = "1.8.0", features = ["tokio02", "attributes"] }
 
 hive_pubsub = { version = "0.4.3", features = ["mongo"] }
-rocket_cors = { git = "https://github.com/lawliet89/rocket_cors", branch = "master" }
-rocket_contrib = { git = "https://github.com/SergioBenitez/Rocket", branch = "master" }
-rocket = { git = "https://github.com/SergioBenitez/Rocket", branch = "master", default-features = false }
+rocket_cors = { git = "https://github.com/insertish/rocket_cors", branch = "master" }
+rocket_contrib = { git = "https://github.com/SergioBenitez/Rocket", rev = "031948c1daaa146128d8a435be116476f2adde00" }
+rocket = { git = "https://github.com/SergioBenitez/Rocket", rev = "031948c1daaa146128d8a435be116476f2adde00", default-features = false }
 mongodb = { version = "1.1.1", features = ["tokio-runtime"], default-features = false }
 
 once_cell = "1.4.1"
