@@ -1,4 +1,8 @@
 use crate::database::*;
+use crate::util::result::Result;
+
+use super::PermissionCalculator;
+
 use num_enum::TryFromPrimitive;
 use std::ops;
 
@@ -21,40 +25,90 @@ bitfield! {
 impl_op_ex!(+ |a: &ChannelPermission, b: &ChannelPermission| -> u32 { *a as u32 | *b as u32 });
 impl_op_ex_commutative!(+ |a: &u32, b: &ChannelPermission| -> u32 { *a | *b as u32 });
 
-pub async fn calculate(user: &User, target: &Channel) -> ChannelPermissions<[u32; 1]> {
+/*pub async fn calculate(user: &User, target: &Channel) -> Result<u32> {
     match target {
         Channel::SavedMessages { user: owner, .. } => {
             if &user.id == owner {
-                ChannelPermissions([ChannelPermission::View
+                Ok(ChannelPermission::View
                     + ChannelPermission::SendMessage
-                    + ChannelPermission::ManageMessages])
+                    + ChannelPermission::ManageMessages)
             } else {
-                ChannelPermissions([0])
+                Ok(0)
             }
         }
         Channel::DirectMessage { recipients, .. } => {
             if recipients.iter().find(|x| *x == &user.id).is_some() {
                 if let Some(recipient) = recipients.iter().find(|x| *x != &user.id) {
-                    let perms = super::user::calculate(&user, recipient).await;
+                    let perms = super::user::get(&user, recipient).await?;
 
                     if perms.get_send_message() {
-                        return ChannelPermissions([
-                            ChannelPermission::View + ChannelPermission::SendMessage
-                        ]);
+                        return Ok(ChannelPermission::View + ChannelPermission::SendMessage);
                     }
 
-                    return ChannelPermissions([ChannelPermission::View as u32]);
+                    return Ok(ChannelPermission::View as u32);
                 }
             }
 
-            ChannelPermissions([0])
+            Ok(0)
         }
         Channel::Group { recipients, .. } => {
             if recipients.iter().find(|x| *x == &user.id).is_some() {
-                ChannelPermissions([ChannelPermission::View + ChannelPermission::SendMessage])
+                Ok(ChannelPermission::View + ChannelPermission::SendMessage)
             } else {
-                ChannelPermissions([0])
+                Ok(0)
             }
         }
+    }
+}
+
+pub async fn get(user: &User, target: &Channel) -> Result<ChannelPermissions<[u32; 1]>> {
+    Ok(ChannelPermissions([calculate(&user, &target).await?]))
+}*/
+
+impl<'a> PermissionCalculator<'a> {
+    pub async fn calculate_channel(self) -> Result<u32> {
+        let channel = if let Some(channel) = self.channel {
+            channel
+        } else {
+            unreachable!()
+        };
+
+        match channel {
+            Channel::SavedMessages { user: owner, .. } => {
+                if &self.perspective.id == owner {
+                    Ok(ChannelPermission::View
+                        + ChannelPermission::SendMessage
+                        + ChannelPermission::ManageMessages)
+                } else {
+                    Ok(0)
+                }
+            }
+            Channel::DirectMessage { recipients, .. } => {
+                if recipients.iter().find(|x| *x == &self.perspective.id).is_some() {
+                    if let Some(recipient) = recipients.iter().find(|x| *x != &self.perspective.id) {
+                        let perms = self.for_user(recipient).await?;
+    
+                        if perms.get_send_message() {
+                            return Ok(ChannelPermission::View + ChannelPermission::SendMessage);
+                        }
+    
+                        return Ok(ChannelPermission::View as u32);
+                    }
+                }
+    
+                Ok(0)
+            }
+            Channel::Group { recipients, .. } => {
+                if recipients.iter().find(|x| *x == &self.perspective.id).is_some() {
+                    Ok(ChannelPermission::View + ChannelPermission::SendMessage)
+                } else {
+                    Ok(0)
+                }
+            }
+        }
+    }
+
+    pub async fn for_channel(self) -> Result<ChannelPermissions<[u32; 1]>> {
+        Ok(ChannelPermissions([ self.calculate_channel().await? ]))
     }
 }

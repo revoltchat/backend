@@ -11,8 +11,9 @@ pub async fn req(user: User, target: Ref, member: Ref) -> Result<()> {
     }
 
     let channel = target.fetch_channel().await?;
-
-    let perm = permissions::channel::calculate(&user, &channel).await;
+    let perm = permissions::PermissionCalculator::new(&user)
+        .with_channel(&channel)
+        .for_channel().await?;
     if !perm.get_view() {
         Err(Error::LabelMe)?
     }

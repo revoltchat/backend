@@ -1,7 +1,7 @@
 use crate::database::*;
 use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
-use mongodb::bson::{doc, to_document};
+use mongodb::bson::{doc, from_document, to_document};
 use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
 
@@ -50,6 +50,20 @@ impl Channel {
             Channel::DirectMessage { id, .. } => id,
             Channel::Group { id, .. } => id,
         }
+    }
+
+    pub async fn get(id: &str) -> Result<Channel> {
+        let doc = get_collection("channels")
+            .find_one(
+                doc! { "_id": id },
+                None
+            )
+            .await
+            .map_err(|_| Error::DatabaseError { operation: "find_one", with: "channel" })?
+            .ok_or_else(|| Error::UnknownChannel)?;
+        
+        from_document::<Channel>(doc)
+            .map_err(|_| Error::DatabaseError { operation: "from_document", with: "channel" })
     }
 
     pub async fn publish(self) -> Result<()> {

@@ -44,7 +44,7 @@ impl Message {
                 with: "message",
             })?;
 
-        // ! temp code
+        // ! FIXME: temp code
         let channels = get_collection("channels");
         match channel {
             Channel::DirectMessage { id, .. } => {

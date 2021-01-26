@@ -9,7 +9,9 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
 
     if user.id != target.id {
         // Check whether we are allowed to fetch this user.
-        let perm = permissions::user::calculate(&user, &target.id).await;
+        let perm = permissions::PermissionCalculator::new(&user)
+            .with_user(&target)
+            .for_user_given().await?;
         if !perm.get_access() {
             Err(Error::LabelMe)?
         }
