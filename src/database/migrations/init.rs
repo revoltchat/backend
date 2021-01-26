@@ -9,6 +9,10 @@ pub async fn create_database() {
     info!("Creating database.");
     let db = get_db();
 
+    db.create_collection("accounts", None)
+        .await
+        .expect("Failed to create accounts collection.");
+
     db.create_collection("users", None)
         .await
         .expect("Failed to create users collection.");
@@ -16,14 +20,6 @@ pub async fn create_database() {
     db.create_collection("channels", None)
         .await
         .expect("Failed to create channels collection.");
-
-    db.create_collection("guilds", None)
-        .await
-        .expect("Failed to create guilds collection.");
-
-    db.create_collection("members", None)
-        .await
-        .expect("Failed to create members collection.");
 
     db.create_collection("messages", None)
         .await
@@ -42,6 +38,39 @@ pub async fn create_database() {
     )
     .await
     .expect("Failed to create pubsub collection.");
+
+    db.run_command(
+        doc! {
+            "createIndexes": "accounts",
+            "indexes": [
+                {
+                    "key": {
+                        "email": 1
+                    },
+                    "name": "email",
+                    "unique": true,
+                    "collation": {
+                        "locale": "en",
+                        "strength": 2
+                    }
+                },
+                {
+                    "key": {
+                        "email_normalised": 1
+                    },
+                    "name": "email_normalised",
+                    "unique": true,
+                    "collation": {
+                        "locale": "en",
+                        "strength": 2
+                    }
+                }
+            ]
+        },
+        None,
+    )
+    .await
+    .expect("Failed to create account index.");
 
     db.run_command(
         doc! {
