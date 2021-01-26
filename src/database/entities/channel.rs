@@ -54,16 +54,18 @@ impl Channel {
 
     pub async fn get(id: &str) -> Result<Channel> {
         let doc = get_collection("channels")
-            .find_one(
-                doc! { "_id": id },
-                None
-            )
+            .find_one(doc! { "_id": id }, None)
             .await
-            .map_err(|_| Error::DatabaseError { operation: "find_one", with: "channel" })?
+            .map_err(|_| Error::DatabaseError {
+                operation: "find_one",
+                with: "channel",
+            })?
             .ok_or_else(|| Error::UnknownChannel)?;
-        
-        from_document::<Channel>(doc)
-            .map_err(|_| Error::DatabaseError { operation: "from_document", with: "channel" })
+
+        from_document::<Channel>(doc).map_err(|_| Error::DatabaseError {
+            operation: "from_document",
+            with: "channel",
+        })
     }
 
     pub async fn publish(self) -> Result<()> {

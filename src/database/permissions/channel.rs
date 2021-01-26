@@ -84,22 +84,31 @@ impl<'a> PermissionCalculator<'a> {
                 }
             }
             Channel::DirectMessage { recipients, .. } => {
-                if recipients.iter().find(|x| *x == &self.perspective.id).is_some() {
-                    if let Some(recipient) = recipients.iter().find(|x| *x != &self.perspective.id) {
+                if recipients
+                    .iter()
+                    .find(|x| *x == &self.perspective.id)
+                    .is_some()
+                {
+                    if let Some(recipient) = recipients.iter().find(|x| *x != &self.perspective.id)
+                    {
                         let perms = self.for_user(recipient).await?;
-    
+
                         if perms.get_send_message() {
                             return Ok(ChannelPermission::View + ChannelPermission::SendMessage);
                         }
-    
+
                         return Ok(ChannelPermission::View as u32);
                     }
                 }
-    
+
                 Ok(0)
             }
             Channel::Group { recipients, .. } => {
-                if recipients.iter().find(|x| *x == &self.perspective.id).is_some() {
+                if recipients
+                    .iter()
+                    .find(|x| *x == &self.perspective.id)
+                    .is_some()
+                {
                     Ok(ChannelPermission::View + ChannelPermission::SendMessage)
                 } else {
                     Ok(0)
@@ -109,6 +118,6 @@ impl<'a> PermissionCalculator<'a> {
     }
 
     pub async fn for_channel(self) -> Result<ChannelPermissions<[u32; 1]>> {
-        Ok(ChannelPermissions([ self.calculate_channel().await? ]))
+        Ok(ChannelPermissions([self.calculate_channel().await?]))
     }
 }

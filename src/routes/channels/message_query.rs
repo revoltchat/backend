@@ -31,7 +31,8 @@ pub async fn req(user: User, target: Ref, options: Form<Options>) -> Result<Json
 
     let perm = permissions::PermissionCalculator::new(&user)
         .with_channel(&target)
-        .for_channel().await?;
+        .for_channel()
+        .await?;
     if !perm.get_view() {
         Err(Error::LabelMe)?
     }

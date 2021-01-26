@@ -3,9 +3,9 @@ use crate::util::result::{Error, Result};
 
 use super::PermissionCalculator;
 
-use std::ops;
 use mongodb::bson::doc;
 use num_enum::TryFromPrimitive;
+use std::ops;
 
 #[derive(Debug, PartialEq, Eq, TryFromPrimitive, Copy, Clone)]
 #[repr(u32)]
@@ -13,7 +13,9 @@ pub enum UserPermission {
     Access = 1,
     ViewProfile = 2,
     SendMessage = 4,
-    Invite = 8
+    Invite = 8,
+
+    ViewAll = 2147483648,
 }
 
 bitfield! {
@@ -23,9 +25,13 @@ bitfield! {
     pub get_view_profile, _: 30;
     pub get_send_message, _: 29;
     pub get_invite, _: 28;
+
+    pub get_view_all, _: 0;
 }
 
 impl_op_ex!(+ |a: &UserPermission, b: &UserPermission| -> u32 { *a as u32 | *b as u32 });
+impl_op_ex!(-|a: &UserPermission, b: &UserPermission| -> u32 { *a as u32 & !(*b as u32) });
+impl_op_ex!(-|a: &u32, b: &UserPermission| -> u32 { *a & !(*b as u32) });
 impl_op_ex_commutative!(+ |a: &u32, b: &UserPermission| -> u32 { *a | *b as u32 });
 
 pub fn get_relationship(a: &User, b: &str) -> RelationshipStatus {
@@ -44,11 +50,13 @@ pub fn get_relationship(a: &User, b: &str) -> RelationshipStatus {
 
 impl<'a> PermissionCalculator<'a> {
     pub async fn calculate_user(self, target: &str) -> Result<u32> {
+        if &self.perspective.id == target {
+            return Ok(u32::MAX);
+        }
+
         let mut permissions: u32 = 0;
         match get_relationship(&self.perspective, &target) {
-            RelationshipStatus::Friend => {
-                return Ok(u32::MAX)
-            }
+            RelationshipStatus::Friend => return Ok(u32::MAX - UserPermission::ViewAll),
             RelationshipStatus::Blocked | RelationshipStatus::BlockedOther => {
                 return Ok(UserPermission::Access as u32)
             }
@@ -62,20 +70,25 @@ impl<'a> PermissionCalculator<'a> {
             _ => {}
         }
 
-        if get_collection("channels")
-            .find_one(
-                doc! {
-                    "type": "Group",
-                    "$and": {
-                        "recipients": &self.perspective.id,
-                        "recipients": target
-                    }
-                },
-                None
-            )
-            .await
-            .map_err(|_| Error::DatabaseError { operation: "find", with: "channels" })?
-            .is_some() {
+        if self.has_mutual_conncetion
+            || get_collection("channels")
+                .find_one(
+                    doc! {
+                        "type": "Group",
+                        "$and": {
+                            "recipients": &self.perspective.id,
+                            "recipients": target
+                        }
+                    },
+                    None,
+                )
+                .await
+                .map_err(|_| Error::DatabaseError {
+                    operation: "find",
+                    with: "channels",
+                })?
+                .is_some()
+        {
             return Ok(UserPermission::Access as u32);
         }
 
@@ -83,11 +96,11 @@ impl<'a> PermissionCalculator<'a> {
     }
 
     pub async fn for_user(self, target: &str) -> Result<UserPermissions<[u32; 1]>> {
-        Ok(UserPermissions([ self.calculate_user(&target).await? ]))
+        Ok(UserPermissions([self.calculate_user(&target).await?]))
     }
 
     pub async fn for_user_given(self) -> Result<UserPermissions<[u32; 1]>> {
         let id = &self.user.unwrap().id;
-        Ok(UserPermissions([ self.calculate_user(&id).await? ]))
+        Ok(UserPermissions([self.calculate_user(&id).await?]))
     }
 }
