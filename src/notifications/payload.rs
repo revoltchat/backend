@@ -65,6 +65,7 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
         }
     }
 
+    user_ids.remove(&user.id);
     if user_ids.len() > 0 {
         let mut cursor = get_collection("users")
             .find(
@@ -85,21 +86,10 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
 
         while let Some(result) = cursor.next().await {
             if let Ok(doc) = result {
-                let mut other: User = from_document(doc).map_err(|_| Error::DatabaseError {
+                let other: User = from_document(doc).map_err(|_| Error::DatabaseError {
                     operation: "from_document",
                     with: "user",
                 })?;
-
-                if let Some(relationships) = &user.relations {
-                    other.relationship = Some(
-                        if let Some(relationship) = relationships.iter().find(|x| other.id == x.id)
-                        {
-                            relationship.status.clone()
-                        } else {
-                            RelationshipStatus::None
-                        },
-                    );
-                }
 
                 let permissions = PermissionCalculator::new(&user)
                     .with_mutual_connection()
@@ -107,11 +97,16 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
                     .for_user_given()
                     .await?;
 
-                users.push(other.with(permissions));
+                users.push(
+                    other
+                        .from(&user)
+                        .with(permissions)
+                );
             }
         }
     }
 
+    user.relationship = Some(RelationshipStatus::User);
     user.online = Some(true);
     users.push(user);
 

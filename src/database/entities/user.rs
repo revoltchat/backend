@@ -36,6 +36,24 @@ pub struct User {
 }
 
 impl User {
+    /// Mutate the user object to include relationship as seen by user.
+    pub fn from(mut self, user: &User) -> User {
+        if self.id == user.id {
+            self.relationship = Some(RelationshipStatus::User);
+            return self;
+        }
+
+        if let Some(relations) = &user.relations {
+            if let Some(relationship) = relations.iter().find(|x| self.id == x.id) {
+                self.relationship = Some(relationship.status.clone());
+                return self;
+            }
+        }
+
+        self
+    }
+
+    /// Mutate the user object to appear as seen by user.
     pub fn with(mut self, permissions: UserPermissions<[u32; 1]>) -> User {
         if !permissions.get_view_all() {
             self.relations = None;
