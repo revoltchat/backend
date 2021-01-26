@@ -1,9 +1,7 @@
-use super::super::{get_collection, get_db};
+use crate::database::get_collection;
 
-use crate::rocket::futures::StreamExt;
 use log::info;
 use mongodb::bson::{doc, from_document};
-use mongodb::options::FindOptions;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]

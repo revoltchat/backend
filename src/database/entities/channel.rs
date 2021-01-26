@@ -79,8 +79,12 @@ impl Channel {
     pub async fn publish_update(&self, data: JsonValue) -> Result<()> {
         let id = self.id().to_string();
         ClientboundNotification::ChannelUpdate {
-            id: id.clone(), data
-        }.publish(id).await.ok();
+            id: id.clone(),
+            data,
+        }
+        .publish(id)
+        .await
+        .ok();
 
         Ok(())
     }

@@ -48,46 +48,48 @@ impl Message {
         let channels = get_collection("channels");
         match channel {
             Channel::DirectMessage { id, .. } => {
-                channels.update_one(
-                    doc! { "_id": id },
-                    doc! {
-                        "$set": {
-                            "active": true,
-                            "last_message": {
-                                "_id": self.id.clone(),
-                                "author": self.author.clone(),
-                                "short": self.content.chars().take(24).collect::<String>()
+                channels
+                    .update_one(
+                        doc! { "_id": id },
+                        doc! {
+                            "$set": {
+                                "active": true,
+                                "last_message": {
+                                    "_id": self.id.clone(),
+                                    "author": self.author.clone(),
+                                    "short": self.content.chars().take(24).collect::<String>()
+                                }
                             }
-                        }
-                    },
-                    None
-                )
-                .await
-                .map_err(|_| Error::DatabaseError {
-                    operation: "update_one",
-                    with: "channel",
-                })?;
-            },
+                        },
+                        None,
+                    )
+                    .await
+                    .map_err(|_| Error::DatabaseError {
+                        operation: "update_one",
+                        with: "channel",
+                    })?;
+            }
             Channel::Group { id, .. } => {
-                channels.update_one(
-                    doc! { "_id": id },
-                    doc! {
-                        "$set": {
-                            "last_message": {
-                                "_id": self.id.clone(),
-                                "author": self.author.clone(),
-                                "short": self.content.chars().take(24).collect::<String>()
+                channels
+                    .update_one(
+                        doc! { "_id": id },
+                        doc! {
+                            "$set": {
+                                "last_message": {
+                                    "_id": self.id.clone(),
+                                    "author": self.author.clone(),
+                                    "short": self.content.chars().take(24).collect::<String>()
+                                }
                             }
-                        }
-                    },
-                    None
-                )
-                .await
-                .map_err(|_| Error::DatabaseError {
-                    operation: "update_one",
-                    with: "channel",
-                })?;
-            },
+                        },
+                        None,
+                    )
+                    .await
+                    .map_err(|_| Error::DatabaseError {
+                        operation: "update_one",
+                        with: "channel",
+                    })?;
+            }
             _ => {}
         }
 
@@ -102,8 +104,12 @@ impl Message {
     pub async fn publish_update(&self, data: JsonValue) -> Result<()> {
         let channel = self.channel.clone();
         ClientboundNotification::MessageUpdate {
-            id: self.id.clone(), data
-        }.publish(channel).await.ok();
+            id: self.id.clone(),
+            data,
+        }
+        .publish(channel)
+        .await
+        .ok();
 
         Ok(())
     }

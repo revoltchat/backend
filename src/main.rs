@@ -18,10 +18,13 @@ pub mod notifications;
 pub mod routes;
 pub mod util;
 
+use chrono::Duration;
 use futures::join;
 use log::info;
-use rauth::{self, options::Options};
+use rauth::auth::Auth;
+use rauth::options::{EmailVerification, Options, SMTP};
 use rocket_cors::AllowedOrigins;
+use util::variables::{PUBLIC_URL, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD, SMTP_USERNAME, USE_EMAIL};
 
 #[async_std::main]
 async fn main() {
@@ -55,7 +58,27 @@ async fn launch_web() {
     .to_cors()
     .expect("Failed to create CORS.");
 
-    let auth = rauth::auth::Auth::new(database::get_collection("accounts"), Options::new());
+    let auth = Auth::new(
+        database::get_collection("accounts"),
+        Options::new()
+            .base_url(format!("{}/auth", *PUBLIC_URL))
+            .email_verification(if *USE_EMAIL {
+                EmailVerification::Enabled {
+                    success_redirect_uri: format!("{}/welcome", *PUBLIC_URL),
+                    verification_expiry: Duration::days(1),
+                    verification_ratelimit: Duration::minutes(1),
+
+                    smtp: SMTP {
+                        from: (*SMTP_FROM).to_string(),
+                        host: (*SMTP_HOST).to_string(),
+                        username: (*SMTP_USERNAME).to_string(),
+                        password: (*SMTP_PASSWORD).to_string(),
+                    },
+                }
+            } else {
+                EmailVerification::Disabled
+            }),
+    );
 
     routes::mount(rocket::ignite())
         .mount("/", rocket_cors::catch_all_options_routes())

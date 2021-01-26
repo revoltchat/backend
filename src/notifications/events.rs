@@ -41,7 +41,7 @@ pub enum ClientboundNotification {
     Message(Message),
     MessageUpdate {
         id: String,
-        data: JsonValue
+        data: JsonValue,
     },
     MessageDelete {
         id: String,
@@ -50,7 +50,7 @@ pub enum ClientboundNotification {
     ChannelCreate(Channel),
     ChannelUpdate {
         id: String,
-        data: JsonValue
+        data: JsonValue,
     },
     ChannelGroupJoin {
         id: String,
