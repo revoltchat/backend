@@ -2208,8 +2208,8 @@ dependencies = [
 
 [[package]]
 name = "rauth"
-version = "0.2.0"
-source = "git+https://gitlab.insrt.uk/insert/rauth?rev=8f3ea627#8f3ea627eb304945b0af0b79aca8e94e474e46ae"
+version = "0.2.1"
+source = "git+https://gitlab.insrt.uk/insert/rauth?rev=d48b0087cc546d2c9ef53f27d0693c8378172dfe#d48b0087cc546d2c9ef53f27d0693c8378172dfe"
 dependencies = [
  "chrono",
  "json",
