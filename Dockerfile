@@ -9,8 +9,11 @@ COPY src ./src
 RUN cargo build --release
 
 # Bundle Stage
-FROM scratch
+FROM alpine:latest
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 COPY --from=builder /home/rust/src/revolt/target/x86_64-unknown-linux-musl/release/revolt ./
 EXPOSE 8000
 EXPOSE 9000
+ENV ROCKET_ADDRESS 0.0.0.0
+ENV ROCKET_PORT 8000
 CMD ["./revolt"]
