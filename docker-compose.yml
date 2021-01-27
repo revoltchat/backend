@@ -14,5 +14,5 @@ services:
       - REVOLT_UNSAFE_NO_CAPTCHA=1
     ports:
       - "8000:8000"
-      - "9999:9999"
+      - "9000:9000"
     restart: unless-stopped
