@@ -6,6 +6,7 @@ RUN USER=root cargo new --bin revolt
 WORKDIR ./revolt
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
+COPY assets ./assets
 RUN cargo build --release
 
 # Bundle Stage
