@@ -18,13 +18,14 @@ pub mod notifications;
 pub mod routes;
 pub mod util;
 
-use chrono::Duration;
-use futures::join;
 use log::info;
+use futures::join;
+use chrono::Duration;
 use rauth::auth::Auth;
-use rauth::options::{EmailVerification, Options, SMTP};
 use rocket_cors::AllowedOrigins;
-use util::variables::{PUBLIC_URL, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD, SMTP_USERNAME, USE_EMAIL};
+use rocket_prometheus::PrometheusMetrics;
+use rauth::options::{EmailVerification, Options, SMTP};
+use util::variables::{PUBLIC_URL, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD, SMTP_USERNAME, USE_EMAIL, USE_PROMETHEUS};
 
 #[async_std::main]
 async fn main() {
@@ -80,7 +81,17 @@ async fn launch_web() {
             }),
     );
 
-    routes::mount(rocket::ignite())
+    let mut rocket = rocket::ignite();
+
+    if *USE_PROMETHEUS {
+        info!("Enabled Prometheus metrics!");
+        let prometheus = PrometheusMetrics::new();
+        rocket = rocket
+            .attach(prometheus.clone())
+            .mount("/metrics", prometheus);
+    }
+
+    routes::mount(rocket)
         .mount("/", rocket_cors::catch_all_options_routes())
         .mount("/auth", rauth::routes::routes())
         .manage(auth)

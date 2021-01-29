@@ -19,7 +19,7 @@ lazy_static! {
         env::var("REVOLT_WS_HOST").unwrap_or_else(|_| "0.0.0.0:9000".to_string());
 
     // Application Flags
-    pub static ref DISABLE_REGISTRATION: bool = env::var("REVOLT_DISABLE_REGISTRATION").map_or(false, |v| v == "*1");
+    pub static ref DISABLE_REGISTRATION: bool = env::var("REVOLT_DISABLE_REGISTRATION").map_or(false, |v| v == "1");
     pub static ref USE_EMAIL: bool = env::var("REVOLT_USE_EMAIL_VERIFICATION").map_or(
         env::var("REVOLT_SMTP_HOST").is_ok()
             && env::var("REVOLT_SMTP_USERNAME").is_ok()
@@ -28,6 +28,7 @@ lazy_static! {
         |v| v == *"1"
     );
     pub static ref USE_HCAPTCHA: bool = env::var("REVOLT_HCAPTCHA_KEY").is_ok();
+    pub static ref USE_PROMETHEUS: bool = env::var("REVOLT_ENABLE_PROMETHEUS").map_or(false, |v| v == "1");
 
     // SMTP Settings
     pub static ref SMTP_HOST: String =
