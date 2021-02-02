@@ -1,6 +1,6 @@
 [package]
 name = "revolt"
-version = "0.3.3"
+version = "0.3.3-alpha.0"
 authors = ["Paul Makles <paulmakles@gmail.com>"]
 edition = "2018"
 
@@ -33,11 +33,13 @@ serde_json = "1.0.57"
 bitfield = "0.13.2"
 
 reqwest = { version = "0.10.8", features = ["json"] }
+urlencoding = "1.1.1"
 lazy_static = "1.4.0"
 num_enum = "0.5.1"
 chrono = "0.4.15"
 time = "0.2.16"
 rand = "0.7.3"
+md5 = "0.7.0"
 regex = "1"
 
 lettre = "0.10.0-alpha.1"

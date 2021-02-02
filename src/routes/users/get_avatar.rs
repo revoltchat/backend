@@ -1,29 +1,48 @@
-use rocket::response::NamedFile;
-use std::path::Path;
+use mongodb::options::FindOneOptions;
+use rocket::response::Redirect;
+use mongodb::bson::doc;
+use urlencoding;
+use md5;
 
-use crate::database::Ref;
+use crate::util::result::{Error, Result};
+use crate::util::variables::PUBLIC_URL;
+use crate::database::*;
 
 #[get("/<target>/avatar")]
-pub async fn req(target: Ref) -> Option<NamedFile> {
-    match target.id.chars().nth(25).unwrap() {
-        '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' => {
-            NamedFile::open(Path::new("assets/user_red.png")).await.ok()
-        }
-        '8' | '9' | 'A' | 'C' | 'B' | 'D' | 'E' | 'F' => {
-            NamedFile::open(Path::new("assets/user_green.png"))
-                .await
-                .ok()
-        }
-        'G' | 'H' | 'J' | 'K' | 'M' | 'N' | 'P' | 'Q' => {
-            NamedFile::open(Path::new("assets/user_blue.png"))
-                .await
-                .ok()
-        }
-        'R' | 'S' | 'T' | 'V' | 'W' | 'X' | 'Y' | 'Z' => {
-            NamedFile::open(Path::new("assets/user_yellow.png"))
-                .await
-                .ok()
-        }
-        _ => unreachable!(),
-    }
+pub async fn req(target: Ref) -> Result<Redirect> {
+    let doc = get_collection("accounts")
+        .find_one(
+            doc! {
+                "_id": &target.id
+            },
+            FindOneOptions::builder()
+                .projection(doc! { "email": 1 })
+                .build()
+        )
+        .await
+        .map_err(|_| Error::DatabaseError { operation: "find_one", with: "user" })?
+        .ok_or_else(|| Error::UnknownUser)?;
+    
+    let email = doc
+        .get_str("email")
+        .map_err(|_| Error::DatabaseError { operation: "get_str(email)", with: "user" })?
+        .to_lowercase();
+
+        let url = format!(
+            "https://www.gravatar.com/avatar/{:x}?s=128&d={}",
+            md5::compute(email),
+            urlencoding::encode(
+                &format!(
+                    "{}/users/{}/default_avatar",
+                    *PUBLIC_URL,
+                    &target.id
+                )
+            )
+        );
+
+        dbg!(&url);
+
+    Ok(
+        Redirect::to(url)
+    )
 }
