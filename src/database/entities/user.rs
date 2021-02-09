@@ -43,6 +43,7 @@ impl User {
             return self;
         }
 
+        self.relations = None;
         if let Some(relations) = &user.relations {
             if let Some(relationship) = relations.iter().find(|x| self.id == x.id) {
                 self.relationship = Some(relationship.status.clone());
@@ -55,10 +56,6 @@ impl User {
 
     /// Mutate the user object to appear as seen by user.
     pub fn with(mut self, permissions: UserPermissions<[u32; 1]>) -> User {
-        if !permissions.get_view_all() {
-            self.relations = None;
-        }
-
         if permissions.get_view_profile() {
             self.online = Some(is_online(&self.id));
         }

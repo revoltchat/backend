@@ -14,8 +14,6 @@ pub enum UserPermission {
     ViewProfile = 2,
     SendMessage = 4,
     Invite = 8,
-
-    ViewAll = 2147483648,
 }
 
 bitfield! {
@@ -25,13 +23,9 @@ bitfield! {
     pub get_view_profile, _: 30;
     pub get_send_message, _: 29;
     pub get_invite, _: 28;
-
-    pub get_view_all, _: 0;
 }
 
 impl_op_ex!(+ |a: &UserPermission, b: &UserPermission| -> u32 { *a as u32 | *b as u32 });
-impl_op_ex!(-|a: &UserPermission, b: &UserPermission| -> u32 { *a as u32 & !(*b as u32) });
-impl_op_ex!(-|a: &u32, b: &UserPermission| -> u32 { *a & !(*b as u32) });
 impl_op_ex_commutative!(+ |a: &u32, b: &UserPermission| -> u32 { *a | *b as u32 });
 
 pub fn get_relationship(a: &User, b: &str) -> RelationshipStatus {
@@ -56,7 +50,7 @@ impl<'a> PermissionCalculator<'a> {
 
         let mut permissions: u32 = 0;
         match get_relationship(&self.perspective, &target) {
-            RelationshipStatus::Friend => return Ok(u32::MAX - UserPermission::ViewAll),
+            RelationshipStatus::Friend => return Ok(u32::MAX),
             RelationshipStatus::Blocked | RelationshipStatus::BlockedOther => {
                 return Ok(UserPermission::Access as u32)
             }
@@ -74,7 +68,10 @@ impl<'a> PermissionCalculator<'a> {
             || get_collection("channels")
                 .find_one(
                     doc! {
-                        "type": "Group",
+                        "$or": [
+                            { "type": "Group" },
+                            { "type": "DirectMessage" },
+                        ],
                         "$and": {
                             "recipients": &self.perspective.id,
                             "recipients": target
