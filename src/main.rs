@@ -18,14 +18,16 @@ pub mod notifications;
 pub mod routes;
 pub mod util;
 
-use log::info;
-use futures::join;
 use chrono::Duration;
+use futures::join;
+use log::info;
 use rauth::auth::Auth;
+use rauth::options::{EmailVerification, Options, SMTP};
 use rocket_cors::AllowedOrigins;
 use rocket_prometheus::PrometheusMetrics;
-use rauth::options::{EmailVerification, Options, SMTP};
-use util::variables::{PUBLIC_URL, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD, SMTP_USERNAME, USE_EMAIL, USE_PROMETHEUS};
+use util::variables::{
+    PUBLIC_URL, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD, SMTP_USERNAME, USE_EMAIL, USE_PROMETHEUS,
+};
 
 #[async_std::main]
 async fn main() {

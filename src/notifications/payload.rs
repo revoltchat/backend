@@ -59,6 +59,8 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
 
             if let Channel::Group { recipients, .. } = &channel {
                 user_ids.extend(recipients.iter().cloned());
+            } else if let Channel::DirectMessage { recipients, .. } = &channel {
+                user_ids.extend(recipients.iter().cloned());
             }
 
             channels.push(channel);
@@ -97,11 +99,7 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
                     .for_user_given()
                     .await?;
 
-                users.push(
-                    other
-                        .from(&user)
-                        .with(permissions)
-                );
+                users.push(other.from(&user).with(permissions));
             }
         }
     }

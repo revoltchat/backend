@@ -16,9 +16,5 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
         Err(Error::LabelMe)?
     }
 
-    Ok(json!(
-        target
-            .from(&user)
-            .with(perm)
-    ))
+    Ok(json!(target.from(&user).with(perm)))
 }

@@ -72,10 +72,10 @@ impl<'a> PermissionCalculator<'a> {
                             { "type": "Group" },
                             { "type": "DirectMessage" },
                         ],
-                        "$and": {
-                            "recipients": &self.perspective.id,
-                            "recipients": target
-                        }
+                        "$and": [
+                            { "recipients": &self.perspective.id },
+                            { "recipients": target }
+                        ]
                     },
                     None,
                 )
