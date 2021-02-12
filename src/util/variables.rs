@@ -22,6 +22,7 @@ lazy_static! {
 
     // Application Flags
     pub static ref DISABLE_REGISTRATION: bool = env::var("REVOLT_DISABLE_REGISTRATION").map_or(false, |v| v == "1");
+    pub static ref INVITE_ONLY: bool = env::var("REVOLT_INVITE_ONLY").map_or(false, |v| v == "1");
     pub static ref USE_EMAIL: bool = env::var("REVOLT_USE_EMAIL_VERIFICATION").map_or(
         env::var("REVOLT_SMTP_HOST").is_ok()
             && env::var("REVOLT_SMTP_USERNAME").is_ok()

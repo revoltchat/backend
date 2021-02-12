@@ -26,7 +26,7 @@ use rauth::options::{EmailVerification, Options, SMTP};
 use rocket_cors::AllowedOrigins;
 use rocket_prometheus::PrometheusMetrics;
 use util::variables::{
-    PUBLIC_URL, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD, SMTP_USERNAME, USE_EMAIL, USE_PROMETHEUS, APP_URL
+    PUBLIC_URL, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD, SMTP_USERNAME, USE_EMAIL, USE_PROMETHEUS, APP_URL, INVITE_ONLY
 };
 
 #[async_std::main]
@@ -63,7 +63,12 @@ async fn launch_web() {
 
     let auth = Auth::new(
         database::get_collection("accounts"),
-        Options::new()
+        if *INVITE_ONLY {
+            Options::new()
+                .invite_only_collection(database::get_collection("invites"))
+        } else {
+            Options::new()
+        }
             .base_url(format!("{}/auth", *PUBLIC_URL))
             .email_verification(if *USE_EMAIL {
                 EmailVerification::Enabled {
