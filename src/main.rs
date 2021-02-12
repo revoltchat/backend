@@ -21,12 +21,12 @@ pub mod util;
 use chrono::Duration;
 use futures::join;
 use log::info;
-use rauth::auth::Auth;
+use rauth::{auth::Auth, options::{Template, Templates}};
 use rauth::options::{EmailVerification, Options, SMTP};
 use rocket_cors::AllowedOrigins;
 use rocket_prometheus::PrometheusMetrics;
 use util::variables::{
-    PUBLIC_URL, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD, SMTP_USERNAME, USE_EMAIL, USE_PROMETHEUS,
+    PUBLIC_URL, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD, SMTP_USERNAME, USE_EMAIL, USE_PROMETHEUS, APP_URL
 };
 
 #[async_std::main]
@@ -67,9 +67,26 @@ async fn launch_web() {
             .base_url(format!("{}/auth", *PUBLIC_URL))
             .email_verification(if *USE_EMAIL {
                 EmailVerification::Enabled {
-                    success_redirect_uri: format!("{}/welcome", *PUBLIC_URL),
+                    success_redirect_uri: format!("{}/login", *APP_URL),
+                    welcome_redirect_uri: format!("{}/welcome", *APP_URL),
+                    password_reset_url: Some(format!("{}/login/reset", *APP_URL)),
+
                     verification_expiry: Duration::days(1),
-                    verification_ratelimit: Duration::minutes(1),
+                    password_reset_expiry: Duration::hours(1),
+
+                    templates: Templates {
+                        verify_email: Template {
+                            title: "Verify your REVOLT account.",
+                            text: "Verify your email here: {{url}}",
+                            html: include_str!("../assets/templates/verify.html")
+                        },
+                        reset_password: Template {
+                            title: "Reset your REVOLT password.",
+                            text: "Reset your password here: {{url}}",
+                            html: include_str!("../assets/templates/reset.html")
+                        },
+                        welcome: None
+                    },
 
                     smtp: SMTP {
                         from: (*SMTP_FROM).to_string(),

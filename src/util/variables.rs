@@ -9,6 +9,8 @@ lazy_static! {
         env::var("REVOLT_MONGO_URI").expect("Missing REVOLT_MONGO_URI environment variable.");
     pub static ref PUBLIC_URL: String =
         env::var("REVOLT_PUBLIC_URL").expect("Missing REVOLT_PUBLIC_URL environment variable.");
+    pub static ref APP_URL: String =
+        env::var("REVOLT_APP_URL").unwrap_or_else(|_| "https://app.revolt.chat".to_string());
     pub static ref EXTERNAL_WS_URL: String =
         env::var("REVOLT_EXTERNAL_WS_URL").expect("Missing REVOLT_EXTERNAL_WS_URL environment variable.");
     pub static ref HCAPTCHA_KEY: String =
