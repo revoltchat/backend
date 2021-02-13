@@ -21,12 +21,16 @@ pub mod util;
 use chrono::Duration;
 use futures::join;
 use log::info;
-use rauth::{auth::Auth, options::{Template, Templates}};
 use rauth::options::{EmailVerification, Options, SMTP};
+use rauth::{
+    auth::Auth,
+    options::{Template, Templates},
+};
 use rocket_cors::AllowedOrigins;
 use rocket_prometheus::PrometheusMetrics;
 use util::variables::{
-    PUBLIC_URL, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD, SMTP_USERNAME, USE_EMAIL, USE_PROMETHEUS, APP_URL, INVITE_ONLY
+    APP_URL, HCAPTCHA_KEY, INVITE_ONLY, PUBLIC_URL, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD,
+    SMTP_USERNAME, USE_EMAIL, USE_HCAPTCHA, USE_PROMETHEUS,
 };
 
 #[async_std::main]
@@ -61,49 +65,51 @@ async fn launch_web() {
     .to_cors()
     .expect("Failed to create CORS.");
 
-    let auth = Auth::new(
-        database::get_collection("accounts"),
-        if *INVITE_ONLY {
-            Options::new()
-                .invite_only_collection(database::get_collection("invites"))
+    let mut options = Options::new()
+        .base_url(format!("{}/auth", *PUBLIC_URL))
+        .email_verification(if *USE_EMAIL {
+            EmailVerification::Enabled {
+                success_redirect_uri: format!("{}/login", *APP_URL),
+                welcome_redirect_uri: format!("{}/welcome", *APP_URL),
+                password_reset_url: Some(format!("{}/login/reset", *APP_URL)),
+
+                verification_expiry: Duration::days(1),
+                password_reset_expiry: Duration::hours(1),
+
+                templates: Templates {
+                    verify_email: Template {
+                        title: "Verify your REVOLT account.",
+                        text: "Verify your email here: {{url}}",
+                        html: include_str!("../assets/templates/verify.html"),
+                    },
+                    reset_password: Template {
+                        title: "Reset your REVOLT password.",
+                        text: "Reset your password here: {{url}}",
+                        html: include_str!("../assets/templates/reset.html"),
+                    },
+                    welcome: None,
+                },
+
+                smtp: SMTP {
+                    from: (*SMTP_FROM).to_string(),
+                    host: (*SMTP_HOST).to_string(),
+                    username: (*SMTP_USERNAME).to_string(),
+                    password: (*SMTP_PASSWORD).to_string(),
+                },
+            }
         } else {
-            Options::new()
-        }
-            .base_url(format!("{}/auth", *PUBLIC_URL))
-            .email_verification(if *USE_EMAIL {
-                EmailVerification::Enabled {
-                    success_redirect_uri: format!("{}/login", *APP_URL),
-                    welcome_redirect_uri: format!("{}/welcome", *APP_URL),
-                    password_reset_url: Some(format!("{}/login/reset", *APP_URL)),
+            EmailVerification::Disabled
+        });
 
-                    verification_expiry: Duration::days(1),
-                    password_reset_expiry: Duration::hours(1),
+    if *INVITE_ONLY {
+        options = options.invite_only_collection(database::get_collection("invites"))
+    }
 
-                    templates: Templates {
-                        verify_email: Template {
-                            title: "Verify your REVOLT account.",
-                            text: "Verify your email here: {{url}}",
-                            html: include_str!("../assets/templates/verify.html")
-                        },
-                        reset_password: Template {
-                            title: "Reset your REVOLT password.",
-                            text: "Reset your password here: {{url}}",
-                            html: include_str!("../assets/templates/reset.html")
-                        },
-                        welcome: None
-                    },
+    if *USE_HCAPTCHA {
+        options = options.hcaptcha_secret(HCAPTCHA_KEY.clone());
+    }
 
-                    smtp: SMTP {
-                        from: (*SMTP_FROM).to_string(),
-                        host: (*SMTP_HOST).to_string(),
-                        username: (*SMTP_USERNAME).to_string(),
-                        password: (*SMTP_PASSWORD).to_string(),
-                    },
-                }
-            } else {
-                EmailVerification::Disabled
-            }),
-    );
+    let auth = Auth::new(database::get_collection("accounts"), options);
 
     let mut rocket = rocket::ignite();
 

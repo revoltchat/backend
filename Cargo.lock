@@ -2308,8 +2308,8 @@ dependencies = [
 
 [[package]]
 name = "rauth"
-version = "0.2.2"
-source = "git+https://gitlab.insrt.uk/insert/rauth?rev=73fd602f0aba3d3689307fb1f811f211422fb4d3#73fd602f0aba3d3689307fb1f811f211422fb4d3"
+version = "0.2.4"
+source = "git+https://gitlab.insrt.uk/insert/rauth?rev=8c96882057f85d950578a6324abf1f7268862edd#8c96882057f85d950578a6324abf1f7268862edd"
 dependencies = [
  "chrono",
  "handlebars",
@@ -2319,6 +2319,7 @@ dependencies = [
  "mongodb",
  "nanoid",
  "regex",
+ "reqwest",
  "rocket",
  "rocket_contrib",
  "rust-argon2",
@@ -2453,7 +2454,7 @@ dependencies = [
 
 [[package]]
 name = "revolt"
-version = "0.3.3-alpha.1"
+version = "0.3.3-alpha.2"
 dependencies = [
  "async-std",
  "async-tungstenite",
