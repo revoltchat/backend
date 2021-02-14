@@ -1,6 +1,6 @@
 [package]
 name = "revolt"
-version = "0.3.3-alpha.2"
+version = "0.3.3-alpha.3"
 authors = ["Paul Makles <paulmakles@gmail.com>"]
 edition = "2018"
 
@@ -13,7 +13,7 @@ many-to-many = "0.1.2"
 ctrlc = { version = "3.0", features = ["termination"] }
 async-std = { version = "1.8.0", features = ["tokio02", "attributes"] }
 async-tungstenite = { version = "0.10.0", features = ["async-std-runtime"] }
-rauth = { git = "https://gitlab.insrt.uk/insert/rauth", rev = "8c96882057f85d950578a6324abf1f7268862edd" }
+rauth = { git = "https://gitlab.insrt.uk/insert/rauth", rev = "c52758a5087cd035b0ed9c6eacc942ba5468d2ce" }
 
 hive_pubsub = { version = "0.4.3", features = ["mongo"] }
 rocket_cors = { git = "https://github.com/insertish/rocket_cors", branch = "master" }

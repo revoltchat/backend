@@ -2308,8 +2308,8 @@ dependencies = [
 
 [[package]]
 name = "rauth"
-version = "0.2.4"
-source = "git+https://gitlab.insrt.uk/insert/rauth?rev=8c96882057f85d950578a6324abf1f7268862edd#8c96882057f85d950578a6324abf1f7268862edd"
+version = "0.2.5-alpha.0"
+source = "git+https://gitlab.insrt.uk/insert/rauth?rev=c52758a5087cd035b0ed9c6eacc942ba5468d2ce#c52758a5087cd035b0ed9c6eacc942ba5468d2ce"
 dependencies = [
  "chrono",
  "handlebars",
@@ -2454,7 +2454,7 @@ dependencies = [
 
 [[package]]
 name = "revolt"
-version = "0.3.3-alpha.2"
+version = "0.3.3-alpha.3"
 dependencies = [
  "async-std",
  "async-tungstenite",
