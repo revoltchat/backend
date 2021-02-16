@@ -7,18 +7,20 @@ lazy_static! {
     // Application Settings
     pub static ref MONGO_URI: String =
         env::var("REVOLT_MONGO_URI").expect("Missing REVOLT_MONGO_URI environment variable.");
+    pub static ref WS_HOST: String =
+            env::var("REVOLT_WS_HOST").unwrap_or_else(|_| "0.0.0.0:9000".to_string());
     pub static ref PUBLIC_URL: String =
         env::var("REVOLT_PUBLIC_URL").expect("Missing REVOLT_PUBLIC_URL environment variable.");
     pub static ref APP_URL: String =
         env::var("REVOLT_APP_URL").unwrap_or_else(|_| "https://app.revolt.chat".to_string());
     pub static ref EXTERNAL_WS_URL: String =
         env::var("REVOLT_EXTERNAL_WS_URL").expect("Missing REVOLT_EXTERNAL_WS_URL environment variable.");
+    pub static ref AUTUMN_URL: String =
+        env::var("AUTUMN_PUBLIC_URL").unwrap_or_else(|_| "https://example.com".to_string());
     pub static ref HCAPTCHA_KEY: String =
         env::var("REVOLT_HCAPTCHA_KEY").unwrap_or_else(|_| "0x0000000000000000000000000000000000000000".to_string());
     pub static ref HCAPTCHA_SITEKEY: String =
         env::var("REVOLT_HCAPTCHA_SITEKEY").unwrap_or_else(|_| "10000000-ffff-ffff-ffff-000000000001".to_string());
-    pub static ref WS_HOST: String =
-        env::var("REVOLT_WS_HOST").unwrap_or_else(|_| "0.0.0.0:9000".to_string());
 
     // Application Flags
     pub static ref DISABLE_REGISTRATION: bool = env::var("REVOLT_DISABLE_REGISTRATION").map_or(false, |v| v == "1");
@@ -32,6 +34,7 @@ lazy_static! {
     );
     pub static ref USE_HCAPTCHA: bool = env::var("REVOLT_HCAPTCHA_KEY").is_ok();
     pub static ref USE_PROMETHEUS: bool = env::var("REVOLT_ENABLE_PROMETHEUS").map_or(false, |v| v == "1");
+    pub static ref USE_AUTUMN: bool = env::var("AUTUMN_PUBLIC_URL").is_ok();
 
     // SMTP Settings
     pub static ref SMTP_HOST: String =

@@ -36,6 +36,8 @@ pub enum Error {
     // ? Channel related errors.
     #[snafu(display("This channel does not exist!"))]
     UnknownChannel,
+    #[snafu(display("Attachment does not exist!"))]
+    UnknownAttachment,
     #[snafu(display("Cannot edit someone else's message."))]
     CannotEditMessage,
     #[snafu(display("Cannot remove yourself from a group, use delete channel instead."))]
@@ -84,6 +86,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::NotFriends => Status::Forbidden,
 
             Error::UnknownChannel => Status::NotFound,
+            Error::UnknownAttachment => Status::BadRequest,
             Error::CannotEditMessage => Status::Forbidden,
             Error::CannotRemoveYourself => Status::BadRequest,
             Error::GroupTooLarge { .. } => Status::Forbidden,

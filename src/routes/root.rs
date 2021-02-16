@@ -1,5 +1,5 @@
 use crate::util::variables::{
-    DISABLE_REGISTRATION, EXTERNAL_WS_URL, HCAPTCHA_SITEKEY, INVITE_ONLY, USE_EMAIL, USE_HCAPTCHA,
+    DISABLE_REGISTRATION, EXTERNAL_WS_URL, HCAPTCHA_SITEKEY, INVITE_ONLY, USE_EMAIL, USE_HCAPTCHA, USE_AUTUMN, AUTUMN_URL
 };
 
 use mongodb::bson::doc;
@@ -16,7 +16,11 @@ pub async fn root() -> JsonValue {
                 "key": HCAPTCHA_SITEKEY.to_string()
             },
             "email": *USE_EMAIL,
-            "invite_only": *INVITE_ONLY
+            "invite_only": *INVITE_ONLY,
+            "autumn": {
+                "enabled": *USE_AUTUMN,
+                "url": *AUTUMN_URL
+            }
         },
         "ws": *EXTERNAL_WS_URL,
     })

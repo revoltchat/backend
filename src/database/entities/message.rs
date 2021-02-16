@@ -19,6 +19,8 @@ pub struct Message {
 
     pub content: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub attachment: Option<File>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub edited: Option<DateTime>,
 }
 
@@ -31,6 +33,7 @@ impl Message {
             author,
 
             content,
+            attachment: None,
             edited: None,
         }
     }
