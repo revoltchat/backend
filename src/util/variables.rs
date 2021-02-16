@@ -8,7 +8,7 @@ lazy_static! {
     pub static ref MONGO_URI: String =
         env::var("REVOLT_MONGO_URI").expect("Missing REVOLT_MONGO_URI environment variable.");
     pub static ref WS_HOST: String =
-            env::var("REVOLT_WS_HOST").unwrap_or_else(|_| "0.0.0.0:9000".to_string());
+        env::var("REVOLT_WS_HOST").unwrap_or_else(|_| "0.0.0.0:9000".to_string());
     pub static ref PUBLIC_URL: String =
         env::var("REVOLT_PUBLIC_URL").expect("Missing REVOLT_PUBLIC_URL environment variable.");
     pub static ref APP_URL: String =
