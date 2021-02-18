@@ -21,6 +21,10 @@ lazy_static! {
         env::var("REVOLT_HCAPTCHA_KEY").unwrap_or_else(|_| "0x0000000000000000000000000000000000000000".to_string());
     pub static ref HCAPTCHA_SITEKEY: String =
         env::var("REVOLT_HCAPTCHA_SITEKEY").unwrap_or_else(|_| "10000000-ffff-ffff-ffff-000000000001".to_string());
+    pub static ref VAPID_PRIVATE_KEY: String =
+        env::var("REVOLT_VAPID_PRIVATE_KEY").expect("Missing REVOLT_VAPID_PRIVATE_KEY environment variable.");
+    pub static ref VAPID_PUBLIC_KEY: String =
+        env::var("REVOLT_VAPID_PUBLIC_KEY").expect("Missing REVOLT_VAPID_PUBLIC_KEY environment variable.");
 
     // Application Flags
     pub static ref DISABLE_REGISTRATION: bool = env::var("REVOLT_DISABLE_REGISTRATION").map_or(false, |v| v == "1");
@@ -48,6 +52,8 @@ lazy_static! {
     // Application Logic Settings
     pub static ref MAX_GROUP_SIZE: usize =
         env::var("REVOLT_MAX_GROUP_SIZE").unwrap_or_else(|_| "50".to_string()).parse().unwrap();
+    pub static ref PUSH_LIMIT: usize =
+        env::var("REVOLT_PUSH_LIMIT").unwrap_or_else(|_| "50".to_string()).parse().unwrap();
 }
 
 pub fn preflight_checks() {

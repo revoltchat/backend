@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
@@ -17,5 +17,5 @@ pub struct File {
     metadata: Metadata,
     content_type: String,
 
-    message_id: Option<String>
+    message_id: Option<String>,
 }

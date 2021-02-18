@@ -46,9 +46,9 @@ pub enum Channel {
 impl Channel {
     pub fn id(&self) -> &str {
         match self {
-            Channel::SavedMessages { id, .. } => id,
-            Channel::DirectMessage { id, .. } => id,
-            Channel::Group { id, .. } => id,
+            Channel::SavedMessages { id, .. }
+            | Channel::DirectMessage { id, .. }
+            | Channel::Group { id, .. } => id,
         }
     }
 

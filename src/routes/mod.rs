@@ -5,6 +5,7 @@ use rocket::Rocket;
 mod channels;
 mod guild;
 mod onboard;
+mod push;
 mod root;
 mod users;
 
@@ -15,4 +16,5 @@ pub fn mount(rocket: Rocket) -> Rocket {
         .mount("/users", users::routes())
         .mount("/channels", channels::routes())
         .mount("/guild", guild::routes())
+        .mount("/push", push::routes())
 }

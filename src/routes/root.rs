@@ -1,5 +1,6 @@
 use crate::util::variables::{
-    DISABLE_REGISTRATION, EXTERNAL_WS_URL, HCAPTCHA_SITEKEY, INVITE_ONLY, USE_EMAIL, USE_HCAPTCHA, USE_AUTUMN, AUTUMN_URL
+    AUTUMN_URL, DISABLE_REGISTRATION, EXTERNAL_WS_URL, HCAPTCHA_SITEKEY, INVITE_ONLY, USE_AUTUMN,
+    USE_EMAIL, USE_HCAPTCHA, VAPID_PUBLIC_KEY,
 };
 
 use mongodb::bson::doc;
@@ -8,7 +9,7 @@ use rocket_contrib::json::JsonValue;
 #[get("/")]
 pub async fn root() -> JsonValue {
     json!({
-        "revolt": "0.3.3-alpha.5",
+        "revolt": "0.3.3-alpha.6",
         "features": {
             "registration": !*DISABLE_REGISTRATION,
             "captcha": {
@@ -23,5 +24,6 @@ pub async fn root() -> JsonValue {
             }
         },
         "ws": *EXTERNAL_WS_URL,
+        "vapid": *VAPID_PUBLIC_KEY
     })
 }

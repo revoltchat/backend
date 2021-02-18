@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct Options {
-    ids: Vec<String>
+    ids: Vec<String>,
 }
 
 #[post("/<target>/messages/stale", data = "<data>")]
@@ -35,7 +35,7 @@ pub async fn req(user: User, target: Ref, data: Json<Options>) -> Result<JsonVal
                 },
                 "channel": target.id()
             },
-            None
+            None,
         )
         .await
         .map_err(|_| Error::DatabaseError {
@@ -47,12 +47,11 @@ pub async fn req(user: User, target: Ref, data: Json<Options>) -> Result<JsonVal
     let mut found_ids = vec![];
     while let Some(result) = cursor.next().await {
         if let Ok(doc) = result {
-            let msg = from_document::<Message>(doc)
-                .map_err(|_| Error::DatabaseError {
-                    operation: "from_document",
-                    with: "message",
-                })?;
-            
+            let msg = from_document::<Message>(doc).map_err(|_| Error::DatabaseError {
+                operation: "from_document",
+                with: "message",
+            })?;
+
             found_ids.push(msg.id.clone());
             if msg.edited.is_some() {
                 updated.push(msg);
