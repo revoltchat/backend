@@ -119,9 +119,9 @@ impl Message {
         match &channel {
             Channel::DirectMessage { recipients, .. } | Channel::Group { recipients, .. } => {
                 for recipient in recipients {
-                    // if !is_online(recipient) {
+                    if !is_online(recipient) {
                         target_ids.push(recipient.clone());
-                    // }
+                    }
                 }
             }
             _ => {}
