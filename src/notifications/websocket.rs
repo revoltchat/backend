@@ -163,10 +163,15 @@ async fn accept(stream: TcpStream) {
                     // ! Could just run permission check here.
                     ServerboundNotification::BeginTyping { channel } => {
                         if mutex.lock().unwrap().is_some() {
+                            let user = {
+                                let mutex = mutex.lock().unwrap();
+                                let session = mutex.as_ref().unwrap();
+                                session.user_id.clone()
+                            };
+
                             ClientboundNotification::ChannelStartTyping {
                                 id: channel.clone(),
-                                // lol
-                                user: mutex.lock().as_ref().unwrap().as_ref().unwrap().user_id.clone()
+                                user
                             }
                             .publish(channel)
                             .await
@@ -181,9 +186,15 @@ async fn accept(stream: TcpStream) {
                     }
                     ServerboundNotification::EndTyping { channel } => {
                         if mutex.lock().unwrap().is_some() {
+                            let user = {
+                                let mutex = mutex.lock().unwrap();
+                                let session = mutex.as_ref().unwrap();
+                                session.user_id.clone()
+                            };
+
                             ClientboundNotification::ChannelStopTyping {
                                 id: channel.clone(),
-                                user: mutex.lock().as_ref().unwrap().as_ref().unwrap().user_id.clone()
+                                user
                             }
                             .publish(channel)
                             .await
