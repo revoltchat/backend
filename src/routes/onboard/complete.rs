@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 lazy_static! {
-    static ref RE_USERNAME: Regex = Regex::new(r"^[a-zA-Z0-9_]+$").unwrap();
+    static ref RE_USERNAME: Regex = Regex::new(r"^[a-zA-Z0-9_.]+$").unwrap();
 }
 
 #[derive(Validate, Serialize, Deserialize)]

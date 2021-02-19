@@ -8,15 +8,12 @@ use rocket_contrib::json::JsonValue;
 
 #[get("/<target>/mutual")]
 pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
-    let channels = get_collection("channels")
+    let users = get_collection("users")
         .find(
             doc! {
-                "$or": [
-                    { "type": "Group" },
-                ],
                 "$and": [
-                    { "recipients": &user.id },
-                    { "recipients": &target.id }
+                    { "relations.id": &user.id },
+                    { "relations.id": &target.id }
                 ]
             },
             FindOptions::builder().projection(doc! { "_id": 1 }).build(),
@@ -24,7 +21,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
         .await
         .map_err(|_| Error::DatabaseError {
             operation: "find",
-            with: "channels",
+            with: "users",
         })?
         .filter_map(async move |s| s.ok())
         .collect::<Vec<Document>>()
@@ -33,5 +30,5 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
         .filter_map(|x| x.get_str("_id").ok().map(|x| x.to_string()))
         .collect::<Vec<String>>();
 
-    Ok(json!({ "channels": channels }))
+    Ok(json!({ "users": users }))
 }
