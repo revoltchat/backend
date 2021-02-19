@@ -40,6 +40,8 @@ pub enum Error {
     UnknownAttachment,
     #[snafu(display("Cannot edit someone else's message."))]
     CannotEditMessage,
+    #[snafu(display("Cannot send empty message."))]
+    EmptyMessage,
     #[snafu(display("Cannot remove yourself from a group, use delete channel instead."))]
     CannotRemoveYourself,
     #[snafu(display("Group size is too large."))]
@@ -92,6 +94,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::UnknownChannel => Status::NotFound,
             Error::UnknownAttachment => Status::BadRequest,
             Error::CannotEditMessage => Status::Forbidden,
+            Error::EmptyMessage => Status::UnprocessableEntity,
             Error::CannotRemoveYourself => Status::BadRequest,
             Error::GroupTooLarge { .. } => Status::Forbidden,
             Error::AlreadyInGroup => Status::Conflict,

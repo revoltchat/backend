@@ -12,7 +12,7 @@ use validator::Validate;
 
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
-    #[validate(length(min = 1, max = 2000))]
+    #[validate(length(min = 0, max = 2000))]
     content: String,
     // Maximum length of 36 allows both ULIDs and UUIDs.
     #[validate(length(min = 1, max = 36))]
@@ -26,6 +26,10 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
     message
         .validate()
         .map_err(|error| Error::FailedValidation { error })?;
+    
+    if message.content.len() == 0 && message.attachment.is_none() {
+        return Err(Error::EmptyMessage);
+    }
 
     let target = target.fetch_channel().await?;
 
