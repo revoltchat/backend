@@ -1,6 +1,11 @@
+use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
+use mongodb::options::{Collation, FindOneOptions};
 
-use crate::{database::permissions::user::UserPermissions, notifications::websocket::is_online};
+use crate::database::*;
+use crate::util::result::{Error, Result};
+use crate::notifications::websocket::is_online;
+use crate::database::permissions::user::UserPermissions;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum RelationshipStatus {
@@ -61,5 +66,33 @@ impl User {
         }
 
         self
+    }
+
+    /// Utility function for checking claimed usernames.
+    pub async fn is_username_taken(username: &str) -> Result<bool> {
+        if username == "revolt" && username == "admin" {
+            return Ok(true)
+        }
+    
+        if get_collection("users")
+            .find_one(
+                doc! {
+                    "username": username
+                },
+                FindOneOptions::builder()
+                    .collation(Collation::builder().locale("en").strength(2).build())
+                    .build(),
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "find_one",
+                with: "user",
+            })?
+            .is_some()
+        {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
 }

@@ -71,8 +71,6 @@ async fn accept(stream: TcpStream) {
     let fwd = rx.map(Ok).forward(write);
     let incoming = read.try_for_each(async move |msg| {
         let mutex = mutex_generator();
-        //dbg!(&mutex.lock().unwrap());
-
         if let Message::Text(text) = msg {
             if let Ok(notification) = serde_json::from_str::<ServerboundNotification>(&text) {
                 match notification {
@@ -159,6 +157,43 @@ async fn accept(stream: TcpStream) {
                             send(ClientboundNotification::Error(
                                 WebSocketError::InvalidSession,
                             ));
+                        }
+                    }
+                    // ! TEMP: verify user part of channel
+                    // ! Could just run permission check here.
+                    ServerboundNotification::BeginTyping { channel } => {
+                        if mutex.lock().unwrap().is_some() {
+                            ClientboundNotification::ChannelStartTyping {
+                                id: channel.clone(),
+                                // lol
+                                user: mutex.lock().as_ref().unwrap().as_ref().unwrap().user_id.clone()
+                            }
+                            .publish(channel)
+                            .await
+                            .ok();
+                        } else {
+                            send(ClientboundNotification::Error(
+                                WebSocketError::AlreadyAuthenticated,
+                            ));
+
+                            return Ok(());
+                        }
+                    }
+                    ServerboundNotification::EndTyping { channel } => {
+                        if mutex.lock().unwrap().is_some() {
+                            ClientboundNotification::ChannelStopTyping {
+                                id: channel.clone(),
+                                user: mutex.lock().as_ref().unwrap().as_ref().unwrap().user_id.clone()
+                            }
+                            .publish(channel)
+                            .await
+                            .ok();
+                        } else {
+                            send(ClientboundNotification::Error(
+                                WebSocketError::AlreadyAuthenticated,
+                            ));
+
+                            return Ok(());
                         }
                     }
                 }

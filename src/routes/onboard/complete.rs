@@ -2,7 +2,6 @@ use crate::database::*;
 use crate::util::result::{Error, Result};
 
 use mongodb::bson::doc;
-use mongodb::options::{Collation, FindOneOptions};
 use rauth::auth::Session;
 use regex::Regex;
 use rocket_contrib::json::Json;
@@ -28,31 +27,11 @@ pub async fn req(session: Session, user: Option<User>, data: Json<Data>) -> Resu
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if data.username == "revolt" {
-        Err(Error::UsernameTaken)?
+    if User::is_username_taken(&data.username).await? {
+        return Err(Error::UsernameTaken)
     }
 
-    let col = get_collection("users");
-    if col
-        .find_one(
-            doc! {
-                "username": &data.username
-            },
-            FindOneOptions::builder()
-                .collation(Collation::builder().locale("en").strength(2).build())
-                .build(),
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "find_one",
-            with: "user",
-        })?
-        .is_some()
-    {
-        Err(Error::UsernameTaken)?
-    }
-
-    col.insert_one(
+    get_collection("users").insert_one(
         doc! {
             "_id": session.user_id,
             "username": &data.username
