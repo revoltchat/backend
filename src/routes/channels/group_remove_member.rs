@@ -56,7 +56,8 @@ pub async fn req(user: User, target: Ref, member: Ref) -> Result<()> {
         Message::create(
             "00000000000000000000000000".to_string(),
             id.clone(),
-            format!("<@{}> removed <@{}> from the group.", user.id, member.id),
+            // ! FIXME: make a schema for this
+            format!("{{\"type\":\"user_remove\",\"id\":\"{}\",\"by\":\"{}\"}}", member.id, user.id),
         )
         .publish(&channel)
         .await
