@@ -52,8 +52,6 @@ lazy_static! {
     // Application Logic Settings
     pub static ref MAX_GROUP_SIZE: usize =
         env::var("REVOLT_MAX_GROUP_SIZE").unwrap_or_else(|_| "50".to_string()).parse().unwrap();
-    pub static ref PUSH_LIMIT: usize =
-        env::var("REVOLT_PUSH_LIMIT").unwrap_or_else(|_| "50".to_string()).parse().unwrap();
 }
 
 pub fn preflight_checks() {

@@ -16,7 +16,7 @@ pub struct Subscription {
 #[post("/subscribe", data = "<data>")]
 pub async fn req(session: Session, data: Json<Subscription>) -> Result<()> {
     let data = data.into_inner();
-    let col = get_collection("accounts")
+    get_collection("accounts")
         .update_one(
             doc! {
                 "_id": session.user_id,
@@ -24,13 +24,14 @@ pub async fn req(session: Session, data: Json<Subscription>) -> Result<()> {
             },
             doc! {
                 "$set": {
-                    "sessions.$.subscription": to_document(&data).unwrap()
+                    "sessions.$.subscription": to_document(&data)
+                        .map_err(|_| Error::DatabaseError { operation: "to_document", with: "subscription" })?
                 }
             },
             None,
         )
         .await
-        .unwrap();
+        .map_err(|_| Error::DatabaseError { operation: "update_one", with: "account" })?;
 
     Ok(())
 }

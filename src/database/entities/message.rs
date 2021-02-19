@@ -13,7 +13,9 @@ use mongodb::{
 use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
-use web_push::{ContentEncoding, SubscriptionInfo, VapidSignatureBuilder, WebPushClient, WebPushMessageBuilder};
+use web_push::{
+    ContentEncoding, SubscriptionInfo, VapidSignatureBuilder, WebPushClient, WebPushMessageBuilder,
+};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Message {
@@ -171,7 +173,8 @@ impl Message {
             for subscription in subscriptions {
                 let mut builder = WebPushMessageBuilder::new(&subscription).unwrap();
                 let sig_builder =
-                    VapidSignatureBuilder::from_pem(std::io::Cursor::new(&key), &subscription).unwrap();
+                    VapidSignatureBuilder::from_pem(std::io::Cursor::new(&key), &subscription)
+                        .unwrap();
                 let signature = sig_builder.build().unwrap();
                 builder.set_vapid_signature(signature);
                 builder.set_payload(ContentEncoding::AesGcm, enc.as_bytes());

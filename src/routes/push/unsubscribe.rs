@@ -6,7 +6,7 @@ use rauth::auth::Session;
 
 #[post("/unsubscribe")]
 pub async fn req(session: Session) -> Result<()> {
-    let col = get_collection("accounts")
+    get_collection("accounts")
         .update_one(
             doc! {
                 "_id": session.user_id,
@@ -20,7 +20,10 @@ pub async fn req(session: Session) -> Result<()> {
             None,
         )
         .await
-        .unwrap();
+        .map_err(|_| Error::DatabaseError {
+            operation: "to_document",
+            with: "subscription",
+        })?;
 
     Ok(())
 }
