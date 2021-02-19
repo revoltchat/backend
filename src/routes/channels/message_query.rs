@@ -34,7 +34,7 @@ pub async fn req(user: User, target: Ref, options: Form<Options>) -> Result<Json
         .for_channel()
         .await?;
     if !perm.get_view() {
-        Err(Error::LabelMe)?
+        Err(Error::MissingPermission)?
     }
 
     let mut query = doc! { "channel": target.id() };

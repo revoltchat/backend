@@ -13,7 +13,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
         .await?;
 
     if !perm.get_access() {
-        Err(Error::LabelMe)?
+        Err(Error::MissingPermission)?
     }
 
     Ok(json!(target.from(&user).with(perm)))

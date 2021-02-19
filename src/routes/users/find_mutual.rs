@@ -12,8 +12,8 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
         .find(
             doc! {
                 "$and": [
-                    { "relations.id": &user.id },
-                    { "relations.id": &target.id }
+                    { "relations._id": &user.id },
+                    { "relations._id": &target.id }
                 ]
             },
             FindOptions::builder().projection(doc! { "_id": 1 }).build(),

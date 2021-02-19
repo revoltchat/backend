@@ -12,7 +12,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
         .for_channel()
         .await?;
     if !perm.get_view() {
-        Err(Error::LabelMe)?
+        Err(Error::MissingPermission)?
     }
 
     Ok(json!(target))

@@ -20,7 +20,7 @@ pub async fn req(user: User, target: Ref, member: Ref) -> Result<()> {
     {
         if &user.id != owner {
             // figure out if we want to use perm system here
-            Err(Error::LabelMe)?
+            Err(Error::MissingPermission)?
         }
 
         if recipients.iter().find(|x| *x == &member.id).is_none() {

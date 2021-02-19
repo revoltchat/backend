@@ -34,7 +34,7 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
         .for_channel()
         .await?;
     if !perm.get_send_message() {
-        Err(Error::LabelMe)?
+        Err(Error::MissingPermission)?
     }
 
     if get_collection("messages")

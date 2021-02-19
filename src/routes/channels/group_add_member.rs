@@ -16,7 +16,7 @@ pub async fn req(user: User, target: Ref, member: Ref) -> Result<()> {
         .for_channel()
         .await?;
     if !perm.get_view() {
-        Err(Error::LabelMe)?
+        Err(Error::MissingPermission)?
     }
 
     if let Channel::Group { id, recipients, .. } = &channel {

@@ -12,7 +12,7 @@ pub async fn req(user: User, target: Ref, msg: Ref) -> Result<()> {
         .for_channel()
         .await?;
     if !perm.get_view() {
-        Err(Error::LabelMe)?
+        Err(Error::MissingPermission)?
     }
 
     let message = msg.fetch_message(&channel).await?;

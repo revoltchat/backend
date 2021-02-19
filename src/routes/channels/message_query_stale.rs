@@ -14,7 +14,7 @@ pub struct Options {
 #[post("/<target>/messages/stale", data = "<data>")]
 pub async fn req(user: User, target: Ref, data: Json<Options>) -> Result<JsonValue> {
     if data.ids.len() > 150 {
-        return Err(Error::LabelMe);
+        return Err(Error::TooManyIds);
     }
 
     let target = target.fetch_channel().await?;
@@ -24,7 +24,7 @@ pub async fn req(user: User, target: Ref, data: Json<Options>) -> Result<JsonVal
         .for_channel()
         .await?;
     if !perm.get_view() {
-        Err(Error::LabelMe)?
+        Err(Error::MissingPermission)?
     }
 
     let mut cursor = get_collection("messages")

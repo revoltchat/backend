@@ -50,6 +50,8 @@ pub enum Error {
     NotInGroup,
 
     // ? General errors.
+    #[snafu(display("Trying to fetch too much data."))]
+    TooManyIds,
     #[snafu(display("Failed to validate fields."))]
     FailedValidation { error: ValidationErrors },
     #[snafu(display("Encountered a database error."))]
@@ -59,6 +61,8 @@ pub enum Error {
     },
     #[snafu(display("Internal server error."))]
     InternalError,
+    #[snafu(display("Missing permission."))]
+    MissingPermission,
     #[snafu(display("Operation cannot be performed on this object."))]
     InvalidOperation,
     #[snafu(display("Already created an object with this nonce."))]
@@ -96,7 +100,9 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::FailedValidation { .. } => Status::UnprocessableEntity,
             Error::DatabaseError { .. } => Status::InternalServerError,
             Error::InternalError => Status::InternalServerError,
+            Error::MissingPermission => Status::Forbidden,
             Error::InvalidOperation => Status::BadRequest,
+            Error::TooManyIds => Status::BadRequest,
             Error::DuplicateNonce => Status::Conflict,
             Error::NoEffect => Status::Ok,
         };
