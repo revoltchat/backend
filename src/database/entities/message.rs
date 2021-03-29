@@ -179,8 +179,7 @@ impl Message {
                 builder.set_vapid_signature(signature);
                 builder.set_payload(ContentEncoding::AesGcm, enc.as_bytes());
                 let m = builder.build().unwrap();
-                let response = client.send(m).await.unwrap();
-                dbg!(response);
+                let response = client.send(m).await.ok();
             }
         }
 

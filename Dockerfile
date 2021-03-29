@@ -1,5 +1,6 @@
 # Build Stage
 FROM ekidd/rust-musl-builder:nightly-2021-01-01 AS builder
+USER 0:0
 WORKDIR /home/rust/src
 
 RUN USER=root cargo new --bin revolt
