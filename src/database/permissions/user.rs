@@ -68,14 +68,12 @@ impl<'a> PermissionCalculator<'a> {
             || get_collection("channels")
                 .find_one(
                     doc! {
-                        "$or": [
-                            { "type": "Group" },
-                            { "type": "DirectMessage" },
-                        ],
-                        "$and": [
-                            { "recipients": &self.perspective.id },
-                            { "recipients": target }
-                        ]
+                        "channel_type": {
+                            "$in": ["Group", "DirectMessage"]
+                        },
+                        "recipients": {
+                            "$all": [ &self.perspective.id, target ]
+                        }
                     },
                     None,
                 )
