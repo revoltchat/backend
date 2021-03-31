@@ -15,8 +15,14 @@ lazy_static! {
         env::var("REVOLT_APP_URL").unwrap_or_else(|_| "https://app.revolt.chat".to_string());
     pub static ref EXTERNAL_WS_URL: String =
         env::var("REVOLT_EXTERNAL_WS_URL").expect("Missing REVOLT_EXTERNAL_WS_URL environment variable.");
+    
     pub static ref AUTUMN_URL: String =
         env::var("AUTUMN_PUBLIC_URL").unwrap_or_else(|_| "https://example.com".to_string());
+    pub static ref VOSO_URL: String =
+        env::var("VOSO_PUBLIC_URL").unwrap_or_else(|_| "https://example.com".to_string());
+    pub static ref VOSO_MANAGE_TOKEN: String =
+        env::var("VOSO_MANAGE_TOKEN").unwrap_or_else(|_| "0".to_string());
+    
     pub static ref HCAPTCHA_KEY: String =
         env::var("REVOLT_HCAPTCHA_KEY").unwrap_or_else(|_| "0x0000000000000000000000000000000000000000".to_string());
     pub static ref HCAPTCHA_SITEKEY: String =
@@ -39,6 +45,7 @@ lazy_static! {
     pub static ref USE_HCAPTCHA: bool = env::var("REVOLT_HCAPTCHA_KEY").is_ok();
     pub static ref USE_PROMETHEUS: bool = env::var("REVOLT_ENABLE_PROMETHEUS").map_or(false, |v| v == "1");
     pub static ref USE_AUTUMN: bool = env::var("AUTUMN_PUBLIC_URL").is_ok();
+    pub static ref USE_VOSO: bool = env::var("VOSO_PUBLIC_URL").is_ok() && env::var("VOSO_MANAGE_TOKEN").is_ok();
 
     // SMTP Settings
     pub static ref SMTP_HOST: String =

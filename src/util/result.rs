@@ -69,6 +69,8 @@ pub enum Error {
     InvalidOperation,
     #[snafu(display("Already created an object with this nonce."))]
     DuplicateNonce,
+    #[snafu(display("Voso is not enabled on this instance."))]
+    VosoUnavailable,
     #[snafu(display("This request had no effect."))]
     NoEffect,
 }
@@ -107,6 +109,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::InvalidOperation => Status::BadRequest,
             Error::TooManyIds => Status::BadRequest,
             Error::DuplicateNonce => Status::Conflict,
+            Error::VosoUnavailable => Status::BadRequest,
             Error::NoEffect => Status::Ok,
         };
 
