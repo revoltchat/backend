@@ -115,10 +115,11 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
         channel: target.id().to_string(),
         author: user.id,
 
-        content: message.content.clone(),
+        content: Content::Text(message.content.clone()),
         attachment,
         nonce: Some(message.nonce.clone()),
         edited: None,
+        embeds: None
     };
 
     msg.clone().publish(&target).await?;

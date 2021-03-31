@@ -59,8 +59,7 @@ pub async fn req(user: User, target: Ref, member: Ref) -> Result<()> {
         Message::create(
             "00000000000000000000000000".to_string(),
             id.clone(),
-            // ! FIXME: make a schema for this
-            format!("{{\"type\":\"user_added\",\"id\":\"{}\",\"by\":\"{}\"}}", member.id, user.id),
+            Content::SystemMessage(SystemMessage::UserAdded { id: member.id, by: user.id })
         )
         .publish(&channel)
         .await

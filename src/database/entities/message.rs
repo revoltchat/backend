@@ -18,6 +18,47 @@ use web_push::{
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(tag = "type")]
+pub enum MessageEmbed {
+    Dummy
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(tag = "type")]
+pub enum SystemMessage {
+    #[serde(rename = "text")]
+    Text {
+        content: String
+    },
+    #[serde(rename = "user_added")]
+    UserAdded {
+        id: String,
+        by: String
+    },
+    #[serde(rename = "user_remove")]
+    UserRemove {
+        id: String,
+        by: String
+    },
+    #[serde(rename = "user_left")]
+    UserLeft {
+        id: String
+    },
+    #[serde(rename = "channel_renamed")]
+    ChannelRenamed {
+        name: String,
+        by: String
+    },
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(untagged)]
+pub enum Content {
+    Text(String),
+    SystemMessage(SystemMessage)
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Message {
     #[serde(rename = "_id")]
     pub id: String,
@@ -26,15 +67,17 @@ pub struct Message {
     pub channel: String,
     pub author: String,
 
-    pub content: String,
+    pub content: Content,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attachment: Option<File>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub edited: Option<DateTime>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub embeds: Option<MessageEmbed>,
 }
 
 impl Message {
-    pub fn create(author: String, channel: String, content: String) -> Message {
+    pub fn create(author: String, channel: String, content: Content) -> Message {
         Message {
             id: Ulid::new().to_string(),
             nonce: None,
@@ -44,6 +87,7 @@ impl Message {
             content,
             attachment: None,
             edited: None,
+            embeds: None
         }
     }
 
@@ -56,22 +100,28 @@ impl Message {
                 with: "message",
             })?;
 
+        let mut set = if let Content::Text(text) = &self.content {
+            doc! {
+                "last_message": {
+                    "_id": self.id.clone(),
+                    "author": self.author.clone(),
+                    "short": text.chars().take(24).collect::<String>()
+                }
+            }
+        } else {
+            doc! {}
+        };
+
         // ! FIXME: temp code
         let channels = get_collection("channels");
         match &channel {
             Channel::DirectMessage { id, .. } => {
+                set.insert("active", true);
                 channels
                     .update_one(
                         doc! { "_id": id },
                         doc! {
-                            "$set": {
-                                "active": true,
-                                "last_message": {
-                                    "_id": self.id.clone(),
-                                    "author": self.author.clone(),
-                                    "short": self.content.chars().take(24).collect::<String>()
-                                }
-                            }
+                            "$set": set
                         },
                         None,
                     )
@@ -86,13 +136,7 @@ impl Message {
                     .update_one(
                         doc! { "_id": id },
                         doc! {
-                            "$set": {
-                                "last_message": {
-                                    "_id": self.id.clone(),
-                                    "author": self.author.clone(),
-                                    "short": self.content.chars().take(24).collect::<String>()
-                                }
-                            }
+                            "$set": set
                         },
                         None,
                     )

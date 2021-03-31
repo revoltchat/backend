@@ -2475,7 +2475,7 @@ dependencies = [
 
 [[package]]
 name = "revolt"
-version = "0.4.0-alpha.0"
+version = "0.4.0-alpha.1"
 dependencies = [
  "async-std",
  "async-tungstenite",

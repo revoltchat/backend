@@ -12,7 +12,8 @@ pub enum ChannelPermission {
     View = 1,
     SendMessage = 2,
     ManageMessages = 4,
-    VoiceCall = 8,
+    ManageChannel = 8,
+    VoiceCall = 16,
 }
 
 bitfield! {
@@ -21,7 +22,8 @@ bitfield! {
     pub get_view, _: 31;
     pub get_send_message, _: 30;
     pub get_manage_messages, _: 29;
-    pub get_voice_call, _: 28;
+    pub get_manage_channel, _: 28;
+    pub get_voice_call, _: 27;
 }
 
 impl_op_ex!(+ |a: &ChannelPermission, b: &ChannelPermission| -> u32 { *a as u32 | *b as u32 });
@@ -69,7 +71,7 @@ impl<'a> PermissionCalculator<'a> {
                     .find(|x| *x == &self.perspective.id)
                     .is_some()
                 {
-                    Ok(ChannelPermission::View + ChannelPermission::SendMessage + ChannelPermission::VoiceCall)
+                    Ok(ChannelPermission::View + ChannelPermission::SendMessage + ChannelPermission::ManageChannel + ChannelPermission::VoiceCall)
                 } else {
                     Ok(0)
                 }

@@ -1,6 +1,7 @@
 use rocket::Route;
 
 mod delete_channel;
+mod edit_channel;
 mod fetch_channel;
 mod group_add_member;
 mod group_create;
@@ -17,6 +18,7 @@ pub fn routes() -> Vec<Route> {
     routes![
         fetch_channel::req,
         delete_channel::req,
+        edit_channel::req,
         message_send::req,
         message_query::req,
         message_query_stale::req,
