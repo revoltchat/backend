@@ -37,9 +37,18 @@ pub async fn req(user: User, target: Ref, info: Json<Data>) -> Result<()> {
     match &target {
         Channel::Group { id, .. } => {
             let col = get_collection("channels");
+            let mut set = doc! {};
+            if let Some(name) = &info.name {
+                set.insert("name", name.clone());
+            }
+
+            if let Some(description) = &info.description {
+                set.insert("description", description.clone());
+            }
+
             col.update_one(
                 doc! { "_id": &id },
-                doc! { "$set": to_document(&info.0).map_err(|_| Error::DatabaseError { operation: "to_document", with: "info" })? },
+                doc! { "$set": set },
                 None
             )
             .await

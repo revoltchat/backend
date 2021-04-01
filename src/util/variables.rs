@@ -62,6 +62,13 @@ lazy_static! {
 }
 
 pub fn preflight_checks() {
+    format!("{}", *MONGO_URI);
+    format!("{}", *PUBLIC_URL);
+    format!("{}", *EXTERNAL_WS_URL);
+
+    format!("{}", *VAPID_PRIVATE_KEY);
+    format!("{}", *VAPID_PUBLIC_KEY);
+
     if *USE_EMAIL == false {
         #[cfg(not(debug_assertions))]
         if !env::var("REVOLT_UNSAFE_NO_EMAIL").map_or(false, |v| v == *"1") {
