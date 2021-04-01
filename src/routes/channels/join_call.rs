@@ -30,21 +30,28 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
     // - Check if the room exists.
     // - If not, create it.
     let client = reqwest::Client::new();
-    if let Err(error) = client
+    let result = client
         .get(&format!("{}/room/{}", *VOSO_URL, target.id()))
         .header(reqwest::header::AUTHORIZATION, VOSO_MANAGE_TOKEN.to_string())
         .send()
-    .await {
-        if error.status() == Some(reqwest::StatusCode::NOT_FOUND) {
-            if let Err(_) = client
-                .post(&format!("{}/room/{}", *VOSO_URL, target.id()))
-                .header(reqwest::header::AUTHORIZATION, VOSO_MANAGE_TOKEN.to_string())
-                .send()
-            .await {
-                return Err(Error::VosoUnavailable)
+        .await;
+    
+    match result {
+        Err(_) => return Err(Error::VosoUnavailable),
+        Ok(result) => {
+            match result.status() {
+                reqwest::StatusCode::OK => (),
+                reqwest::StatusCode::NOT_FOUND => {
+                    if let Err(_) = client
+                        .post(&format!("{}/room/{}", *VOSO_URL, target.id()))
+                        .header(reqwest::header::AUTHORIZATION, VOSO_MANAGE_TOKEN.to_string())
+                        .send()
+                    .await {
+                        return Err(Error::VosoUnavailable)
+                    }
+                },
+                _ => return Err(Error::VosoUnavailable)
             }
-        } else {
-            return Err(Error::VosoUnavailable)
         }
     }
 
