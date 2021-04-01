@@ -12,7 +12,7 @@ lazy_static! {
     pub static ref PUBLIC_URL: String =
         env::var("REVOLT_PUBLIC_URL").expect("Missing REVOLT_PUBLIC_URL environment variable.");
     pub static ref APP_URL: String =
-        env::var("REVOLT_APP_URL").unwrap_or_else(|_| "https://app.revolt.chat".to_string());
+        env::var("REVOLT_APP_URL").expect("Missing REVOLT_APP_URL environment variable.");
     pub static ref EXTERNAL_WS_URL: String =
         env::var("REVOLT_EXTERNAL_WS_URL").expect("Missing REVOLT_EXTERNAL_WS_URL environment variable.");
     
@@ -20,6 +20,8 @@ lazy_static! {
         env::var("AUTUMN_PUBLIC_URL").unwrap_or_else(|_| "https://example.com".to_string());
     pub static ref VOSO_URL: String =
         env::var("VOSO_PUBLIC_URL").unwrap_or_else(|_| "https://example.com".to_string());
+    pub static ref VOSO_WS_HOST: String =
+        env::var("VOSO_WS_HOST").unwrap_or_else(|_| "wss://example.com".to_string());
     pub static ref VOSO_MANAGE_TOKEN: String =
         env::var("VOSO_MANAGE_TOKEN").unwrap_or_else(|_| "0".to_string());
     
@@ -62,6 +64,7 @@ lazy_static! {
 }
 
 pub fn preflight_checks() {
+    format!("{}", *APP_URL);
     format!("{}", *MONGO_URI);
     format!("{}", *PUBLIC_URL);
     format!("{}", *EXTERNAL_WS_URL);
