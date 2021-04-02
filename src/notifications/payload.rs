@@ -77,7 +77,7 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
                     }
                 },
                 FindOptions::builder()
-                    .projection(doc! { "_id": 1, "username": 1 })
+                    .projection(doc! { "_id": 1, "username": 1, "badges": 1, "status": 1 })
                     .build(),
             )
             .await

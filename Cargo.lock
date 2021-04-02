@@ -1068,6 +1068,8 @@ checksum = "644f9158b2f133fd50f5fb3242878846d9eb792e445c893805ff0e3824006e35"
 [[package]]
 name = "hive_pubsub"
 version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ac4635b1e9faf304ccb33c2f0edbc615030e40d249183281fc788ef20ef5c76"
 dependencies = [
  "futures",
  "many-to-many",
@@ -2473,7 +2475,7 @@ dependencies = [
 
 [[package]]
 name = "revolt"
-version = "0.4.0-alpha.2"
+version = "0.4.0-alpha.3"
 dependencies = [
  "async-std",
  "async-tungstenite",

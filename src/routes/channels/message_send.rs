@@ -32,11 +32,11 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
     }
 
     let target = target.fetch_channel().await?;
-
     let perm = permissions::PermissionCalculator::new(&user)
         .with_channel(&target)
         .for_channel()
         .await?;
+
     if !perm.get_send_message() {
         Err(Error::MissingPermission)?
     }

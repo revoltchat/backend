@@ -25,6 +25,20 @@ pub struct Relationship {
     pub status: RelationshipStatus,
 }
 
+/*
+pub enum Badge {
+    Developer = 1
+}
+*/
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(tag = "type")]
+pub enum UserStatus {
+    Text {
+        text: String
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct User {
     #[serde(rename = "_id")]
@@ -32,6 +46,13 @@ pub struct User {
     pub username: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub relations: Option<Vec<Relationship>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub badges: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<Vec<UserStatus>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub profile: Option<String>,
 
     // ? This should never be pushed to the collection.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -65,6 +86,7 @@ impl User {
             self.online = Some(is_online(&self.id));
         }
 
+        self.profile = None;
         self
     }
 
@@ -73,7 +95,7 @@ impl User {
         if username == "revolt" && username == "admin" {
             return Ok(true)
         }
-    
+
         if get_collection("users")
             .find_one(
                 doc! {
