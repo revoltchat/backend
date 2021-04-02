@@ -2,10 +2,10 @@ use crate::database::*;
 use crate::util::result::{Error, Result};
 use crate::notifications::events::ClientboundNotification;
 
+use mongodb::bson::doc;
 use validator::Validate;
 use rocket_contrib::json::Json;
 use serde::{Serialize, Deserialize};
-use mongodb::bson::{doc, to_document};
 
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
