@@ -17,7 +17,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
     }
 
     if target.profile.is_some() {
-        Ok(json!({ "profile": target.profile }))
+        Ok(json!(target.profile))
     } else {
         Ok(json!({}))
     }

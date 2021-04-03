@@ -33,11 +33,21 @@ pub enum Badge {
 }
 */
 
+#[derive(Serialize, Deserialize, Debug)]
+pub enum Presence {
+    Online,
+    Idle,
+    Busy,
+    Invisible
+}
+
 #[derive(Validate, Serialize, Deserialize, Debug)]
 pub struct UserStatus {
     #[validate(length(min = 1, max = 128))]
     #[serde(skip_serializing_if = "Option::is_none")]
     text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    presence: Option<Presence>
 }
 
 #[derive(Validate, Serialize, Deserialize, Debug)]
