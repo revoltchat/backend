@@ -119,19 +119,21 @@ impl Message {
                     })?;
             }
             Channel::Group { id, .. } => {
-                channels
-                    .update_one(
-                        doc! { "_id": id },
-                        doc! {
-                            "$set": set
-                        },
-                        None,
-                    )
-                    .await
-                    .map_err(|_| Error::DatabaseError {
-                        operation: "update_one",
-                        with: "channel",
-                    })?;
+                if let Content::Text(_) = &self.content {
+                    channels
+                        .update_one(
+                            doc! { "_id": id },
+                            doc! {
+                                "$set": set
+                            },
+                            None,
+                        )
+                        .await
+                        .map_err(|_| Error::DatabaseError {
+                            operation: "update_one",
+                            with: "channel",
+                        })?;
+                }
             }
             _ => {}
         }
@@ -140,7 +142,7 @@ impl Message {
         ClientboundNotification::Message(self)
             .publish(channel.id().to_string())
             .await
-            .ok();
+            .unwrap();
 
         /*
            Web Push Test Code
