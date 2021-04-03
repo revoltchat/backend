@@ -2,7 +2,7 @@ use crate::database::*;
 use crate::util::result::{Error, Result};
 use crate::notifications::events::ClientboundNotification;
 
-use mongodb::bson::doc;
+use mongodb::bson::{doc, to_document};
 use validator::Validate;
 use rocket_contrib::json::Json;
 use serde::{Serialize, Deserialize};
@@ -10,8 +10,10 @@ use serde::{Serialize, Deserialize};
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
     #[validate(length(min = 1, max = 32))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
     #[validate(length(min = 0, max = 1024))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     description: Option<String>,
 }
 
@@ -36,19 +38,10 @@ pub async fn req(user: User, target: Ref, info: Json<Data>) -> Result<()> {
 
     match &target {
         Channel::Group { id, .. } => {
-            let col = get_collection("channels");
-            let mut set = doc! {};
-            if let Some(name) = &info.name {
-                set.insert("name", name.clone());
-            }
-
-            if let Some(description) = &info.description {
-                set.insert("description", description.clone());
-            }
-
-            col.update_one(
+            get_collection("channels")
+            .update_one(
                 doc! { "_id": &id },
-                doc! { "$set": set },
+                doc! { "$set": to_document(&info.0).map_err(|_| Error::DatabaseError { operation: "to_document", with: "data" })? },
                 None
             )
             .await

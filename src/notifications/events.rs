@@ -78,6 +78,10 @@ pub enum ClientboundNotification {
         user: String
     },
 
+    UserUpdate {
+        id: String,
+        data: JsonValue,
+    },
     UserRelationship {
         id: String,
         user: String,

@@ -67,6 +67,8 @@ pub enum Error {
     MissingPermission,
     #[snafu(display("Operation cannot be performed on this object."))]
     InvalidOperation,
+    #[snafu(display("Email or password is incorrect."))]
+    InvalidCredentials,
     #[snafu(display("Already created an object with this nonce."))]
     DuplicateNonce,
     #[snafu(display("Voso is not enabled on this instance."))]
@@ -108,6 +110,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::MissingPermission => Status::Forbidden,
             Error::InvalidOperation => Status::BadRequest,
             Error::TooManyIds => Status::BadRequest,
+            Error::InvalidCredentials => Status::Forbidden,
             Error::DuplicateNonce => Status::Conflict,
             Error::VosoUnavailable => Status::BadRequest,
             Error::NoEffect => Status::Ok,

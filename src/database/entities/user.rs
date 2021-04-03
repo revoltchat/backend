@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use mongodb::options::{Collation, FindOneOptions};
 
 use crate::database::*;
+use validator::Validate;
 use crate::util::result::{Error, Result};
 use crate::notifications::websocket::is_online;
 use crate::database::permissions::user::UserPermissions;
@@ -27,16 +28,23 @@ pub struct Relationship {
 
 /*
 pub enum Badge {
-    Developer = 1
+    Developer = 1,
+    Translator = 2,
 }
 */
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(tag = "type")]
-pub enum UserStatus {
-    Text {
-        text: String
-    }
+#[derive(Validate, Serialize, Deserialize, Debug)]
+pub struct UserStatus {
+    #[validate(length(min = 1, max = 128))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    text: Option<String>
+}
+
+#[derive(Validate, Serialize, Deserialize, Debug)]
+pub struct UserProfile {
+    #[validate(length(min = 1, max = 2000))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    content: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -46,13 +54,13 @@ pub struct User {
     pub username: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub relations: Option<Vec<Relationship>>,
-
+    
     #[serde(skip_serializing_if = "Option::is_none")]
     pub badges: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub status: Option<Vec<UserStatus>>,
+    pub status: Option<UserStatus>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub profile: Option<String>,
+    pub profile: Option<UserProfile>,
 
     // ? This should never be pushed to the collection.
     #[serde(skip_serializing_if = "Option::is_none")]
