@@ -15,8 +15,8 @@ pub struct Data {
     profile: Option<UserProfile>,
 }
 
-#[patch("/", data = "<data>")]
-pub async fn req(user: User, data: Json<Data>) -> Result<()> {
+#[patch("/<_ignore_id>", data = "<data>")]
+pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()> {
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 

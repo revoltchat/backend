@@ -23,12 +23,13 @@ pub struct Data {
     password: String,
 }
 
-#[patch("/username", data = "<data>")]
+#[patch("/<_ignore_id>/username", data = "<data>")]
 pub async fn req(
     auth: State<'_, Auth>,
     session: Session,
     user: User,
     data: Json<Data>,
+    _ignore_id: String,
 ) -> Result<()> {
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
