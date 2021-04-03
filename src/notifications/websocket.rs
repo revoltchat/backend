@@ -171,7 +171,7 @@ async fn accept(stream: TcpStream) {
 
                             ClientboundNotification::ChannelStartTyping {
                                 id: channel.clone(),
-                                user
+                                user,
                             }
                             .publish(channel)
                             .await
@@ -194,7 +194,7 @@ async fn accept(stream: TcpStream) {
 
                             ClientboundNotification::ChannelStopTyping {
                                 id: channel.clone(),
-                                user
+                                user,
                             }
                             .publish(channel)
                             .await

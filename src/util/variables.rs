@@ -15,7 +15,7 @@ lazy_static! {
         env::var("REVOLT_APP_URL").expect("Missing REVOLT_APP_URL environment variable.");
     pub static ref EXTERNAL_WS_URL: String =
         env::var("REVOLT_EXTERNAL_WS_URL").expect("Missing REVOLT_EXTERNAL_WS_URL environment variable.");
-    
+
     pub static ref AUTUMN_URL: String =
         env::var("AUTUMN_PUBLIC_URL").unwrap_or_else(|_| "https://example.com".to_string());
     pub static ref VOSO_URL: String =
@@ -24,7 +24,7 @@ lazy_static! {
         env::var("VOSO_WS_HOST").unwrap_or_else(|_| "wss://example.com".to_string());
     pub static ref VOSO_MANAGE_TOKEN: String =
         env::var("VOSO_MANAGE_TOKEN").unwrap_or_else(|_| "0".to_string());
-    
+
     pub static ref HCAPTCHA_KEY: String =
         env::var("REVOLT_HCAPTCHA_KEY").unwrap_or_else(|_| "0x0000000000000000000000000000000000000000".to_string());
     pub static ref HCAPTCHA_SITEKEY: String =

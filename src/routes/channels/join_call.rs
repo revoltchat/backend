@@ -1,19 +1,19 @@
 use crate::database::*;
 use crate::util::result::{Error, Result};
-use crate::util::variables::{USE_VOSO, VOSO_URL, VOSO_MANAGE_TOKEN};
+use crate::util::variables::{USE_VOSO, VOSO_MANAGE_TOKEN, VOSO_URL};
 
-use serde::{Serialize, Deserialize};
 use rocket_contrib::json::JsonValue;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 struct CreateUserResponse {
-    token: String
+    token: String,
 }
 
 #[post("/<target>/join_call")]
 pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
     if !*USE_VOSO {
-        return Err(Error::VosoUnavailable)
+        return Err(Error::VosoUnavailable);
     }
 
     let target = target.fetch_channel().await?;
@@ -21,9 +21,9 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
         .with_channel(&target)
         .for_channel()
         .await?;
-    
+
     if !perm.get_voice_call() {
-        return Err(Error::MissingPermission)
+        return Err(Error::MissingPermission);
     }
 
     // To join a call:
@@ -32,39 +32,51 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
     let client = reqwest::Client::new();
     let result = client
         .get(&format!("{}/room/{}", *VOSO_URL, target.id()))
-        .header(reqwest::header::AUTHORIZATION, VOSO_MANAGE_TOKEN.to_string())
+        .header(
+            reqwest::header::AUTHORIZATION,
+            VOSO_MANAGE_TOKEN.to_string(),
+        )
         .send()
         .await;
-    
+
     match result {
         Err(_) => return Err(Error::VosoUnavailable),
-        Ok(result) => {
-            match result.status() {
-                reqwest::StatusCode::OK => (),
-                reqwest::StatusCode::NOT_FOUND => {
-                    if let Err(_) = client
-                        .post(&format!("{}/room/{}", *VOSO_URL, target.id()))
-                        .header(reqwest::header::AUTHORIZATION, VOSO_MANAGE_TOKEN.to_string())
-                        .send()
-                    .await {
-                        return Err(Error::VosoUnavailable)
-                    }
-                },
-                _ => return Err(Error::VosoUnavailable)
+        Ok(result) => match result.status() {
+            reqwest::StatusCode::OK => (),
+            reqwest::StatusCode::NOT_FOUND => {
+                if let Err(_) = client
+                    .post(&format!("{}/room/{}", *VOSO_URL, target.id()))
+                    .header(
+                        reqwest::header::AUTHORIZATION,
+                        VOSO_MANAGE_TOKEN.to_string(),
+                    )
+                    .send()
+                    .await
+                {
+                    return Err(Error::VosoUnavailable);
+                }
             }
-        }
+            _ => return Err(Error::VosoUnavailable),
+        },
     }
 
     // Then create a user for the room.
     if let Ok(response) = client
-        .post(&format!("{}/room/{}/user/{}", *VOSO_URL, target.id(), user.id))
-        .header(reqwest::header::AUTHORIZATION, VOSO_MANAGE_TOKEN.to_string())
+        .post(&format!(
+            "{}/room/{}/user/{}",
+            *VOSO_URL,
+            target.id(),
+            user.id
+        ))
+        .header(
+            reqwest::header::AUTHORIZATION,
+            VOSO_MANAGE_TOKEN.to_string(),
+        )
         .send()
-    .await {
-        let res: CreateUserResponse = response.json()
-            .await
-            .map_err(|_| Error::InvalidOperation)?;
-        
+        .await
+    {
+        let res: CreateUserResponse = response.json().await.map_err(|_| Error::InvalidOperation)?;
+
         Ok(json!(res))
     } else {
         Err(Error::VosoUnavailable)

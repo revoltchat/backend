@@ -56,7 +56,9 @@ impl<'a> PermissionCalculator<'a> {
                         let perms = self.for_user(recipient).await?;
 
                         if perms.get_send_message() {
-                            return Ok(ChannelPermission::View + ChannelPermission::SendMessage + ChannelPermission::VoiceCall);
+                            return Ok(ChannelPermission::View
+                                + ChannelPermission::SendMessage
+                                + ChannelPermission::VoiceCall);
                         }
 
                         return Ok(ChannelPermission::View as u32);
@@ -71,7 +73,10 @@ impl<'a> PermissionCalculator<'a> {
                     .find(|x| *x == &self.perspective.id)
                     .is_some()
                 {
-                    Ok(ChannelPermission::View + ChannelPermission::SendMessage + ChannelPermission::ManageChannel + ChannelPermission::VoiceCall)
+                    Ok(ChannelPermission::View
+                        + ChannelPermission::SendMessage
+                        + ChannelPermission::ManageChannel
+                        + ChannelPermission::VoiceCall)
                 } else {
                     Ok(0)
                 }

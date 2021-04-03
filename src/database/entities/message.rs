@@ -20,42 +20,29 @@ use web_push::{
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum MessageEmbed {
-    Dummy
+    Dummy,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum SystemMessage {
     #[serde(rename = "text")]
-    Text {
-        content: String
-    },
+    Text { content: String },
     #[serde(rename = "user_added")]
-    UserAdded {
-        id: String,
-        by: String
-    },
+    UserAdded { id: String, by: String },
     #[serde(rename = "user_remove")]
-    UserRemove {
-        id: String,
-        by: String
-    },
+    UserRemove { id: String, by: String },
     #[serde(rename = "user_left")]
-    UserLeft {
-        id: String
-    },
+    UserLeft { id: String },
     #[serde(rename = "channel_renamed")]
-    ChannelRenamed {
-        name: String,
-        by: String
-    },
+    ChannelRenamed { name: String, by: String },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum Content {
     Text(String),
-    SystemMessage(SystemMessage)
+    SystemMessage(SystemMessage),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -87,7 +74,7 @@ impl Message {
             content,
             attachment: None,
             edited: None,
-            embeds: None
+            embeds: None,
         }
     }
 
@@ -174,7 +161,7 @@ impl Message {
         }
 
         // Fetch their corresponding sessions.
-        let mut cursor = get_collection("accounts")
+        if let Ok(mut cursor) = get_collection("accounts")
             .find(
                 doc! {
                     "_id": {
@@ -189,41 +176,43 @@ impl Message {
                     .build(),
             )
             .await
-            .unwrap(); // !FIXME
+        {
+            let mut subscriptions = vec![];
+            while let Some(result) = cursor.next().await {
+                if let Ok(doc) = result {
+                    if let Ok(sessions) = doc.get_array("sessions") {
+                        for session in sessions {
+                            if let Some(doc) = session.as_document() {
+                                if let Ok(sub) = doc.get_document("subscription") {
+                                    let endpoint = sub.get_str("endpoint").unwrap().to_string();
+                                    let p256dh = sub.get_str("p256dh").unwrap().to_string();
+                                    let auth = sub.get_str("auth").unwrap().to_string();
 
-        let mut subscriptions = vec![];
-        while let Some(result) = cursor.next().await {
-            if let Ok(doc) = result {
-                if let Ok(sessions) = doc.get_array("sessions") {
-                    for session in sessions {
-                        if let Some(doc) = session.as_document() {
-                            if let Ok(sub) = doc.get_document("subscription") {
-                                let endpoint = sub.get_str("endpoint").unwrap().to_string();
-                                let p256dh = sub.get_str("p256dh").unwrap().to_string();
-                                let auth = sub.get_str("auth").unwrap().to_string();
-
-                                subscriptions.push(SubscriptionInfo::new(endpoint, p256dh, auth));
+                                    subscriptions
+                                        .push(SubscriptionInfo::new(endpoint, p256dh, auth));
+                                }
                             }
                         }
                     }
                 }
             }
-        }
 
-        if subscriptions.len() > 0 {
-            let client = WebPushClient::new();
-            let key = base64::decode_config(VAPID_PRIVATE_KEY.clone(), base64::URL_SAFE).unwrap();
+            if subscriptions.len() > 0 {
+                let client = WebPushClient::new();
+                let key =
+                    base64::decode_config(VAPID_PRIVATE_KEY.clone(), base64::URL_SAFE).unwrap();
 
-            for subscription in subscriptions {
-                let mut builder = WebPushMessageBuilder::new(&subscription).unwrap();
-                let sig_builder =
-                    VapidSignatureBuilder::from_pem(std::io::Cursor::new(&key), &subscription)
-                        .unwrap();
-                let signature = sig_builder.build().unwrap();
-                builder.set_vapid_signature(signature);
-                builder.set_payload(ContentEncoding::AesGcm, enc.as_bytes());
-                let m = builder.build().unwrap();
-                client.send(m).await.ok();
+                for subscription in subscriptions {
+                    let mut builder = WebPushMessageBuilder::new(&subscription).unwrap();
+                    let sig_builder =
+                        VapidSignatureBuilder::from_pem(std::io::Cursor::new(&key), &subscription)
+                            .unwrap();
+                    let signature = sig_builder.build().unwrap();
+                    builder.set_vapid_signature(signature);
+                    builder.set_payload(ContentEncoding::AesGcm, enc.as_bytes());
+                    let m = builder.build().unwrap();
+                    client.send(m).await.ok();
+                }
             }
         }
 
@@ -255,7 +244,7 @@ impl Message {
                             "deleted": true
                         }
                     },
-                    None
+                    None,
                 )
                 .await
                 .map_err(|_| Error::DatabaseError {

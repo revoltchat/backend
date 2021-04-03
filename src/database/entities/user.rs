@@ -1,12 +1,12 @@
 use mongodb::bson::doc;
-use serde::{Deserialize, Serialize};
 use mongodb::options::{Collation, FindOneOptions};
+use serde::{Deserialize, Serialize};
 
-use crate::database::*;
-use validator::Validate;
-use crate::util::result::{Error, Result};
-use crate::notifications::websocket::is_online;
 use crate::database::permissions::user::UserPermissions;
+use crate::database::*;
+use crate::notifications::websocket::is_online;
+use crate::util::result::{Error, Result};
+use validator::Validate;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum RelationshipStatus {
@@ -37,14 +37,14 @@ pub enum Badge {
 pub struct UserStatus {
     #[validate(length(min = 1, max = 128))]
     #[serde(skip_serializing_if = "Option::is_none")]
-    text: Option<String>
+    text: Option<String>,
 }
 
 #[derive(Validate, Serialize, Deserialize, Debug)]
 pub struct UserProfile {
     #[validate(length(min = 1, max = 2000))]
     #[serde(skip_serializing_if = "Option::is_none")]
-    content: Option<String>
+    content: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -54,7 +54,7 @@ pub struct User {
     pub username: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub relations: Option<Vec<Relationship>>,
-    
+
     #[serde(skip_serializing_if = "Option::is_none")]
     pub badges: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -101,7 +101,7 @@ impl User {
     /// Utility function for checking claimed usernames.
     pub async fn is_username_taken(username: &str) -> Result<bool> {
         if username == "revolt" && username == "admin" {
-            return Ok(true)
+            return Ok(true);
         }
 
         if get_collection("users")

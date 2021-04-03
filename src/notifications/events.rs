@@ -26,12 +26,8 @@ pub enum WebSocketError {
 #[serde(tag = "type")]
 pub enum ServerboundNotification {
     Authenticate(Session),
-    BeginTyping {
-        channel: String
-    },
-    EndTyping {
-        channel: String
-    }
+    BeginTyping { channel: String },
+    EndTyping { channel: String },
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -71,11 +67,11 @@ pub enum ClientboundNotification {
     },
     ChannelStartTyping {
         id: String,
-        user: String
+        user: String,
     },
     ChannelStopTyping {
         id: String,
-        user: String
+        user: String,
     },
 
     UserUpdate {

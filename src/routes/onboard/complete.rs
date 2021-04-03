@@ -28,21 +28,22 @@ pub async fn req(session: Session, user: Option<User>, data: Json<Data>) -> Resu
         .map_err(|error| Error::FailedValidation { error })?;
 
     if User::is_username_taken(&data.username).await? {
-        return Err(Error::UsernameTaken)
+        return Err(Error::UsernameTaken);
     }
 
-    get_collection("users").insert_one(
-        doc! {
-            "_id": session.user_id,
-            "username": &data.username
-        },
-        None,
-    )
-    .await
-    .map_err(|_| Error::DatabaseError {
-        operation: "insert_one",
-        with: "user",
-    })?;
+    get_collection("users")
+        .insert_one(
+            doc! {
+                "_id": session.user_id,
+                "username": &data.username
+            },
+            None,
+        )
+        .await
+        .map_err(|_| Error::DatabaseError {
+            operation: "insert_one",
+            with: "user",
+        })?;
 
     Ok(())
 }

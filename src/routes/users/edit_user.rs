@@ -1,25 +1,25 @@
 use crate::database::*;
-use crate::util::result::{Error, Result};
 use crate::notifications::events::ClientboundNotification;
+use crate::util::result::{Error, Result};
 
 use mongodb::bson::{doc, to_document};
-use validator::Validate;
 use rocket_contrib::json::Json;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use validator::Validate;
 
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
     #[serde(skip_serializing_if = "Option::is_none")]
     status: Option<UserStatus>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    profile: Option<UserProfile>
+    profile: Option<UserProfile>,
 }
 
 #[patch("/", data = "<data>")]
 pub async fn req(user: User, data: Json<Data>) -> Result<()> {
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
-    
+
     get_collection("users")
     .update_one(
         doc! { "_id": &user.id },
@@ -31,7 +31,7 @@ pub async fn req(user: User, data: Json<Data>) -> Result<()> {
 
     ClientboundNotification::UserUpdate {
         id: user.id.clone(),
-        data: json!(data.0)
+        data: json!(data.0),
     }
     .publish(user.id.clone())
     .await

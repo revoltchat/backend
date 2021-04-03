@@ -26,7 +26,7 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
     message
         .validate()
         .map_err(|error| Error::FailedValidation { error })?;
-    
+
     if message.content.len() == 0 && message.attachment.is_none() {
         return Err(Error::EmptyMessage);
     }
@@ -119,7 +119,7 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
         attachment,
         nonce: Some(message.nonce.clone()),
         edited: None,
-        embeds: None
+        embeds: None,
     };
 
     msg.clone().publish(&target).await?;

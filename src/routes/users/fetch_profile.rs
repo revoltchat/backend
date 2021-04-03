@@ -11,7 +11,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
         .with_user(&target)
         .for_user_given()
         .await?;
-    
+
     if !perm.get_view_profile() {
         Err(Error::MissingPermission)?
     }
