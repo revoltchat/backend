@@ -64,7 +64,7 @@ impl<'a> PermissionCalculator<'a> {
             _ => {}
         }
 
-        if self.has_mutual_conncetion
+        if self.has_mutual_connection
             || get_collection("channels")
                 .find_one(
                     doc! {
@@ -84,7 +84,8 @@ impl<'a> PermissionCalculator<'a> {
                 })?
                 .is_some()
         {
-            return Ok(UserPermission::Access as u32);
+            // ! FIXME: add privacy settings
+            return Ok(UserPermission::Access + UserPermission::ViewProfile);
         }
 
         Ok(permissions)

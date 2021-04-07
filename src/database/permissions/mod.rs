@@ -11,7 +11,7 @@ pub struct PermissionCalculator<'a> {
     user: Option<&'a User>,
     channel: Option<&'a Channel>,
 
-    has_mutual_conncetion: bool,
+    has_mutual_connection: bool,
 }
 
 impl<'a> PermissionCalculator<'a> {
@@ -22,7 +22,7 @@ impl<'a> PermissionCalculator<'a> {
             user: None,
             channel: None,
 
-            has_mutual_conncetion: false,
+            has_mutual_connection: false,
         }
     }
 
@@ -42,7 +42,7 @@ impl<'a> PermissionCalculator<'a> {
 
     pub fn with_mutual_connection(self) -> PermissionCalculator<'a> {
         PermissionCalculator {
-            has_mutual_conncetion: true,
+            has_mutual_connection: true,
             ..self
         }
     }
