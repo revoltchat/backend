@@ -68,7 +68,7 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
                 doc! {
                     "_id": attachment_id,
                     "tag": "attachments",
-                    "message": {
+                    "message_id": {
                         "$exists": false
                     }
                 },
@@ -92,7 +92,7 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
                     },
                     doc! {
                         "$set": {
-                            "message": &id
+                            "message_id": &id
                         }
                     },
                     None,
