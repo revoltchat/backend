@@ -67,7 +67,8 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
             .find_one(
                 doc! {
                     "_id": attachment_id,
-                    "message_id": {
+                    "tag": "attachments",
+                    "message": {
                         "$exists": false
                     }
                 },
@@ -91,7 +92,7 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
                     },
                     doc! {
                         "$set": {
-                            "message_id": &id
+                            "message": &id
                         }
                     },
                     None,

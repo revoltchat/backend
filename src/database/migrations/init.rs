@@ -29,6 +29,10 @@ pub async fn create_database() {
         .await
         .expect("Failed to create migrations collection.");
 
+    db.create_collection("attachments", None)
+        .await
+        .expect("Failed to create attachments collection.");
+
     db.create_collection(
         "pubsub",
         CreateCollectionOptions::builder()
