@@ -10,8 +10,10 @@ use validator::Validate;
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate]
     status: Option<UserStatus>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate]
     profile: Option<UserProfile>,
 }
 
@@ -29,13 +31,15 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
     .await
     .map_err(|_| Error::DatabaseError { operation: "update_one", with: "user" })?;
 
-    ClientboundNotification::UserUpdate {
-        id: user.id.clone(),
-        data: json!(data.0),
+    if let Some(status) = data.0.status {
+        ClientboundNotification::UserUpdate {
+            id: user.id.clone(),
+            data: json!({ "status": status }),
+        }
+        .publish(user.id.clone())
+        .await
+        .ok();
     }
-    .publish(user.id.clone())
-    .await
-    .ok();
 
     Ok(())
 }

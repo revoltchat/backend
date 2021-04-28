@@ -19,6 +19,9 @@ pub struct File {
     metadata: Metadata,
     content_type: String,
     size: isize,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    deleted: Option<bool>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     message_id: Option<String>,

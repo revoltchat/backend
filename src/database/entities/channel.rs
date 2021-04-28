@@ -1,9 +1,10 @@
 use crate::database::*;
 use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
-use mongodb::bson::{doc, from_document, to_document};
+use mongodb::{bson::{Document, doc, from_document, to_document}, options::FindOptions};
 use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
+use futures::StreamExt;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LastMessage {
@@ -107,7 +108,56 @@ impl Channel {
 
     pub async fn delete(&self) -> Result<()> {
         let id = self.id();
-        get_collection("messages")
+        let messages = get_collection("messages");
+
+        // Check if there are any attachments we need to delete.
+        let message_ids = messages
+            .find(
+                doc! {
+                    "channel": id,
+                    "attachment": {
+                        "$exists": 1
+                    }
+                },
+                FindOptions::builder().projection(doc! { "_id": 1 }).build(),
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "fetch_many",
+                with: "messages",
+            })?
+            .filter_map(async move |s| s.ok())
+            .collect::<Vec<Document>>()
+            .await
+            .into_iter()
+            .filter_map(|x| x.get_str("_id").ok().map(|x| x.to_string()))
+            .collect::<Vec<String>>();
+        
+        // If we found any, mark them as deleted.
+        if message_ids.len() > 0 {
+            get_collection("attachments")
+                .update_many(
+                    doc! {
+                        "message_id": {
+                            "$in": message_ids
+                        }
+                    },
+                    doc! {
+                        "$set": {
+                            "deleted": true
+                        }
+                    },
+                    None
+                )
+                .await
+                .map_err(|_| Error::DatabaseError {
+                    operation: "update_many",
+                    with: "attachments",
+                })?;
+        }
+
+        // And then delete said messages.
+        messages
             .delete_many(
                 doc! {
                     "channel": id

@@ -276,6 +276,26 @@ impl Message {
         .await
         .ok();
 
+        if let Some(attachment) = &self.attachment {
+            get_collection("attachments")
+                .update_one(
+                    doc! {
+                        "_id": &attachment.id
+                    },
+                    doc! {
+                        "$set": {
+                            "deleted": true
+                        }
+                    },
+                    None
+                )
+                .await
+                .map_err(|_| Error::DatabaseError {
+                    operation: "update_one",
+                    with: "attachment",
+                })?;
+        }
+
         Ok(())
     }
 }
