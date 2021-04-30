@@ -38,7 +38,7 @@ pub enum Presence {
     Online,
     Idle,
     Busy,
-    Invisible
+    Invisible,
 }
 
 #[derive(Validate, Serialize, Deserialize, Debug)]
@@ -47,7 +47,7 @@ pub struct UserStatus {
     #[serde(skip_serializing_if = "Option::is_none")]
     text: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    presence: Option<Presence>
+    presence: Option<Presence>,
 }
 
 #[derive(Validate, Serialize, Deserialize, Debug)]

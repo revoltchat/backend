@@ -18,6 +18,7 @@ pub mod notifications;
 pub mod routes;
 pub mod util;
 
+use async_std::task;
 use chrono::Duration;
 use futures::join;
 use log::info;
@@ -50,10 +51,13 @@ async fn main() {
     })
     .expect("Error setting Ctrl-C handler");
 
+    let web_task = task::spawn(launch_web());
+    let hive_task = task::spawn(notifications::hive::listen());
+
     join!(
-        launch_web(),
-        notifications::websocket::launch_server(),
-        notifications::hive::listen(),
+        web_task,
+        hive_task,
+        notifications::websocket::launch_server()
     );
 }
 
