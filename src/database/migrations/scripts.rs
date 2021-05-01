@@ -1,8 +1,8 @@
 use crate::database::get_collection;
 
 use log::info;
-use serde::{Deserialize, Serialize};
 use mongodb::bson::{doc, from_document};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 struct MigrationInfo {
@@ -59,21 +59,23 @@ pub async fn run_migrations(revision: i32) -> i32 {
         let messages = get_collection("messages");
         let attachments = get_collection("attachments");
 
-        messages.update_many(
-            doc! { "attachment": { "$exists": 1 } },
-            doc! { "$set": { "attachment.tag": "attachments", "attachment.size": 0 } },
-            None
-        )
-        .await
-        .expect("Failed to update messages.");
+        messages
+            .update_many(
+                doc! { "attachment": { "$exists": 1 } },
+                doc! { "$set": { "attachment.tag": "attachments", "attachment.size": 0 } },
+                None,
+            )
+            .await
+            .expect("Failed to update messages.");
 
-        attachments.update_many(
-            doc! { },
-            doc! { "$set": { "tag": "attachments", "size": 0 } },
-            None
-        )
-        .await
-        .expect("Failed to update attachments.");
+        attachments
+            .update_many(
+                doc! {},
+                doc! { "$set": { "tag": "attachments", "size": 0 } },
+                None,
+            )
+            .await
+            .expect("Failed to update attachments.");
     }
 
     // Reminder to update LATEST_REVISION when adding new migrations.
