@@ -67,6 +67,10 @@ pub async fn req(user: User, mut data: Json<Data>, _ignore_id: String) -> Result
         .publish(user.id.clone())
         .await
         .ok();
+
+        if let Some(old_avatar) = user.avatar {
+            old_avatar.delete().await?;
+        }
     }
 
     Ok(())

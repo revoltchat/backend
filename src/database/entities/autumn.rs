@@ -86,4 +86,25 @@ impl File {
             Err(Error::UnknownAttachment)
         }
     }
+
+    pub async fn delete(&self) -> Result<()> {
+        get_collection("attachments")
+            .update_one(
+                doc! {
+                    "_id": &self.id
+                },
+                doc! {
+                    "$set": {
+                        "deleted": true
+                    }
+                },
+                None,
+            )
+            .await
+            .map(|_| ())
+            .map_err(|_| Error::DatabaseError {
+                operation: "update_one",
+                with: "attachment",
+            })
+    }
 }
