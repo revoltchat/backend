@@ -45,18 +45,20 @@ pub enum Presence {
 pub struct UserStatus {
     #[validate(length(min = 1, max = 128))]
     #[serde(skip_serializing_if = "Option::is_none")]
-    text: Option<String>,
+    pub text: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    presence: Option<Presence>,
+    pub presence: Option<Presence>,
 }
 
-#[derive(Validate, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct UserProfile {
-    #[validate(length(min = 1, max = 2000))]
     #[serde(skip_serializing_if = "Option::is_none")]
-    content: Option<String>,
+    pub content: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub background: Option<File>,
 }
 
+// When changing this struct, update notifications/payload.rs#80
 #[derive(Serialize, Deserialize, Debug)]
 pub struct User {
     #[serde(rename = "_id")]

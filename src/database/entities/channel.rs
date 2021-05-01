@@ -28,6 +28,7 @@ pub enum Channel {
     DirectMessage {
         #[serde(rename = "_id")]
         id: String,
+
         active: bool,
         recipients: Vec<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -38,10 +39,14 @@ pub enum Channel {
         id: String,
         #[serde(skip_serializing_if = "Option::is_none")]
         nonce: Option<String>,
+
         name: String,
         owner: String,
         description: String,
         recipients: Vec<String>,
+        
+        #[serde(skip_serializing_if = "Option::is_none")]
+        icon: Option<File>,
         #[serde(skip_serializing_if = "Option::is_none")]
         last_message: Option<LastMessage>,
     },

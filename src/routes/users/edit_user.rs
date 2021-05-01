@@ -7,34 +7,100 @@ use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+#[derive(Validate, Serialize, Deserialize, Debug)]
+pub struct UserProfileData {
+    #[validate(length(min = 0, max = 2000))]
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[validate]
-    status: Option<UserStatus>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[validate]
-    profile: Option<UserProfile>,
+    content: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[validate(length(min = 1, max = 128))]
+    background: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub enum RemoveField {
+    ProfileContent,
+    ProfileBackground,
+    StatusText,
+    Avatar
+}
+
+#[derive(Validate, Serialize, Deserialize)]
+pub struct Data {
+    #[validate]
+    status: Option<UserStatus>,
+    #[validate]
+    profile: Option<UserProfileData>,
+    #[validate(length(min = 1, max = 128))]
     avatar: Option<String>,
+    remove: Option<RemoveField>
 }
 
 #[patch("/<_ignore_id>", data = "<data>")]
-pub async fn req(user: User, mut data: Json<Data>, _ignore_id: String) -> Result<()> {
-    if data.0.status.is_none() && data.0.profile.is_none() && data.0.avatar.is_none() {
+pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()> {
+    let mut data = data.into_inner();
+    if data.status.is_none() && data.profile.is_none() && data.avatar.is_none() {
         return Ok(());
     }
 
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    let mut set = to_document(&data.0).map_err(|_| Error::DatabaseError {
-        operation: "to_document",
-        with: "data",
-    })?;
+    let mut unset = doc! {};
+    let mut set = doc! {};
 
-    let avatar = std::mem::replace(&mut data.0.avatar, None);
+    let mut remove_background = false;
+    let mut remove_avatar = false;
+
+    if let Some(remove) = data.remove {
+        match remove {
+            RemoveField::ProfileContent => {
+                unset.insert("profile.content", 1);
+            },
+            RemoveField::ProfileBackground => {
+                unset.insert("profile.background", 1);
+                remove_background = true;
+            }
+            RemoveField::StatusText => {
+                unset.insert("status.text", 1);
+            },
+            RemoveField::Avatar => {
+                unset.insert("avatar", 1);
+                remove_avatar = true;
+            }
+        }
+    }
+
+    if let Some(status) = &data.status {
+        set.insert(
+            "status",
+            to_document(&status).map_err(|_| Error::DatabaseError {
+                operation: "to_document",
+                with: "status",
+            })?,
+        );
+    }
+
+    if let Some(profile) = data.profile {
+        if let Some(content) = profile.content {
+            set.insert("profile.content", content);
+        }
+
+        if let Some(attachment_id) = profile.background {
+            let attachment = File::find_and_use(&attachment_id, "backgrounds", "user", &user.id).await?;
+            set.insert(
+                "profile.background",
+                to_document(&attachment).map_err(|_| Error::DatabaseError {
+                    operation: "to_document",
+                    with: "attachment",
+                })?,
+            );
+
+            remove_background = true;
+        }
+    }
+
+    let avatar = std::mem::replace(&mut data.avatar, None);
     let attachment = if let Some(attachment_id) = avatar {
         let attachment = File::find_and_use(&attachment_id, "avatars", "user", &user.id).await?;
         set.insert(
@@ -44,6 +110,8 @@ pub async fn req(user: User, mut data: Json<Data>, _ignore_id: String) -> Result
                 with: "attachment",
             })?,
         );
+
+        remove_avatar = true;
         Some(attachment)
     } else {
         None
@@ -57,7 +125,7 @@ pub async fn req(user: User, mut data: Json<Data>, _ignore_id: String) -> Result
             with: "user",
         })?;
 
-    if let Some(status) = data.0.status {
+    if let Some(status) = data.status {
         ClientboundNotification::UserUpdate {
             id: user.id.clone(),
             data: json!({ "status": status }),
@@ -75,9 +143,19 @@ pub async fn req(user: User, mut data: Json<Data>, _ignore_id: String) -> Result
         .publish(user.id.clone())
         .await
         .ok();
+    }
 
+    if remove_avatar {
         if let Some(old_avatar) = user.avatar {
             old_avatar.delete().await?;
+        }
+    }
+
+    if remove_background {
+        if let Some(profile) = user.profile {
+            if let Some(old_background) = profile.background {
+                old_background.delete().await?;
+            }
         }
     }
 
