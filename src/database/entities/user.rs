@@ -63,6 +63,8 @@ pub struct User {
     pub id: String,
     pub username: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub avatar: Option<File>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub relations: Option<Vec<Relationship>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]

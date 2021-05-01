@@ -2,7 +2,7 @@ use crate::database::*;
 use crate::util::result::{Error, Result};
 
 use mongodb::{
-    bson::{doc, from_document},
+    bson::{doc},
     options::FindOneOptions,
 };
 use rocket_contrib::json::{Json, JsonValue};
@@ -61,52 +61,8 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
     }
 
     let id = Ulid::new().to_string();
-    let attachments = get_collection("attachments");
     let attachment = if let Some(attachment_id) = &message.attachment {
-        if let Some(doc) = attachments
-            .find_one(
-                doc! {
-                    "_id": attachment_id,
-                    "tag": "attachments",
-                    "message_id": {
-                        "$exists": false
-                    }
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "find_one",
-                with: "attachment",
-            })?
-        {
-            let attachment = from_document::<File>(doc).map_err(|_| Error::DatabaseError {
-                operation: "from_document",
-                with: "attachment",
-            })?;
-
-            attachments
-                .update_one(
-                    doc! {
-                        "_id": &attachment.id
-                    },
-                    doc! {
-                        "$set": {
-                            "message_id": &id
-                        }
-                    },
-                    None,
-                )
-                .await
-                .map_err(|_| Error::DatabaseError {
-                    operation: "update_one",
-                    with: "attachment",
-                })?;
-
-            Some(attachment)
-        } else {
-            return Err(Error::UnknownAttachment);
-        }
+        Some(File::find_and_use(attachment_id, "attachments", "message", &id).await?)
     } else {
         None
     };
