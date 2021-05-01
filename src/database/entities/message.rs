@@ -271,7 +271,7 @@ impl Message {
                             "deleted": true
                         }
                     },
-                    None
+                    None,
                 )
                 .await
                 .map_err(|_| Error::DatabaseError {

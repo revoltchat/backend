@@ -67,8 +67,12 @@ pub async fn req(user: User, username: String) -> Result<JsonValue> {
                 )
             ) {
                 Ok(_) => {
-                    let target_user = target_user.from_override(&user, RelationshipStatus::Friend).await?;
-                    let user = user.from_override(&target_user, RelationshipStatus::Friend).await?;
+                    let target_user = target_user
+                        .from_override(&user, RelationshipStatus::Friend)
+                        .await?;
+                    let user = user
+                        .from_override(&target_user, RelationshipStatus::Friend)
+                        .await?;
 
                     try_join!(
                         ClientboundNotification::UserRelationship {
@@ -126,8 +130,12 @@ pub async fn req(user: User, username: String) -> Result<JsonValue> {
                 )
             ) {
                 Ok(_) => {
-                    let target_user = target_user.from_override(&user, RelationshipStatus::Outgoing).await?;
-                    let user = user.from_override(&target_user, RelationshipStatus::Incoming).await?;
+                    let target_user = target_user
+                        .from_override(&user, RelationshipStatus::Outgoing)
+                        .await?;
+                    let user = user
+                        .from_override(&target_user, RelationshipStatus::Incoming)
+                        .await?;
                     try_join!(
                         ClientboundNotification::UserRelationship {
                             id: user.id.clone(),

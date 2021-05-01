@@ -49,7 +49,12 @@ impl<'a> PermissionCalculator<'a> {
         }
 
         let mut permissions: u32 = 0;
-        match self.relationship.clone().map(|v| v.to_owned()).unwrap_or_else(|| get_relationship(&self.perspective, &target)) {
+        match self
+            .relationship
+            .clone()
+            .map(|v| v.to_owned())
+            .unwrap_or_else(|| get_relationship(&self.perspective, &target))
+        {
             RelationshipStatus::Friend => return Ok(u32::MAX),
             RelationshipStatus::Blocked | RelationshipStatus::BlockedOther => {
                 return Ok(UserPermission::Access as u32)

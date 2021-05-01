@@ -81,7 +81,7 @@ pub enum ClientboundNotification {
     UserRelationship {
         id: String,
         user: User,
-        status: RelationshipStatus
+        status: RelationshipStatus,
     },
     UserPresence {
         id: String,

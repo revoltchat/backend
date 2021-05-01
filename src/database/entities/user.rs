@@ -116,10 +116,15 @@ impl User {
 
     /// Mutate the user object to appear as seen by user.
     /// Also overrides the relationship status.
-    pub async fn from_override(mut self, user: &User, relationship: RelationshipStatus) -> Result<User> {
+    pub async fn from_override(
+        mut self,
+        user: &User,
+        relationship: RelationshipStatus,
+    ) -> Result<User> {
         let permissions = PermissionCalculator::new(&user)
             .with_relationship(&relationship)
-            .for_user(&self.id).await?;
+            .for_user(&self.id)
+            .await?;
 
         self.relations = None;
         self.relationship = Some(relationship);

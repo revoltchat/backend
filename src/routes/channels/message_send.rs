@@ -1,10 +1,7 @@
 use crate::database::*;
 use crate::util::result::{Error, Result};
 
-use mongodb::{
-    bson::{doc},
-    options::FindOneOptions,
-};
+use mongodb::{bson::doc, options::FindOneOptions};
 use rocket_contrib::json::{Json, JsonValue};
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;

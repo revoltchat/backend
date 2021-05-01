@@ -1,8 +1,8 @@
 use mongodb::bson::{doc, from_document};
 use serde::{Deserialize, Serialize};
 
-use crate::util::result::{Error, Result};
 use crate::database::*;
+use crate::util::result::{Error, Result};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
@@ -23,7 +23,7 @@ pub struct File {
     metadata: Metadata,
     content_type: String,
     size: isize,
-    
+
     #[serde(skip_serializing_if = "Option::is_none")]
     deleted: Option<bool>,
 
@@ -38,7 +38,12 @@ pub struct File {
 }
 
 impl File {
-    pub async fn find_and_use(attachment_id: &str, tag: &str, parent_type: &str, parent_id: &str) -> Result<File> {
+    pub async fn find_and_use(
+        attachment_id: &str,
+        tag: &str,
+        parent_type: &str,
+        parent_id: &str,
+    ) -> Result<File> {
         let attachments = get_collection("attachments");
         let key = format!("{}_id", parent_type);
         if let Some(doc) = attachments

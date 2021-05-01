@@ -76,8 +76,12 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                 )
             ) {
                 Ok(_) => {
-                    let target = target.from_override(&user, RelationshipStatus::Friend).await?;
-                    let user = user.from_override(&target, RelationshipStatus::Friend).await?;
+                    let target = target
+                        .from_override(&user, RelationshipStatus::Friend)
+                        .await?;
+                    let user = user
+                        .from_override(&target, RelationshipStatus::Friend)
+                        .await?;
                     let target_id = target.id.clone();
 
                     try_join!(
@@ -134,8 +138,12 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                 )
             ) {
                 Ok(_) => {
-                    let target = target.from_override(&user, RelationshipStatus::Blocked).await?;
-                    let user = user.from_override(&target, RelationshipStatus::BlockedOther).await?;
+                    let target = target
+                        .from_override(&user, RelationshipStatus::Blocked)
+                        .await?;
+                    let user = user
+                        .from_override(&target, RelationshipStatus::BlockedOther)
+                        .await?;
                     let target_id = target.id.clone();
 
                     try_join!(

@@ -45,8 +45,12 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                 )
             ) {
                 Ok(_) => {
-                    let target = target.from_override(&user, RelationshipStatus::None).await?;
-                    let user = user.from_override(&target, RelationshipStatus::None).await?;
+                    let target = target
+                        .from_override(&user, RelationshipStatus::None)
+                        .await?;
+                    let user = user
+                        .from_override(&target, RelationshipStatus::None)
+                        .await?;
                     let target_id = target.id.clone();
 
                     try_join!(

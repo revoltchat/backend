@@ -1,10 +1,13 @@
 use crate::database::*;
 use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
-use mongodb::{bson::{Document, doc, from_document, to_document}, options::FindOptions};
+use futures::StreamExt;
+use mongodb::{
+    bson::{doc, from_document, to_document, Document},
+    options::FindOptions,
+};
 use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
-use futures::StreamExt;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LastMessage {
@@ -132,7 +135,7 @@ impl Channel {
             .into_iter()
             .filter_map(|x| x.get_str("_id").ok().map(|x| x.to_string()))
             .collect::<Vec<String>>();
-        
+
         // If we found any, mark them as deleted.
         if message_ids.len() > 0 {
             get_collection("attachments")
@@ -147,7 +150,7 @@ impl Channel {
                             "deleted": true
                         }
                     },
-                    None
+                    None,
                 )
                 .await
                 .map_err(|_| Error::DatabaseError {
