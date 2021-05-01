@@ -31,6 +31,8 @@ pub async fn req(user: User, username: String) -> Result<JsonValue> {
         with: "user",
     })?;
 
+    let target_user = Ref::from(target_id.to_string())?.fetch_user().await?;
+
     match get_relationship(&user, &target_id) {
         RelationshipStatus::User => return Err(Error::NoEffect),
         RelationshipStatus::Friend => return Err(Error::AlreadyFriends),
@@ -65,16 +67,19 @@ pub async fn req(user: User, username: String) -> Result<JsonValue> {
                 )
             ) {
                 Ok(_) => {
+                    let target_user = target_user.from_override(&user, RelationshipStatus::Friend).await?;
+                    let user = user.from_override(&target_user, RelationshipStatus::Friend).await?;
+
                     try_join!(
                         ClientboundNotification::UserRelationship {
                             id: user.id.clone(),
-                            user: target_id.to_string(),
+                            user: target_user,
                             status: RelationshipStatus::Friend
                         }
                         .publish(user.id.clone()),
                         ClientboundNotification::UserRelationship {
                             id: target_id.to_string(),
-                            user: user.id.clone(),
+                            user,
                             status: RelationshipStatus::Friend
                         }
                         .publish(target_id.to_string())
@@ -121,16 +126,18 @@ pub async fn req(user: User, username: String) -> Result<JsonValue> {
                 )
             ) {
                 Ok(_) => {
+                    let target_user = target_user.from_override(&user, RelationshipStatus::Outgoing).await?;
+                    let user = user.from_override(&target_user, RelationshipStatus::Incoming).await?;
                     try_join!(
                         ClientboundNotification::UserRelationship {
                             id: user.id.clone(),
-                            user: target_id.to_string(),
+                            user: target_user,
                             status: RelationshipStatus::Outgoing
                         }
                         .publish(user.id.clone()),
                         ClientboundNotification::UserRelationship {
                             id: target_id.to_string(),
-                            user: user.id.clone(),
+                            user,
                             status: RelationshipStatus::Incoming
                         }
                         .publish(target_id.to_string())

@@ -10,6 +10,8 @@ use rocket_contrib::json::JsonValue;
 pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
     let col = get_collection("users");
 
+    let target = target.fetch_user().await?;
+
     match get_relationship(&user, &target.id) {
         RelationshipStatus::User | RelationshipStatus::Blocked => Err(Error::NoEffect),
         RelationshipStatus::BlockedOther => {
@@ -33,7 +35,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
 
             ClientboundNotification::UserRelationship {
                 id: user.id.clone(),
-                user: target.id.clone(),
+                user: target,
                 status: RelationshipStatus::Blocked,
             }
             .publish(user.id.clone())
@@ -74,19 +76,23 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                 )
             ) {
                 Ok(_) => {
+                    let target = target.from_override(&user, RelationshipStatus::Friend).await?;
+                    let user = user.from_override(&target, RelationshipStatus::Friend).await?;
+                    let target_id = target.id.clone();
+
                     try_join!(
                         ClientboundNotification::UserRelationship {
                             id: user.id.clone(),
-                            user: target.id.clone(),
+                            user: target,
                             status: RelationshipStatus::Blocked
                         }
                         .publish(user.id.clone()),
                         ClientboundNotification::UserRelationship {
-                            id: target.id.clone(),
-                            user: user.id.clone(),
+                            id: target_id.clone(),
+                            user,
                             status: RelationshipStatus::BlockedOther
                         }
-                        .publish(target.id.clone())
+                        .publish(target_id)
                     )
                     .ok();
 
@@ -128,19 +134,23 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                 )
             ) {
                 Ok(_) => {
+                    let target = target.from_override(&user, RelationshipStatus::Blocked).await?;
+                    let user = user.from_override(&target, RelationshipStatus::BlockedOther).await?;
+                    let target_id = target.id.clone();
+
                     try_join!(
                         ClientboundNotification::UserRelationship {
                             id: user.id.clone(),
-                            user: target.id.clone(),
+                            user: target,
                             status: RelationshipStatus::Blocked
                         }
                         .publish(user.id.clone()),
                         ClientboundNotification::UserRelationship {
-                            id: target.id.clone(),
-                            user: user.id.clone(),
+                            id: target_id.clone(),
+                            user,
                             status: RelationshipStatus::BlockedOther
                         }
-                        .publish(target.id.clone())
+                        .publish(target_id)
                     )
                     .ok();
 

@@ -82,6 +82,8 @@ pub struct User {
 impl User {
     /// Mutate the user object to include relationship as seen by user.
     pub fn from(mut self, user: &User) -> User {
+        self.relationship = Some(RelationshipStatus::None);
+
         if self.id == user.id {
             self.relationship = Some(RelationshipStatus::User);
             return self;
@@ -102,10 +104,24 @@ impl User {
     pub fn with(mut self, permissions: UserPermissions<[u32; 1]>) -> User {
         if permissions.get_view_profile() {
             self.online = Some(is_online(&self.id));
+        } else {
+            self.status = None;
         }
 
         self.profile = None;
         self
+    }
+
+    /// Mutate the user object to appear as seen by user.
+    /// Also overrides the relationship status.
+    pub async fn from_override(mut self, user: &User, relationship: RelationshipStatus) -> Result<User> {
+        let permissions = PermissionCalculator::new(&user)
+            .with_relationship(&relationship)
+            .for_user(&self.id).await?;
+
+        self.relations = None;
+        self.relationship = Some(relationship);
+        Ok(self.with(permissions))
     }
 
     /// Utility function for checking claimed usernames.

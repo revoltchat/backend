@@ -80,8 +80,8 @@ pub enum ClientboundNotification {
     },
     UserRelationship {
         id: String,
-        user: String,
-        status: RelationshipStatus,
+        user: User,
+        status: RelationshipStatus
     },
     UserPresence {
         id: String,
@@ -116,7 +116,7 @@ pub fn prehandle_hook(notification: &ClientboundNotification) {
         }
         ClientboundNotification::UserRelationship { id, user, status } => {
             if status != &RelationshipStatus::None {
-                subscribe_if_exists(id.clone(), user.clone()).ok();
+                subscribe_if_exists(id.clone(), user.id.clone()).ok();
             }
         }
         _ => {}
@@ -132,7 +132,7 @@ pub fn posthandle_hook(notification: &ClientboundNotification) {
             if status == &RelationshipStatus::None {
                 get_hive()
                     .hive
-                    .unsubscribe(&id.to_string(), &user.to_string())
+                    .unsubscribe(&id.to_string(), &user.id.to_string())
                     .ok();
             }
         }

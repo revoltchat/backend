@@ -9,10 +9,11 @@ use rocket_contrib::json::JsonValue;
 #[delete("/<target>/block")]
 pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
     let col = get_collection("users");
+    let target = target.fetch_user().await?;
 
     match get_relationship(&user, &target.id) {
         RelationshipStatus::Blocked => {
-            match get_relationship(&target.fetch_user().await?, &user.id) {
+            match get_relationship(&target, &user.id) {
                 RelationshipStatus::Blocked => {
                     col.update_one(
                         doc! {
@@ -32,9 +33,10 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                         with: "user",
                     })?;
 
+                    let target = target.from_override(&user, RelationshipStatus::BlockedOther).await?;
                     ClientboundNotification::UserRelationship {
                         id: user.id.clone(),
-                        user: target.id.clone(),
+                        user: target,
                         status: RelationshipStatus::BlockedOther,
                     }
                     .publish(user.id.clone())
@@ -73,19 +75,23 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                         )
                     ) {
                         Ok(_) => {
+                            let target = target.from_override(&user, RelationshipStatus::None).await?;
+                            let user = user.from_override(&target, RelationshipStatus::None).await?;
+                            let target_id = target.id.clone();
+
                             try_join!(
                                 ClientboundNotification::UserRelationship {
                                     id: user.id.clone(),
-                                    user: target.id.clone(),
+                                    user: target,
                                     status: RelationshipStatus::None
                                 }
                                 .publish(user.id.clone()),
                                 ClientboundNotification::UserRelationship {
-                                    id: target.id.clone(),
-                                    user: user.id.clone(),
+                                    id: target_id.clone(),
+                                    user: user,
                                     status: RelationshipStatus::None
                                 }
-                                .publish(target.id.clone())
+                                .publish(target_id)
                             )
                             .ok();
 
