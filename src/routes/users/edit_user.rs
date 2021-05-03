@@ -35,7 +35,7 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if data.status.is_none() || data.profile.is_none() || data.avatar.is_none() || data.remove.is_none() {
+    if data.status.is_none() && data.profile.is_none() && data.avatar.is_none() && data.remove.is_none() {
         return Ok(())
     }
 
@@ -119,13 +119,15 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
         operations.insert("$unset", unset);
     }
 
-    get_collection("users")
-        .update_one(doc! { "_id": &user.id }, operations, None)
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "update_one",
-            with: "user",
-        })?;
+    if operations.len() > 0 {
+        get_collection("users")
+            .update_one(doc! { "_id": &user.id }, operations, None)
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "update_one",
+                with: "user",
+            })?;
+    }
 
     if let Some(status) = &data.status {
         ClientboundNotification::UserUpdate {

@@ -26,7 +26,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if data.name.is_none() || data.description.is_none() || data.icon.is_none() || data.remove.is_none() {
+    if data.name.is_none() && data.description.is_none() && data.icon.is_none() && data.remove.is_none() {
         return Ok(())
     }
 
@@ -85,14 +85,16 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
                 operations.insert("$unset", unset);
             }
 
-            get_collection("channels")
-            .update_one(
-                doc! { "_id": &id },
-                operations,
-                None
-            )
-            .await
-            .map_err(|_| Error::DatabaseError { operation: "update_one", with: "channel" })?;
+            if operations.len() > 0 {
+                get_collection("channels")
+                .update_one(
+                    doc! { "_id": &id },
+                    operations,
+                    None
+                )
+                .await
+                .map_err(|_| Error::DatabaseError { operation: "update_one", with: "channel" })?;
+            }
 
             ClientboundNotification::ChannelUpdate {
                 id: id.clone(),
