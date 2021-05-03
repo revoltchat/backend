@@ -220,13 +220,27 @@ async fn accept(stream: TcpStream) {
     info!("User {} disconnected.", &addr);
     CONNECTIONS.lock().unwrap().remove(&addr);
 
-    let session = session.lock().unwrap();
-    if let Some(session) = session.as_ref() {
-        let mut users = USERS.write().unwrap();
-        users.remove(&session.user_id, &addr);
-        if users.get_left(&session.user_id).is_none() {
-            get_hive().drop_client(&session.user_id).unwrap();
+    let mut offline = None;
+    {
+        let session = session.lock().unwrap();
+        if let Some(session) = session.as_ref() {
+            let mut users = USERS.write().unwrap();
+            users.remove(&session.user_id, &addr);
+            if users.get_left(&session.user_id).is_none() {
+                get_hive().drop_client(&session.user_id).unwrap();
+                offline = Some(session.user_id.clone());
+            }
         }
+    }
+
+    if let Some(id) = offline {
+        ClientboundNotification::UserPresence {
+            id: id.clone(),
+            online: false,
+        }
+        .publish(id)
+        .await
+        .ok();
     }
 }
 
