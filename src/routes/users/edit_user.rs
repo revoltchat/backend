@@ -35,6 +35,10 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
+    if data.status.is_none() || data.profile.is_none() || data.avatar.is_none() || data.remove.is_none() {
+        return Ok(())
+    }
+
     let mut unset = doc! {};
     let mut set = doc! {};
 
