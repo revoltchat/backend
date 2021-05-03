@@ -1,4 +1,4 @@
-use crate::database::*;
+use crate::{database::*, notifications::events::RemoveUserField};
 use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
 
@@ -17,14 +17,6 @@ pub struct UserProfileData {
     background: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
-pub enum RemoveField {
-    ProfileContent,
-    ProfileBackground,
-    StatusText,
-    Avatar
-}
-
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
     #[validate]
@@ -33,15 +25,12 @@ pub struct Data {
     profile: Option<UserProfileData>,
     #[validate(length(min = 1, max = 128))]
     avatar: Option<String>,
-    remove: Option<RemoveField>
+    remove: Option<RemoveUserField>
 }
 
 #[patch("/<_ignore_id>", data = "<data>")]
 pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()> {
     let mut data = data.into_inner();
-    if data.status.is_none() && data.profile.is_none() && data.avatar.is_none() {
-        return Ok(());
-    }
 
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
@@ -52,19 +41,19 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
     let mut remove_background = false;
     let mut remove_avatar = false;
 
-    if let Some(remove) = data.remove {
+    if let Some(remove) = &data.remove {
         match remove {
-            RemoveField::ProfileContent => {
+            RemoveUserField::ProfileContent => {
                 unset.insert("profile.content", 1);
             },
-            RemoveField::ProfileBackground => {
+            RemoveUserField::ProfileBackground => {
                 unset.insert("profile.background", 1);
                 remove_background = true;
             }
-            RemoveField::StatusText => {
+            RemoveUserField::StatusText => {
                 unset.insert("status.text", 1);
             },
-            RemoveField::Avatar => {
+            RemoveUserField::Avatar => {
                 unset.insert("avatar", 1);
                 remove_avatar = true;
             }
@@ -117,18 +106,28 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
         None
     };
 
+    let mut operations = doc! {};
+    if set.len() > 0 {
+        operations.insert("$set", set);
+    }
+
+    if unset.len() > 0 {
+        operations.insert("$unset", unset);
+    }
+
     get_collection("users")
-        .update_one(doc! { "_id": &user.id }, doc! { "$set": set }, None)
+        .update_one(doc! { "_id": &user.id }, operations, None)
         .await
         .map_err(|_| Error::DatabaseError {
             operation: "update_one",
             with: "user",
         })?;
 
-    if let Some(status) = data.status {
+    if let Some(status) = &data.status {
         ClientboundNotification::UserUpdate {
             id: user.id.clone(),
             data: json!({ "status": status }),
+            clear: None
         }
         .publish(user.id.clone())
         .await
@@ -139,6 +138,18 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
         ClientboundNotification::UserUpdate {
             id: user.id.clone(),
             data: json!({ "avatar": avatar }),
+            clear: None
+        }
+        .publish(user.id.clone())
+        .await
+        .ok();
+    }
+
+    if let Some(clear) = data.remove {
+        ClientboundNotification::UserUpdate {
+            id: user.id.clone(),
+            data: json!({}),
+            clear: Some(clear)
         }
         .publish(user.id.clone())
         .await

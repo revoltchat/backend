@@ -31,6 +31,19 @@ pub enum ServerboundNotification {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub enum RemoveUserField {
+    ProfileContent,
+    ProfileBackground,
+    StatusText,
+    Avatar
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum RemoveChannelField {
+    Icon
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum ClientboundNotification {
     Error(WebSocketError),
@@ -53,6 +66,8 @@ pub enum ClientboundNotification {
     ChannelUpdate {
         id: String,
         data: JsonValue,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        clear: Option<RemoveChannelField>
     },
     ChannelGroupJoin {
         id: String,
@@ -77,6 +92,8 @@ pub enum ClientboundNotification {
     UserUpdate {
         id: String,
         data: JsonValue,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        clear: Option<RemoveUserField>
     },
     UserRelationship {
         id: String,

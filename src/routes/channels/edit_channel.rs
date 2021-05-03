@@ -1,4 +1,4 @@
-use crate::database::*;
+use crate::{database::*, notifications::events::RemoveChannelField};
 use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
 
@@ -17,15 +17,16 @@ pub struct Data {
     description: Option<String>,
     #[validate(length(min = 1, max = 128))]
     icon: Option<String>,
+    remove: Option<RemoveChannelField>
 }
 
-#[patch("/<target>", data = "<info>")]
-pub async fn req(user: User, target: Ref, info: Json<Data>) -> Result<()> {
-    let info = info.into_inner();
-    info.validate()
+#[patch("/<target>", data = "<data>")]
+pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
+    let data = data.into_inner();
+    data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if info.name.is_none() && info.description.is_none() && info.icon.is_none() {
+    if data.name.is_none() && data.description.is_none() && data.icon.is_none() && data.remove.is_none() {
         return Ok(());
     }
 
@@ -42,16 +43,27 @@ pub async fn req(user: User, target: Ref, info: Json<Data>) -> Result<()> {
     match &target {
         Channel::Group { id, icon, .. } => {
             let mut set = doc! {};
-            if let Some(name) = &info.name {
+            let mut unset = doc! {};
+
+            let mut remove_icon = false;
+            if let Some(remove) = &data.remove {
+                match remove {
+                    RemoveChannelField::Icon => {
+                        unset.insert("icon", 1);
+                        remove_icon = true;
+                    }
+                }
+            }
+
+            if let Some(name) = &data.name {
                 set.insert("name", name);
             }
 
-            if let Some(description) = info.description {
+            if let Some(description) = &data.description {
                 set.insert("description", description);
             }
 
-            let mut remove_icon = false;
-            if let Some(attachment_id) = info.icon {
+            if let Some(attachment_id) = &data.icon {
                 let attachment = File::find_and_use(&attachment_id, "icons", "object", &user.id).await?;
                 set.insert(
                     "icon",
@@ -64,10 +76,19 @@ pub async fn req(user: User, target: Ref, info: Json<Data>) -> Result<()> {
                 remove_icon = true;
             }
 
+            let mut operations = doc! {};
+            if set.len() > 0 {
+                operations.insert("$set", &set);
+            }
+        
+            if unset.len() > 0 {
+                operations.insert("$unset", unset);
+            }
+
             get_collection("channels")
             .update_one(
                 doc! { "_id": &id },
-                doc! { "$set": &set },
+                operations,
                 None
             )
             .await
@@ -76,12 +97,13 @@ pub async fn req(user: User, target: Ref, info: Json<Data>) -> Result<()> {
             ClientboundNotification::ChannelUpdate {
                 id: id.clone(),
                 data: json!(set),
+                clear: data.remove
             }
             .publish(id.clone())
             .await
             .ok();
 
-            if let Some(name) = info.name {
+            if let Some(name) = data.name {
                 Message::create(
                     "00000000000000000000000000".to_string(),
                     id.clone(),

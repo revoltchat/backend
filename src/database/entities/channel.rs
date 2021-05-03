@@ -106,6 +106,7 @@ impl Channel {
         ClientboundNotification::ChannelUpdate {
             id: id.clone(),
             data,
+            clear: None
         }
         .publish(id)
         .await
@@ -195,6 +196,12 @@ impl Channel {
             .publish(id.to_string())
             .await
             .ok();
+        
+        if let Channel::Group { icon, .. } = self {
+            if let Some(attachment) = icon {
+                attachment.delete().await?;
+            }
+        }
 
         Ok(())
     }
