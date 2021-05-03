@@ -11,6 +11,12 @@ use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
+#[derive(Serialize, Deserialize, FromFormValue)]
+pub enum Sort {
+    Latest,
+    Oldest
+}
+
 #[derive(Validate, Serialize, Deserialize, FromForm)]
 pub struct Options {
     #[validate(range(min = 1, max = 100))]
@@ -19,6 +25,7 @@ pub struct Options {
     before: Option<String>,
     #[validate(length(min = 26, max = 26))]
     after: Option<String>,
+    sort: Option<Sort>
 }
 
 #[get("/<target>/messages?<options..>")]
@@ -47,13 +54,14 @@ pub async fn req(user: User, target: Ref, options: Form<Options>) -> Result<Json
         query.insert("_id", doc! { "$gt": after });
     }
 
+    let sort = if let Sort::Latest = options.sort.as_ref().unwrap_or_else(|| &Sort::Latest) { -1 } else { 1 };
     let mut cursor = get_collection("messages")
         .find(
             query,
             FindOptions::builder()
                 .limit(options.limit.unwrap_or(50))
                 .sort(doc! {
-                    "_id": -1
+                    "_id": sort
                 })
                 .build(),
         )

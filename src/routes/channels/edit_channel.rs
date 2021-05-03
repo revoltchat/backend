@@ -26,10 +26,6 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if data.name.is_none() && data.description.is_none() && data.icon.is_none() && data.remove.is_none() {
-        return Ok(());
-    }
-
     let target = target.fetch_channel().await?;
     let perm = permissions::PermissionCalculator::new(&user)
         .with_channel(&target)
