@@ -1,6 +1,9 @@
 [package]
 name = "revolt"
-version = "0.4.1-alpha.3"
+# To help optimise CI and Docker builds.
+# Version here is left as 0.0.0, please
+# adjust and run ./set_version.sh instead.
+version = "0.0.0"
 authors = ["Paul Makles <paulmakles@gmail.com>"]
 edition = "2018"
 
