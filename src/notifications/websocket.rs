@@ -133,9 +133,7 @@ async fn accept(stream: TcpStream) {
                                                 id: id.clone(),
                                                 online: true,
                                             }
-                                            .publish(id)
-                                            .await
-                                            .ok();
+                                            .publish(id);
                                         }
                                     }
                                     Err(_) => {
@@ -173,9 +171,7 @@ async fn accept(stream: TcpStream) {
                                 id: channel.clone(),
                                 user,
                             }
-                            .publish(channel)
-                            .await
-                            .ok();
+                            .publish(channel);
                         } else {
                             send(ClientboundNotification::Error(
                                 WebSocketError::AlreadyAuthenticated,
@@ -196,9 +192,7 @@ async fn accept(stream: TcpStream) {
                                 id: channel.clone(),
                                 user,
                             }
-                            .publish(channel)
-                            .await
-                            .ok();
+                            .publish(channel);
                         } else {
                             send(ClientboundNotification::Error(
                                 WebSocketError::AlreadyAuthenticated,
@@ -238,9 +232,7 @@ async fn accept(stream: TcpStream) {
             id: id.clone(),
             online: false,
         }
-        .publish(id)
-        .await
-        .ok();
+        .publish(id);
     }
 }
 

@@ -135,9 +135,7 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
             data: json!({ "status": status }),
             clear: None
         }
-        .publish(user.id.clone())
-        .await
-        .ok();
+        .publish(user.id.clone());
     }
 
     if let Some(avatar) = attachment {
@@ -146,9 +144,7 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
             data: json!({ "avatar": avatar }),
             clear: None
         }
-        .publish(user.id.clone())
-        .await
-        .ok();
+        .publish(user.id.clone());
     }
 
     if let Some(clear) = data.remove {
@@ -157,9 +153,7 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
             data: json!({}),
             clear: Some(clear)
         }
-        .publish(user.id.clone())
-        .await
-        .ok();
+        .publish(user.id.clone());
     }
 
     if remove_avatar {

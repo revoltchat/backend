@@ -19,12 +19,6 @@ use web_push::{
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
-pub enum MessageEmbed {
-    Dummy,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "type")]
 pub enum SystemMessage {
     #[serde(rename = "text")]
     Text { content: String },
@@ -60,7 +54,7 @@ pub struct Message {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub edited: Option<DateTime>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub embeds: Option<MessageEmbed>,
+    pub embeds: Option<Vec<Embed>>,
 }
 
 impl Message {
@@ -138,11 +132,12 @@ impl Message {
             _ => {}
         }
 
+        self.process_embed();
+
         let enc = serde_json::to_string(&self).unwrap();
         ClientboundNotification::Message(self)
-            .publish(channel.id().to_string())
-            .await
-            .unwrap();
+            .publish(channel.id().to_string());
+        
 
         /*
            Web Push Test Code
@@ -162,76 +157,112 @@ impl Message {
             _ => {}
         }
 
-        // Fetch their corresponding sessions.
-        if let Ok(mut cursor) = get_collection("accounts")
-            .find(
-                doc! {
-                    "_id": {
-                        "$in": target_ids
+        async_std::task::spawn(async move {
+            // Fetch their corresponding sessions.
+            if let Ok(mut cursor) = get_collection("accounts")
+                .find(
+                    doc! {
+                        "_id": {
+                            "$in": target_ids
+                        },
+                        "sessions.subscription": {
+                            "$exists": true
+                        }
                     },
-                    "sessions.subscription": {
-                        "$exists": true
-                    }
-                },
-                FindOptions::builder()
-                    .projection(doc! { "sessions": 1 })
-                    .build(),
-            )
-            .await
-        {
-            let mut subscriptions = vec![];
-            while let Some(result) = cursor.next().await {
-                if let Ok(doc) = result {
-                    if let Ok(sessions) = doc.get_array("sessions") {
-                        for session in sessions {
-                            if let Some(doc) = session.as_document() {
-                                if let Ok(sub) = doc.get_document("subscription") {
-                                    let endpoint = sub.get_str("endpoint").unwrap().to_string();
-                                    let p256dh = sub.get_str("p256dh").unwrap().to_string();
-                                    let auth = sub.get_str("auth").unwrap().to_string();
+                    FindOptions::builder()
+                        .projection(doc! { "sessions": 1 })
+                        .build(),
+                )
+                .await
+            {
+                let mut subscriptions = vec![];
+                while let Some(result) = cursor.next().await {
+                    if let Ok(doc) = result {
+                        if let Ok(sessions) = doc.get_array("sessions") {
+                            for session in sessions {
+                                if let Some(doc) = session.as_document() {
+                                    if let Ok(sub) = doc.get_document("subscription") {
+                                        let endpoint = sub.get_str("endpoint").unwrap().to_string();
+                                        let p256dh = sub.get_str("p256dh").unwrap().to_string();
+                                        let auth = sub.get_str("auth").unwrap().to_string();
 
-                                    subscriptions
-                                        .push(SubscriptionInfo::new(endpoint, p256dh, auth));
+                                        subscriptions
+                                            .push(SubscriptionInfo::new(endpoint, p256dh, auth));
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            if subscriptions.len() > 0 {
-                let client = WebPushClient::new();
-                let key =
-                    base64::decode_config(VAPID_PRIVATE_KEY.clone(), base64::URL_SAFE).unwrap();
+                if subscriptions.len() > 0 {
+                    let client = WebPushClient::new();
+                    let key =
+                        base64::decode_config(VAPID_PRIVATE_KEY.clone(), base64::URL_SAFE).unwrap();
 
-                for subscription in subscriptions {
-                    let mut builder = WebPushMessageBuilder::new(&subscription).unwrap();
-                    let sig_builder =
-                        VapidSignatureBuilder::from_pem(std::io::Cursor::new(&key), &subscription)
-                            .unwrap();
-                    let signature = sig_builder.build().unwrap();
-                    builder.set_vapid_signature(signature);
-                    builder.set_payload(ContentEncoding::AesGcm, enc.as_bytes());
-                    let m = builder.build().unwrap();
-                    client.send(m).await.ok();
+                    for subscription in subscriptions {
+                        let mut builder = WebPushMessageBuilder::new(&subscription).unwrap();
+                        let sig_builder =
+                            VapidSignatureBuilder::from_pem(std::io::Cursor::new(&key), &subscription)
+                                .unwrap();
+                        let signature = sig_builder.build().unwrap();
+                        builder.set_vapid_signature(signature);
+                        builder.set_payload(ContentEncoding::AesGcm, enc.as_bytes());
+                        let m = builder.build().unwrap();
+                        client.send(m).await.ok();
+                    }
                 }
             }
-        }
+        });
 
         Ok(())
     }
 
-    pub async fn publish_update(&self, data: JsonValue) -> Result<()> {
+    pub async fn publish_update(self, data: JsonValue) -> Result<()> {
         let channel = self.channel.clone();
         ClientboundNotification::MessageUpdate {
             id: self.id.clone(),
             data,
         }
-        .publish(channel)
-        .await
-        .ok();
+        .publish(channel);
+        self.process_embed();
 
         Ok(())
+    }
+
+    pub fn process_embed(&self) {
+        if let Content::Text(text) = &self.content {
+            let id = self.id.clone();
+            let content = text.clone();
+            let channel = self.channel.clone();
+            async_std::task::spawn(async move {
+                if let Ok(embeds) = Embed::generate(content).await {
+                    if let Ok(bson) = to_bson(&embeds) {
+                        if let Ok(_) = get_collection("messages")
+                            .update_one(
+                                doc! {
+                                    "_id": &id
+                                },
+                                doc! {
+                                    "$set": {
+                                        "embeds": bson
+                                    }
+                                },
+                                None,
+                            )
+                            .await {
+                            ClientboundNotification::MessageUpdate {
+                                id,
+                                data: json!({
+                                    "embeds": embeds
+                                }),
+                            }
+                            .publish(channel);
+                        }
+                    }
+                }
+            });
+        }
     }
 
     pub async fn delete(&self) -> Result<()> {
@@ -256,9 +287,7 @@ impl Message {
         ClientboundNotification::MessageDelete {
             id: self.id.clone(),
         }
-        .publish(channel)
-        .await
-        .ok();
+        .publish(channel);
 
         if let Some(attachment) = &self.attachment {
             get_collection("attachments")

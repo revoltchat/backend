@@ -74,21 +74,19 @@ pub async fn req(user: User, username: String) -> Result<JsonValue> {
                         .from_override(&target_user, RelationshipStatus::Friend)
                         .await?;
 
-                    try_join!(
-                        ClientboundNotification::UserRelationship {
-                            id: user.id.clone(),
-                            user: target_user,
-                            status: RelationshipStatus::Friend
-                        }
-                        .publish(user.id.clone()),
-                        ClientboundNotification::UserRelationship {
-                            id: target_id.to_string(),
-                            user,
-                            status: RelationshipStatus::Friend
-                        }
-                        .publish(target_id.to_string())
-                    )
-                    .ok();
+                    ClientboundNotification::UserRelationship {
+                        id: user.id.clone(),
+                        user: target_user,
+                        status: RelationshipStatus::Friend
+                    }
+                    .publish(user.id.clone());
+
+                    ClientboundNotification::UserRelationship {
+                        id: target_id.to_string(),
+                        user,
+                        status: RelationshipStatus::Friend
+                    }
+                    .publish(target_id.to_string());
 
                     Ok(json!({ "status": "Friend" }))
                 }
@@ -136,21 +134,20 @@ pub async fn req(user: User, username: String) -> Result<JsonValue> {
                     let user = user
                         .from_override(&target_user, RelationshipStatus::Incoming)
                         .await?;
-                    try_join!(
-                        ClientboundNotification::UserRelationship {
-                            id: user.id.clone(),
-                            user: target_user,
-                            status: RelationshipStatus::Outgoing
-                        }
-                        .publish(user.id.clone()),
-                        ClientboundNotification::UserRelationship {
-                            id: target_id.to_string(),
-                            user,
-                            status: RelationshipStatus::Incoming
-                        }
-                        .publish(target_id.to_string())
-                    )
-                    .ok();
+                    
+                    ClientboundNotification::UserRelationship {
+                        id: user.id.clone(),
+                        user: target_user,
+                        status: RelationshipStatus::Outgoing
+                    }
+                    .publish(user.id.clone());
+                    
+                    ClientboundNotification::UserRelationship {
+                        id: target_id.to_string(),
+                        user,
+                        status: RelationshipStatus::Incoming
+                    }
+                    .publish(target_id.to_string());
 
                     Ok(json!({ "status": "Outgoing" }))
                 }

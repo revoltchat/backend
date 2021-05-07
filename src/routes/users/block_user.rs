@@ -38,9 +38,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                 user: target,
                 status: RelationshipStatus::Blocked,
             }
-            .publish(user.id.clone())
-            .await
-            .ok();
+            .publish(user.id.clone());
 
             Ok(json!({ "status": "Blocked" }))
         }
@@ -84,21 +82,19 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                         .await?;
                     let target_id = target.id.clone();
 
-                    try_join!(
-                        ClientboundNotification::UserRelationship {
-                            id: user.id.clone(),
-                            user: target,
-                            status: RelationshipStatus::Blocked
-                        }
-                        .publish(user.id.clone()),
-                        ClientboundNotification::UserRelationship {
-                            id: target_id.clone(),
-                            user,
-                            status: RelationshipStatus::BlockedOther
-                        }
-                        .publish(target_id)
-                    )
-                    .ok();
+                    ClientboundNotification::UserRelationship {
+                        id: user.id.clone(),
+                        user: target,
+                        status: RelationshipStatus::Blocked
+                    }
+                    .publish(user.id.clone());
+
+                    ClientboundNotification::UserRelationship {
+                        id: target_id.clone(),
+                        user,
+                        status: RelationshipStatus::BlockedOther
+                    }
+                    .publish(target_id);
 
                     Ok(json!({ "status": "Blocked" }))
                 }
@@ -146,21 +142,19 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                         .await?;
                     let target_id = target.id.clone();
 
-                    try_join!(
-                        ClientboundNotification::UserRelationship {
-                            id: user.id.clone(),
-                            user: target,
-                            status: RelationshipStatus::Blocked
-                        }
-                        .publish(user.id.clone()),
-                        ClientboundNotification::UserRelationship {
-                            id: target_id.clone(),
-                            user,
-                            status: RelationshipStatus::BlockedOther
-                        }
-                        .publish(target_id)
-                    )
-                    .ok();
+                    ClientboundNotification::UserRelationship {
+                        id: user.id.clone(),
+                        user: target,
+                        status: RelationshipStatus::Blocked
+                    }
+                    .publish(user.id.clone());
+                    
+                    ClientboundNotification::UserRelationship {
+                        id: target_id.clone(),
+                        user,
+                        status: RelationshipStatus::BlockedOther
+                    }
+                    .publish(target_id);
 
                     Ok(json!({ "status": "Blocked" }))
                 }

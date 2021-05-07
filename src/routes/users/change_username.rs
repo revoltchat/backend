@@ -60,9 +60,7 @@ pub async fn req(
         data: json!(data.0),
         clear: None
     }
-    .publish(user.id.clone())
-    .await
-    .ok();
+    .publish(user.id.clone());
 
     Ok(())
 }

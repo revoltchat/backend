@@ -94,9 +94,7 @@ impl Channel {
 
         let channel_id = self.id().to_string();
         ClientboundNotification::ChannelCreate(self)
-            .publish(channel_id)
-            .await
-            .ok();
+            .publish(channel_id);
 
         Ok(())
     }
@@ -108,9 +106,7 @@ impl Channel {
             data,
             clear: None
         }
-        .publish(id)
-        .await
-        .ok();
+        .publish(id);
 
         Ok(())
     }
@@ -193,9 +189,7 @@ impl Channel {
             })?;
 
         ClientboundNotification::ChannelDelete { id: id.to_string() }
-            .publish(id.to_string())
-            .await
-            .ok();
+            .publish(id.to_string());
         
         if let Channel::Group { icon, .. } = self {
             if let Some(attachment) = icon {

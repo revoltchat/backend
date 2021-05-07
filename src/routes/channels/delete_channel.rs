@@ -95,9 +95,7 @@ pub async fn req(user: User, target: Ref) -> Result<()> {
                 id: id.clone(),
                 user: user.id.clone(),
             }
-            .publish(id.clone())
-            .await
-            .ok();
+            .publish(id.clone());
 
             Message::create(
                 "00000000000000000000000000".to_string(),

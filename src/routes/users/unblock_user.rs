@@ -40,9 +40,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                     user: target,
                     status: RelationshipStatus::BlockedOther,
                 }
-                .publish(user.id.clone())
-                .await
-                .ok();
+                .publish(user.id.clone());
 
                 Ok(json!({ "status": "BlockedOther" }))
             }
@@ -84,21 +82,19 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                             .await?;
                         let target_id = target.id.clone();
 
-                        try_join!(
-                            ClientboundNotification::UserRelationship {
-                                id: user.id.clone(),
-                                user: target,
-                                status: RelationshipStatus::None
-                            }
-                            .publish(user.id.clone()),
-                            ClientboundNotification::UserRelationship {
-                                id: target_id.clone(),
-                                user: user,
-                                status: RelationshipStatus::None
-                            }
-                            .publish(target_id)
-                        )
-                        .ok();
+                        ClientboundNotification::UserRelationship {
+                            id: user.id.clone(),
+                            user: target,
+                            status: RelationshipStatus::None
+                        }
+                        .publish(user.id.clone());
+                        
+                        ClientboundNotification::UserRelationship {
+                            id: target_id.clone(),
+                            user: user,
+                            status: RelationshipStatus::None
+                        }
+                        .publish(target_id);
 
                         Ok(json!({ "status": "None" }))
                     }

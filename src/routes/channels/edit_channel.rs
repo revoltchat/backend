@@ -101,9 +101,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
                 data: json!(set),
                 clear: data.remove
             }
-            .publish(id.clone())
-            .await
-            .ok();
+            .publish(id.clone());
 
             if let Some(name) = data.name {
                 Message::create(

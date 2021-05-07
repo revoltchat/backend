@@ -107,9 +107,11 @@ pub enum ClientboundNotification {
 }
 
 impl ClientboundNotification {
-    pub async fn publish(self, topic: String) -> Result<(), String> {
-        prehandle_hook(&self); // ! TODO: this should be moved to pubsub
-        hive_pubsub::backend::mongo::publish(get_hive(), &topic, self).await
+    pub fn publish(self, topic: String) {
+        async_std::task::spawn(async move {
+            prehandle_hook(&self); // ! TODO: this should be moved to pubsub
+            hive_pubsub::backend::mongo::publish(get_hive(), &topic, self).await.ok();
+        });
     }
 }
 
