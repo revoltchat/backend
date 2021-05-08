@@ -25,6 +25,10 @@ pub async fn create_database() {
         .await
         .expect("Failed to create messages collection.");
 
+    db.create_collection("servers", None)
+        .await
+        .expect("Failed to create servers collection.");
+
     db.create_collection("migrations", None)
         .await
         .expect("Failed to create migrations collection.");

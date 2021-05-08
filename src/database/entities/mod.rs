@@ -1,4 +1,4 @@
-mod guild;
+mod server;
 mod autumn;
 mod january;
 mod channel;
@@ -8,6 +8,6 @@ mod user;
 pub use january::*;
 pub use autumn::*;
 pub use channel::*;
-pub use guild::*;
+pub use server::*;
 pub use message::*;
 pub use user::*;

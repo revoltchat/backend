@@ -19,11 +19,20 @@ pub struct Media {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Metadata {
     #[serde(skip_serializing_if = "Option::is_none")]
+    url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     title: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     image: Option<Media>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    site_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    icon_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    color: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

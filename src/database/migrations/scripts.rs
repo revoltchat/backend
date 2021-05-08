@@ -1,4 +1,4 @@
-use crate::database::get_collection;
+use crate::database::{get_collection, get_db};
 
 use log::info;
 use mongodb::bson::{doc, from_document};
@@ -10,7 +10,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 2;
+pub const LATEST_REVISION: i32 = 3;
 
 pub async fn migrate_database() {
     let migrations = get_collection("migrations");
@@ -76,6 +76,15 @@ pub async fn run_migrations(revision: i32) -> i32 {
             )
             .await
             .expect("Failed to update attachments.");
+    }
+
+    if revision <= 2 {
+        info!("Running migration [revision 2 / 2021-05-08]: Add servers collection.");
+
+        get_db()
+            .create_collection("servers", None)
+            .await
+            .expect("Failed to create servers collection.");
     }
 
     // Reminder to update LATEST_REVISION when adding new migrations.

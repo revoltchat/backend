@@ -1,6 +1,6 @@
-// use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
-/*#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MemberCompositeKey {
     pub guild: String,
     pub user: String,
@@ -27,12 +27,11 @@ pub struct Ban {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Guild {
+pub struct Server {
     #[serde(rename = "_id")]
     pub id: String,
-    // pub nonce: String, used internally
-    pub name: String,
-    pub description: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<String>,
     pub owner: String,
 
     pub channels: Vec<String>,
@@ -40,4 +39,4 @@ pub struct Guild {
     pub bans: Vec<Ban>,
 
     pub default_permissions: u32,
-}*/
+}
