@@ -3,30 +3,77 @@ use linkify::{LinkFinder, LinkKind};
 use crate::util::{result::{Error, Result}, variables::JANUARY_URL};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum MediaSize {
+pub enum ImageSize {
     Large,
     Preview,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Media {
+pub struct Image {
     pub url: String,
     pub width: isize,
     pub height: isize,
-    pub size: MediaSize,
+    pub size: ImageSize,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Video {
+    pub url: String,
+    pub width: isize,
+    pub height: isize,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum TwitchType {
+    Channel,
+    Video,
+    Clip,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum BandcampType {
+    Album,
+    Track
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(tag = "type")]
+pub enum Special {
+    None,
+    YouTube {
+        id: String,
+    },
+    Twitch {
+        content_type: TwitchType,
+        id: String,
+    },
+    Spotify {
+        content_type: String,
+        id: String,
+    },
+    Soundcloud,
+    Bandcamp {
+        content_type: BandcampType,
+        id: String
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Metadata {
-    #[serde(skip_serializing_if = "Option::is_none")]
     url: Option<String>,
+    special: Option<Special>,
+
     #[serde(skip_serializing_if = "Option::is_none")]
     title: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    image: Option<Media>,
-    
+    image: Option<Image>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    video: Option<Video>,
+
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // opengraph_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     site_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -39,13 +86,30 @@ pub struct Metadata {
 #[serde(tag = "type")]
 pub enum Embed {
     Website(Metadata),
-    Image(Media),
+    Image(Image),
     None,
 }
 
 impl Embed {
     pub async fn generate(content: String) -> Result<Vec<Embed>> {
-        // FIXME: allow multiple links
+        let content = content
+            .split("\n")
+            .map(|v| {
+                // Ignore quoted lines.
+                if let Some(c) = v.chars().next() {
+                    if c == '>' {
+                        return ""
+                    }
+                }
+
+                v
+            })
+            // This will also remove newlines, but
+            // that isn't important here.
+            .collect::<String>();
+
+        // ! FIXME: allow multiple links
+        // ! FIXME: prevent generation if link is surrounded with < >
         let mut finder = LinkFinder::new();
         finder.kinds(&[LinkKind::Url]);
         let links: Vec<_> = finder.links(&content).collect();
