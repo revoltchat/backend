@@ -111,7 +111,29 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
                 Message::create(
                     "00000000000000000000000000".to_string(),
                     id.clone(),
-                    Content::SystemMessage(SystemMessage::ChannelRenamed { name, by: user.id }),
+                    Content::SystemMessage(SystemMessage::ChannelRenamed { name, by: user.id.clone() }),
+                )
+                .publish(&target)
+                .await
+                .ok();
+            }
+
+            if let Some(_) = data.description {
+                Message::create(
+                    "00000000000000000000000000".to_string(),
+                    id.clone(),
+                    Content::SystemMessage(SystemMessage::ChannelDescriptionChanged { by: user.id.clone() }),
+                )
+                .publish(&target)
+                .await
+                .ok();
+            }
+
+            if let Some(_) = data.icon {
+                Message::create(
+                    "00000000000000000000000000".to_string(),
+                    id.clone(),
+                    Content::SystemMessage(SystemMessage::ChannelIconChanged { by: user.id }),
                 )
                 .publish(&target)
                 .await

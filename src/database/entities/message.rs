@@ -30,6 +30,10 @@ pub enum SystemMessage {
     UserLeft { id: String },
     #[serde(rename = "channel_renamed")]
     ChannelRenamed { name: String, by: String },
+    #[serde(rename = "channel_description_changed")]
+    ChannelDescriptionChanged { by: String },
+    #[serde(rename = "channel_icon_changed")]
+    ChannelIconChanged { by: String },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
