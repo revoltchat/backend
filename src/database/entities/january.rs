@@ -107,9 +107,8 @@ impl Embed {
 
                 v
             })
-            // This will also remove newlines, but
-            // that isn't important here.
-            .collect::<String>();
+            .collect::<Vec<&str>>()
+            .join("\n");
 
         // ! FIXME: allow multiple links
         // ! FIXME: prevent generation if link is surrounded with < >

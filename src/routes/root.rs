@@ -1,6 +1,6 @@
 use crate::util::variables::{
-    APP_URL, AUTUMN_URL, DISABLE_REGISTRATION, EXTERNAL_WS_URL, HCAPTCHA_SITEKEY, INVITE_ONLY,
-    USE_AUTUMN, USE_EMAIL, USE_HCAPTCHA, USE_VOSO, VAPID_PUBLIC_KEY, VOSO_URL, VOSO_WS_HOST,
+    APP_URL, JANUARY_URL, AUTUMN_URL, DISABLE_REGISTRATION, EXTERNAL_WS_URL, HCAPTCHA_SITEKEY, INVITE_ONLY,
+    USE_AUTUMN, USE_JANUARY, USE_EMAIL, USE_HCAPTCHA, USE_VOSO, VAPID_PUBLIC_KEY, VOSO_URL, VOSO_WS_HOST,
 };
 
 use mongodb::bson::doc;
@@ -21,6 +21,10 @@ pub async fn root() -> JsonValue {
             "autumn": {
                 "enabled": *USE_AUTUMN,
                 "url": *AUTUMN_URL
+            },
+            "january": {
+                "enabled": *USE_JANUARY,
+                "url": *JANUARY_URL
             },
             "voso": {
                 "enabled": *USE_VOSO,

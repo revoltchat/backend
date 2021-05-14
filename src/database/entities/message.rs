@@ -1,4 +1,4 @@
-use crate::util::variables::VAPID_PRIVATE_KEY;
+use crate::util::variables::{VAPID_PRIVATE_KEY, USE_JANUARY};
 use crate::{
     database::*,
     notifications::{events::ClientboundNotification, websocket::is_online},
@@ -231,6 +231,10 @@ impl Message {
     }
 
     pub fn process_embed(&self) {
+        if !*USE_JANUARY {
+            return;
+        }
+
         if let Content::Text(text) = &self.content {
             let id = self.id.clone();
             let content = text.clone();
