@@ -75,24 +75,24 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
             ) {
                 Ok(_) => {
                     let target = target
-                        .from_override(&user, RelationshipStatus::Friend)
+                        .from_override(&user, RelationshipStatus::Blocked)
                         .await?;
                     let user = user
-                        .from_override(&target, RelationshipStatus::Friend)
+                        .from_override(&target, RelationshipStatus::BlockedOther)
                         .await?;
                     let target_id = target.id.clone();
 
                     ClientboundNotification::UserRelationship {
                         id: user.id.clone(),
                         user: target,
-                        status: RelationshipStatus::Blocked
+                        status: RelationshipStatus::Blocked,
                     }
                     .publish(user.id.clone());
 
                     ClientboundNotification::UserRelationship {
                         id: target_id.clone(),
                         user,
-                        status: RelationshipStatus::BlockedOther
+                        status: RelationshipStatus::BlockedOther,
                     }
                     .publish(target_id);
 
@@ -145,14 +145,14 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                     ClientboundNotification::UserRelationship {
                         id: user.id.clone(),
                         user: target,
-                        status: RelationshipStatus::Blocked
+                        status: RelationshipStatus::Blocked,
                     }
                     .publish(user.id.clone());
-                    
+
                     ClientboundNotification::UserRelationship {
                         id: target_id.clone(),
                         user,
-                        status: RelationshipStatus::BlockedOther
+                        status: RelationshipStatus::BlockedOther,
                     }
                     .publish(target_id);
 

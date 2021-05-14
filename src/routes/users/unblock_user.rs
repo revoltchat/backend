@@ -85,14 +85,14 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
                         ClientboundNotification::UserRelationship {
                             id: user.id.clone(),
                             user: target,
-                            status: RelationshipStatus::None
+                            status: RelationshipStatus::None,
                         }
                         .publish(user.id.clone());
-                        
+
                         ClientboundNotification::UserRelationship {
                             id: target_id.clone(),
                             user: user,
-                            status: RelationshipStatus::None
+                            status: RelationshipStatus::None,
                         }
                         .publish(target_id);
 

@@ -1,6 +1,9 @@
-use serde::{Serialize, Deserialize};
+use crate::util::{
+    result::{Error, Result},
+    variables::JANUARY_URL,
+};
 use linkify::{LinkFinder, LinkKind};
-use crate::util::{result::{Error, Result}, variables::JANUARY_URL};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ImageSize {
@@ -33,7 +36,7 @@ pub enum TwitchType {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum BandcampType {
     Album,
-    Track
+    Track,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -54,8 +57,8 @@ pub enum Special {
     Soundcloud,
     Bandcamp {
         content_type: BandcampType,
-        id: String
-    }
+        id: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -98,7 +101,7 @@ impl Embed {
                 // Ignore quoted lines.
                 if let Some(c) = v.chars().next() {
                     if c == '>' {
-                        return ""
+                        return "";
                     }
                 }
 
@@ -131,12 +134,10 @@ impl Embed {
             Err(_) => return Err(Error::LabelMe),
             Ok(result) => match result.status() {
                 reqwest::StatusCode::OK => {
-                    let res: Embed = result.json()
-                        .await
-                        .map_err(|_| Error::InvalidOperation)?;
+                    let res: Embed = result.json().await.map_err(|_| Error::InvalidOperation)?;
 
-                    Ok(vec![ res ])
-                },
+                    Ok(vec![res])
+                }
                 _ => return Err(Error::LabelMe),
             },
         }

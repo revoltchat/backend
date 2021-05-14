@@ -44,7 +44,7 @@ pub enum Channel {
         owner: String,
         description: String,
         recipients: Vec<String>,
-        
+
         #[serde(skip_serializing_if = "Option::is_none")]
         icon: Option<File>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -93,8 +93,7 @@ impl Channel {
             })?;
 
         let channel_id = self.id().to_string();
-        ClientboundNotification::ChannelCreate(self)
-            .publish(channel_id);
+        ClientboundNotification::ChannelCreate(self).publish(channel_id);
 
         Ok(())
     }
@@ -104,7 +103,7 @@ impl Channel {
         ClientboundNotification::ChannelUpdate {
             id: id.clone(),
             data,
-            clear: None
+            clear: None,
         }
         .publish(id);
 
@@ -188,9 +187,8 @@ impl Channel {
                 with: "channel",
             })?;
 
-        ClientboundNotification::ChannelDelete { id: id.to_string() }
-            .publish(id.to_string());
-        
+        ClientboundNotification::ChannelDelete { id: id.to_string() }.publish(id.to_string());
+
         if let Channel::Group { icon, .. } = self {
             if let Some(attachment) = icon {
                 attachment.delete().await?;

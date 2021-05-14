@@ -6,13 +6,9 @@ use crate::{
     util::result::{Error, Result},
 };
 use futures::StreamExt;
-use mongodb::{
-    bson::{doc, from_document},
-    options::FindOptions,
-};
+use mongodb::bson::{doc, from_document};
 
 pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
-    let mut users = vec![];
     let mut user_ids: HashSet<String> = HashSet::new();
 
     if let Some(relationships) = &user.relations {
@@ -68,41 +64,12 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
     }
 
     user_ids.remove(&user.id);
-    if user_ids.len() > 0 {
-        let mut cursor = get_collection("users")
-            .find(
-                doc! {
-                    "_id": {
-                        "$in": user_ids.into_iter().collect::<Vec<String>>()
-                    }
-                },
-                FindOptions::builder()
-                    .projection(doc! { "_id": 1, "username": 1, "avatar": 1, "badges": 1, "status": 1 })
-                    .build(),
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "find",
-                with: "users",
-            })?;
-
-        while let Some(result) = cursor.next().await {
-            if let Ok(doc) = result {
-                let other: User = from_document(doc).map_err(|_| Error::DatabaseError {
-                    operation: "from_document",
-                    with: "user",
-                })?;
-
-                let permissions = PermissionCalculator::new(&user)
-                    .with_mutual_connection()
-                    .with_user(&other)
-                    .for_user_given()
-                    .await?;
-
-                users.push(other.from(&user).with(permissions));
-            }
-        }
-    }
+    let mut users = if user_ids.len() > 0 {
+        user.fetch_multiple_users(user_ids.into_iter().collect::<Vec<String>>())
+            .await?
+    } else {
+        vec![]
+    };
 
     user.relationship = Some(RelationshipStatus::User);
     user.online = Some(true);

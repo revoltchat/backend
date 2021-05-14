@@ -77,14 +77,14 @@ pub async fn req(user: User, username: String) -> Result<JsonValue> {
                     ClientboundNotification::UserRelationship {
                         id: user.id.clone(),
                         user: target_user,
-                        status: RelationshipStatus::Friend
+                        status: RelationshipStatus::Friend,
                     }
                     .publish(user.id.clone());
 
                     ClientboundNotification::UserRelationship {
                         id: target_id.to_string(),
                         user,
-                        status: RelationshipStatus::Friend
+                        status: RelationshipStatus::Friend,
                     }
                     .publish(target_id.to_string());
 
@@ -134,18 +134,18 @@ pub async fn req(user: User, username: String) -> Result<JsonValue> {
                     let user = user
                         .from_override(&target_user, RelationshipStatus::Incoming)
                         .await?;
-                    
+
                     ClientboundNotification::UserRelationship {
                         id: user.id.clone(),
                         user: target_user,
-                        status: RelationshipStatus::Outgoing
+                        status: RelationshipStatus::Outgoing,
                     }
                     .publish(user.id.clone());
-                    
+
                     ClientboundNotification::UserRelationship {
                         id: target_id.to_string(),
                         user,
-                        status: RelationshipStatus::Incoming
+                        status: RelationshipStatus::Incoming,
                     }
                     .publish(target_id.to_string());
 

@@ -15,9 +15,9 @@ extern crate ctrlc;
 
 pub mod database;
 pub mod notifications;
-pub mod version;
 pub mod routes;
 pub mod util;
+pub mod version;
 
 use async_std::task;
 use chrono::Duration;
@@ -40,7 +40,10 @@ async fn main() {
     dotenv::dotenv().ok();
     env_logger::init_from_env(env_logger::Env::default().filter_or("RUST_LOG", "info"));
 
-    info!("Starting REVOLT server [version {}].", crate::version::VERSION);
+    info!(
+        "Starting REVOLT server [version {}].",
+        crate::version::VERSION
+    );
 
     util::variables::preflight_checks();
     database::connect().await;

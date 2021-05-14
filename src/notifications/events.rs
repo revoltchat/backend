@@ -35,12 +35,12 @@ pub enum RemoveUserField {
     ProfileContent,
     ProfileBackground,
     StatusText,
-    Avatar
+    Avatar,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum RemoveChannelField {
-    Icon
+    Icon,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -67,7 +67,7 @@ pub enum ClientboundNotification {
         id: String,
         data: JsonValue,
         #[serde(skip_serializing_if = "Option::is_none")]
-        clear: Option<RemoveChannelField>
+        clear: Option<RemoveChannelField>,
     },
     ChannelGroupJoin {
         id: String,
@@ -93,7 +93,7 @@ pub enum ClientboundNotification {
         id: String,
         data: JsonValue,
         #[serde(skip_serializing_if = "Option::is_none")]
-        clear: Option<RemoveUserField>
+        clear: Option<RemoveUserField>,
     },
     UserRelationship {
         id: String,
@@ -110,7 +110,9 @@ impl ClientboundNotification {
     pub fn publish(self, topic: String) {
         async_std::task::spawn(async move {
             prehandle_hook(&self); // ! TODO: this should be moved to pubsub
-            hive_pubsub::backend::mongo::publish(get_hive(), &topic, self).await.ok();
+            hive_pubsub::backend::mongo::publish(get_hive(), &topic, self)
+                .await
+                .ok();
         });
     }
 }

@@ -1,6 +1,6 @@
-use crate::{database::*, notifications::events::RemoveChannelField};
 use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
+use crate::{database::*, notifications::events::RemoveChannelField};
 
 use mongodb::bson::{doc, to_document};
 use rocket_contrib::json::Json;
@@ -17,7 +17,7 @@ pub struct Data {
     description: Option<String>,
     #[validate(length(min = 1, max = 128))]
     icon: Option<String>,
-    remove: Option<RemoveChannelField>
+    remove: Option<RemoveChannelField>,
 }
 
 #[patch("/<target>", data = "<data>")]
@@ -26,8 +26,12 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if data.name.is_none() && data.description.is_none() && data.icon.is_none() && data.remove.is_none() {
-        return Ok(())
+    if data.name.is_none()
+        && data.description.is_none()
+        && data.icon.is_none()
+        && data.remove.is_none()
+    {
+        return Ok(());
     }
 
     let target = target.fetch_channel().await?;
@@ -64,7 +68,8 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
             }
 
             if let Some(attachment_id) = &data.icon {
-                let attachment = File::find_and_use(&attachment_id, "icons", "object", &user.id).await?;
+                let attachment =
+                    File::find_and_use(&attachment_id, "icons", "object", &user.id).await?;
                 set.insert(
                     "icon",
                     to_document(&attachment).map_err(|_| Error::DatabaseError {
@@ -72,7 +77,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
                         with: "attachment",
                     })?,
                 );
-    
+
                 remove_icon = true;
             }
 
@@ -80,26 +85,25 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
             if set.len() > 0 {
                 operations.insert("$set", &set);
             }
-        
+
             if unset.len() > 0 {
                 operations.insert("$unset", unset);
             }
 
             if operations.len() > 0 {
                 get_collection("channels")
-                .update_one(
-                    doc! { "_id": &id },
-                    operations,
-                    None
-                )
-                .await
-                .map_err(|_| Error::DatabaseError { operation: "update_one", with: "channel" })?;
+                    .update_one(doc! { "_id": &id }, operations, None)
+                    .await
+                    .map_err(|_| Error::DatabaseError {
+                        operation: "update_one",
+                        with: "channel",
+                    })?;
             }
 
             ClientboundNotification::ChannelUpdate {
                 id: id.clone(),
                 data: json!(set),
-                clear: data.remove
+                clear: data.remove,
             }
             .publish(id.clone());
 
@@ -107,10 +111,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
                 Message::create(
                     "00000000000000000000000000".to_string(),
                     id.clone(),
-                    Content::SystemMessage(SystemMessage::ChannelRenamed {
-                        name,
-                        by: user.id,
-                    }),
+                    Content::SystemMessage(SystemMessage::ChannelRenamed { name, by: user.id }),
                 )
                 .publish(&target)
                 .await

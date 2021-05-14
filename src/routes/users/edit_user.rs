@@ -1,6 +1,6 @@
-use crate::{database::*, notifications::events::RemoveUserField};
 use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
+use crate::{database::*, notifications::events::RemoveUserField};
 
 use mongodb::bson::{doc, to_document};
 use rocket_contrib::json::Json;
@@ -25,7 +25,7 @@ pub struct Data {
     profile: Option<UserProfileData>,
     #[validate(length(min = 1, max = 128))]
     avatar: Option<String>,
-    remove: Option<RemoveUserField>
+    remove: Option<RemoveUserField>,
 }
 
 #[patch("/<_ignore_id>", data = "<data>")]
@@ -35,8 +35,12 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if data.status.is_none() && data.profile.is_none() && data.avatar.is_none() && data.remove.is_none() {
-        return Ok(())
+    if data.status.is_none()
+        && data.profile.is_none()
+        && data.avatar.is_none()
+        && data.remove.is_none()
+    {
+        return Ok(());
     }
 
     let mut unset = doc! {};
@@ -49,14 +53,14 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
         match remove {
             RemoveUserField::ProfileContent => {
                 unset.insert("profile.content", 1);
-            },
+            }
             RemoveUserField::ProfileBackground => {
                 unset.insert("profile.background", 1);
                 remove_background = true;
             }
             RemoveUserField::StatusText => {
                 unset.insert("status.text", 1);
-            },
+            }
             RemoveUserField::Avatar => {
                 unset.insert("avatar", 1);
                 remove_avatar = true;
@@ -80,7 +84,8 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
         }
 
         if let Some(attachment_id) = profile.background {
-            let attachment = File::find_and_use(&attachment_id, "backgrounds", "user", &user.id).await?;
+            let attachment =
+                File::find_and_use(&attachment_id, "backgrounds", "user", &user.id).await?;
             set.insert(
                 "profile.background",
                 to_document(&attachment).map_err(|_| Error::DatabaseError {
@@ -133,7 +138,7 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
         ClientboundNotification::UserUpdate {
             id: user.id.clone(),
             data: json!({ "status": status }),
-            clear: None
+            clear: None,
         }
         .publish(user.id.clone());
     }
@@ -142,7 +147,7 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
         ClientboundNotification::UserUpdate {
             id: user.id.clone(),
             data: json!({ "avatar": avatar }),
-            clear: None
+            clear: None,
         }
         .publish(user.id.clone());
     }
@@ -151,7 +156,7 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
         ClientboundNotification::UserUpdate {
             id: user.id.clone(),
             data: json!({}),
-            clear: Some(clear)
+            clear: Some(clear),
         }
         .publish(user.id.clone());
     }

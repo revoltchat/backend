@@ -135,9 +135,7 @@ impl Message {
         self.process_embed();
 
         let enc = serde_json::to_string(&self).unwrap();
-        ClientboundNotification::Message(self)
-            .publish(channel.id().to_string());
-        
+        ClientboundNotification::Message(self).publish(channel.id().to_string());
 
         /*
            Web Push Test Code
@@ -202,9 +200,11 @@ impl Message {
 
                     for subscription in subscriptions {
                         let mut builder = WebPushMessageBuilder::new(&subscription).unwrap();
-                        let sig_builder =
-                            VapidSignatureBuilder::from_pem(std::io::Cursor::new(&key), &subscription)
-                                .unwrap();
+                        let sig_builder = VapidSignatureBuilder::from_pem(
+                            std::io::Cursor::new(&key),
+                            &subscription,
+                        )
+                        .unwrap();
                         let signature = sig_builder.build().unwrap();
                         builder.set_vapid_signature(signature);
                         builder.set_payload(ContentEncoding::AesGcm, enc.as_bytes());
@@ -250,12 +250,11 @@ impl Message {
                                 },
                                 None,
                             )
-                            .await {
+                            .await
+                        {
                             ClientboundNotification::MessageUpdate {
                                 id,
-                                data: json!({
-                                    "embeds": embeds
-                                }),
+                                data: json!({ "embeds": embeds }),
                             }
                             .publish(channel);
                         }

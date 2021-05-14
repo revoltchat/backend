@@ -1,12 +1,16 @@
-use mongodb::bson::doc;
+use futures::StreamExt;
 use mongodb::options::{Collation, FindOneOptions};
+use mongodb::{
+    bson::{doc, from_document},
+    options::FindOptions,
+};
 use serde::{Deserialize, Serialize};
+use validator::Validate;
 
 use crate::database::permissions::user::UserPermissions;
 use crate::database::*;
 use crate::notifications::websocket::is_online;
 use crate::util::result::{Error, Result};
-use validator::Validate;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum RelationshipStatus {
@@ -159,5 +163,47 @@ impl User {
         } else {
             Ok(false)
         }
+    }
+
+    /// Utility function for fetching multiple users from the perspective of one.
+    pub async fn fetch_multiple_users(&self, user_ids: Vec<String>) -> Result<Vec<User>> {
+        let mut users = vec![];
+        let mut cursor = get_collection("users")
+            .find(
+                doc! {
+                    "_id": {
+                        "$in": user_ids
+                    }
+                },
+                FindOptions::builder()
+                    .projection(
+                        doc! { "_id": 1, "username": 1, "avatar": 1, "badges": 1, "status": 1 },
+                    )
+                    .build(),
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "find",
+                with: "users",
+            })?;
+
+        while let Some(result) = cursor.next().await {
+            if let Ok(doc) = result {
+                let other: User = from_document(doc).map_err(|_| Error::DatabaseError {
+                    operation: "from_document",
+                    with: "user",
+                })?;
+
+                let permissions = PermissionCalculator::new(&self)
+                    .with_mutual_connection()
+                    .with_user(&other)
+                    .for_user_given()
+                    .await?;
+
+                users.push(other.from(&self).with(permissions));
+            }
+        }
+
+        Ok(users)
     }
 }
