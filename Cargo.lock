@@ -647,12 +647,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 
 [[package]]
-name = "doc-comment"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
-
-[[package]]
 name = "dotenv"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2338,8 +2332,8 @@ dependencies = [
 
 [[package]]
 name = "rauth"
-version = "0.2.5-alpha.0"
-source = "git+https://gitlab.insrt.uk/insert/rauth?rev=c52758a5087cd035b0ed9c6eacc942ba5468d2ce#c52758a5087cd035b0ed9c6eacc942ba5468d2ce"
+version = "0.2.6-alpha.0"
+source = "git+https://gitlab.insrt.uk/insert/rauth?rev=d3f417a05cf7a26dd9d116c5abcdeacc975c53b9#d3f417a05cf7a26dd9d116c5abcdeacc975c53b9"
 dependencies = [
  "chrono",
  "handlebars",
@@ -2355,7 +2349,6 @@ dependencies = [
  "rust-argon2",
  "serde",
  "serde_json",
- "snafu",
  "tokio",
  "ulid",
  "validator",
@@ -2516,7 +2509,6 @@ dependencies = [
  "rocket_prometheus",
  "serde",
  "serde_json",
- "snafu",
  "time 0.2.25",
  "ulid",
  "urlencoding",
@@ -2923,27 +2915,6 @@ name = "smallvec"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe0f37c9e8f3c5a4a66ad655a93c74daac4ad00c441533bf5c6e7990bb42604e"
-
-[[package]]
-name = "snafu"
-version = "0.6.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eab12d3c261b2308b0d80c26fffb58d17eba81a4be97890101f416b478c79ca7"
-dependencies = [
- "doc-comment",
- "snafu-derive",
-]
-
-[[package]]
-name = "snafu-derive"
-version = "0.6.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1508efa03c362e23817f96cde18abed596a25219a8b2c66e8db33c03543d315b"
-dependencies = [
- "proc-macro2 1.0.24",
- "quote 1.0.9",
- "syn 1.0.60",
-]
 
 [[package]]
 name = "socket2"

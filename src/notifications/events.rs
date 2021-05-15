@@ -2,23 +2,17 @@ use hive_pubsub::PubSub;
 use rauth::auth::Session;
 use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
-use snafu::Snafu;
 
 use super::hive::{get_hive, subscribe_if_exists};
 use crate::database::*;
 
-#[derive(Serialize, Deserialize, Debug, Snafu)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "error")]
 pub enum WebSocketError {
-    #[snafu(display("This error has not been labelled."))]
     LabelMe,
-    #[snafu(display("Internal server error."))]
     InternalError { at: String },
-    #[snafu(display("Invalid session."))]
     InvalidSession,
-    #[snafu(display("User hasn't completed onboarding."))]
     OnboardingNotFinished,
-    #[snafu(display("Already authenticated with server."))]
     AlreadyAuthenticated,
 }
 
