@@ -54,7 +54,7 @@ pub struct Message {
 
     pub content: Content,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub attachment: Option<File>,
+    pub attachments: Option<Vec<File>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub edited: Option<DateTime>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -70,7 +70,7 @@ impl Message {
             author,
 
             content,
-            attachment: None,
+            attachments: None,
             edited: None,
             embeds: None,
         }
@@ -275,8 +275,10 @@ impl Message {
     }
 
     pub async fn delete(&self) -> Result<()> {
-        if let Some(attachment) = &self.attachment {
-            attachment.delete().await?;
+        if let Some(attachments) = &self.attachments {
+            for attachment in attachments {
+                attachment.delete().await?;
+            }
         }
 
         get_collection("messages")
@@ -299,11 +301,14 @@ impl Message {
         }
         .publish(channel);
 
-        if let Some(attachment) = &self.attachment {
+        if let Some(attachments) = &self.attachments {
+            let attachment_ids: Vec<String> = attachments.iter().map(|f| f.id.to_string()).collect();
             get_collection("attachments")
                 .update_one(
                     doc! {
-                        "_id": &attachment.id
+                        "_id": {
+                            "$in": attachment_ids
+                        }
                     },
                     doc! {
                         "$set": {

@@ -1,8 +1,9 @@
 use crate::database::{get_collection, get_db};
 
 use log::info;
-use mongodb::bson::{doc, from_document};
+use futures::StreamExt;
 use serde::{Deserialize, Serialize};
+use mongodb::{bson::{doc, from_document}, options::FindOptions};
 
 #[derive(Serialize, Deserialize)]
 struct MigrationInfo {
@@ -10,7 +11,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 3;
+pub const LATEST_REVISION: i32 = 4;
 
 pub async fn migrate_database() {
     let migrations = get_collection("migrations");
@@ -85,6 +86,51 @@ pub async fn run_migrations(revision: i32) -> i32 {
             .create_collection("servers", None)
             .await
             .expect("Failed to create servers collection.");
+    }
+
+    if revision <= 3 {
+        info!("Running migration [revision 3 / 2021-05-25]: Support multiple file uploads, add channel_unreads and user_settings.");
+
+        let messages = get_collection("messages");
+        let mut cursor = messages.find(
+            doc! {
+                "attachment": {
+                    "$exists": 1
+                }
+            },
+            FindOptions::builder()
+                .projection(doc! {
+                    "_id": 1,
+                    "attachments": [ "$attachment" ]
+                })
+                .build()
+        )
+        .await
+        .expect("Failed to fetch messages.");
+
+        while let Some(result) = cursor.next().await {
+            let doc = result.unwrap();
+            let id = doc.get_str("_id").unwrap();
+            let attachments = doc.get_array("attachments").unwrap();
+
+            messages.update_one(
+                doc! { "_id": id },
+                doc! { "$unset": { "attachment": 1 }, "$set": { "attachments": attachments } },
+                None
+            )
+            .await
+            .unwrap();
+        }
+
+        get_db()
+            .create_collection("channel_unreads", None)
+            .await
+            .expect("Failed to create channel_unreads collection.");
+
+        get_db()
+            .create_collection("user_settings", None)
+            .await
+            .expect("Failed to create user_settings collection.");
     }
 
     // Reminder to update LATEST_REVISION when adding new migrations.

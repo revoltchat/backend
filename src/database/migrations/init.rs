@@ -37,6 +37,14 @@ pub async fn create_database() {
         .await
         .expect("Failed to create attachments collection.");
 
+    db.create_collection("channel_unreads", None)
+        .await
+        .expect("Failed to create channel_unreads collection.");
+
+    db.create_collection("user_settings", None)
+        .await
+        .expect("Failed to create user_settings collection.");
+
     db.create_collection(
         "pubsub",
         CreateCollectionOptions::builder()
