@@ -6,11 +6,15 @@ use mongodb::{
 };
 use serde::{Deserialize, Serialize};
 use validator::Validate;
+use num_enum::TryFromPrimitive;
+use ulid::Ulid;
+use std::ops;
 
 use crate::database::permissions::user::UserPermissions;
 use crate::database::*;
 use crate::notifications::websocket::is_online;
 use crate::util::result::{Error, Result};
+use crate::util::variables::EARLY_ADOPTER_BADGE;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum RelationshipStatus {
@@ -29,13 +33,6 @@ pub struct Relationship {
     pub id: String,
     pub status: RelationshipStatus,
 }
-
-/*
-pub enum Badge {
-    Developer = 1,
-    Translator = 2,
-}
-*/
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Presence {
@@ -61,6 +58,17 @@ pub struct UserProfile {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub background: Option<File>,
 }
+
+#[derive(Debug, PartialEq, Eq, TryFromPrimitive, Copy, Clone)]
+#[repr(i32)]
+pub enum Badges {
+    Developer = 1,
+    Translator = 2,
+    Supporter = 4,
+    EarlyAdopter = 256
+}
+
+impl_op_ex_commutative!(+ |a: &i32, b: &Badges| -> i32 { *a | *b as i32 });
 
 // When changing this struct, update notifications/payload.rs#80
 #[derive(Serialize, Deserialize, Debug)]
@@ -110,6 +118,15 @@ impl User {
 
     /// Mutate the user object to appear as seen by user.
     pub fn with(mut self, permissions: UserPermissions<[u32; 1]>) -> User {
+        let mut badges = self.badges.unwrap_or_else(|| 0);
+        if let Ok(id) = Ulid::from_string(&self.id) {
+            if id.datetime().timestamp_millis() < *EARLY_ADOPTER_BADGE {
+                badges = badges + Badges::EarlyAdopter;
+            }
+        }
+
+        self.badges = Some(badges);
+
         if permissions.get_view_profile() {
             self.online = Some(is_online(&self.id));
         } else {

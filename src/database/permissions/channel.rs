@@ -16,6 +16,9 @@ pub enum ChannelPermission {
     VoiceCall = 16,
 }
 
+impl_op_ex!(+ |a: &ChannelPermission, b: &ChannelPermission| -> u32 { *a as u32 | *b as u32 });
+impl_op_ex_commutative!(+ |a: &u32, b: &ChannelPermission| -> u32 { *a | *b as u32 });
+
 bitfield! {
     pub struct ChannelPermissions(MSB0 [u32]);
     u32;
@@ -25,9 +28,6 @@ bitfield! {
     pub get_manage_channel, _: 28;
     pub get_voice_call, _: 27;
 }
-
-impl_op_ex!(+ |a: &ChannelPermission, b: &ChannelPermission| -> u32 { *a as u32 | *b as u32 });
-impl_op_ex_commutative!(+ |a: &u32, b: &ChannelPermission| -> u32 { *a | *b as u32 });
 
 impl<'a> PermissionCalculator<'a> {
     pub async fn calculate_channel(self) -> Result<u32> {
