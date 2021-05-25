@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::database::*;
 use crate::util::result::{Error, Result};
 
@@ -26,6 +28,7 @@ pub struct Options {
     #[validate(length(min = 26, max = 26))]
     after: Option<String>,
     sort: Option<Sort>,
+    include_users: Option<bool>
 }
 
 #[get("/<target>/messages?<options..>")]
@@ -87,5 +90,19 @@ pub async fn req(user: User, target: Ref, options: Form<Options>) -> Result<Json
         }
     }
 
-    Ok(json!(messages))
+    if options.include_users.unwrap_or_else(|| false) {
+        let mut ids = HashSet::new();
+        for message in &messages {
+            ids.insert(message.author.clone());
+        }
+
+        let user_ids = ids.into_iter().collect();
+
+        Ok(json!({
+            "messages": messages,
+            "users": user.fetch_multiple_users(user_ids).await?
+        }))
+    } else {
+        Ok(json!(messages))
+    }
 }
