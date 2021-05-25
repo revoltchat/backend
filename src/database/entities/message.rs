@@ -226,6 +226,7 @@ impl Message {
         let channel = self.channel.clone();
         ClientboundNotification::MessageUpdate {
             id: self.id.clone(),
+            channel: self.channel.clone(),
             data,
         }
         .publish(channel);
@@ -262,6 +263,7 @@ impl Message {
                         {
                             ClientboundNotification::MessageUpdate {
                                 id,
+                                channel: channel.clone(),
                                 data: json!({ "embeds": embeds }),
                             }
                             .publish(channel);
@@ -293,6 +295,7 @@ impl Message {
         let channel = self.channel.clone();
         ClientboundNotification::MessageDelete {
             id: self.id.clone(),
+            channel: self.channel.clone()
         }
         .publish(channel);
 

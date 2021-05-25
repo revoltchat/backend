@@ -50,10 +50,12 @@ pub enum ClientboundNotification {
     Message(Message),
     MessageUpdate {
         id: String,
+        channel: String,
         data: JsonValue,
     },
     MessageDelete {
         id: String,
+        channel: String,
     },
 
     ChannelCreate(Channel),
