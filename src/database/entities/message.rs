@@ -1,4 +1,4 @@
-use crate::util::variables::{VAPID_PRIVATE_KEY, USE_JANUARY};
+use crate::util::variables::{USE_JANUARY, VAPID_PRIVATE_KEY};
 use crate::{
     database::*,
     notifications::{events::ClientboundNotification, websocket::is_online},
@@ -297,12 +297,13 @@ impl Message {
         let channel = self.channel.clone();
         ClientboundNotification::MessageDelete {
             id: self.id.clone(),
-            channel: self.channel.clone()
+            channel: self.channel.clone(),
         }
         .publish(channel);
 
         if let Some(attachments) = &self.attachments {
-            let attachment_ids: Vec<String> = attachments.iter().map(|f| f.id.to_string()).collect();
+            let attachment_ids: Vec<String> =
+                attachments.iter().map(|f| f.id.to_string()).collect();
             get_collection("attachments")
                 .update_one(
                     doc! {

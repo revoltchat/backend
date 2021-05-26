@@ -29,13 +29,17 @@ pub enum Error {
     CannotEditMessage,
     EmptyMessage,
     CannotRemoveYourself,
-    GroupTooLarge { max: usize },
+    GroupTooLarge {
+        max: usize,
+    },
     AlreadyInGroup,
     NotInGroup,
 
     // ? General errors.
     TooManyIds,
-    FailedValidation { error: ValidationErrors },
+    FailedValidation {
+        error: ValidationErrors,
+    },
     DatabaseError {
         operation: &'static str,
         with: &'static str,

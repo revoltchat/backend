@@ -1,9 +1,12 @@
 use crate::database::{get_collection, get_db};
 
-use log::info;
 use futures::StreamExt;
+use log::info;
+use mongodb::{
+    bson::{doc, from_document},
+    options::FindOptions,
+};
 use serde::{Deserialize, Serialize};
-use mongodb::{bson::{doc, from_document}, options::FindOptions};
 
 #[derive(Serialize, Deserialize)]
 struct MigrationInfo {
@@ -92,34 +95,36 @@ pub async fn run_migrations(revision: i32) -> i32 {
         info!("Running migration [revision 3 / 2021-05-25]: Support multiple file uploads, add channel_unreads and user_settings.");
 
         let messages = get_collection("messages");
-        let mut cursor = messages.find(
-            doc! {
-                "attachment": {
-                    "$exists": 1
-                }
-            },
-            FindOptions::builder()
-                .projection(doc! {
-                    "_id": 1,
-                    "attachments": [ "$attachment" ]
-                })
-                .build()
-        )
-        .await
-        .expect("Failed to fetch messages.");
+        let mut cursor = messages
+            .find(
+                doc! {
+                    "attachment": {
+                        "$exists": 1
+                    }
+                },
+                FindOptions::builder()
+                    .projection(doc! {
+                        "_id": 1,
+                        "attachments": [ "$attachment" ]
+                    })
+                    .build(),
+            )
+            .await
+            .expect("Failed to fetch messages.");
 
         while let Some(result) = cursor.next().await {
             let doc = result.unwrap();
             let id = doc.get_str("_id").unwrap();
             let attachments = doc.get_array("attachments").unwrap();
 
-            messages.update_one(
-                doc! { "_id": id },
-                doc! { "$unset": { "attachment": 1 }, "$set": { "attachments": attachments } },
-                None
-            )
-            .await
-            .unwrap();
+            messages
+                .update_one(
+                    doc! { "_id": id },
+                    doc! { "$unset": { "attachment": 1 }, "$set": { "attachments": attachments } },
+                    None,
+                )
+                .await
+                .unwrap();
         }
 
         get_db()

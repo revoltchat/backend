@@ -59,7 +59,9 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
 
     let id = Ulid::new().to_string();
     let attachments = if let Some(attachment_id) = &message.attachment {
-        Some(vec![ File::find_and_use(attachment_id, "attachments", "message", &id).await? ])
+        Some(vec![
+            File::find_and_use(attachment_id, "attachments", "message", &id).await?,
+        ])
     } else {
         None
     };

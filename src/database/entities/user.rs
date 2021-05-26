@@ -4,11 +4,11 @@ use mongodb::{
     bson::{doc, from_document},
     options::FindOptions,
 };
-use serde::{Deserialize, Serialize};
-use validator::Validate;
 use num_enum::TryFromPrimitive;
-use ulid::Ulid;
+use serde::{Deserialize, Serialize};
 use std::ops;
+use ulid::Ulid;
+use validator::Validate;
 
 use crate::database::permissions::user::UserPermissions;
 use crate::database::*;
@@ -65,7 +65,7 @@ pub enum Badges {
     Developer = 1,
     Translator = 2,
     Supporter = 4,
-    EarlyAdopter = 256
+    EarlyAdopter = 256,
 }
 
 impl_op_ex_commutative!(+ |a: &i32, b: &Badges| -> i32 { *a | *b as i32 });

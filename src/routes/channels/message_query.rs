@@ -28,7 +28,7 @@ pub struct Options {
     #[validate(length(min = 26, max = 26))]
     after: Option<String>,
     sort: Option<Sort>,
-    include_users: Option<bool>
+    include_users: Option<bool>,
 }
 
 #[get("/<target>/messages?<options..>")]
