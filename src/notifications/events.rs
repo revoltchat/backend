@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use hive_pubsub::PubSub;
 use rauth::auth::Session;
 use rocket_contrib::json::JsonValue;
@@ -100,6 +102,10 @@ pub enum ClientboundNotification {
         id: String,
         online: bool,
     },
+    UserSettingsUpdate {
+        id: String,
+        update: HashMap<String, String>
+    }
 }
 
 impl ClientboundNotification {

@@ -8,6 +8,7 @@ mod onboard;
 mod push;
 mod root;
 mod users;
+mod sync;
 
 pub fn mount(rocket: Rocket) -> Rocket {
     rocket
@@ -17,4 +18,5 @@ pub fn mount(rocket: Rocket) -> Rocket {
         .mount("/channels", channels::routes())
         .mount("/guild", guild::routes())
         .mount("/push", push::routes())
+        .mount("/sync", sync::routes())
 }
