@@ -242,10 +242,14 @@ pub fn publish(ids: Vec<String>, notification: ClientboundNotification) {
         let users = USERS.read().unwrap();
         for id in ids {
             // Block certain notifications from reaching users that aren't meant to see them.
-            if let ClientboundNotification::UserRelationship { id: user_id, .. } = &notification {
-                if &id != user_id {
-                    continue;
+            match &notification {
+                ClientboundNotification::UserRelationship { id: user_id, .. } |
+                ClientboundNotification::UserSettingsUpdate { id: user_id, .. } => {
+                    if &id != user_id {
+                        continue;
+                    }
                 }
+                _ => {}
             }
 
             if let Some(mut arr) = users.get_left(&id) {
