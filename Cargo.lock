@@ -2332,8 +2332,8 @@ dependencies = [
 
 [[package]]
 name = "rauth"
-version = "0.2.6-alpha.0"
-source = "git+https://gitlab.insrt.uk/insert/rauth?rev=d3f417a05cf7a26dd9d116c5abcdeacc975c53b9#d3f417a05cf7a26dd9d116c5abcdeacc975c53b9"
+version = "0.2.7"
+source = "git+https://gitlab.insrt.uk/insert/rauth?rev=1db825a0059639144ea8802f6d51b5d27c5b986e#1db825a0059639144ea8802f6d51b5d27c5b986e"
 dependencies = [
  "chrono",
  "handlebars",
