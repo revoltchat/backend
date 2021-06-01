@@ -6,7 +6,7 @@ use crate::{
     util::result::{Error, Result},
 };
 use futures::StreamExt;
-use mongodb::bson::{doc, from_document};
+use mongodb::bson::{doc, from_document, Document};
 
 pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
     let mut user_ids: HashSet<String> = HashSet::new();
@@ -19,10 +19,68 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
         );
     }
 
+    let server_ids = get_collection("server_members")
+        .find(
+            doc! {
+                "_id.user": &user.id
+            },
+            None,
+        )
+        .await
+        .map_err(|_| Error::DatabaseError {
+            operation: "find",
+            with: "server_members",
+        })?
+        .filter_map(async move |s| s.ok())
+        .collect::<Vec<Document>>()
+        .await
+        .into_iter()
+        .filter_map(|x| {
+            x.get_document("_id")
+                .ok()
+                .map(|i| i.get_str("server").ok().map(|x| x.to_string()))
+        })
+        .flatten()
+        .collect::<Vec<String>>();
+
+    let mut cursor = get_collection("servers")
+        .find(
+            doc! {
+                "_id": {
+                    "$in": server_ids
+                }
+            },
+            None,
+        )
+        .await
+        .map_err(|_| Error::DatabaseError {
+            operation: "find",
+            with: "servers",
+        })?;
+
+    let mut servers = vec![];
+    let mut channel_ids = vec![];
+    while let Some(result) = cursor.next().await {
+        if let Ok(doc) = result {
+            let server: Server = from_document(doc).map_err(|_| Error::DatabaseError {
+                operation: "from_document",
+                with: "server",
+            })?;
+
+            channel_ids.extend(server.channels.iter().cloned());
+            servers.push(server);
+        }
+    }
+
     let mut cursor = get_collection("channels")
         .find(
             doc! {
                 "$or": [
+                    {
+                        "_id": {
+                            "$in": channel_ids
+                        }
+                    },
                     {
                         "channel_type": "SavedMessages",
                         "user": &user.id
@@ -75,5 +133,9 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
     user.online = Some(true);
     users.push(user);
 
-    Ok(ClientboundNotification::Ready { users, channels })
+    Ok(ClientboundNotification::Ready {
+        users,
+        servers,
+        channels,
+    })
 }

@@ -2,13 +2,13 @@ use crate::database::*;
 use crate::util::result::{Error, Result};
 
 use mongodb::bson::doc;
-use serde::{Deserialize, Serialize};
 use mongodb::options::FindOneOptions;
 use rocket_contrib::json::{Json, JsonValue};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct Options {
-    keys: Vec<String>
+    keys: Vec<String>,
 }
 
 #[post("/settings/fetch", data = "<options>")]
@@ -27,14 +27,16 @@ pub async fn req(user: User, options: Json<Options>) -> Result<JsonValue> {
             doc! {
                 "_id": user.id
             },
-            FindOneOptions::builder()
-                .projection(projection)
-                .build()
+            FindOneOptions::builder().projection(projection).build(),
         )
         .await
-        .map_err(|_| Error::DatabaseError { operation: "find_one", with: "user_settings" })? {
+        .map_err(|_| Error::DatabaseError {
+            operation: "find_one",
+            with: "user_settings",
+        })?
+    {
         Ok(json!(doc))
     } else {
-        Ok(json!({ }))
+        Ok(json!({}))
     }
 }

@@ -11,6 +11,7 @@ pub struct PermissionCalculator<'a> {
     user: Option<&'a User>,
     relationship: Option<&'a RelationshipStatus>,
     channel: Option<&'a Channel>,
+    server: Option<&'a Server>,
 
     has_mutual_connection: bool,
 }
@@ -23,6 +24,7 @@ impl<'a> PermissionCalculator<'a> {
             user: None,
             relationship: None,
             channel: None,
+            server: None,
 
             has_mutual_connection: false,
         }
@@ -45,6 +47,13 @@ impl<'a> PermissionCalculator<'a> {
     pub fn with_channel(self, channel: &'a Channel) -> PermissionCalculator {
         PermissionCalculator {
             channel: Some(&channel),
+            ..self
+        }
+    }
+
+    pub fn with_server(self, server: &'a Server) -> PermissionCalculator {
+        PermissionCalculator {
+            server: Some(&server),
             ..self
         }
     }

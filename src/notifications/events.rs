@@ -40,12 +40,19 @@ pub enum RemoveChannelField {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub enum RemoveServerField {
+    Icon,
+    Banner,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum ClientboundNotification {
     Error(WebSocketError),
     Authenticated,
     Ready {
         users: Vec<User>,
+        servers: Vec<Server>,
         channels: Vec<Channel>,
     },
 
@@ -67,6 +74,9 @@ pub enum ClientboundNotification {
         #[serde(skip_serializing_if = "Option::is_none")]
         clear: Option<RemoveChannelField>,
     },
+    ChannelDelete {
+        id: String,
+    },
     ChannelGroupJoin {
         id: String,
         user: String,
@@ -75,14 +85,30 @@ pub enum ClientboundNotification {
         id: String,
         user: String,
     },
-    ChannelDelete {
-        id: String,
-    },
     ChannelStartTyping {
         id: String,
         user: String,
     },
     ChannelStopTyping {
+        id: String,
+        user: String,
+    },
+
+    ServerCreate(Server),
+    ServerUpdate {
+        id: String,
+        data: JsonValue,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        clear: Option<RemoveServerField>,
+    },
+    ServerDelete {
+        id: String,
+    },
+    ServerMemberJoin {
+        id: String,
+        user: String,
+    },
+    ServerMemberLeave {
         id: String,
         user: String,
     },
@@ -104,8 +130,8 @@ pub enum ClientboundNotification {
     },
     UserSettingsUpdate {
         id: String,
-        update: JsonValue
-    }
+        update: JsonValue,
+    },
 }
 
 impl ClientboundNotification {
@@ -137,6 +163,12 @@ pub fn prehandle_hook(notification: &ClientboundNotification) {
                 }
             }
         }
+        ClientboundNotification::ServerMemberJoin { id, user } => {
+            subscribe_if_exists(user.clone(), id.clone()).ok();
+        }
+        ClientboundNotification::ServerCreate(server) => {
+            subscribe_if_exists(server.owner.clone(), server.id.clone()).ok();
+        }
         ClientboundNotification::UserRelationship { id, user, status } => {
             if status != &RelationshipStatus::None {
                 subscribe_if_exists(id.clone(), user.id.clone()).ok();
@@ -151,6 +183,21 @@ pub fn posthandle_hook(notification: &ClientboundNotification) {
         ClientboundNotification::ChannelDelete { id } => {
             get_hive().hive.drop_topic(&id).ok();
         }
+        ClientboundNotification::ChannelGroupLeave { id, user } => {
+            get_hive()
+                .hive
+                .unsubscribe(&user.to_string(), &id.to_string())
+                .ok();
+        }
+        ClientboundNotification::ServerDelete { id } => {
+            get_hive().hive.drop_topic(&id).ok();
+        }
+        ClientboundNotification::ServerMemberLeave { id, user } => {
+            get_hive()
+                .hive
+                .unsubscribe(&user.to_string(), &id.to_string())
+                .ok();
+        }
         ClientboundNotification::UserRelationship { id, user, status } => {
             if status == &RelationshipStatus::None {
                 get_hive()
@@ -158,12 +205,6 @@ pub fn posthandle_hook(notification: &ClientboundNotification) {
                     .unsubscribe(&id.to_string(), &user.id.to_string())
                     .ok();
             }
-        }
-        ClientboundNotification::ChannelGroupLeave { id, user } => {
-            get_hive()
-                .hive
-                .unsubscribe(&user.to_string(), &id.to_string())
-                .ok();
         }
         _ => {}
     }

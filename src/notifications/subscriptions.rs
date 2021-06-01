@@ -45,5 +45,7 @@ pub async fn generate_subscriptions(user: &User) -> Result<(), String> {
         }
     }
 
+    // ! FIXME: fetch memberships for servers
+
     Ok(())
 }

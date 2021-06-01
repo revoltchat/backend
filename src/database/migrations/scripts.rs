@@ -14,7 +14,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 4;
+pub const LATEST_REVISION: i32 = 5;
 
 pub async fn migrate_database() {
     let migrations = get_collection("migrations");
@@ -136,6 +136,25 @@ pub async fn run_migrations(revision: i32) -> i32 {
             .create_collection("user_settings", None)
             .await
             .expect("Failed to create user_settings collection.");
+    }
+
+    if revision <= 4 {
+        info!("Running migration [revision 4 / 2021-06-01]: Add more server collections.");
+
+        get_db()
+            .create_collection("server_members", None)
+            .await
+            .expect("Failed to create server_members collection.");
+
+        get_db()
+            .create_collection("server_bans", None)
+            .await
+            .expect("Failed to create server_bans collection.");
+
+        get_db()
+            .create_collection("invites", None)
+            .await
+            .expect("Failed to create invites collection.");
     }
 
     // Reminder to update LATEST_REVISION when adding new migrations.

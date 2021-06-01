@@ -47,6 +47,10 @@ impl Ref {
         self.fetch("channels").await
     }
 
+    pub async fn fetch_server(&self) -> Result<Server> {
+        self.fetch("servers").await
+    }
+
     pub async fn fetch_message(&self, channel: &Channel) -> Result<Message> {
         let message: Message = self.fetch("messages").await?;
         if &message.channel != channel.id() {

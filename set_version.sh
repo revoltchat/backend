@@ -1,3 +1,3 @@
 #!/bin/bash
-export version=0.4.2-alpha.3
+export version=0.5.0-alpha.0
 echo "pub const VERSION: &str = \"${version}\";" > src/version.rs

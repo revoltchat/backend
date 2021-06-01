@@ -35,6 +35,9 @@ pub enum Error {
     AlreadyInGroup,
     NotInGroup,
 
+    // ? Server related errors.
+    UnknownServer,
+
     // ? General errors.
     TooManyIds,
     FailedValidation {
@@ -79,6 +82,8 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::GroupTooLarge { .. } => Status::Forbidden,
             Error::AlreadyInGroup => Status::Conflict,
             Error::NotInGroup => Status::NotFound,
+
+            Error::UnknownServer => Status::NotFound,
 
             Error::FailedValidation { .. } => Status::UnprocessableEntity,
             Error::DatabaseError { .. } => Status::InternalServerError,

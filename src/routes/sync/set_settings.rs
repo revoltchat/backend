@@ -3,12 +3,12 @@ use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
 
 use chrono::prelude::*;
-use rocket::request::Form;
-use std::collections::HashMap;
-use rocket_contrib::json::Json;
 use mongodb::bson::{doc, to_bson};
-use serde::{Serialize, Deserialize};
 use mongodb::options::UpdateOptions;
+use rocket::request::Form;
+use rocket_contrib::json::Json;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 type Data = HashMap<String, String>;
 
@@ -35,10 +35,10 @@ pub async fn req(user: User, data: Json<Data>, options: Form<Options>) -> Result
     for (key, data) in &data {
         set.insert(
             key.clone(),
-            vec! [
+            vec![
                 to_bson(&timestamp).unwrap(),
-                to_bson(&data.clone()).unwrap()
-            ]
+                to_bson(&data.clone()).unwrap(),
+            ],
         );
     }
 
@@ -51,19 +51,20 @@ pub async fn req(user: User, data: Json<Data>, options: Form<Options>) -> Result
                 doc! {
                     "$set": &set
                 },
-                UpdateOptions::builder()
-                    .upsert(true)
-                    .build()
+                UpdateOptions::builder().upsert(true).build(),
             )
             .await
-            .map_err(|_| Error::DatabaseError { operation: "update_one", with: "user_settings" })?;
+            .map_err(|_| Error::DatabaseError {
+                operation: "update_one",
+                with: "user_settings",
+            })?;
     }
 
     ClientboundNotification::UserSettingsUpdate {
         id: user.id.clone(),
-        update: json!(set)
+        update: json!(set),
     }
     .publish(user.id);
-    
+
     Ok(())
 }
