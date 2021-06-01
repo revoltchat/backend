@@ -1,5 +1,6 @@
 Rocket.toml
 /target
+/target_backup
 **/*.rs.bk
 .mongo
 .env

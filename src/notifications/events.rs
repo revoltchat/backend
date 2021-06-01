@@ -104,7 +104,7 @@ pub enum ClientboundNotification {
     },
     UserSettingsUpdate {
         id: String,
-        update: HashMap<String, String>
+        update: JsonValue
     }
 }
 
