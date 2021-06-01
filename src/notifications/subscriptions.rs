@@ -45,7 +45,14 @@ pub async fn generate_subscriptions(user: &User) -> Result<(), String> {
         }
     }
 
-    // ! FIXME: fetch memberships for servers
+    let server_ids = user
+        .fetch_server_ids()
+        .await
+        .map_err(|_| "Failed to fetch memberships.".to_string())?;
+
+    for id in server_ids {
+        hive.subscribe(user.id.clone(), id)?;
+    }
 
     Ok(())
 }

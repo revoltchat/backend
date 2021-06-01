@@ -1,4 +1,3 @@
-use crate::database::*;
 use crate::util::result::Result;
 
 use super::PermissionCalculator;
@@ -10,6 +9,7 @@ use std::ops;
 #[repr(u32)]
 pub enum ServerPermission {
     View = 1,
+    ManageServer = 8,
 }
 
 impl_op_ex!(+ |a: &ServerPermission, b: &ServerPermission| -> u32 { *a as u32 | *b as u32 });
@@ -19,6 +19,7 @@ bitfield! {
     pub struct ServerPermissions(MSB0 [u32]);
     u32;
     pub get_view, _: 31;
+    pub get_manage_server, _: 28;
 }
 
 impl<'a> PermissionCalculator<'a> {
@@ -29,14 +30,14 @@ impl<'a> PermissionCalculator<'a> {
             unreachable!()
         };
 
-        if &self.perspective.id == server.owner {
+        if self.perspective.id == server.owner {
             Ok(u32::MAX)
         } else {
             Ok(ServerPermission::View as u32)
         }
     }
 
-    pub async fn for_server(self) -> Result<ChannelPermissions<[u32; 1]>> {
+    pub async fn for_server(self) -> Result<ServerPermissions<[u32; 1]>> {
         Ok(ServerPermissions([self.calculate_server().await?]))
     }
 }

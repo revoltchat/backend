@@ -69,7 +69,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
 
             if let Some(attachment_id) = &data.icon {
                 let attachment =
-                    File::find_and_use(&attachment_id, "icons", "object", &user.id).await?;
+                    File::find_and_use(&attachment_id, "icons", "object", target.id()).await?;
                 set.insert(
                     "icon",
                     to_document(&attachment).map_err(|_| Error::DatabaseError {

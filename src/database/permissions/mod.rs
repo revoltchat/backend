@@ -1,6 +1,7 @@
 pub use crate::database::*;
 
 pub mod channel;
+pub mod server;
 pub mod user;
 
 pub use user::get_relationship;

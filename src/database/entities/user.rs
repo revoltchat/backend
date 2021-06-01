@@ -1,4 +1,5 @@
 use futures::StreamExt;
+use mongodb::bson::Document;
 use mongodb::options::{Collation, FindOneOptions};
 use mongodb::{
     bson::{doc, from_document},
@@ -222,5 +223,32 @@ impl User {
         }
 
         Ok(users)
+    }
+
+    /// Utility function to get all the server IDs the user is in.
+    pub async fn fetch_server_ids(&self) -> Result<Vec<String>> {
+        Ok(get_collection("server_members")
+            .find(
+                doc! {
+                    "_id.user": &self.id
+                },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "find",
+                with: "server_members",
+            })?
+            .filter_map(async move |s| s.ok())
+            .collect::<Vec<Document>>()
+            .await
+            .into_iter()
+            .filter_map(|x| {
+                x.get_document("_id")
+                    .ok()
+                    .map(|i| i.get_str("server").ok().map(|x| x.to_string()))
+            })
+            .flatten()
+            .collect::<Vec<String>>())
     }
 }

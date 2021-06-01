@@ -1,5 +1,5 @@
-use crate::util::result::{Error, Result};
 use crate::database::*;
+use crate::util::result::{Error, Result};
 
 use mongodb::bson::doc;
 
@@ -14,6 +14,9 @@ pub async fn req(user: User, target: Ref) -> Result<()> {
     if !perm.get_view() {
         Err(Error::MissingPermission)?
     }*/
+
+    // ! FIXME: either delete server if owner
+    // ! OR leave server if member
 
     target.delete().await
 }

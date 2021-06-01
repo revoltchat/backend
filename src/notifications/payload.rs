@@ -6,7 +6,7 @@ use crate::{
     util::result::{Error, Result},
 };
 use futures::StreamExt;
-use mongodb::bson::{doc, from_document, Document};
+use mongodb::bson::{doc, from_document};
 
 pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
     let mut user_ids: HashSet<String> = HashSet::new();
@@ -19,30 +19,7 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
         );
     }
 
-    let server_ids = get_collection("server_members")
-        .find(
-            doc! {
-                "_id.user": &user.id
-            },
-            None,
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "find",
-            with: "server_members",
-        })?
-        .filter_map(async move |s| s.ok())
-        .collect::<Vec<Document>>()
-        .await
-        .into_iter()
-        .filter_map(|x| {
-            x.get_document("_id")
-                .ok()
-                .map(|i| i.get_str("server").ok().map(|x| x.to_string()))
-        })
-        .flatten()
-        .collect::<Vec<String>>();
-
+    let server_ids = user.fetch_server_ids().await?;
     let mut cursor = get_collection("servers")
         .find(
             doc! {
