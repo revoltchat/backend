@@ -81,6 +81,9 @@ impl<'a> PermissionCalculator<'a> {
                     Ok(0)
                 }
             }
+            Channel::TextChannel { .. } => {
+                Ok(ChannelPermission::View + ChannelPermission::SendMessage)
+            }
         }
     }
 

@@ -50,6 +50,18 @@ pub enum Channel {
         #[serde(skip_serializing_if = "Option::is_none")]
         last_message: Option<LastMessage>,
     },
+    TextChannel {
+        #[serde(rename = "_id")]
+        id: String,
+        server: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        nonce: Option<String>,
+
+        name: String,
+        description: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        icon: Option<File>,
+    }
 }
 
 impl Channel {
@@ -57,7 +69,8 @@ impl Channel {
         match self {
             Channel::SavedMessages { id, .. }
             | Channel::DirectMessage { id, .. }
-            | Channel::Group { id, .. } => id,
+            | Channel::Group { id, .. }
+            | Channel::TextChannel { id, .. } => id,
         }
     }
 

@@ -43,9 +43,10 @@ pub struct Server {
 
     pub name: String,
     // pub default_permissions: u32,
-    pub channels: Vec<String>,
     // pub invites: Vec<Invite>,
     // pub bans: Vec<Ban>,
+    pub channels: Vec<String>,
+
     #[serde(skip_serializing_if = "Option::is_none")]
     pub icon: Option<File>,
     #[serde(skip_serializing_if = "Option::is_none")]

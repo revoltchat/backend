@@ -143,6 +143,18 @@ impl ClientboundNotification {
                 .ok();
         });
     }
+
+    pub fn publish_to(self, channel: &Channel) {
+        // ! FIXME: update all for channel
+        // ! FIXME: temporary solution for pushing to guilds
+        self.publish(
+            if let Channel::TextChannel { server, .. } = channel {
+                server.clone()
+            } else {
+                channel.id().to_string()
+            }
+        )
+    }
 }
 
 pub fn prehandle_hook(notification: &ClientboundNotification) {
@@ -161,6 +173,7 @@ pub fn prehandle_hook(notification: &ClientboundNotification) {
                         subscribe_if_exists(recipient.clone(), channel_id.to_string()).ok();
                     }
                 }
+                _ => {}
             }
         }
         ClientboundNotification::ServerMemberJoin { id, user } => {

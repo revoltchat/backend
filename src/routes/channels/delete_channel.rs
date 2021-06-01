@@ -108,5 +108,6 @@ pub async fn req(user: User, target: Ref) -> Result<()> {
 
             Ok(())
         }
+        Channel::TextChannel { .. } => unimplemented!()
     }
 }
