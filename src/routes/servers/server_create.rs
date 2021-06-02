@@ -40,34 +40,13 @@ pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
 
     let id = Ulid::new().to_string();
     let cid = Ulid::new().to_string();
-    
-    Channel::TextChannel {
-        id: cid.clone(),
-        server: id.clone(),
-        nonce: Some(info.nonce.clone()),
-        name: "general".to_string(),
-        description: None,
-        icon: None,
-    }.publish().await?;
-
-    let server = Server {
-        id: id.clone(),
-        nonce: Some(info.nonce.clone()),
-        owner: user.id.clone(),
-
-        name: info.name.clone(),
-        channels: vec![ cid ],
-
-        icon: None,
-        banner: None,
-    };
 
     get_collection("server_members")
         .insert_one(
             doc! {
                 "_id": {
-                    "server": id,
-                    "user": user.id
+                    "server": &id,
+                    "user": &user.id
                 }
             },
             None,
@@ -77,6 +56,29 @@ pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
             operation: "insert_one",
             with: "server_members",
         })?;
+
+    Channel::TextChannel {
+        id: cid.clone(),
+        server: id.clone(),
+        nonce: Some(info.nonce.clone()),
+        name: "general".to_string(),
+        description: None,
+        icon: None,
+    }
+    .publish()
+    .await?;
+
+    let server = Server {
+        id: id.clone(),
+        nonce: Some(info.nonce.clone()),
+        owner: user.id.clone(),
+
+        name: info.name.clone(),
+        channels: vec![cid],
+
+        icon: None,
+        banner: None,
+    };
 
     server.clone().publish().await?;
 

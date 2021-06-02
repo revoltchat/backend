@@ -1,12 +1,9 @@
 use crate::database::*;
 use crate::util::result::{Error, Result};
-use crate::util::variables::MAX_GROUP_SIZE;
 
 use mongodb::bson::doc;
 use rocket_contrib::json::{Json, JsonValue};
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
-use std::iter::FromIterator;
 use ulid::Ulid;
 use validator::Validate;
 
@@ -19,28 +16,22 @@ pub struct Data {
     // Maximum length of 36 allows both ULIDs and UUIDs.
     #[validate(length(min = 1, max = 36))]
     nonce: String,
-    users: Vec<String>,
 }
 
-#[post("/create", data = "<info>")]
-pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
+#[post("/<target>/channels", data = "<info>")]
+pub async fn req(user: User, target: Ref, info: Json<Data>) -> Result<JsonValue> {
     let info = info.into_inner();
     info.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    let mut set: HashSet<String> = HashSet::from_iter(info.users.iter().cloned());
-    set.insert(user.id.clone());
+    let target = target.fetch_server().await?;
+    let perm = permissions::PermissionCalculator::new(&user)
+        .with_server(&target)
+        .for_server()
+        .await?;
 
-    if set.len() > *MAX_GROUP_SIZE {
-        Err(Error::GroupTooLarge {
-            max: *MAX_GROUP_SIZE,
-        })?
-    }
-
-    for target in &set {
-        if get_relationship(&user, target) != RelationshipStatus::Friend {
-            Err(Error::NotFriends)?
-        }
+    if !perm.get_manage_server() {
+        Err(Error::MissingPermission)?
     }
 
     if get_collection("channels")
@@ -61,18 +52,34 @@ pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
     }
 
     let id = Ulid::new().to_string();
-    let channel = Channel::Group {
-        id,
+    let channel = Channel::TextChannel {
+        id: id.clone(),
+        server: target.id.clone(),
         nonce: Some(info.nonce),
+
         name: info.name,
         description: info.description,
-        owner: user.id,
-        recipients: set.into_iter().collect::<Vec<String>>(),
         icon: None,
-        last_message: None,
     };
 
     channel.clone().publish().await?;
+    get_collection("servers")
+        .update_one(
+            doc! {
+                "_id": target.id
+            },
+            doc! {
+                "$addToSet": {
+                    "channels": id
+                }
+            },
+            None
+        )
+        .await
+        .map_err(|_| Error::DatabaseError {
+            operation: "update_one",
+            with: "server",
+        })?;
 
     Ok(json!(channel))
 }

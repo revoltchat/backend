@@ -42,7 +42,8 @@ pub enum Channel {
 
         name: String,
         owner: String,
-        description: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        description: Option<String>,
         recipients: Vec<String>,
 
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -58,10 +59,11 @@ pub enum Channel {
         nonce: Option<String>,
 
         name: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
         description: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         icon: Option<File>,
-    }
+    },
 }
 
 impl Channel {

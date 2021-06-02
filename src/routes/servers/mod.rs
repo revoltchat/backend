@@ -4,6 +4,13 @@ mod server_create;
 mod server_delete;
 mod server_edit;
 
+mod channel_create;
+
 pub fn routes() -> Vec<Route> {
-    routes![server_create::req, server_delete::req, server_edit::req]
+    routes![
+        server_create::req,
+        server_delete::req,
+        server_edit::req,
+        channel_create::req
+    ]
 }

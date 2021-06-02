@@ -1,12 +1,15 @@
 use futures::StreamExt;
 use hive_pubsub::PubSub;
+use mongodb::bson::{doc, Document};
 use rauth::auth::Session;
-use mongodb::bson::{Document, doc};
-use serde::{Deserialize, Serialize};
 use rocket_contrib::json::JsonValue;
+use serde::{Deserialize, Serialize};
 
 use super::hive::{get_hive, subscribe_if_exists};
-use crate::{database::*, util::result::{Error, Result}};
+use crate::{
+    database::*,
+    util::result::{Error, Result},
+};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "error")]

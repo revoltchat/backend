@@ -1,9 +1,11 @@
 use crate::database::*;
+use crate::util::result::Error;
 
 use super::hive::get_hive;
 use futures::StreamExt;
 use hive_pubsub::PubSub;
 use mongodb::bson::doc;
+use mongodb::bson::Document;
 use mongodb::options::FindOptions;
 
 pub async fn generate_subscriptions(user: &User) -> Result<(), String> {
@@ -14,6 +16,44 @@ pub async fn generate_subscriptions(user: &User) -> Result<(), String> {
         for relation in relations {
             hive.subscribe(user.id.clone(), relation.id.clone())?;
         }
+    }
+
+    let server_ids = user
+        .fetch_server_ids()
+        .await
+        .map_err(|_| "Failed to fetch memberships.".to_string())?;
+
+    let channel_ids = get_collection("servers")
+        .find(
+            doc! {
+                "_id": {
+                    "$in": &server_ids
+                }
+            },
+            None,
+        )
+        .await
+        .map_err(|_| "Failed to fetch servers.".to_string())?
+        .filter_map(async move |s| s.ok())
+        .collect::<Vec<Document>>()
+        .await
+        .into_iter()
+        .filter_map(|x| {
+            x.get_array("channels").ok().map(|v| {
+                v.into_iter()
+                    .filter_map(|x| x.as_str().map(|x| x.to_string()))
+                    .collect::<Vec<String>>()
+            })
+        })
+        .flatten()
+        .collect::<Vec<String>>();
+
+    for id in server_ids {
+        hive.subscribe(user.id.clone(), id)?;
+    }
+
+    for id in channel_ids {
+        hive.subscribe(user.id.clone(), id)?;
     }
 
     let mut cursor = get_collection("channels")
@@ -43,15 +83,6 @@ pub async fn generate_subscriptions(user: &User) -> Result<(), String> {
         if let Ok(doc) = result {
             hive.subscribe(user.id.clone(), doc.get_str("_id").unwrap().to_string())?;
         }
-    }
-
-    let server_ids = user
-        .fetch_server_ids()
-        .await
-        .map_err(|_| "Failed to fetch memberships.".to_string())?;
-
-    for id in server_ids {
-        hive.subscribe(user.id.clone(), id)?;
     }
 
     Ok(())
