@@ -40,7 +40,7 @@ impl<'a> PermissionCalculator<'a> {
         match channel {
             Channel::SavedMessages { user: owner, .. } => {
                 if &self.perspective.id == owner {
-                    Ok(u32::MAX - ChannelPermission::VoiceCall as u32)
+                    Ok(u32::MAX)
                 } else {
                     Ok(0)
                 }
@@ -81,8 +81,14 @@ impl<'a> PermissionCalculator<'a> {
                     Ok(0)
                 }
             }
-            Channel::TextChannel { .. } => {
-                Ok(ChannelPermission::View + ChannelPermission::SendMessage)
+            Channel::TextChannel { server, .. } => {
+                let server = Server::get(server).await?;
+
+                if self.perspective.id == server.owner {
+                    Ok(u32::MAX)
+                } else {
+                    Ok(ChannelPermission::View + ChannelPermission::SendMessage)
+                }
             }
         }
     }

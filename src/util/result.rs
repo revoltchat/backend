@@ -27,6 +27,7 @@ pub enum Error {
     UnknownChannel,
     UnknownAttachment,
     CannotEditMessage,
+    CannotJoinCall,
     EmptyMessage,
     CannotRemoveYourself,
     GroupTooLarge {
@@ -77,6 +78,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::UnknownChannel => Status::NotFound,
             Error::UnknownAttachment => Status::BadRequest,
             Error::CannotEditMessage => Status::Forbidden,
+            Error::CannotJoinCall => Status::BadRequest,
             Error::EmptyMessage => Status::UnprocessableEntity,
             Error::CannotRemoveYourself => Status::BadRequest,
             Error::GroupTooLarge { .. } => Status::Forbidden,
