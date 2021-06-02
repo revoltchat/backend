@@ -96,6 +96,7 @@ pub async fn req(user: User, target: Ref, options: Form<Options>) -> Result<Json
             ids.insert(message.author.clone());
         }
 
+        ids.remove(&user.id);
         let user_ids = ids.into_iter().collect();
 
         Ok(json!({
