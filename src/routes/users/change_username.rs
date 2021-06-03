@@ -57,7 +57,9 @@ pub async fn req(
 
     ClientboundNotification::UserUpdate {
         id: user.id.clone(),
-        data: json!(data.0),
+        data: json!({
+            "username": data.username
+        }),
         clear: None,
     }
     .publish(user.id.clone());

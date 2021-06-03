@@ -1,4 +1,5 @@
 mod channel;
+mod invites;
 mod message;
 mod microservice;
 mod server;
@@ -9,6 +10,7 @@ use microservice::*;
 
 pub use autumn::*;
 pub use channel::*;
+pub use invites::*;
 pub use january::*;
 pub use message::*;
 pub use server::*;

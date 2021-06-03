@@ -7,6 +7,7 @@ mod fetch_members;
 mod group_add_member;
 mod group_create;
 mod group_remove_member;
+mod invite_channel;
 mod join_call;
 mod message_delete;
 mod message_edit;
@@ -21,6 +22,7 @@ pub fn routes() -> Vec<Route> {
         fetch_members::req,
         delete_channel::req,
         edit_channel::req,
+        invite_channel::req,
         message_send::req,
         message_query::req,
         message_query_stale::req,

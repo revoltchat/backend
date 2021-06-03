@@ -9,13 +9,20 @@ use validator::Validate;
 
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Ref {
-    #[validate(length(min = 26, max = 26))]
+    #[validate(length(min = 1, max = 26))]
     pub id: String,
 }
 
 impl Ref {
+    pub fn from_unchecked(id: String) -> Ref {
+        Ref { id }
+    }
+
     pub fn from(id: String) -> Result<Ref> {
-        Ok(Ref { id })
+        let r = Ref { id };
+        r.validate()
+            .map_err(|error| Error::FailedValidation { error })?;
+        Ok(r)
     }
 
     pub async fn fetch<T: DeserializeOwned>(&self, collection: &'static str) -> Result<T> {
@@ -49,6 +56,10 @@ impl Ref {
 
     pub async fn fetch_server(&self) -> Result<Server> {
         self.fetch("servers").await
+    }
+
+    pub async fn fetch_invite(&self) -> Result<Invite> {
+        self.fetch("invites").await
     }
 
     pub async fn fetch_message(&self, channel: &Channel) -> Result<Message> {

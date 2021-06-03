@@ -17,14 +17,11 @@ pub struct MemberCompositeKey {
 pub struct Member {
     #[serde(rename = "_id")]
     pub id: MemberCompositeKey,
-    pub nickname: Option<String>,
-}
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Invite {
-    pub code: String,
-    pub creator: String,
-    pub channel: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nickname: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avatar: Option<File>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -54,22 +51,6 @@ pub struct Server {
 }
 
 impl Server {
-    pub async fn get(id: &str) -> Result<Server> {
-        let doc = get_collection("servers")
-            .find_one(doc! { "_id": id }, None)
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "find_one",
-                with: "server",
-            })?
-            .ok_or_else(|| Error::UnknownServer)?;
-
-        from_document::<Server>(doc).map_err(|_| Error::DatabaseError {
-            operation: "from_document",
-            with: "server",
-        })
-    }
-
     pub async fn publish(self) -> Result<()> {
         get_collection("servers")
             .insert_one(
@@ -104,5 +85,31 @@ impl Server {
 
     pub async fn delete(&self) -> Result<()> {
         unimplemented!()
+    }
+
+    pub async fn join_member(&self, id: &str) -> Result<()> {
+        get_collection("server_members")
+            .insert_one(
+                doc! {
+                    "_id": {
+                        "server": &self.id,
+                        "user": &id
+                    }
+                },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "insert_one",
+                with: "server_members",
+            })?;
+        
+        ClientboundNotification::ServerMemberJoin {
+            id: self.id.clone(),
+            user: id.to_string()
+        }
+        .publish(self.id.clone());
+
+        Ok(())
     }
 }

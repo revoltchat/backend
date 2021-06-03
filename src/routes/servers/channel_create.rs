@@ -73,7 +73,7 @@ pub async fn req(user: User, target: Ref, info: Json<Data>) -> Result<JsonValue>
                     "channels": id
                 }
             },
-            None
+            None,
         )
         .await
         .map_err(|_| Error::DatabaseError {

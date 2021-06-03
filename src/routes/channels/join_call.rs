@@ -18,8 +18,9 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
 
     let target = target.fetch_channel().await?;
     match target {
-        Channel::SavedMessages { .. }
-        | Channel::TextChannel { .. } => return Err(Error::CannotJoinCall),
+        Channel::SavedMessages { .. } | Channel::TextChannel { .. } => {
+            return Err(Error::CannotJoinCall)
+        }
         _ => {}
     }
 

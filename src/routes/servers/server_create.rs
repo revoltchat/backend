@@ -18,6 +18,7 @@ pub struct Data {
 
 #[post("/create", data = "<info>")]
 pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
+    let info = info.into_inner();
     info.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
@@ -41,44 +42,30 @@ pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
     let id = Ulid::new().to_string();
     let cid = Ulid::new().to_string();
 
-    get_collection("server_members")
-        .insert_one(
-            doc! {
-                "_id": {
-                    "server": &id,
-                    "user": &user.id
-                }
-            },
-            None,
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "insert_one",
-            with: "server_members",
-        })?;
+    let server = Server {
+        id: id.clone(),
+        nonce: Some(info.nonce.clone()),
+        owner: user.id.clone(),
+
+        name: info.name,
+        channels: vec![cid.clone()],
+
+        icon: None,
+        banner: None,
+    };
+
+    server.join_member(&user.id).await?;
 
     Channel::TextChannel {
-        id: cid.clone(),
-        server: id.clone(),
-        nonce: Some(info.nonce.clone()),
+        id: cid,
+        server: id,
+        nonce: Some(info.nonce),
         name: "general".to_string(),
         description: None,
         icon: None,
     }
     .publish()
     .await?;
-
-    let server = Server {
-        id: id.clone(),
-        nonce: Some(info.nonce.clone()),
-        owner: user.id.clone(),
-
-        name: info.name.clone(),
-        channels: vec![cid],
-
-        icon: None,
-        banner: None,
-    };
 
     server.clone().publish().await?;
 

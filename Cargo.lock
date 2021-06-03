@@ -1600,6 +1600,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nanoid"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ffa00dec017b5b1a8b7cf5e2c008bfda1aa7e0697ac1508b491fdf2622fb4d8"
+dependencies = [
+ "rand 0.8.3",
+]
+
+[[package]]
 name = "native-tls"
 version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2341,7 +2350,7 @@ dependencies = [
  "lazy_static",
  "lettre",
  "mongodb",
- "nanoid",
+ "nanoid 0.3.0",
  "regex",
  "reqwest",
  "rocket",
@@ -2497,6 +2506,7 @@ dependencies = [
  "many-to-many",
  "md5",
  "mongodb",
+ "nanoid 0.4.0",
  "num_enum",
  "once_cell",
  "rand 0.7.3",

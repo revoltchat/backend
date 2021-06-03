@@ -18,5 +18,9 @@ pub async fn req(user: User, target: Ref) -> Result<()> {
     // ! FIXME: either delete server if owner
     // ! OR leave server if member
 
+    // also need to delete server invites
+    // and members
+    // and bans
+
     target.delete().await
 }

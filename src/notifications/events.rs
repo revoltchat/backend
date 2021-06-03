@@ -197,7 +197,13 @@ pub async fn prehandle_hook(notification: &ClientboundNotification) -> Result<()
             }
         }
         ClientboundNotification::ServerMemberJoin { id, user } => {
+            let server = Ref::from_unchecked(id.clone()).fetch_server().await?;
+
             subscribe_if_exists(user.clone(), id.clone()).ok();
+
+            for channel in server.channels {
+                subscribe_if_exists(user.clone(), channel).ok();
+            }
         }
         ClientboundNotification::ServerCreate(server) => {
             subscribe_if_exists(server.owner.clone(), server.id.clone()).ok();

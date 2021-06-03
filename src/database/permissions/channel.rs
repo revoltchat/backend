@@ -14,6 +14,7 @@ pub enum ChannelPermission {
     ManageMessages = 4,
     ManageChannel = 8,
     VoiceCall = 16,
+    InviteOthers = 32,
 }
 
 impl_op_ex!(+ |a: &ChannelPermission, b: &ChannelPermission| -> u32 { *a as u32 | *b as u32 });
@@ -27,6 +28,7 @@ bitfield! {
     pub get_manage_messages, _: 29;
     pub get_manage_channel, _: 28;
     pub get_voice_call, _: 27;
+    pub get_invite_others, _: 26;
 }
 
 impl<'a> PermissionCalculator<'a> {
@@ -76,18 +78,21 @@ impl<'a> PermissionCalculator<'a> {
                     Ok(ChannelPermission::View
                         + ChannelPermission::SendMessage
                         + ChannelPermission::ManageChannel
-                        + ChannelPermission::VoiceCall)
+                        + ChannelPermission::VoiceCall
+                        + ChannelPermission::InviteOthers)
                 } else {
                     Ok(0)
                 }
             }
             Channel::TextChannel { server, .. } => {
-                let server = Server::get(server).await?;
+                let server = Ref::from_unchecked(server.clone()).fetch_server().await?;
 
                 if self.perspective.id == server.owner {
                     Ok(u32::MAX)
                 } else {
-                    Ok(ChannelPermission::View + ChannelPermission::SendMessage)
+                    Ok(ChannelPermission::View
+                        + ChannelPermission::SendMessage
+                        + ChannelPermission::InviteOthers)
                 }
             }
         }
