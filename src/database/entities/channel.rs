@@ -186,6 +186,27 @@ impl Channel {
                 with: "channel",
             })?;
 
+        // Remove from server object.
+        if let Channel::TextChannel { server, .. } = &self {
+            get_collection("servers")
+                .update_one(
+                    doc !{
+                        "_id": server
+                    },
+                    doc! {
+                        "$pull": {
+                            "channels": id
+                        }
+                    },
+                    None,
+                )
+                .await
+                .map_err(|_| Error::DatabaseError {
+                    operation: "update_one",
+                    with: "servers",
+                })?;
+        }
+
         ClientboundNotification::ChannelDelete { id: id.to_string() }.publish(id.to_string());
 
         if let Channel::Group { icon, .. } = self {

@@ -13,7 +13,7 @@ lazy_static! {
     ];
 }
 
-#[post("/<target>/invite")]
+#[post("/<target>/invites")]
 pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
     let target = target.fetch_channel().await?;
     let perm = permissions::PermissionCalculator::new(&user)
@@ -30,10 +30,11 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
         Channel::Group { .. } => {
             unimplemented!()
         }
-        Channel::TextChannel { id, .. } => {
+        Channel::TextChannel { id, server, .. } => {
             Invite::Server {
                 code: code.clone(),
                 creator: user.id,
+                server: server.clone(),
                 channel: id.clone(),
             }
             .save()

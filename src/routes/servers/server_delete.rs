@@ -1,26 +1,42 @@
 use crate::database::*;
 use crate::util::result::{Error, Result};
+use crate::notifications::events::ClientboundNotification;
 
 use mongodb::bson::doc;
 
 #[delete("/<target>")]
 pub async fn req(user: User, target: Ref) -> Result<()> {
     let target = target.fetch_server().await?;
-
-    /*let perm = permissions::PermissionCalculator::new(&user)
-        .with_channel(&target)
-        .for_channel()
+    let perm = permissions::PermissionCalculator::new(&user)
+        .with_server(&target)
+        .for_server()
         .await?;
+
     if !perm.get_view() {
-        Err(Error::MissingPermission)?
-    }*/
+        return Err(Error::MissingPermission);
+    }
 
-    // ! FIXME: either delete server if owner
-    // ! OR leave server if member
+    if user.id == target.owner {
+        target.delete().await
+    } else {
+        get_collection("server_members")
+            .delete_one(
+                doc! {
 
-    // also need to delete server invites
-    // and members
-    // and bans
+                },
+                None
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "delete_one",
+                with: "server_member"
+            })?;
 
-    target.delete().await
+        ClientboundNotification::ServerMemberLeave {
+            id: target.id.clone(),
+            user: user.id
+        }.publish(target.id);
+
+        Ok(())
+    }
 }

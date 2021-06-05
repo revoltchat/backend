@@ -38,7 +38,7 @@ pub enum Error {
 
     // ? Server related errors.
     UnknownServer,
-
+    
     // ? General errors.
     TooManyIds,
     FailedValidation {
@@ -54,6 +54,7 @@ pub enum Error {
     InvalidCredentials,
     DuplicateNonce,
     VosoUnavailable,
+    NotFound,
     NoEffect,
 }
 
@@ -96,6 +97,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::InvalidCredentials => Status::Forbidden,
             Error::DuplicateNonce => Status::Conflict,
             Error::VosoUnavailable => Status::BadRequest,
+            Error::NotFound => Status::NotFound,
             Error::NoEffect => Status::Ok,
         };
 

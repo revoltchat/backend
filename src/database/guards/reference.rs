@@ -38,7 +38,7 @@ impl Ref {
                 operation: "find_one",
                 with: &collection,
             })?
-            .ok_or_else(|| Error::UnknownUser)?;
+            .ok_or_else(|| Error::NotFound)?;
 
         Ok(from_document::<T>(doc).map_err(|_| Error::DatabaseError {
             operation: "from_document",

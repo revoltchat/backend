@@ -22,6 +22,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
             server.join_member(&user.id).await?;
 
             Ok(json!({
+                "type": "Server",
                 "channel": channel,
                 "server": server
             }))

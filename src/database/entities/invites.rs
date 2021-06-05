@@ -13,6 +13,7 @@ pub enum Invite {
     Server {
         #[serde(rename = "_id")]
         code: String,
+        server: String,
         creator: String,
         channel: String,
     },
@@ -32,6 +33,13 @@ impl Invite {
         match &self {
             Invite::Server { code, .. } => code,
             Invite::Group { code, .. } => code,
+        }
+    }
+
+    pub fn creator(&self) -> &String {
+        match &self {
+            Invite::Server { creator, .. } => creator,
+            Invite::Group { creator, .. } => creator,
         }
     }
 

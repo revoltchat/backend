@@ -45,7 +45,8 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
     }
 
     match &target {
-        Channel::Group { id, icon, .. } => {
+        Channel::Group { id, icon, .. } |
+        Channel::TextChannel { id, icon, .. } => {
             let mut set = doc! {};
             let mut unset = doc! {};
 
@@ -107,42 +108,44 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
             }
             .publish(id.clone());
 
-            if let Some(name) = data.name {
-                Message::create(
-                    "00000000000000000000000000".to_string(),
-                    id.clone(),
-                    Content::SystemMessage(SystemMessage::ChannelRenamed {
-                        name,
-                        by: user.id.clone(),
-                    }),
-                )
-                .publish(&target)
-                .await
-                .ok();
-            }
+            if let Channel::Group { .. } = &target {
+                if let Some(name) = data.name {
+                    Message::create(
+                        "00000000000000000000000000".to_string(),
+                        id.clone(),
+                        Content::SystemMessage(SystemMessage::ChannelRenamed {
+                            name,
+                            by: user.id.clone(),
+                        }),
+                    )
+                    .publish(&target)
+                    .await
+                    .ok();
+                }
 
-            if let Some(_) = data.description {
-                Message::create(
-                    "00000000000000000000000000".to_string(),
-                    id.clone(),
-                    Content::SystemMessage(SystemMessage::ChannelDescriptionChanged {
-                        by: user.id.clone(),
-                    }),
-                )
-                .publish(&target)
-                .await
-                .ok();
-            }
+                if let Some(_) = data.description {
+                    Message::create(
+                        "00000000000000000000000000".to_string(),
+                        id.clone(),
+                        Content::SystemMessage(SystemMessage::ChannelDescriptionChanged {
+                            by: user.id.clone(),
+                        }),
+                    )
+                    .publish(&target)
+                    .await
+                    .ok();
+                }
 
-            if let Some(_) = data.icon {
-                Message::create(
-                    "00000000000000000000000000".to_string(),
-                    id.clone(),
-                    Content::SystemMessage(SystemMessage::ChannelIconChanged { by: user.id }),
-                )
-                .publish(&target)
-                .await
-                .ok();
+                if let Some(_) = data.icon {
+                    Message::create(
+                        "00000000000000000000000000".to_string(),
+                        id.clone(),
+                        Content::SystemMessage(SystemMessage::ChannelIconChanged { by: user.id }),
+                    )
+                    .publish(&target)
+                    .await
+                    .ok();
+                }
             }
 
             if remove_icon {
