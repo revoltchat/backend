@@ -51,6 +51,12 @@ pub enum RemoveServerField {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub enum RemoveMemberField {
+    Nickname,
+    Avatar
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum ClientboundNotification {
     Error(WebSocketError),
@@ -108,6 +114,12 @@ pub enum ClientboundNotification {
     },
     ServerDelete {
         id: String,
+    },
+    ServerMemberUpdate {
+        id: MemberCompositeKey,
+        data: JsonValue,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        clear: Option<RemoveMemberField>,
     },
     ServerMemberJoin {
         id: String,
@@ -168,7 +180,7 @@ pub async fn prehandle_hook(notification: &ClientboundNotification) -> Result<()
                 }
                 Channel::TextChannel { server, .. } => {
                     // ! FIXME: write a better algorithm?
-                    let members = Server::fetch_members(server).await?;
+                    let members = Server::fetch_member_ids(server).await?;
                     for member in members {
                         subscribe_if_exists(member.clone(), channel_id.to_string()).ok();
                     }

@@ -207,7 +207,7 @@ impl Server {
         Ok(())
     }
 
-    pub async fn fetch_members(id: &str) -> Result<Vec<String>> {
+    pub async fn fetch_member_ids(id: &str) -> Result<Vec<String>> {
         Ok(get_collection("server_members")
             .find(
                 doc! {

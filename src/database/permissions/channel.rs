@@ -9,12 +9,12 @@ use std::ops;
 #[derive(Debug, PartialEq, Eq, TryFromPrimitive, Copy, Clone)]
 #[repr(u32)]
 pub enum ChannelPermission {
-    View = 1,
-    SendMessage = 2,
-    ManageMessages = 4,
-    ManageChannel = 8,
-    VoiceCall = 16,
-    InviteOthers = 32,
+    View           = 0b00000000000000000000000000000001, // 1
+    SendMessage    = 0b00000000000000000000000000000010, // 2
+    ManageMessages = 0b00000000000000000000000000000100, // 4
+    ManageChannel  = 0b00000000000000000000000000001000, // 8
+    VoiceCall      = 0b00000000000000000000000000010000, // 16
+    InviteOthers   = 0b00000000000000000000000000100000, // 32
 }
 
 impl_op_ex!(+ |a: &ChannelPermission, b: &ChannelPermission| -> u32 { *a as u32 | *b as u32 });

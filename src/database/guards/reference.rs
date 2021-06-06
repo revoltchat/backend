@@ -62,6 +62,28 @@ impl Ref {
         self.fetch("invites").await
     }
 
+    pub async fn fetch_member(&self, server: &str) -> Result<Member> {
+        let doc = get_collection("server_members")
+            .find_one(
+                doc! {
+                    "_id.user": &self.id,
+                    "_id.server": server
+                },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "find_one",
+                with: "server_member",
+            })?
+            .ok_or_else(|| Error::NotFound)?;
+
+        Ok(from_document::<Member>(doc).map_err(|_| Error::DatabaseError {
+            operation: "from_document",
+            with: "server_member",
+        })?)
+    }
+
     pub async fn fetch_message(&self, channel: &Channel) -> Result<Message> {
         let message: Message = self.fetch("messages").await?;
         if &message.channel != channel.id() {

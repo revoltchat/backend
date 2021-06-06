@@ -10,10 +10,10 @@ use std::ops;
 #[derive(Debug, PartialEq, Eq, TryFromPrimitive, Copy, Clone)]
 #[repr(u32)]
 pub enum UserPermission {
-    Access = 1,
-    ViewProfile = 2,
-    SendMessage = 4,
-    Invite = 8,
+    Access      = 0b00000000000000000000000000000001, // 1
+    ViewProfile = 0b00000000000000000000000000000010, // 2
+    SendMessage = 0b00000000000000000000000000000100, // 4
+    Invite      = 0b00000000000000000000000000001000, // 8
 }
 
 bitfield! {

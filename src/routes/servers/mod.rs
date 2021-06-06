@@ -7,7 +7,9 @@ mod server_edit;
 
 mod channel_create;
 
-mod members_fetch;
+mod member_fetch_all;
+mod member_fetch;
+mod member_edit;
 
 mod invites_fetch;
 
@@ -18,7 +20,9 @@ pub fn routes() -> Vec<Route> {
         server_fetch::req,
         server_edit::req,
         channel_create::req,
-        members_fetch::req,
+        member_fetch_all::req,
+        member_fetch::req,
+        member_edit::req,
         invites_fetch::req
     ]
 }
