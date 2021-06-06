@@ -10,8 +10,9 @@ use validator::Validate;
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
     #[validate(length(min = 1, max = 32))]
-    #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
+    #[validate(length(min = 0, max = 1024))]
+    description: Option<String>,
     icon: Option<String>,
     banner: Option<String>,
     remove: Option<RemoveServerField>,
@@ -53,11 +54,18 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
                 unset.insert("banner", 1);
                 remove_banner = true;
             }
+            RemoveServerField::Description => {
+                unset.insert("description", 1);
+            }
         }
     }
 
     if let Some(name) = &data.name {
         set.insert("name", name);
+    }
+
+    if let Some(description) = &data.description {
+        set.insert("description", description);
     }
 
     if let Some(attachment_id) = &data.icon {

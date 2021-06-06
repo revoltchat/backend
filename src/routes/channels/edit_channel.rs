@@ -57,6 +57,9 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
                         unset.insert("icon", 1);
                         remove_icon = true;
                     }
+                    RemoveChannelField::Description => {
+                        unset.insert("description", 1);
+                    }
                 }
             }
 

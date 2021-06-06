@@ -11,6 +11,8 @@ use validator::Validate;
 pub struct Data {
     #[validate(length(min = 1, max = 32))]
     name: String,
+    #[validate(length(min = 0, max = 1024))]
+    description: Option<String>,
     // Maximum length of 36 allows both ULIDs and UUIDs.
     #[validate(length(min = 1, max = 36))]
     nonce: String,
@@ -48,6 +50,7 @@ pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
         owner: user.id.clone(),
 
         name: info.name,
+        description: info.description,
         channels: vec![cid.clone()],
 
         icon: None,

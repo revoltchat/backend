@@ -40,12 +40,14 @@ pub enum RemoveUserField {
 #[derive(Serialize, Deserialize, Debug)]
 pub enum RemoveChannelField {
     Icon,
+    Description,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum RemoveServerField {
     Icon,
     Banner,
+    Description,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
