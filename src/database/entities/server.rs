@@ -258,4 +258,30 @@ impl Server {
 
         Ok(())
     }
+
+    pub async fn remove_member(&self, id: &str) -> Result<()> {
+        get_collection("server_members")
+            .delete_one(
+                doc! {
+                    "_id": {
+                        "server": &self.id,
+                        "user": &id
+                    }
+                },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "delete_one",
+                with: "server_members",
+            })?;
+        
+        ClientboundNotification::ServerMemberLeave {
+            id: self.id.clone(),
+            user: id.to_string()
+        }
+        .publish(self.id.clone());
+
+        Ok(())
+    }
 }

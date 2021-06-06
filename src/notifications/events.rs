@@ -11,7 +11,7 @@ use crate::{
     util::result::{Error, Result},
 };
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "error")]
 pub enum WebSocketError {
     LabelMe,
@@ -29,7 +29,7 @@ pub enum ServerboundNotification {
     EndTyping { channel: String },
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum RemoveUserField {
     ProfileContent,
     ProfileBackground,
@@ -37,26 +37,26 @@ pub enum RemoveUserField {
     Avatar,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum RemoveChannelField {
     Icon,
     Description,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum RemoveServerField {
     Icon,
     Banner,
     Description,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum RemoveMemberField {
     Nickname,
     Avatar
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum ClientboundNotification {
     Error(WebSocketError),
@@ -210,7 +210,7 @@ pub async fn prehandle_hook(notification: &ClientboundNotification) -> Result<()
     Ok(())
 }
 
-pub fn posthandle_hook(notification: &ClientboundNotification) {
+pub async fn posthandle_hook(notification: &ClientboundNotification) {
     match &notification {
         ClientboundNotification::ChannelDelete { id } => {
             get_hive().hive.drop_topic(&id).ok();
@@ -218,7 +218,7 @@ pub fn posthandle_hook(notification: &ClientboundNotification) {
         ClientboundNotification::ChannelGroupLeave { id, user } => {
             get_hive()
                 .hive
-                .unsubscribe(&user.to_string(), &id.to_string())
+                .unsubscribe(user, id)
                 .ok();
         }
         ClientboundNotification::ServerDelete { id } => {
@@ -227,14 +227,23 @@ pub fn posthandle_hook(notification: &ClientboundNotification) {
         ClientboundNotification::ServerMemberLeave { id, user } => {
             get_hive()
                 .hive
-                .unsubscribe(&user.to_string(), &id.to_string())
+                .unsubscribe(user, id)
                 .ok();
+
+            if let Ok(server) = Ref::from_unchecked(id.clone()).fetch_server().await {
+                for channel in server.channels {
+                    get_hive()
+                        .hive
+                        .unsubscribe(user, &channel)
+                        .ok();
+                }
+            }
         }
         ClientboundNotification::UserRelationship { id, user, status } => {
             if status == &RelationshipStatus::None {
                 get_hive()
                     .hive
-                    .unsubscribe(&id.to_string(), &user.id.to_string())
+                    .unsubscribe(id, &user.id)
                     .ok();
             }
         }

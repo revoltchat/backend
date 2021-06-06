@@ -28,14 +28,14 @@ pub enum RelationshipStatus {
     BlockedOther,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Relationship {
     #[serde(rename = "_id")]
     pub id: String,
     pub status: RelationshipStatus,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Presence {
     Online,
     Idle,
@@ -43,7 +43,7 @@ pub enum Presence {
     Invisible,
 }
 
-#[derive(Validate, Serialize, Deserialize, Debug)]
+#[derive(Validate, Serialize, Deserialize, Debug, Clone)]
 pub struct UserStatus {
     #[validate(length(min = 1, max = 128))]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -52,7 +52,7 @@ pub struct UserStatus {
     pub presence: Option<Presence>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UserProfile {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<String>,
@@ -72,7 +72,7 @@ pub enum Badges {
 impl_op_ex_commutative!(+ |a: &i32, b: &Badges| -> i32 { *a | *b as i32 });
 
 // When changing this struct, update notifications/payload.rs#80
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {
     #[serde(rename = "_id")]
     pub id: String,

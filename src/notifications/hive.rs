@@ -13,8 +13,11 @@ static HIVE: OnceCell<Hive> = OnceCell::new();
 
 pub async fn init_hive() {
     let hive = MongodbPubSub::new(
-        |ids, notification| {
-            super::events::posthandle_hook(&notification);
+        |ids, notification: ClientboundNotification| {
+            let notif = notification.clone();
+            async_std::task::spawn(async move {
+                super::events::posthandle_hook(&notif).await;
+            });
 
             if let Ok(data) = to_string(&notification) {
                 debug!("Pushing out notification. {}", data);

@@ -9,7 +9,8 @@ use std::ops;
 #[repr(u32)]
 pub enum ServerPermission {
     View            = 0b00000000000000000000000000000001, // 1
-    // 2 bits of space
+    ManageMembers   = 0b00000000000000000000000000000010, // 2
+    ManageChannels  = 0b00000000000000000000000000000100, // 4
     ManageServer    = 0b00000000000000000000000000001000, // 8
     // 8 bits of space
     ChangeNickname  = 0b00000000000000000001000000000000, // 4096
@@ -26,6 +27,8 @@ bitfield! {
     pub struct ServerPermissions(MSB0 [u32]);
     u32;
     pub get_view, _: 31;
+    pub get_manage_members, _: 30;
+    pub get_manage_channels, _: 29;
     pub get_manage_server, _: 28;
 
     pub get_change_nickname, _: 19;
