@@ -42,9 +42,6 @@ pub struct Server {
     pub owner: String,
 
     pub name: String,
-    // pub default_permissions: u32,
-    // pub invites: Vec<Invite>,
-    // pub bans: Vec<Ban>,
     pub channels: Vec<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -90,6 +87,8 @@ impl Server {
         let messages = get_collection("messages");
 
         // Check if there are any attachments we need to delete.
+        // ! FIXME: make this generic and merge with channel delete
+        // ! e.g. delete_channel(filter: doc!)
         let message_ids = messages
             .find(
                 doc! {
@@ -204,6 +203,32 @@ impl Server {
         }
 
         Ok(())
+    }
+
+    pub async fn fetch_members(id: &str) -> Result<Vec<String>> {
+        Ok(get_collection("server_members")
+            .find(
+                doc! {
+                    "_id.server": id
+                },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "find",
+                with: "server_members",
+            })?
+            .filter_map(async move |s| s.ok())
+            .collect::<Vec<Document>>()
+            .await
+            .into_iter()
+            .filter_map(|x| {
+                x.get_document("_id")
+                    .ok()
+                    .map(|i| i.get_str("user").ok().map(|x| x.to_string()))
+            })
+            .flatten()
+            .collect::<Vec<String>>())
     }
 
     pub async fn join_member(&self, id: &str) -> Result<()> {

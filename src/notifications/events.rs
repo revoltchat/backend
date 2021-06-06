@@ -166,30 +166,7 @@ pub async fn prehandle_hook(notification: &ClientboundNotification) -> Result<()
                 }
                 Channel::TextChannel { server, .. } => {
                     // ! FIXME: write a better algorithm?
-                    let members = get_collection("server_members")
-                        .find(
-                            doc! {
-                                "_id.server": server
-                            },
-                            None,
-                        )
-                        .await
-                        .map_err(|_| Error::DatabaseError {
-                            operation: "find",
-                            with: "server_members",
-                        })?
-                        .filter_map(async move |s| s.ok())
-                        .collect::<Vec<Document>>()
-                        .await
-                        .into_iter()
-                        .filter_map(|x| {
-                            x.get_document("_id")
-                                .ok()
-                                .map(|i| i.get_str("user").ok().map(|x| x.to_string()))
-                        })
-                        .flatten()
-                        .collect::<Vec<String>>();
-
+                    let members = Server::fetch_members(server).await?;
                     for member in members {
                         subscribe_if_exists(member.clone(), channel_id.to_string()).ok();
                     }
