@@ -38,6 +38,7 @@ pub enum Error {
 
     // ? Server related errors.
     UnknownServer,
+    Banned,
     
     // ? General errors.
     TooManyIds,
@@ -87,6 +88,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::NotInGroup => Status::NotFound,
 
             Error::UnknownServer => Status::NotFound,
+            Error::Banned => Status::Forbidden,
 
             Error::FailedValidation { .. } => Status::UnprocessableEntity,
             Error::DatabaseError { .. } => Status::InternalServerError,

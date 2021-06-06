@@ -25,7 +25,7 @@ impl Ref {
         Ok(r)
     }
 
-    pub async fn fetch<T: DeserializeOwned>(&self, collection: &'static str) -> Result<T> {
+    async fn fetch<T: DeserializeOwned>(&self, collection: &'static str) -> Result<T> {
         let doc = get_collection(&collection)
             .find_one(
                 doc! {
@@ -81,6 +81,28 @@ impl Ref {
         Ok(from_document::<Member>(doc).map_err(|_| Error::DatabaseError {
             operation: "from_document",
             with: "server_member",
+        })?)
+    }
+
+    pub async fn fetch_ban(&self, server: &str) -> Result<Ban> {
+        let doc = get_collection("server_bans")
+            .find_one(
+                doc! {
+                    "_id.user": &self.id,
+                    "_id.server": server
+                },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "find_one",
+                with: "server_ban",
+            })?
+            .ok_or_else(|| Error::NotFound)?;
+
+        Ok(from_document::<Ban>(doc).map_err(|_| Error::DatabaseError {
+            operation: "from_document",
+            with: "server_ban",
         })?)
     }
 

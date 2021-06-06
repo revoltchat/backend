@@ -30,7 +30,7 @@ pub struct Member {
 pub struct Ban {
     #[serde(rename = "_id")]
     pub id: MemberCompositeKey,
-    pub reason: String,
+    pub reason: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -234,6 +234,23 @@ impl Server {
     }
 
     pub async fn join_member(&self, id: &str) -> Result<()> {
+        if get_collection("server_bans")
+            .find_one(
+                doc! {
+                    "_id.server": &self.id,
+                    "_id.user": &id
+                },
+                None
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "find_one",
+                with: "server_bans",
+            })?
+            .is_some() {
+            return Err(Error::Banned)
+        }
+
         get_collection("server_members")
             .insert_one(
                 doc! {
@@ -260,7 +277,7 @@ impl Server {
     }
 
     pub async fn remove_member(&self, id: &str) -> Result<()> {
-        get_collection("server_members")
+        let result = get_collection("server_members")
             .delete_one(
                 doc! {
                     "_id": {
@@ -276,11 +293,13 @@ impl Server {
                 with: "server_members",
             })?;
         
-        ClientboundNotification::ServerMemberLeave {
-            id: self.id.clone(),
-            user: id.to_string()
+        if result.deleted_count > 0 {
+            ClientboundNotification::ServerMemberLeave {
+                id: self.id.clone(),
+                user: id.to_string()
+            }
+            .publish(self.id.clone());
         }
-        .publish(self.id.clone());
 
         Ok(())
     }

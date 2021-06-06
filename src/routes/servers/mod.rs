@@ -12,6 +12,10 @@ mod member_remove;
 mod member_fetch;
 mod member_edit;
 
+mod ban_create;
+mod ban_remove;
+mod ban_list;
+
 mod invites_fetch;
 
 pub fn routes() -> Vec<Route> {
@@ -25,6 +29,9 @@ pub fn routes() -> Vec<Route> {
         member_remove::req,
         member_fetch::req,
         member_edit::req,
+        ban_create::req,
+        ban_remove::req,
+        ban_list::req,
         invites_fetch::req
     ]
 }

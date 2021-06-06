@@ -12,7 +12,9 @@ pub enum ServerPermission {
     ManageMembers   = 0b00000000000000000000000000000010, // 2
     ManageChannels  = 0b00000000000000000000000000000100, // 4
     ManageServer    = 0b00000000000000000000000000001000, // 8
-    // 8 bits of space
+    KickMembers     = 0b00000000000000000000000000010000, // 16
+    BanMembers      = 0b00000000000000000000000000100000, // 32
+    // 6 bits of space
     ChangeNickname  = 0b00000000000000000001000000000000, // 4096
     ManageNicknames = 0b00000000000000000010000000000000, // 8192
     ChangeAvatar    = 0b00000000000000000100000000000000, // 16392
@@ -30,6 +32,8 @@ bitfield! {
     pub get_manage_members, _: 30;
     pub get_manage_channels, _: 29;
     pub get_manage_server, _: 28;
+    pub get_kick_members, _: 27;
+    pub get_ban_members, _: 26;
 
     pub get_change_nickname, _: 19;
     pub get_manage_nicknames, _: 18;
