@@ -68,7 +68,7 @@ pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
     .publish()
     .await?;
 
-    server.clone().publish().await?;
+    server.clone().create().await?;
     server.join_member(&user.id).await?;
 
     Ok(json!(server))

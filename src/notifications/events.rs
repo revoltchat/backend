@@ -1,6 +1,5 @@
-use futures::StreamExt;
 use hive_pubsub::PubSub;
-use mongodb::bson::{doc, Document};
+use mongodb::bson::doc;
 use rauth::auth::Session;
 use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
@@ -8,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use super::hive::{get_hive, subscribe_if_exists};
 use crate::{
     database::*,
-    util::result::{Error, Result},
+    util::result::{Result},
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -105,7 +104,6 @@ pub enum ClientboundNotification {
         user: String,
     },
 
-    ServerCreate(Server),
     ServerUpdate {
         id: String,
         data: JsonValue,
@@ -195,9 +193,6 @@ pub async fn prehandle_hook(notification: &ClientboundNotification) -> Result<()
             for channel in server.channels {
                 subscribe_if_exists(user.clone(), channel).ok();
             }
-        }
-        ClientboundNotification::ServerCreate(server) => {
-            subscribe_if_exists(server.owner.clone(), server.id.clone()).ok();
         }
         ClientboundNotification::UserRelationship { id, user, status } => {
             if status != &RelationshipStatus::None {

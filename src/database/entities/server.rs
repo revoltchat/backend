@@ -53,7 +53,7 @@ pub struct Server {
 }
 
 impl Server {
-    pub async fn publish(self) -> Result<()> {
+    pub async fn create(self) -> Result<()> {
         get_collection("servers")
             .insert_one(
                 to_document(&self).map_err(|_| Error::DatabaseError {
@@ -67,9 +67,6 @@ impl Server {
                 operation: "insert_one",
                 with: "server",
             })?;
-
-        let server_id = self.id.clone();
-        ClientboundNotification::ServerCreate(self).publish(server_id);
 
         Ok(())
     }
