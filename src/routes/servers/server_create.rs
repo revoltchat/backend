@@ -57,8 +57,6 @@ pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
         banner: None,
     };
 
-    server.join_member(&user.id).await?;
-
     Channel::TextChannel {
         id: cid,
         server: id,
@@ -71,6 +69,7 @@ pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
     .await?;
 
     server.clone().publish().await?;
+    server.join_member(&user.id).await?;
 
     Ok(json!(server))
 }

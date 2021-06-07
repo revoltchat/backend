@@ -16,6 +16,14 @@ pub async fn req(user: User, server: Ref, target: Ref) -> Result<()> {
         Err(Error::MissingPermission)?
     }
 
+    if target.id == user.id {
+        return Err(Error::InvalidOperation)
+    }
+
+    if target.id == server.owner {
+        return Err(Error::MissingPermission)
+    }
+
     let target = target.fetch_ban(&server.id).await?;
     get_collection("server_bans")
         .delete_one(
