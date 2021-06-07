@@ -78,10 +78,12 @@ impl Ref {
             })?
             .ok_or_else(|| Error::NotFound)?;
 
-        Ok(from_document::<Member>(doc).map_err(|_| Error::DatabaseError {
-            operation: "from_document",
-            with: "server_member",
-        })?)
+        Ok(
+            from_document::<Member>(doc).map_err(|_| Error::DatabaseError {
+                operation: "from_document",
+                with: "server_member",
+            })?,
+        )
     }
 
     pub async fn fetch_ban(&self, server: &str) -> Result<Ban> {

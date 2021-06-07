@@ -8,18 +8,18 @@ use std::ops;
 #[derive(Debug, PartialEq, Eq, TryFromPrimitive, Copy, Clone)]
 #[repr(u32)]
 pub enum ServerPermission {
-    View            = 0b00000000000000000000000000000001, // 1
-    ManageMembers   = 0b00000000000000000000000000000010, // 2
-    ManageChannels  = 0b00000000000000000000000000000100, // 4
-    ManageServer    = 0b00000000000000000000000000001000, // 8
-    KickMembers     = 0b00000000000000000000000000010000, // 16
-    BanMembers      = 0b00000000000000000000000000100000, // 32
+    View = 0b00000000000000000000000000000001,           // 1
+    ManageMembers = 0b00000000000000000000000000000010,  // 2
+    ManageChannels = 0b00000000000000000000000000000100, // 4
+    ManageServer = 0b00000000000000000000000000001000,   // 8
+    KickMembers = 0b00000000000000000000000000010000,    // 16
+    BanMembers = 0b00000000000000000000000000100000,     // 32
     // 6 bits of space
-    ChangeNickname  = 0b00000000000000000001000000000000, // 4096
+    ChangeNickname = 0b00000000000000000001000000000000, // 4096
     ManageNicknames = 0b00000000000000000010000000000000, // 8192
-    ChangeAvatar    = 0b00000000000000000100000000000000, // 16392
-    RemoveAvatars   = 0b00000000000000001000000000000000, // 32784
-    // 16 bits of space
+    ChangeAvatar = 0b00000000000000000100000000000000,   // 16392
+    RemoveAvatars = 0b00000000000000001000000000000000,  // 32784
+                                                         // 16 bits of space
 }
 
 impl_op_ex!(+ |a: &ServerPermission, b: &ServerPermission| -> u32 { *a as u32 | *b as u32 });
@@ -52,7 +52,9 @@ impl<'a> PermissionCalculator<'a> {
         if self.perspective.id == server.owner {
             Ok(u32::MAX)
         } else {
-            Ok(ServerPermission::View + ServerPermission::ChangeNickname + ServerPermission::ChangeAvatar)
+            Ok(ServerPermission::View
+                + ServerPermission::ChangeNickname
+                + ServerPermission::ChangeAvatar)
         }
     }
 

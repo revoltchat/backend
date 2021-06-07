@@ -53,7 +53,7 @@ pub enum RemoveServerField {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum RemoveMemberField {
     Nickname,
-    Avatar
+    Avatar,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -216,35 +216,23 @@ pub async fn posthandle_hook(notification: &ClientboundNotification) {
             get_hive().hive.drop_topic(&id).ok();
         }
         ClientboundNotification::ChannelGroupLeave { id, user } => {
-            get_hive()
-                .hive
-                .unsubscribe(user, id)
-                .ok();
+            get_hive().hive.unsubscribe(user, id).ok();
         }
         ClientboundNotification::ServerDelete { id } => {
             get_hive().hive.drop_topic(&id).ok();
         }
         ClientboundNotification::ServerMemberLeave { id, user } => {
-            get_hive()
-                .hive
-                .unsubscribe(user, id)
-                .ok();
+            get_hive().hive.unsubscribe(user, id).ok();
 
             if let Ok(server) = Ref::from_unchecked(id.clone()).fetch_server().await {
                 for channel in server.channels {
-                    get_hive()
-                        .hive
-                        .unsubscribe(user, &channel)
-                        .ok();
+                    get_hive().hive.unsubscribe(user, &channel).ok();
                 }
             }
         }
         ClientboundNotification::UserRelationship { id, user, status } => {
             if status == &RelationshipStatus::None {
-                get_hive()
-                    .hive
-                    .unsubscribe(id, &user.id)
-                    .ok();
+                get_hive().hive.unsubscribe(id, &user.id).ok();
             }
         }
         _ => {}

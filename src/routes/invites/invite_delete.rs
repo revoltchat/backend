@@ -21,8 +21,8 @@ pub async fn req(user: User, target: Ref) -> Result<()> {
                 }
 
                 target.delete().await
-            },
-            _ => unreachable!()
+            }
+            _ => unreachable!(),
         }
     }
 }

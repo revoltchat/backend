@@ -11,18 +11,18 @@ pub async fn req(user: User, target: Ref, member: String) -> Result<()> {
         .with_server(&target)
         .for_server()
         .await?;
-    
+
     if !perm.get_manage_members() {
-        return Err(Error::MissingPermission)
+        return Err(Error::MissingPermission);
     }
 
     let member = Ref::from(member)?.fetch_member(&target.id).await?;
     if member.id.user == user.id {
-        return Err(Error::InvalidOperation)
+        return Err(Error::InvalidOperation);
     }
 
     if target.id == target.owner {
-        return Err(Error::MissingPermission)
+        return Err(Error::MissingPermission);
     }
 
     target.remove_member(&member.id.user).await

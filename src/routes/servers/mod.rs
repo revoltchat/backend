@@ -2,19 +2,19 @@ use rocket::Route;
 
 mod server_create;
 mod server_delete;
-mod server_fetch;
 mod server_edit;
+mod server_fetch;
 
 mod channel_create;
 
+mod member_edit;
+mod member_fetch;
 mod member_fetch_all;
 mod member_remove;
-mod member_fetch;
-mod member_edit;
 
 mod ban_create;
-mod ban_remove;
 mod ban_list;
+mod ban_remove;
 
 mod invites_fetch;
 

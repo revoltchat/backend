@@ -21,8 +21,7 @@ pub async fn req(user: User, server: Ref, target: String, data: Json<Data>) -> R
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if data.nickname.is_none() && data.avatar.is_none() && data.remove.is_none()
-    {
+    if data.nickname.is_none() && data.avatar.is_none() && data.remove.is_none() {
         return Ok(());
     }
 
@@ -35,30 +34,31 @@ pub async fn req(user: User, server: Ref, target: String, data: Json<Data>) -> R
         .await?;
 
     if target.id.user == user.id {
-        if (data.nickname.is_some() && !perm.get_change_nickname()) ||
-            (data.avatar.is_some() && !perm.get_change_avatar()) {
-            return Err(Error::MissingPermission)
+        if (data.nickname.is_some() && !perm.get_change_nickname())
+            || (data.avatar.is_some() && !perm.get_change_avatar())
+        {
+            return Err(Error::MissingPermission);
         }
 
         if let Some(remove) = &data.remove {
             if match remove {
                 RemoveMemberField::Avatar => !perm.get_change_avatar(),
-                RemoveMemberField::Nickname => !perm.get_change_nickname()
+                RemoveMemberField::Nickname => !perm.get_change_nickname(),
             } {
-                return Err(Error::MissingPermission)
+                return Err(Error::MissingPermission);
             }
         }
     } else {
         if data.avatar.is_some() || (data.nickname.is_some() && !perm.get_manage_nicknames()) {
-            return Err(Error::MissingPermission)
+            return Err(Error::MissingPermission);
         }
 
         if let Some(remove) = &data.remove {
             if match remove {
                 RemoveMemberField::Avatar => !perm.get_remove_avatars(),
-                RemoveMemberField::Nickname => !perm.get_manage_nicknames()
+                RemoveMemberField::Nickname => !perm.get_manage_nicknames(),
             } {
-                return Err(Error::MissingPermission)
+                return Err(Error::MissingPermission);
             }
         }
     }
@@ -84,7 +84,8 @@ pub async fn req(user: User, server: Ref, target: String, data: Json<Data>) -> R
     }
 
     if let Some(attachment_id) = &data.avatar {
-        let attachment = File::find_and_use(&attachment_id, "avatars", "user", &target.id.user).await?;
+        let attachment =
+            File::find_and_use(&attachment_id, "avatars", "user", &target.id.user).await?;
         set.insert(
             "avatar",
             to_document(&attachment).map_err(|_| Error::DatabaseError {
@@ -107,7 +108,11 @@ pub async fn req(user: User, server: Ref, target: String, data: Json<Data>) -> R
 
     if operations.len() > 0 {
         get_collection("server_members")
-            .update_one(doc! { "_id.server": &server.id, "_id.user": &target.id.user }, operations, None)
+            .update_one(
+                doc! { "_id.server": &server.id, "_id.user": &target.id.user },
+                operations,
+                None,
+            )
             .await
             .map_err(|_| Error::DatabaseError {
                 operation: "update_one",

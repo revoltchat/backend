@@ -12,7 +12,7 @@ pub async fn req(user: User, target: Ref, member: String) -> Result<JsonValue> {
         .with_server(&target)
         .for_server()
         .await?;
-    
+
     if !perm.get_view() {
         Err(Error::MissingPermission)?
     }

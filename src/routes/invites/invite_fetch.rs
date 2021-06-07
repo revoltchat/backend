@@ -18,8 +18,8 @@ pub enum InviteResponse {
         channel_description: Option<String>,
         user_name: String,
         #[serde(skip_serializing_if = "Option::is_none")]
-        user_avatar: Option<File>
-    }
+        user_avatar: Option<File>,
+    },
 }
 
 #[get("/<target>")]
@@ -28,14 +28,18 @@ pub async fn req(target: Ref) -> Result<JsonValue> {
 
     match target {
         Invite::Server {
-            channel,
-            creator,
-            ..
+            channel, creator, ..
         } => {
             let channel = Ref::from_unchecked(channel).fetch_channel().await?;
             let creator = Ref::from_unchecked(creator).fetch_user().await?;
 
-            if let Channel::TextChannel { server, name, description, .. } = channel {
+            if let Channel::TextChannel {
+                server,
+                name,
+                description,
+                ..
+            } = channel
+            {
                 let server = Ref::from_unchecked(server).fetch_server().await?;
 
                 Ok(json!(InviteResponse::Server {

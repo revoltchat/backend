@@ -11,7 +11,7 @@ pub async fn req(user: User, target: Ref) -> Result<()> {
         .with_channel(&target)
         .for_channel()
         .await?;
-    
+
     if !perm.get_view() {
         Err(Error::MissingPermission)?
     }

@@ -190,7 +190,7 @@ impl Channel {
         if let Channel::TextChannel { server, .. } = &self {
             get_collection("servers")
                 .update_one(
-                    doc !{
+                    doc! {
                         "_id": server
                     },
                     doc! {

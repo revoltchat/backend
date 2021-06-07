@@ -2,8 +2,8 @@ use crate::database::*;
 use crate::util::result::{Error, Result};
 
 use futures::StreamExt;
-use rocket_contrib::json::JsonValue;
 use mongodb::bson::{doc, from_document};
+use rocket_contrib::json::JsonValue;
 
 #[get("/<target>/bans")]
 pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
@@ -13,7 +13,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
         .with_server(&target)
         .for_server()
         .await?;
-    
+
     if !perm.get_manage_members() {
         Err(Error::MissingPermission)?
     }
@@ -30,7 +30,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
             operation: "find",
             with: "server_bans",
         })?;
-    
+
     let mut bans = vec![];
     while let Some(result) = cursor.next().await {
         if let Ok(doc) = result {
@@ -39,6 +39,6 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
             }
         }
     }
-    
+
     Ok(json!(bans))
 }

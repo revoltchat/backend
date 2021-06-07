@@ -39,7 +39,7 @@ pub enum Error {
     // ? Server related errors.
     UnknownServer,
     Banned,
-    
+
     // ? General errors.
     TooManyIds,
     FailedValidation {

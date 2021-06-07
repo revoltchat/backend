@@ -1,10 +1,10 @@
 use crate::database::*;
 use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
-use mongodb::bson::Document;
-use mongodb::bson::doc;
 use futures::StreamExt;
+use mongodb::bson::doc;
 use mongodb::bson::to_document;
+use mongodb::bson::Document;
 use mongodb::options::FindOptions;
 use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
@@ -149,9 +149,9 @@ impl Server {
                 operation: "delete_many",
                 with: "messages",
             })?;
-        
+
         // Delete all channels, members, bans and invites.
-        for with in [ "channels", "invites" ] {
+        for with in ["channels", "invites"] {
             get_collection(with)
                 .delete_many(
                     doc! {
@@ -166,7 +166,7 @@ impl Server {
                 })?;
         }
 
-        for with in [ "server_members", "server_bans" ] {
+        for with in ["server_members", "server_bans"] {
             get_collection(with)
                 .delete_many(
                     doc! {
@@ -194,7 +194,10 @@ impl Server {
                 with: "server",
             })?;
 
-        ClientboundNotification::ServerDelete { id: self.id.clone() }.publish(self.id.clone());
+        ClientboundNotification::ServerDelete {
+            id: self.id.clone(),
+        }
+        .publish(self.id.clone());
 
         if let Some(attachment) = &self.icon {
             attachment.delete().await?;
@@ -240,15 +243,16 @@ impl Server {
                     "_id.server": &self.id,
                     "_id.user": &id
                 },
-                None
+                None,
             )
             .await
             .map_err(|_| Error::DatabaseError {
                 operation: "find_one",
                 with: "server_bans",
             })?
-            .is_some() {
-            return Err(Error::Banned)
+            .is_some()
+        {
+            return Err(Error::Banned);
         }
 
         get_collection("server_members")
@@ -266,10 +270,10 @@ impl Server {
                 operation: "insert_one",
                 with: "server_members",
             })?;
-        
+
         ClientboundNotification::ServerMemberJoin {
             id: self.id.clone(),
-            user: id.to_string()
+            user: id.to_string(),
         }
         .publish(self.id.clone());
 
@@ -292,11 +296,11 @@ impl Server {
                 operation: "delete_one",
                 with: "server_members",
             })?;
-        
+
         if result.deleted_count > 0 {
             ClientboundNotification::ServerMemberLeave {
                 id: self.id.clone(),
-                user: id.to_string()
+                user: id.to_string(),
             }
             .publish(self.id.clone());
         }

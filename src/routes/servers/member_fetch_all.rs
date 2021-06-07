@@ -2,8 +2,8 @@ use crate::database::*;
 use crate::util::result::{Error, Result};
 
 use futures::StreamExt;
+use mongodb::bson::{doc, from_document, Document};
 use rocket_contrib::json::JsonValue;
-use mongodb::bson::{Document, doc, from_document};
 
 // ! FIXME: this is a temporary route while permissions are being worked on.
 
@@ -15,7 +15,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
         .with_server(&target)
         .for_server()
         .await?;
-    
+
     if !perm.get_view() {
         Err(Error::MissingPermission)?
     }
