@@ -8,11 +8,13 @@ use serde::Serialize;
 #[serde(tag = "type")]
 pub enum InviteResponse {
     Server {
+        server_id: String,
         server_name: String,
         #[serde(skip_serializing_if = "Option::is_none")]
         server_icon: Option<File>,
         #[serde(skip_serializing_if = "Option::is_none")]
         server_banner: Option<File>,
+        channel_id: String,
         channel_name: String,
         #[serde(skip_serializing_if = "Option::is_none")]
         channel_description: Option<String>,
@@ -34,6 +36,7 @@ pub async fn req(target: Ref) -> Result<JsonValue> {
             let creator = Ref::from_unchecked(creator).fetch_user().await?;
 
             if let Channel::TextChannel {
+                id,
                 server,
                 name,
                 description,
@@ -43,9 +46,11 @@ pub async fn req(target: Ref) -> Result<JsonValue> {
                 let server = Ref::from_unchecked(server).fetch_server().await?;
 
                 Ok(json!(InviteResponse::Server {
+                    server_id: server.id,
                     server_name: server.name,
                     server_icon: server.icon,
                     server_banner: server.banner,
+                    channel_id: id,
                     channel_name: name,
                     channel_description: description,
                     user_name: creator.username,

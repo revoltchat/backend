@@ -30,7 +30,7 @@ impl_op_ex_commutative!(+ |a: &u32, b: &UserPermission| -> u32 { *a | *b as u32 
 
 pub fn get_relationship(a: &User, b: &str) -> RelationshipStatus {
     if a.id == b {
-        return RelationshipStatus::Friend;
+        return RelationshipStatus::User;
     }
 
     if let Some(relations) = &a.relations {
@@ -55,7 +55,8 @@ impl<'a> PermissionCalculator<'a> {
             .map(|v| v.to_owned())
             .unwrap_or_else(|| get_relationship(&self.perspective, &target))
         {
-            RelationshipStatus::Friend => return Ok(u32::MAX),
+            RelationshipStatus::Friend |
+            RelationshipStatus::User => return Ok(u32::MAX),
             RelationshipStatus::Blocked | RelationshipStatus::BlockedOther => {
                 return Ok(UserPermission::Access as u32)
             }
@@ -64,7 +65,7 @@ impl<'a> PermissionCalculator<'a> {
                 // ! INFO: if we add boolean switch for permission to
                 // ! message people who have mutual, we need to get
                 // ! rid of this return statement.
-                return Ok(permissions);
+                // return Ok(permissions);
             }
             _ => {}
         }
