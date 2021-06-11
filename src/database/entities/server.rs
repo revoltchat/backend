@@ -35,6 +35,20 @@ pub struct Ban {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SystemMessageChannels {
+    pub user_joined: Option<String>,
+    pub user_left: Option<String>,
+    pub user_kicked: Option<String>,
+    pub user_banned: Option<String>
+}
+
+pub enum RemoveMember {
+    Leave,
+    Kick,
+    Ban
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Server {
     #[serde(rename = "_id")]
     pub id: String,
@@ -46,6 +60,8 @@ pub struct Server {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     pub channels: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub system_messages: Option<SystemMessageChannels>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub icon: Option<File>,
@@ -296,10 +312,19 @@ impl Server {
         }
         .publish(self.id.clone());
 
+        if let Some(channels) = &self.system_messages {
+            if let Some(cid) = &channels.user_joined {
+                let channel = Ref::from_unchecked(cid.clone()).fetch_channel().await?;
+                Content::SystemMessage(SystemMessage::UserJoined { id: id.to_string() })
+                    .send_as_system(&channel)
+                    .await?;
+            }
+        }
+
         Ok(())
     }
 
-    pub async fn remove_member(&self, id: &str) -> Result<()> {
+    pub async fn remove_member(&self, id: &str, removal: RemoveMember) -> Result<()> {
         let result = get_collection("server_members")
             .delete_one(
                 doc! {
@@ -322,6 +347,39 @@ impl Server {
                 user: id.to_string(),
             }
             .publish(self.id.clone());
+
+            if let Some(channels) = &self.system_messages {
+                let message = match removal {
+                    RemoveMember::Leave => {
+                        if let Some(cid) = &channels.user_left {
+                            Some((cid.clone(), SystemMessage::UserLeft { id: id.to_string() }))
+                        } else {
+                            None
+                        }
+                    }
+                    RemoveMember::Kick => {
+                        if let Some(cid) = &channels.user_kicked {
+                            Some((cid.clone(), SystemMessage::UserKicked { id: id.to_string() }))
+                        } else {
+                            None
+                        }
+                    }
+                    RemoveMember::Ban => {
+                        if let Some(cid) = &channels.user_banned {
+                            Some((cid.clone(), SystemMessage::UserBanned { id: id.to_string() }))
+                        } else {
+                            None
+                        }
+                    }
+                };
+
+                if let Some((cid, message)) = message {
+                    let channel = Ref::from_unchecked(cid).fetch_channel().await?;
+                    Content::SystemMessage(message)
+                        .send_as_system(&channel)
+                        .await?;
+                }
+            }
         }
 
         Ok(())

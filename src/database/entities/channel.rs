@@ -115,6 +115,20 @@ impl Channel {
         let id = self.id();
         let messages = get_collection("messages");
 
+        // Delete any invites.
+        get_collection("invites")
+            .delete_many(
+                doc! {
+                    "channel": id
+                },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "delete_many",
+                with: "invites",
+            })?;
+
         // Check if there are any attachments we need to delete.
         let message_ids = messages
             .find(
@@ -190,15 +204,45 @@ impl Channel {
 
         // Remove from server object.
         if let Channel::TextChannel { server, .. } = &self {
+            let server = Ref::from_unchecked(server.clone()).fetch_server().await?;
+            let mut unset = doc! {};
+
+            if let Some(sys) = &server.system_messages {
+                if let Some(cid) = &sys.user_joined {
+                    if id == cid {
+                        unset.insert("system_messages.user_joined", 1);
+                    }
+                }
+
+                if let Some(cid) = &sys.user_left {
+                    if id == cid {
+                        unset.insert("system_messages.user_left", 1);
+                    }
+                }
+
+                if let Some(cid) = &sys.user_kicked {
+                    if id == cid {
+                        unset.insert("system_messages.user_kicked", 1);
+                    }
+                }
+
+                if let Some(cid) = &sys.user_banned {
+                    if id == cid {
+                        unset.insert("system_messages.user_banned", 1);
+                    }
+                }
+            }
+
             get_collection("servers")
                 .update_one(
                     doc! {
-                        "_id": server
+                        "_id": server.id
                     },
                     doc! {
                         "$pull": {
                             "channels": id
-                        }
+                        },
+                        "$unset": unset
                     },
                     None,
                 )

@@ -26,8 +26,14 @@ pub enum SystemMessage {
     UserAdded { id: String, by: String },
     #[serde(rename = "user_remove")]
     UserRemove { id: String, by: String },
+    #[serde(rename = "user_joined")]
+    UserJoined { id: String },
     #[serde(rename = "user_left")]
     UserLeft { id: String },
+    #[serde(rename = "user_kicked")]
+    UserKicked { id: String },
+    #[serde(rename = "user_banned")]
+    UserBanned { id: String },
     #[serde(rename = "channel_renamed")]
     ChannelRenamed { name: String, by: String },
     #[serde(rename = "channel_description_changed")]

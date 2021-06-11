@@ -18,6 +18,6 @@ pub async fn req(user: User, target: Ref) -> Result<()> {
     if user.id == target.owner {
         target.delete().await
     } else {
-        target.remove_member(&user.id).await
+        target.remove_member(&user.id, RemoveMember::Leave).await
     }
 }

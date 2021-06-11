@@ -49,5 +49,5 @@ pub async fn req(user: User, server: Ref, target: Ref, data: Json<Data>) -> Resu
             with: "server_ban",
         })?;
 
-    server.remove_member(&target.id).await
+    server.remove_member(&target.id, RemoveMember::Ban).await
 }
