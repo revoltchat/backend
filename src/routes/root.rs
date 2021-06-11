@@ -1,5 +1,5 @@
 use crate::util::variables::{
-    APP_URL, AUTUMN_URL, DISABLE_REGISTRATION, EXTERNAL_WS_URL, HCAPTCHA_SITEKEY, INVITE_ONLY,
+    APP_URL, AUTUMN_URL, EXTERNAL_WS_URL, HCAPTCHA_SITEKEY, INVITE_ONLY,
     JANUARY_URL, USE_AUTUMN, USE_EMAIL, USE_HCAPTCHA, USE_JANUARY, USE_VOSO, VAPID_PUBLIC_KEY,
     VOSO_URL, VOSO_WS_HOST,
 };
@@ -12,7 +12,6 @@ pub async fn root() -> JsonValue {
     json!({
         "revolt": crate::version::VERSION,
         "features": {
-            "registration": !*DISABLE_REGISTRATION,
             "captcha": {
                 "enabled": *USE_HCAPTCHA,
                 "key": HCAPTCHA_SITEKEY.to_string()

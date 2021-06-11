@@ -3,6 +3,7 @@ use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
 use futures::StreamExt;
 use mongodb::bson::doc;
+use mongodb::bson::from_document;
 use mongodb::bson::to_document;
 use mongodb::bson::Document;
 use mongodb::options::FindOptions;
@@ -148,7 +149,7 @@ impl Server {
             })?;
 
         // Delete all channels, members, bans and invites.
-        for with in ["channels", "invites"] {
+        for with in &["channels", "invites"] {
             get_collection(with)
                 .delete_many(
                     doc! {
@@ -163,7 +164,7 @@ impl Server {
                 })?;
         }
 
-        for with in ["server_members", "server_bans"] {
+        for with in &["server_members", "server_bans"] {
             get_collection(with)
                 .delete_many(
                     doc! {
@@ -205,6 +206,27 @@ impl Server {
         }
 
         Ok(())
+    }
+
+    pub async fn fetch_members(id: &str) -> Result<Vec<Member>> {
+        Ok(get_collection("server_members")
+            .find(
+                doc! {
+                    "_id.server": id
+                },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "find",
+                with: "server_members",
+            })?
+            .filter_map(async move |s| s.ok())
+            .collect::<Vec<Document>>()
+            .await
+            .into_iter()
+            .filter_map(|x| from_document(x).ok())
+            .collect::<Vec<Member>>())
     }
 
     pub async fn fetch_member_ids(id: &str) -> Result<Vec<String>> {

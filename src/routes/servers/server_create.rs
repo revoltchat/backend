@@ -64,6 +64,7 @@ pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
         name: "general".to_string(),
         description: None,
         icon: None,
+        last_message: None
     }
     .publish()
     .await?;

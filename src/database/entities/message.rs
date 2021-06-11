@@ -90,7 +90,7 @@ impl Message {
                 "last_message": {
                     "_id": self.id.clone(),
                     "author": self.author.clone(),
-                    "short": text.chars().take(24).collect::<String>()
+                    "short": text.chars().take(128).collect::<String>()
                 }
             }
         } else {
@@ -123,6 +123,25 @@ impl Message {
                             doc! { "_id": id },
                             doc! {
                                 "$set": set
+                            },
+                            None,
+                        )
+                        .await
+                        .map_err(|_| Error::DatabaseError {
+                            operation: "update_one",
+                            with: "channel",
+                        })?;
+                }
+            }
+            Channel::TextChannel { id, .. } => {
+                if let Content::Text(_) = &self.content {
+                    channels
+                        .update_one(
+                            doc! { "_id": id },
+                            doc! {
+                                "$set": {
+                                    "last_message": &self.id
+                                }
                             },
                             None,
                         )

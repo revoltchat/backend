@@ -63,6 +63,8 @@ pub enum Channel {
         description: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         icon: Option<File>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        last_message: Option<String>,
     },
 }
 
