@@ -43,6 +43,19 @@ pub enum Content {
     SystemMessage(SystemMessage),
 }
 
+impl Content {
+    pub async fn send_as_system(self, target: &Channel) -> Result<()> {
+        Message::create(
+            "00000000000000000000000000".to_string(),
+            target.id().to_string(),
+            self,
+            None
+        )
+        .publish(&target)
+        .await
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Message {
     #[serde(rename = "_id")]

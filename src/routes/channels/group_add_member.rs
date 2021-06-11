@@ -55,18 +55,12 @@ pub async fn req(user: User, target: Ref, member: Ref) -> Result<()> {
         }
         .publish(id.clone());
 
-        Message::create(
-            "00000000000000000000000000".to_string(),
-            id.clone(),
-            Content::SystemMessage(SystemMessage::UserAdded {
-                id: member.id,
-                by: user.id,
-            }),
-            None
-        )
-        .publish(&channel)
-        .await
-        .ok();
+        Content::SystemMessage(SystemMessage::UserAdded {
+            id: member.id,
+            by: user.id,
+        })
+        .send_as_system(&channel)
+        .await.ok();
 
         Ok(())
     } else {

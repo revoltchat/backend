@@ -112,44 +112,26 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
 
             if let Channel::Group { .. } = &target {
                 if let Some(name) = data.name {
-                    Message::create(
-                        "00000000000000000000000000".to_string(),
-                        id.clone(),
-                        Content::SystemMessage(SystemMessage::ChannelRenamed {
-                            name,
-                            by: user.id.clone(),
-                        }),
-                        None
-                    )
-                    .publish(&target)
-                    .await
-                    .ok();
+                    Content::SystemMessage(SystemMessage::ChannelRenamed {
+                        name,
+                        by: user.id.clone(),
+                    })
+                    .send_as_system(&target)
+                    .await.ok();
                 }
 
                 if let Some(_) = data.description {
-                    Message::create(
-                        "00000000000000000000000000".to_string(),
-                        id.clone(),
-                        Content::SystemMessage(SystemMessage::ChannelDescriptionChanged {
-                            by: user.id.clone(),
-                        }),
-                        None
-                    )
-                    .publish(&target)
-                    .await
-                    .ok();
+                    Content::SystemMessage(SystemMessage::ChannelDescriptionChanged {
+                        by: user.id.clone(),
+                    })
+                    .send_as_system(&target)
+                    .await.ok();
                 }
 
                 if let Some(_) = data.icon {
-                    Message::create(
-                        "00000000000000000000000000".to_string(),
-                        id.clone(),
-                        Content::SystemMessage(SystemMessage::ChannelIconChanged { by: user.id }),
-                        None
-                    )
-                    .publish(&target)
-                    .await
-                    .ok();
+                    Content::SystemMessage(SystemMessage::ChannelIconChanged { by: user.id })
+                    .send_as_system(&target)
+                    .await.ok();
                 }
             }
 
