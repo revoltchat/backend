@@ -119,6 +119,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
                             name,
                             by: user.id.clone(),
                         }),
+                        None
                     )
                     .publish(&target)
                     .await
@@ -132,6 +133,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
                         Content::SystemMessage(SystemMessage::ChannelDescriptionChanged {
                             by: user.id.clone(),
                         }),
+                        None
                     )
                     .publish(&target)
                     .await
@@ -143,6 +145,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
                         "00000000000000000000000000".to_string(),
                         id.clone(),
                         Content::SystemMessage(SystemMessage::ChannelIconChanged { by: user.id }),
+                        None
                     )
                     .publish(&target)
                     .await

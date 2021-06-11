@@ -4,8 +4,9 @@ use crate::util::result::{Error, Result};
 use mongodb::{bson::doc, options::FindOneOptions};
 use rocket_contrib::json::{Json, JsonValue};
 use serde::{Deserialize, Serialize};
-use ulid::Ulid;
 use validator::Validate;
+use regex::Regex;
+use ulid::Ulid;
 
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
@@ -16,6 +17,10 @@ pub struct Data {
     nonce: String,
     #[validate(length(min = 1, max = 128))]
     attachment: Option<String>,
+}
+
+lazy_static! {
+    static ref RE_ULID: Regex = Regex::new(r"<@([0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26})>").unwrap();
 }
 
 #[post("/<target>/messages", data = "<message>")]
@@ -66,6 +71,12 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
         None
     };
 
+    let mut mentions = vec![];
+    if let Some(captures) = RE_ULID.captures_iter(&message.content).next() {
+        // ! FIXME: in the future, verify in group so we can send out push
+        mentions.push(captures[1].to_string());
+    }
+
     let msg = Message {
         id,
         channel: target.id().to_string(),
@@ -76,6 +87,7 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
         nonce: Some(message.nonce.clone()),
         edited: None,
         embeds: None,
+        mentions: if mentions.len() > 0 { Some(mentions) } else { None }
     };
 
     msg.clone().publish(&target).await?;

@@ -59,10 +59,12 @@ pub struct Message {
     pub edited: Option<DateTime>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub embeds: Option<Vec<Embed>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mentions: Option<Vec<String>>
 }
 
 impl Message {
-    pub fn create(author: String, channel: String, content: Content) -> Message {
+    pub fn create(author: String, channel: String, content: Content, mentions: Option<Vec<String>>) -> Message {
         Message {
             id: Ulid::new().to_string(),
             nonce: None,
@@ -73,6 +75,7 @@ impl Message {
             attachments: None,
             edited: None,
             embeds: None,
+            mentions
         }
     }
 

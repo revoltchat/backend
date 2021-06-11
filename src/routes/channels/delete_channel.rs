@@ -102,6 +102,7 @@ pub async fn req(user: User, target: Ref) -> Result<()> {
                 "00000000000000000000000000".to_string(),
                 id.clone(),
                 Content::SystemMessage(SystemMessage::UserLeft { id: user.id }),
+                None
             )
             .publish(&target)
             .await
