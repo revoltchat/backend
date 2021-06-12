@@ -37,9 +37,9 @@ pub async fn create_database() {
         .await
         .expect("Failed to create server_bans collection.");
 
-    db.create_collection("invites", None)
+    db.create_collection("channel_invites", None)
         .await
-        .expect("Failed to create invites collection.");
+        .expect("Failed to create channel_invites collection.");
 
     db.create_collection("migrations", None)
         .await

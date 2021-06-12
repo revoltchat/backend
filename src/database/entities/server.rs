@@ -165,7 +165,7 @@ impl Server {
             })?;
 
         // Delete all channels, members, bans and invites.
-        for with in &["channels", "invites"] {
+        for with in &["channels", "channel_invites"] {
             get_collection(with)
                 .delete_many(
                     doc! {

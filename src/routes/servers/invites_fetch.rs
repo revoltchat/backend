@@ -27,7 +27,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
         Err(Error::MissingPermission)?
     }
 
-    let mut cursor = get_collection("invites")
+    let mut cursor = get_collection("channel_invites")
         .find(
             doc! {
                 "server": target.id
@@ -37,7 +37,7 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
         .await
         .map_err(|_| Error::DatabaseError {
             operation: "find",
-            with: "invites",
+            with: "channel_invites",
         })?;
 
     let mut invites = vec![];

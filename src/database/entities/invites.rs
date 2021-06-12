@@ -44,7 +44,7 @@ impl Invite {
     }
 
     pub async fn get(code: &str) -> Result<Invite> {
-        let doc = get_collection("invites")
+        let doc = get_collection("channel_invites")
             .find_one(doc! { "_id": code }, None)
             .await
             .map_err(|_| Error::DatabaseError {
@@ -60,7 +60,7 @@ impl Invite {
     }
 
     pub async fn save(self) -> Result<()> {
-        get_collection("invites")
+        get_collection("channel_invites")
             .insert_one(
                 to_document(&self).map_err(|_| Error::DatabaseError {
                     operation: "to_bson",
@@ -78,7 +78,7 @@ impl Invite {
     }
 
     pub async fn delete(&self) -> Result<()> {
-        get_collection("invites")
+        get_collection("channel_invites")
             .delete_one(
                 doc! {
                     "_id": self.code()

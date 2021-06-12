@@ -116,7 +116,7 @@ impl Channel {
         let messages = get_collection("messages");
 
         // Delete any invites.
-        get_collection("invites")
+        get_collection("channel_invites")
             .delete_many(
                 doc! {
                     "channel": id
@@ -126,7 +126,7 @@ impl Channel {
             .await
             .map_err(|_| Error::DatabaseError {
                 operation: "delete_many",
-                with: "invites",
+                with: "channel_invites",
             })?;
 
         // Check if there are any attachments we need to delete.

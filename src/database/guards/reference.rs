@@ -59,7 +59,7 @@ impl Ref {
     }
 
     pub async fn fetch_invite(&self) -> Result<Invite> {
-        self.fetch("invites").await
+        self.fetch("channel_invites").await
     }
 
     pub async fn fetch_member(&self, server: &str) -> Result<Member> {
