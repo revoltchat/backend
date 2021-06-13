@@ -66,6 +66,7 @@ pub enum Badges {
     Developer = 1,
     Translator = 2,
     Supporter = 4,
+    ResponsibleDisclosure = 8,
     EarlyAdopter = 256,
 }
 

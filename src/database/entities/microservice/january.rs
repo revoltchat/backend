@@ -63,7 +63,9 @@ pub enum Special {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Metadata {
+    #[serde(skip_serializing_if = "Option::is_none")]
     url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     special: Option<Special>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
