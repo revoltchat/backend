@@ -189,19 +189,6 @@ impl Channel {
                 with: "messages",
             })?;
 
-        get_collection("channels")
-            .delete_one(
-                doc! {
-                    "_id": id
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "delete_one",
-                with: "channel",
-            })?;
-
         // Remove from server object.
         if let Channel::TextChannel { server, .. } = &self {
             let server = Ref::from_unchecked(server.clone()).fetch_server().await?;
@@ -257,6 +244,20 @@ impl Channel {
                     with: "servers",
                 })?;
         }
+
+        // Finally, delete the channel object.
+        get_collection("channels")
+            .delete_one(
+                doc! {
+                    "_id": id
+                },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "delete_one",
+                with: "channel",
+            })?;
 
         ClientboundNotification::ChannelDelete { id: id.to_string() }.publish(id.to_string());
 
