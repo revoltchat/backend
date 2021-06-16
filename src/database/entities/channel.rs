@@ -205,9 +205,15 @@ impl Channel {
         // Remove from server object.
         if let Channel::TextChannel { server, .. } = &self {
             let server = Ref::from_unchecked(server.clone()).fetch_server().await?;
-            let mut unset = doc! {};
+            let mut update = doc! {
+                "$pull": {
+                    "channels": id
+                }
+            };
 
             if let Some(sys) = &server.system_messages {
+                let mut unset = doc! {};
+
                 if let Some(cid) = &sys.user_joined {
                     if id == cid {
                         unset.insert("system_messages.user_joined", 1);
@@ -231,6 +237,10 @@ impl Channel {
                         unset.insert("system_messages.user_banned", 1);
                     }
                 }
+
+                if unset.len() > 0 {
+                    update.insert("$unset", unset);
+                }
             }
 
             get_collection("servers")
@@ -238,12 +248,7 @@ impl Channel {
                     doc! {
                         "_id": server.id
                     },
-                    doc! {
-                        "$pull": {
-                            "channels": id
-                        },
-                        "$unset": unset
-                    },
+                    update,
                     None,
                 )
                 .await

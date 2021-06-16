@@ -1,5 +1,4 @@
 use crate::database::*;
-use crate::util::result::Error;
 
 use super::hive::get_hive;
 use futures::StreamExt;
