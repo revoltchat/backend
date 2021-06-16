@@ -244,7 +244,8 @@ pub fn publish(ids: Vec<String>, notification: ClientboundNotification) {
             // Block certain notifications from reaching users that aren't meant to see them.
             match &notification {
                 ClientboundNotification::UserRelationship { id: user_id, .. }
-                | ClientboundNotification::UserSettingsUpdate { id: user_id, .. } => {
+                | ClientboundNotification::UserSettingsUpdate { id: user_id, .. }
+                | ClientboundNotification::ChannelAck { user: user_id, .. } => {
                     if &id != user_id {
                         continue;
                     }

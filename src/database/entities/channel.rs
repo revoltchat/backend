@@ -128,6 +128,20 @@ impl Channel {
                 operation: "delete_many",
                 with: "channel_invites",
             })?;
+        
+        // Delete any unreads.
+        get_collection("channel_unreads")
+            .delete_many(
+                doc! {
+                    "_id.channel": id
+                },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "delete_many",
+                with: "channel_unreads",
+            })?;
 
         // Check if there are any attachments we need to delete.
         let message_ids = messages

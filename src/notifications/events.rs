@@ -63,7 +63,7 @@ pub enum ClientboundNotification {
     Ready {
         users: Vec<User>,
         servers: Vec<Server>,
-        channels: Vec<Channel>,
+        channels: Vec<Channel>
     },
 
     Message(Message),
@@ -102,6 +102,11 @@ pub enum ClientboundNotification {
     ChannelStopTyping {
         id: String,
         user: String,
+    },
+    ChannelAck {
+        id: String,
+        user: String,
+        message_id: String
     },
 
     ServerUpdate {

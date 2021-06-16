@@ -180,6 +180,8 @@ impl Server {
                 })?;
         }
 
+        // ! FIXME: delete any unreads
+
         for with in &["server_members", "server_bans"] {
             get_collection(with)
                 .delete_many(

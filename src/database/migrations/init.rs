@@ -41,6 +41,10 @@ pub async fn create_database() {
         .await
         .expect("Failed to create channel_invites collection.");
 
+    db.create_collection("channel_unreads", None)
+        .await
+        .expect("Failed to create channel_unreads collection.");
+
     db.create_collection("migrations", None)
         .await
         .expect("Failed to create migrations collection.");
@@ -48,10 +52,6 @@ pub async fn create_database() {
     db.create_collection("attachments", None)
         .await
         .expect("Failed to create attachments collection.");
-
-    db.create_collection("channel_unreads", None)
-        .await
-        .expect("Failed to create channel_unreads collection.");
 
     db.create_collection("user_settings", None)
         .await
