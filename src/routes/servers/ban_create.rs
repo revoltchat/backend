@@ -30,6 +30,14 @@ pub async fn req(user: User, server: Ref, target: Ref, data: Json<Data>) -> Resu
     }
 
     let target = target.fetch_user().await?;
+    if target.id == user.id {
+        return Err(Error::InvalidOperation)
+    }
+
+    if target.id == server.owner {
+        return Err(Error::MissingPermission)
+    }
+
     let mut document = doc! {
         "_id": {
             "server": &server.id,
