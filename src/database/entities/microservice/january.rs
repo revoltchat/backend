@@ -4,6 +4,7 @@ use crate::util::{
 };
 use linkify::{LinkFinder, LinkKind};
 use serde::{Deserialize, Serialize};
+use regex::Regex;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ImageSize {
@@ -97,10 +98,17 @@ pub enum Embed {
 
 impl Embed {
     pub async fn generate(content: String) -> Result<Vec<Embed>> {
+        lazy_static! {
+            static ref RE_CODE: Regex = Regex::new("```(?:.|\n)+?```|`(?:.|\n)+?`").unwrap();
+        }
+
+        // Ignore code blocks.
+        let content = RE_CODE.replace_all(&content, "");
+
         let content = content
+            // Ignore quoted lines.
             .split("\n")
             .map(|v| {
-                // Ignore quoted lines.
                 if let Some(c) = v.chars().next() {
                     if c == '>' {
                         return "";
