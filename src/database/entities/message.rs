@@ -268,7 +268,7 @@ impl Message {
         ClientboundNotification::MessageUpdate {
             id: self.id.clone(),
             channel: self.channel.clone(),
-            data,
+            data
         }
         .publish(channel);
         self.process_embed();
@@ -282,6 +282,8 @@ impl Message {
         }
 
         if let Content::Text(text) = &self.content {
+            // ! FIXME: re-write this at some point,
+            // ! or just before we allow user generated embeds
             let id = self.id.clone();
             let content = text.clone();
             let channel = self.channel.clone();
@@ -305,7 +307,7 @@ impl Message {
                             ClientboundNotification::MessageUpdate {
                                 id,
                                 channel: channel.clone(),
-                                data: json!({ "embeds": embeds }),
+                                data: json!({ "embeds": embeds })
                             }
                             .publish(channel);
                         }

@@ -70,7 +70,7 @@ pub enum ClientboundNotification {
     MessageUpdate {
         id: String,
         channel: String,
-        data: JsonValue,
+        data: JsonValue
     },
     MessageDelete {
         id: String,
