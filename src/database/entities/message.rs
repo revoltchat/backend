@@ -107,39 +107,30 @@ impl Message {
                 with: "message",
             })?;
 
-        let mut set = if let Content::Text(text) = &self.content {
-            doc! {
-                "last_message": {
-                    "_id": self.id.clone(),
-                    "author": self.author.clone(),
-                    "short": text.chars().take(128).collect::<String>()
-                }
-            }
-        } else {
-            doc! {}
-        };
+        // ! FIXME: all this code is legitimately crap
+        // ! rewrite when can be asked
 
-        // ! FIXME: temp code
-        let channels = get_collection("channels");
-        match &channel {
-            Channel::DirectMessage { id, .. } => {
-                set.insert("active", true);
-                channels
-                    .update_one(
-                        doc! { "_id": id },
-                        doc! {
-                            "$set": set
-                        },
-                        None,
-                    )
-                    .await
-                    .map_err(|_| Error::DatabaseError {
-                        operation: "update_one",
-                        with: "channel",
-                    })?;
-            }
-            Channel::Group { id, .. } => {
-                if let Content::Text(_) = &self.content {
+        let ss = self.clone();
+        let c_clone = channel.clone();
+        async_std::task::spawn(async move {
+            let mut set = if let Content::Text(text) = &ss.content {
+                doc! {
+                    "last_message": {
+                        "_id": ss.id.clone(),
+                        "author": ss.author.clone(),
+                        "short": text.chars().take(128).collect::<String>()
+                    }
+                }
+            } else {
+                doc! {}
+            };
+
+            // ! MARK AS ACTIVE
+            // ! FIXME: temp code
+            let channels = get_collection("channels");
+            match &c_clone {
+                Channel::DirectMessage { id, .. } => {
+                    set.insert("active", true);
                     channels
                         .update_one(
                             doc! { "_id": id },
@@ -149,32 +140,83 @@ impl Message {
                             None,
                         )
                         .await
-                        .map_err(|_| Error::DatabaseError {
+                        /*.map_err(|_| Error::DatabaseError {
                             operation: "update_one",
                             with: "channel",
-                        })?;
+                        })?;*/
+                        .unwrap();
                 }
-            }
-            Channel::TextChannel { id, .. } => {
-                if let Content::Text(_) = &self.content {
-                    channels
-                        .update_one(
-                            doc! { "_id": id },
-                            doc! {
-                                "$set": {
-                                    "last_message": &self.id
-                                }
-                            },
-                            None,
-                        )
-                        .await
-                        .map_err(|_| Error::DatabaseError {
-                            operation: "update_one",
-                            with: "channel",
-                        })?;
+                Channel::Group { id, .. } => {
+                    if let Content::Text(_) = &ss.content {
+                        channels
+                            .update_one(
+                                doc! { "_id": id },
+                                doc! {
+                                    "$set": set
+                                },
+                                None,
+                            )
+                            .await
+                            /*.map_err(|_| Error::DatabaseError {
+                                operation: "update_one",
+                                with: "channel",
+                            })?;*/
+                            .unwrap();
+                    }
                 }
+                Channel::TextChannel { id, .. } => {
+                    if let Content::Text(_) = &ss.content {
+                        channels
+                            .update_one(
+                                doc! { "_id": id },
+                                doc! {
+                                    "$set": {
+                                        "last_message": &ss.id
+                                    }
+                                },
+                                None,
+                            )
+                            .await
+                            /*.map_err(|_| Error::DatabaseError {
+                                operation: "update_one",
+                                with: "channel",
+                            })?;*/
+                            .unwrap();
+                    }
+                }
+                _ => {}
             }
-            _ => {}
+        });
+
+        // ! FIXME: also temp code
+        // ! THIS ADDS ANY MENTIONS
+        if let Some(mentions) = &self.mentions {
+            let message = self.id.clone();
+            let channel = self.channel.clone();
+            let mentions = mentions.clone();
+            async_std::task::spawn(async move {
+                get_collection("channel_unreads")
+                    .update_many(
+                        doc! {
+                            "_id.channel": channel,
+                            "_id.user": {
+                                "$in": mentions
+                            }
+                        },
+                        doc! {
+                            "$push": {
+                                "mentions": message
+                            }
+                        },
+                        None
+                    )
+                    .await
+                    /*.map_err(|_| Error::DatabaseError {
+                        operation: "update_many",
+                        with: "channel_unreads",
+                    })?;*/
+                    .unwrap();
+            });
         }
 
         self.process_embed();
@@ -184,23 +226,22 @@ impl Message {
 
         /*
            Web Push Test Code
-           ! FIXME: temp code
         */
-
-        // Find all offline users.
-        let mut target_ids = vec![];
-        match &channel {
-            Channel::DirectMessage { recipients, .. } | Channel::Group { recipients, .. } => {
-                for recipient in recipients {
-                    if !is_online(recipient) {
-                        target_ids.push(recipient.clone());
+        let c_clone = channel.clone();
+        async_std::task::spawn(async move {
+            // Find all offline users.
+            let mut target_ids = vec![];
+            match &c_clone {
+                Channel::DirectMessage { recipients, .. } | Channel::Group { recipients, .. } => {
+                    for recipient in recipients {
+                        if !is_online(recipient) {
+                            target_ids.push(recipient.clone());
+                        }
                     }
                 }
+                _ => {}
             }
-            _ => {}
-        }
-
-        async_std::task::spawn(async move {
+    
             // Fetch their corresponding sessions.
             if let Ok(mut cursor) = get_collection("accounts")
                 .find(
