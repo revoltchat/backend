@@ -6,6 +6,7 @@ use crate::{
 };
 
 use futures::StreamExt;
+use mongodb::options::UpdateOptions;
 use mongodb::{
     bson::{doc, to_bson, DateTime},
     options::FindOptions,
@@ -55,7 +56,7 @@ impl Content {
             "00000000000000000000000000".to_string(),
             target.id().to_string(),
             self,
-            None
+            None,
         )
         .publish(&target)
         .await
@@ -79,11 +80,16 @@ pub struct Message {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub embeds: Option<Vec<Embed>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub mentions: Option<Vec<String>>
+    pub mentions: Option<Vec<String>>,
 }
 
 impl Message {
-    pub fn create(author: String, channel: String, content: Content, mentions: Option<Vec<String>>) -> Message {
+    pub fn create(
+        author: String,
+        channel: String,
+        content: Content,
+        mentions: Option<Vec<String>>,
+    ) -> Message {
         Message {
             id: Ulid::new().to_string(),
             nonce: None,
@@ -94,7 +100,7 @@ impl Message {
             attachments: None,
             edited: None,
             embeds: None,
-            mentions
+            mentions,
         }
     }
 
@@ -208,7 +214,7 @@ impl Message {
                                 "mentions": message
                             }
                         },
-                        None
+                        UpdateOptions::builder().upsert(true).build(),
                     )
                     .await
                     /*.map_err(|_| Error::DatabaseError {
@@ -241,7 +247,7 @@ impl Message {
                 }
                 _ => {}
             }
-    
+
             // Fetch their corresponding sessions.
             if let Ok(mut cursor) = get_collection("accounts")
                 .find(
@@ -309,7 +315,7 @@ impl Message {
         ClientboundNotification::MessageUpdate {
             id: self.id.clone(),
             channel: self.channel.clone(),
-            data
+            data,
         }
         .publish(channel);
         self.process_embed();
@@ -348,7 +354,7 @@ impl Message {
                             ClientboundNotification::MessageUpdate {
                                 id,
                                 channel: channel.clone(),
-                                data: json!({ "embeds": embeds })
+                                data: json!({ "embeds": embeds }),
                             }
                             .publish(channel);
                         }

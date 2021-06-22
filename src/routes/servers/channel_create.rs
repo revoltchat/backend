@@ -60,7 +60,7 @@ pub async fn req(user: User, target: Ref, info: Json<Data>) -> Result<JsonValue>
         name: info.name,
         description: info.description,
         icon: None,
-        last_message: None
+        last_message: None,
     };
 
     channel.clone().publish().await?;

@@ -113,6 +113,6 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
     Ok(ClientboundNotification::Ready {
         users,
         servers,
-        channels
+        channels,
     })
 }

@@ -2,11 +2,11 @@ use crate::database::*;
 use crate::util::result::{Error, Result};
 
 use mongodb::{bson::doc, options::FindOneOptions};
+use regex::Regex;
 use rocket_contrib::json::{Json, JsonValue};
 use serde::{Deserialize, Serialize};
-use validator::Validate;
-use regex::Regex;
 use ulid::Ulid;
+use validator::Validate;
 
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
@@ -16,7 +16,7 @@ pub struct Data {
     #[validate(length(min = 1, max = 36))]
     nonce: String,
     #[validate(length(min = 1, max = 128))]
-    attachment: Option<String>,
+    attachments: Option<Vec<String>>,
 }
 
 lazy_static! {
@@ -29,7 +29,9 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
         .validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if message.content.len() == 0 && message.attachment.is_none() {
+    if message.content.len() == 0
+        && (message.attachments.is_none() || message.attachments.as_ref().unwrap().len() == 0)
+    {
         return Err(Error::EmptyMessage);
     }
 
@@ -63,10 +65,19 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
     }
 
     let id = Ulid::new().to_string();
-    let attachments = if let Some(attachment_id) = &message.attachment {
-        Some(vec![
-            File::find_and_use(attachment_id, "attachments", "message", &id).await?,
-        ])
+    let attachments = if let Some(ids) = &message.attachments {
+        // ! FIXME: move this to app config
+        if ids.len() >= 5 {
+            return Err(Error::TooManyAttachments)
+        }
+
+        let mut attachments = vec![];
+        for attachment_id in ids {
+            attachments
+                .push(File::find_and_use(attachment_id, "attachments", "message", &id).await?);
+        }
+
+        Some(attachments)
     } else {
         None
     };
@@ -76,6 +87,7 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
         // ! FIXME: in the future, verify in group so we can send out push
         mentions.push(captures[1].to_string());
     }
+
 
     let msg = Message {
         id,
@@ -87,7 +99,11 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
         nonce: Some(message.nonce.clone()),
         edited: None,
         embeds: None,
-        mentions: if mentions.len() > 0 { Some(mentions) } else { None }
+        mentions: if mentions.len() > 0 {
+            Some(mentions)
+        } else {
+            None
+        },
     };
 
     msg.clone().publish(&target).await?;

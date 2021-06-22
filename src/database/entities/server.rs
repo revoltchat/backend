@@ -39,13 +39,13 @@ pub struct SystemMessageChannels {
     pub user_joined: Option<String>,
     pub user_left: Option<String>,
     pub user_kicked: Option<String>,
-    pub user_banned: Option<String>
+    pub user_banned: Option<String>,
 }
 
 pub enum RemoveMember {
     Leave,
     Kick,
-    Ban
+    Ban,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -361,14 +361,20 @@ impl Server {
                     }
                     RemoveMember::Kick => {
                         if let Some(cid) = &channels.user_kicked {
-                            Some((cid.clone(), SystemMessage::UserKicked { id: id.to_string() }))
+                            Some((
+                                cid.clone(),
+                                SystemMessage::UserKicked { id: id.to_string() },
+                            ))
                         } else {
                             None
                         }
                     }
                     RemoveMember::Ban => {
                         if let Some(cid) = &channels.user_banned {
-                            Some((cid.clone(), SystemMessage::UserBanned { id: id.to_string() }))
+                            Some((
+                                cid.clone(),
+                                SystemMessage::UserBanned { id: id.to_string() },
+                            ))
                         } else {
                             None
                         }

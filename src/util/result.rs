@@ -28,6 +28,7 @@ pub enum Error {
     UnknownAttachment,
     CannotEditMessage,
     CannotJoinCall,
+    TooManyAttachments,
     EmptyMessage,
     CannotRemoveYourself,
     GroupTooLarge {
@@ -81,6 +82,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::UnknownAttachment => Status::BadRequest,
             Error::CannotEditMessage => Status::Forbidden,
             Error::CannotJoinCall => Status::BadRequest,
+            Error::TooManyAttachments => Status::BadRequest,
             Error::EmptyMessage => Status::UnprocessableEntity,
             Error::CannotRemoveYourself => Status::BadRequest,
             Error::GroupTooLarge { .. } => Status::Forbidden,

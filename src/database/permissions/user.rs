@@ -55,8 +55,7 @@ impl<'a> PermissionCalculator<'a> {
             .map(|v| v.to_owned())
             .unwrap_or_else(|| get_relationship(&self.perspective, &target))
         {
-            RelationshipStatus::Friend |
-            RelationshipStatus::User => return Ok(u32::MAX),
+            RelationshipStatus::Friend | RelationshipStatus::User => return Ok(u32::MAX),
             RelationshipStatus::Blocked | RelationshipStatus::BlockedOther => {
                 return Ok(UserPermission::Access as u32)
             }

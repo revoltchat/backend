@@ -261,7 +261,7 @@ impl User {
                 doc! {
                     "_id.user": &self.id
                 },
-                None
+                None,
             )
             .await
             .map_err(|_| Error::DatabaseError {

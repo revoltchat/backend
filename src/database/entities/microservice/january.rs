@@ -3,8 +3,8 @@ use crate::util::{
     variables::JANUARY_URL,
 };
 use linkify::{LinkFinder, LinkKind};
-use serde::{Deserialize, Serialize};
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ImageSize {

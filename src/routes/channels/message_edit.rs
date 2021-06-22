@@ -2,7 +2,7 @@ use crate::database::*;
 use crate::util::result::{Error, Result};
 
 use chrono::Utc;
-use mongodb::bson::{Bson, DateTime, Document, doc};
+use mongodb::bson::{doc, Bson, DateTime, Document};
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -45,10 +45,7 @@ pub async fn req(user: User, target: Ref, msg: Ref, edit: Json<Data>) -> Result<
 
         for embed in embeds {
             match embed {
-                Embed::Website(_) |
-                Embed::Image(_) |
-                Embed::None => { }
-                // Otherwise push to new_embeds.
+                Embed::Website(_) | Embed::Image(_) | Embed::None => {} // Otherwise push to new_embeds.
             }
         }
 
@@ -73,7 +70,5 @@ pub async fn req(user: User, target: Ref, msg: Ref, edit: Json<Data>) -> Result<
             with: "message",
         })?;
 
-    message
-        .publish_update(update)
-        .await
+    message.publish_update(update).await
 }

@@ -1,6 +1,6 @@
+use crate::database::*;
 use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
-use crate::database::*;
 
 use mongodb::bson::doc;
 use mongodb::options::UpdateOptions;
@@ -33,21 +33,20 @@ pub async fn req(user: User, target: Ref, message: Ref) -> Result<()> {
                     "last_id": &message.id
                 }
             },
-            UpdateOptions::builder()
-                .upsert(true)
-                .build()
+            UpdateOptions::builder().upsert(true).build(),
         )
         .await
         .map_err(|_| Error::DatabaseError {
             operation: "update_one",
             with: "channel_unreads",
         })?;
-    
+
     ClientboundNotification::ChannelAck {
         id: id.to_string(),
         user: user.id.clone(),
-        message_id: message.id
-    }.publish(user.id);
-    
+        message_id: message.id,
+    }
+    .publish(user.id);
+
     Ok(())
 }

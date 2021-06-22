@@ -1,5 +1,5 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
 
 pub type UserSettings = HashMap<String, (i64, String)>;
 
@@ -14,6 +14,6 @@ pub struct ChannelUnread {
     #[serde(rename = "_id")]
     pub id: ChannelCompositeKey,
 
-    pub last_id: String,
+    pub last_id: Option<String>,
     pub mentions: Option<Vec<String>>,
 }

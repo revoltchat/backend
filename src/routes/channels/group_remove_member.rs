@@ -56,7 +56,8 @@ pub async fn req(user: User, target: Ref, member: Ref) -> Result<()> {
             by: user.id,
         })
         .send_as_system(&channel)
-        .await.ok();
+        .await
+        .ok();
 
         Ok(())
     } else {

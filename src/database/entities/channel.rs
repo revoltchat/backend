@@ -128,7 +128,7 @@ impl Channel {
                 operation: "delete_many",
                 with: "channel_invites",
             })?;
-        
+
         // Delete any unreads.
         get_collection("channel_unreads")
             .delete_many(

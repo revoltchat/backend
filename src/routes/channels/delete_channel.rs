@@ -99,8 +99,9 @@ pub async fn req(user: User, target: Ref) -> Result<()> {
             .publish(id.clone());
 
             Content::SystemMessage(SystemMessage::UserLeft { id: user.id })
-            .send_as_system(&target)
-            .await.ok();
+                .send_as_system(&target)
+                .await
+                .ok();
 
             Ok(())
         }

@@ -52,14 +52,12 @@ pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
         name: info.name,
         description: info.description,
         channels: vec![cid.clone()],
-        system_messages: Some(
-            SystemMessageChannels {
-                user_joined: Some(cid.clone()),
-                user_left: Some(cid.clone()),
-                user_kicked: Some(cid.clone()),
-                user_banned: Some(cid.clone())
-            }
-        ),
+        system_messages: Some(SystemMessageChannels {
+            user_joined: Some(cid.clone()),
+            user_left: Some(cid.clone()),
+            user_kicked: Some(cid.clone()),
+            user_banned: Some(cid.clone()),
+        }),
 
         icon: None,
         banner: None,
@@ -72,7 +70,7 @@ pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
         name: "general".to_string(),
         description: None,
         icon: None,
-        last_message: None
+        last_message: None,
     }
     .publish()
     .await?;

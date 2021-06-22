@@ -5,10 +5,7 @@ use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
 
 use super::hive::{get_hive, subscribe_if_exists};
-use crate::{
-    database::*,
-    util::result::{Result},
-};
+use crate::{database::*, util::result::Result};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "error")]
@@ -63,14 +60,14 @@ pub enum ClientboundNotification {
     Ready {
         users: Vec<User>,
         servers: Vec<Server>,
-        channels: Vec<Channel>
+        channels: Vec<Channel>,
     },
 
     Message(Message),
     MessageUpdate {
         id: String,
         channel: String,
-        data: JsonValue
+        data: JsonValue,
     },
     MessageDelete {
         id: String,
@@ -106,7 +103,7 @@ pub enum ClientboundNotification {
     ChannelAck {
         id: String,
         user: String,
-        message_id: String
+        message_id: String,
     },
 
     ServerUpdate {

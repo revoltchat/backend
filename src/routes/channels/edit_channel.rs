@@ -117,7 +117,8 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
                         by: user.id.clone(),
                     })
                     .send_as_system(&target)
-                    .await.ok();
+                    .await
+                    .ok();
                 }
 
                 if let Some(_) = data.description {
@@ -125,13 +126,15 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
                         by: user.id.clone(),
                     })
                     .send_as_system(&target)
-                    .await.ok();
+                    .await
+                    .ok();
                 }
 
                 if let Some(_) = data.icon {
                     Content::SystemMessage(SystemMessage::ChannelIconChanged { by: user.id })
-                    .send_as_system(&target)
-                    .await.ok();
+                        .send_as_system(&target)
+                        .await
+                        .ok();
                 }
             }
 

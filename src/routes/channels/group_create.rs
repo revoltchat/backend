@@ -39,8 +39,7 @@ pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
 
     for target in &set {
         match get_relationship(&user, target) {
-            RelationshipStatus::Friend |
-            RelationshipStatus::User => {},
+            RelationshipStatus::Friend | RelationshipStatus::User => {}
             _ => {
                 return Err(Error::NotFriends);
             }

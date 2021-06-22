@@ -25,5 +25,7 @@ pub async fn req(user: User, target: Ref, member: String) -> Result<()> {
         return Err(Error::MissingPermission);
     }
 
-    target.remove_member(&member.id.user, RemoveMember::Kick).await
+    target
+        .remove_member(&member.id.user, RemoveMember::Kick)
+        .await
 }
