@@ -26,9 +26,11 @@ pub enum Error {
     // ? Channel related errors.
     UnknownChannel,
     UnknownAttachment,
+    UnknownMessage,
     CannotEditMessage,
     CannotJoinCall,
     TooManyAttachments,
+    TooManyReplies,
     EmptyMessage,
     CannotRemoveYourself,
     GroupTooLarge {
@@ -79,10 +81,12 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::NotFriends => Status::Forbidden,
 
             Error::UnknownChannel => Status::NotFound,
+            Error::UnknownMessage => Status::NotFound,
             Error::UnknownAttachment => Status::BadRequest,
             Error::CannotEditMessage => Status::Forbidden,
             Error::CannotJoinCall => Status::BadRequest,
             Error::TooManyAttachments => Status::BadRequest,
+            Error::TooManyReplies => Status::BadRequest,
             Error::EmptyMessage => Status::UnprocessableEntity,
             Error::CannotRemoveYourself => Status::BadRequest,
             Error::GroupTooLarge { .. } => Status::Forbidden,

@@ -7,8 +7,22 @@ use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use validator::Validate;
 
+#[derive(Serialize, Deserialize)]
+enum ChannelType {
+    Text,
+    Voice
+}
+
+impl Default for ChannelType {
+    fn default() -> Self {
+        ChannelType::Text
+    }
+}
+
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
+    #[serde(rename = "type", default = "ChannelType::default")]
+    channel_type: ChannelType,
     #[validate(length(min = 1, max = 32))]
     name: String,
     #[validate(length(min = 0, max = 1024))]
@@ -30,7 +44,7 @@ pub async fn req(user: User, target: Ref, info: Json<Data>) -> Result<JsonValue>
         .for_server()
         .await?;
 
-    if !perm.get_manage_server() {
+    if !perm.get_manage_channels() {
         Err(Error::MissingPermission)?
     }
 
@@ -52,15 +66,26 @@ pub async fn req(user: User, target: Ref, info: Json<Data>) -> Result<JsonValue>
     }
 
     let id = Ulid::new().to_string();
-    let channel = Channel::TextChannel {
-        id: id.clone(),
-        server: target.id.clone(),
-        nonce: Some(info.nonce),
+    let channel = match info.channel_type {
+        ChannelType::Text => Channel::TextChannel {
+            id: id.clone(),
+            server: target.id.clone(),
+            nonce: Some(info.nonce),
 
-        name: info.name,
-        description: info.description,
-        icon: None,
-        last_message: None,
+            name: info.name,
+            description: info.description,
+            icon: None,
+            last_message: None,
+        },
+        ChannelType::Voice => Channel::VoiceChannel {
+            id: id.clone(),
+            server: target.id.clone(),
+            nonce: Some(info.nonce),
+
+            name: info.name,
+            description: info.description,
+            icon: None
+        }
     };
 
     channel.clone().publish().await?;

@@ -30,7 +30,8 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
         Channel::Group { .. } => {
             unimplemented!()
         }
-        Channel::TextChannel { id, server, .. } => {
+        Channel::TextChannel { id, server, .. }
+        | Channel::VoiceChannel { id, server, .. } => {
             Invite::Server {
                 code: code.clone(),
                 creator: user.id,

@@ -57,6 +57,7 @@ impl Content {
             target.id().to_string(),
             self,
             None,
+            None
         )
         .publish(&target)
         .await
@@ -81,6 +82,8 @@ pub struct Message {
     pub embeds: Option<Vec<Embed>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mentions: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub replies: Option<Vec<String>>
 }
 
 impl Message {
@@ -89,6 +92,7 @@ impl Message {
         channel: String,
         content: Content,
         mentions: Option<Vec<String>>,
+        replies: Option<Vec<String>>,
     ) -> Message {
         Message {
             id: Ulid::new().to_string(),
@@ -101,6 +105,7 @@ impl Message {
             edited: None,
             embeds: None,
             mentions,
+            replies
         }
     }
 

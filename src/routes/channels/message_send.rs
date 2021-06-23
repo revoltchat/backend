@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::database::*;
 use crate::util::result::{Error, Result};
 
@@ -8,6 +10,12 @@ use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use validator::Validate;
 
+#[derive(Serialize, Deserialize)]
+pub struct Reply {
+    id: String,
+    mention: bool
+}
+
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
     #[validate(length(min = 0, max = 2000))]
@@ -17,6 +25,7 @@ pub struct Data {
     nonce: String,
     #[validate(length(min = 1, max = 128))]
     attachments: Option<Vec<String>>,
+    replies: Option<Vec<Reply>>,
 }
 
 lazy_static! {
@@ -25,6 +34,7 @@ lazy_static! {
 
 #[post("/<target>/messages", data = "<message>")]
 pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonValue> {
+    let message = message.into_inner();
     message
         .validate()
         .map_err(|error| Error::FailedValidation { error })?;
@@ -36,6 +46,8 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
     }
 
     let target = target.fetch_channel().await?;
+    target.has_messaging()?;
+    
     let perm = permissions::PermissionCalculator::new(&user)
         .with_channel(&target)
         .for_channel()
@@ -65,29 +77,45 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
     }
 
     let id = Ulid::new().to_string();
-    let attachments = if let Some(ids) = &message.attachments {
+
+    let mut mentions = HashSet::new();
+    if let Some(captures) = RE_ULID.captures_iter(&message.content).next() {
+        // ! FIXME: in the future, verify in group so we can send out push
+        mentions.insert(captures[1].to_string());
+    }
+
+    let mut replies = HashSet::new();
+    if let Some(entries) = message.replies {
+        // ! FIXME: move this to app config
+        if entries.len() >= 5 {
+            return Err(Error::TooManyReplies)
+        }
+
+        for Reply { id, mention } in entries {
+            let message = Ref::from_unchecked(id)
+                .fetch_message(&target)
+                .await?;
+            
+            replies.insert(message.id);
+            
+            if mention {
+                mentions.insert(message.author);
+            }
+        }
+    }
+
+    let mut attachments = vec![];
+    if let Some(ids) = &message.attachments {
         // ! FIXME: move this to app config
         if ids.len() >= 5 {
             return Err(Error::TooManyAttachments)
         }
 
-        let mut attachments = vec![];
         for attachment_id in ids {
             attachments
                 .push(File::find_and_use(attachment_id, "attachments", "message", &id).await?);
         }
-
-        Some(attachments)
-    } else {
-        None
-    };
-
-    let mut mentions = vec![];
-    if let Some(captures) = RE_ULID.captures_iter(&message.content).next() {
-        // ! FIXME: in the future, verify in group so we can send out push
-        mentions.push(captures[1].to_string());
     }
-
 
     let msg = Message {
         id,
@@ -95,12 +123,18 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
         author: user.id,
 
         content: Content::Text(message.content.clone()),
-        attachments,
         nonce: Some(message.nonce.clone()),
         edited: None,
         embeds: None,
+
+        attachments: if attachments.len() > 0 { Some(attachments) } else { None },
         mentions: if mentions.len() > 0 {
-            Some(mentions)
+            Some(mentions.into_iter().collect::<Vec<String>>())
+        } else {
+            None
+        },
+        replies: if replies.len() > 0 {
+            Some(replies.into_iter().collect::<Vec<String>>())
         } else {
             None
         },

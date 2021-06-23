@@ -18,6 +18,7 @@ pub async fn req(user: User, target: Ref, data: Json<Options>) -> Result<JsonVal
     }
 
     let target = target.fetch_channel().await?;
+    target.has_messaging()?;
 
     let perm = permissions::PermissionCalculator::new(&user)
         .with_channel(&target)

@@ -38,6 +38,7 @@ pub async fn req(user: User, target: Ref, options: Form<Options>) -> Result<Json
         .map_err(|error| Error::FailedValidation { error })?;
 
     let target = target.fetch_channel().await?;
+    target.has_messaging()?;
 
     let perm = permissions::PermissionCalculator::new(&user)
         .with_channel(&target)

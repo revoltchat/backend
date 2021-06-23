@@ -178,7 +178,8 @@ pub async fn prehandle_hook(notification: &ClientboundNotification) -> Result<()
                         subscribe_if_exists(recipient.clone(), channel_id.to_string()).ok();
                     }
                 }
-                Channel::TextChannel { server, .. } => {
+                Channel::TextChannel { server, .. }
+                | Channel::VoiceChannel { server, .. } => {
                     // ! FIXME: write a better algorithm?
                     let members = Server::fetch_member_ids(server).await?;
                     for member in members {

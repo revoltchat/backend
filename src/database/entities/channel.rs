@@ -66,6 +66,19 @@ pub enum Channel {
         #[serde(skip_serializing_if = "Option::is_none")]
         last_message: Option<String>,
     },
+    VoiceChannel {
+        #[serde(rename = "_id")]
+        id: String,
+        server: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        nonce: Option<String>,
+
+        name: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        description: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        icon: Option<File>,
+    },
 }
 
 impl Channel {
@@ -74,7 +87,17 @@ impl Channel {
             Channel::SavedMessages { id, .. }
             | Channel::DirectMessage { id, .. }
             | Channel::Group { id, .. }
-            | Channel::TextChannel { id, .. } => id,
+            | Channel::TextChannel { id, .. }
+            | Channel::VoiceChannel { id, .. } => id,
+        }
+    }
+    pub fn has_messaging(&self) -> Result<()> {
+        match self {
+            Channel::SavedMessages { .. }
+            | Channel::DirectMessage { .. }
+            | Channel::Group { .. }
+            | Channel::TextChannel { .. } => Ok(()),
+            Channel::VoiceChannel { .. } => Err(Error::InvalidOperation)
         }
     }
 
@@ -129,79 +152,84 @@ impl Channel {
                 with: "channel_invites",
             })?;
 
-        // Delete any unreads.
-        get_collection("channel_unreads")
-            .delete_many(
-                doc! {
-                    "_id.channel": id
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "delete_many",
-                with: "channel_unreads",
-            })?;
+        match &self {
+            Channel::VoiceChannel { .. } => {},
+            _ => {
+                // Delete any unreads.
+                get_collection("channel_unreads")
+                    .delete_many(
+                        doc! {
+                            "_id.channel": id
+                        },
+                        None,
+                    )
+                    .await
+                    .map_err(|_| Error::DatabaseError {
+                        operation: "delete_many",
+                        with: "channel_unreads",
+                    })?;
 
-        // Check if there are any attachments we need to delete.
-        let message_ids = messages
-            .find(
-                doc! {
-                    "channel": id,
-                    "attachment": {
-                        "$exists": 1
-                    }
-                },
-                FindOptions::builder().projection(doc! { "_id": 1 }).build(),
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "fetch_many",
-                with: "messages",
-            })?
-            .filter_map(async move |s| s.ok())
-            .collect::<Vec<Document>>()
-            .await
-            .into_iter()
-            .filter_map(|x| x.get_str("_id").ok().map(|x| x.to_string()))
-            .collect::<Vec<String>>();
+                // Check if there are any attachments we need to delete.
+                let message_ids = messages
+                    .find(
+                        doc! {
+                            "channel": id,
+                            "attachment": {
+                                "$exists": 1
+                            }
+                        },
+                        FindOptions::builder().projection(doc! { "_id": 1 }).build(),
+                    )
+                    .await
+                    .map_err(|_| Error::DatabaseError {
+                        operation: "fetch_many",
+                        with: "messages",
+                    })?
+                    .filter_map(async move |s| s.ok())
+                    .collect::<Vec<Document>>()
+                    .await
+                    .into_iter()
+                    .filter_map(|x| x.get_str("_id").ok().map(|x| x.to_string()))
+                    .collect::<Vec<String>>();
 
-        // If we found any, mark them as deleted.
-        if message_ids.len() > 0 {
-            get_collection("attachments")
-                .update_many(
-                    doc! {
-                        "message_id": {
-                            "$in": message_ids
-                        }
-                    },
-                    doc! {
-                        "$set": {
-                            "deleted": true
-                        }
-                    },
-                    None,
-                )
-                .await
-                .map_err(|_| Error::DatabaseError {
-                    operation: "update_many",
-                    with: "attachments",
-                })?;
+                // If we found any, mark them as deleted.
+                if message_ids.len() > 0 {
+                    get_collection("attachments")
+                        .update_many(
+                            doc! {
+                                "message_id": {
+                                    "$in": message_ids
+                                }
+                            },
+                            doc! {
+                                "$set": {
+                                    "deleted": true
+                                }
+                            },
+                            None,
+                        )
+                        .await
+                        .map_err(|_| Error::DatabaseError {
+                            operation: "update_many",
+                            with: "attachments",
+                        })?;
+                }
+
+                // And then delete said messages.
+                messages
+                    .delete_many(
+                        doc! {
+                            "channel": id
+                        },
+                        None,
+                    )
+                    .await
+                    .map_err(|_| Error::DatabaseError {
+                        operation: "delete_many",
+                        with: "messages",
+                    })?;
+            }
         }
-
-        // And then delete said messages.
-        messages
-            .delete_many(
-                doc! {
-                    "channel": id
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "delete_many",
-                with: "messages",
-            })?;
 
         // Remove from server object.
         if let Channel::TextChannel { server, .. } = &self {

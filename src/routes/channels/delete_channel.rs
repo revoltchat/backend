@@ -105,7 +105,8 @@ pub async fn req(user: User, target: Ref) -> Result<()> {
 
             Ok(())
         }
-        Channel::TextChannel { .. } => {
+        Channel::TextChannel { .. } |
+        Channel::VoiceChannel { .. } => {
             if perm.get_manage_channel() {
                 target.delete().await
             } else {

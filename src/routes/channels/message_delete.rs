@@ -6,6 +6,7 @@ use mongodb::bson::doc;
 #[delete("/<target>/messages/<msg>")]
 pub async fn req(user: User, target: Ref, msg: Ref) -> Result<()> {
     let channel = target.fetch_channel().await?;
+    channel.has_messaging()?;
 
     let perm = permissions::PermissionCalculator::new(&user)
         .with_channel(&channel)

@@ -84,7 +84,8 @@ impl<'a> PermissionCalculator<'a> {
                     Ok(0)
                 }
             }
-            Channel::TextChannel { server, .. } => {
+            Channel::TextChannel { server, .. }
+            | Channel::VoiceChannel { server, .. } => {
                 let server = Ref::from_unchecked(server.clone()).fetch_server().await?;
 
                 if self.perspective.id == server.owner {
@@ -92,6 +93,7 @@ impl<'a> PermissionCalculator<'a> {
                 } else {
                     Ok(ChannelPermission::View
                         + ChannelPermission::SendMessage
+                        + ChannelPermission::VoiceCall
                         + ChannelPermission::InviteOthers)
                 }
             }
