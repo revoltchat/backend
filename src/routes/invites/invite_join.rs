@@ -10,10 +10,12 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
     match target {
         Invite::Server { channel, .. } => {
             let channel = Ref::from_unchecked(channel).fetch_channel().await?;
-            let server = if let Channel::TextChannel { server, .. } = &channel {
-                Ref::from_unchecked(server.clone()).fetch_server().await?
-            } else {
-                unreachable!()
+            let server = match &channel {
+                Channel::TextChannel { server, .. }
+                | Channel::VoiceChannel { server, .. } => {
+                    Ref::from_unchecked(server.clone()).fetch_server().await?
+                }
+                _ => unreachable!()
             };
 
             server.join_member(&user.id).await?;

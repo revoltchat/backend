@@ -45,7 +45,9 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
     }
 
     match &target {
-        Channel::Group { id, icon, .. } | Channel::TextChannel { id, icon, .. } => {
+        Channel::Group { id, icon, .. }
+        | Channel::TextChannel { id, icon, .. }
+        | Channel::VoiceChannel { id, icon, .. } => {
             let mut set = doc! {};
             let mut unset = doc! {};
 

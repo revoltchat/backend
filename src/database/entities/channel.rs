@@ -232,59 +232,63 @@ impl Channel {
         }
 
         // Remove from server object.
-        if let Channel::TextChannel { server, .. } = &self {
-            let server = Ref::from_unchecked(server.clone()).fetch_server().await?;
-            let mut update = doc! {
-                "$pull": {
-                    "channels": id
-                }
-            };
+        match &self {
+            Channel::TextChannel { server, .. }
+            | Channel::VoiceChannel { server, .. } => {
+                let server = Ref::from_unchecked(server.clone()).fetch_server().await?;
+                let mut update = doc! {
+                    "$pull": {
+                        "channels": id
+                    }
+                };
 
-            if let Some(sys) = &server.system_messages {
-                let mut unset = doc! {};
+                if let Some(sys) = &server.system_messages {
+                    let mut unset = doc! {};
 
-                if let Some(cid) = &sys.user_joined {
-                    if id == cid {
-                        unset.insert("system_messages.user_joined", 1);
+                    if let Some(cid) = &sys.user_joined {
+                        if id == cid {
+                            unset.insert("system_messages.user_joined", 1);
+                        }
+                    }
+
+                    if let Some(cid) = &sys.user_left {
+                        if id == cid {
+                            unset.insert("system_messages.user_left", 1);
+                        }
+                    }
+
+                    if let Some(cid) = &sys.user_kicked {
+                        if id == cid {
+                            unset.insert("system_messages.user_kicked", 1);
+                        }
+                    }
+
+                    if let Some(cid) = &sys.user_banned {
+                        if id == cid {
+                            unset.insert("system_messages.user_banned", 1);
+                        }
+                    }
+
+                    if unset.len() > 0 {
+                        update.insert("$unset", unset);
                     }
                 }
 
-                if let Some(cid) = &sys.user_left {
-                    if id == cid {
-                        unset.insert("system_messages.user_left", 1);
-                    }
-                }
-
-                if let Some(cid) = &sys.user_kicked {
-                    if id == cid {
-                        unset.insert("system_messages.user_kicked", 1);
-                    }
-                }
-
-                if let Some(cid) = &sys.user_banned {
-                    if id == cid {
-                        unset.insert("system_messages.user_banned", 1);
-                    }
-                }
-
-                if unset.len() > 0 {
-                    update.insert("$unset", unset);
-                }
-            }
-
-            get_collection("servers")
-                .update_one(
-                    doc! {
-                        "_id": server.id
-                    },
-                    update,
-                    None,
-                )
-                .await
-                .map_err(|_| Error::DatabaseError {
-                    operation: "update_one",
-                    with: "servers",
-                })?;
+                get_collection("servers")
+                    .update_one(
+                        doc! {
+                            "_id": server.id
+                        },
+                        update,
+                        None,
+                    )
+                    .await
+                    .map_err(|_| Error::DatabaseError {
+                        operation: "update_one",
+                        with: "servers",
+                    })?;
+            },
+            _ => {}
         }
 
         // Finally, delete the channel object.
