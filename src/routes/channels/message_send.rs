@@ -54,7 +54,7 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
         .await?;
 
     if !perm.get_send_message() {
-        Err(Error::MissingPermission)?
+        return Err(Error::MissingPermission)
     }
 
     if get_collection("messages")
@@ -106,6 +106,10 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
 
     let mut attachments = vec![];
     if let Some(ids) = &message.attachments {
+        if ids.len() > 0 && !perm.get_embed_links() {
+            return Err(Error::MissingPermission)
+        }
+
         // ! FIXME: move this to app config
         if ids.len() >= 5 {
             return Err(Error::TooManyAttachments)
@@ -140,7 +144,7 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
         },
     };
 
-    msg.clone().publish(&target).await?;
+    msg.clone().publish(&target, perm.get_embed_links()).await?;
 
     Ok(json!(msg))
 }

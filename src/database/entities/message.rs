@@ -59,7 +59,7 @@ impl Content {
             None,
             None
         )
-        .publish(&target)
+        .publish(&target, false)
         .await
     }
 }
@@ -109,7 +109,7 @@ impl Message {
         }
     }
 
-    pub async fn publish(self, channel: &Channel) -> Result<()> {
+    pub async fn publish(self, channel: &Channel, process_embeds: bool) -> Result<()> {
         get_collection("messages")
             .insert_one(to_bson(&self).unwrap().as_document().unwrap().clone(), None)
             .await
@@ -230,8 +230,11 @@ impl Message {
             });
         }
 
-        self.process_embed();
+        if process_embeds {
+            self.process_embed();
+        }
 
+        let mentions = self.mentions.clone();
         let enc = serde_json::to_string(&self).unwrap();
         ClientboundNotification::Message(self).publish(channel.id().to_string());
 
@@ -248,6 +251,11 @@ impl Message {
                         if !is_online(recipient) {
                             target_ids.push(recipient.clone());
                         }
+                    }
+                }
+                Channel::TextChannel { .. } => {
+                    if let Some(mut mentions) = mentions {
+                        target_ids.append(&mut mentions);
                     }
                 }
                 _ => {}

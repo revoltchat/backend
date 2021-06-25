@@ -15,6 +15,8 @@ pub enum ChannelPermission {
     ManageChannel = 0b00000000000000000000000000001000,  // 8
     VoiceCall = 0b00000000000000000000000000010000,      // 16
     InviteOthers = 0b00000000000000000000000000100000,   // 32
+    EmbedLinks = 0b00000000000000000000000001000000,     // 64
+    UploadFiles = 0b00000000000000000000000010000000,   // 128
 }
 
 impl_op_ex!(+ |a: &ChannelPermission, b: &ChannelPermission| -> u32 { *a as u32 | *b as u32 });
@@ -29,6 +31,8 @@ bitfield! {
     pub get_manage_channel, _: 28;
     pub get_voice_call, _: 27;
     pub get_invite_others, _: 26;
+    pub get_embed_links, _: 25;
+    pub get_upload_files, _: 24;
 }
 
 impl<'a> PermissionCalculator<'a> {
@@ -60,7 +64,9 @@ impl<'a> PermissionCalculator<'a> {
                         if perms.get_send_message() {
                             return Ok(ChannelPermission::View
                                 + ChannelPermission::SendMessage
-                                + ChannelPermission::VoiceCall);
+                                + ChannelPermission::VoiceCall
+                                + ChannelPermission::EmbedLinks
+                                + ChannelPermission::UploadFiles);
                         }
 
                         return Ok(ChannelPermission::View as u32);
@@ -79,7 +85,9 @@ impl<'a> PermissionCalculator<'a> {
                         + ChannelPermission::SendMessage
                         + ChannelPermission::ManageChannel
                         + ChannelPermission::VoiceCall
-                        + ChannelPermission::InviteOthers)
+                        + ChannelPermission::InviteOthers
+                        + ChannelPermission::EmbedLinks
+                        + ChannelPermission::UploadFiles)
                 } else {
                     Ok(0)
                 }
@@ -94,7 +102,9 @@ impl<'a> PermissionCalculator<'a> {
                     Ok(ChannelPermission::View
                         + ChannelPermission::SendMessage
                         + ChannelPermission::VoiceCall
-                        + ChannelPermission::InviteOthers)
+                        + ChannelPermission::InviteOthers
+                        + ChannelPermission::EmbedLinks
+                        + ChannelPermission::UploadFiles)
                 }
             }
         }
