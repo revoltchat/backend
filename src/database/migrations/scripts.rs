@@ -1,11 +1,8 @@
-use crate::database::{get_collection, get_db};
+use crate::database::{permissions, get_collection, get_db, PermissionTuple};
 
 use futures::StreamExt;
 use log::info;
-use mongodb::{
-    bson::{doc, from_document},
-    options::FindOptions,
-};
+use mongodb::{bson::{doc, from_document, to_document}, options::FindOptions};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -14,7 +11,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 5;
+pub const LATEST_REVISION: i32 = 6;
 
 pub async fn migrate_database() {
     let migrations = get_collection("migrations");
@@ -155,6 +152,33 @@ pub async fn run_migrations(revision: i32) -> i32 {
             .create_collection("channel_invites", None)
             .await
             .expect("Failed to create channel_invites collection.");
+    }
+
+    if revision <= 5 {
+        info!("Running migration [revision 5 / 2021-06-26]: Add permissions.");
+
+        #[derive(Serialize)]
+        struct Server {
+            pub default_permissions: PermissionTuple,
+        }
+
+        let server = Server {
+            default_permissions: (
+                *permissions::server::DEFAULT_PERMISSION as i32,
+                *permissions::channel::DEFAULT_PERMISSION_SERVER as i32
+            )
+        };
+
+        get_collection("servers")
+            .update_many(
+                doc! { },
+                doc! {
+                    "$set": to_document(&server).unwrap()
+                },
+                None
+            )
+            .await
+            .expect("Failed to migrate servers.");
     }
 
     // Reminder to update LATEST_REVISION when adding new migrations.

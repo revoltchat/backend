@@ -1,6 +1,7 @@
-use crate::util::result::Result;
+use crate::util::result::{Error, Result};
 
 use super::PermissionCalculator;
+use super::Ref;
 
 use num_enum::TryFromPrimitive;
 use std::ops;
@@ -20,6 +21,13 @@ pub enum ServerPermission {
     ChangeAvatar = 0b00000000000000000100000000000000,   // 16392
     RemoveAvatars = 0b00000000000000001000000000000000,  // 32784
                                                          // 16 bits of space
+}
+
+lazy_static! {
+    pub static ref DEFAULT_PERMISSION: u32 =
+        ServerPermission::View
+        + ServerPermission::ChangeNickname
+        + ServerPermission::ChangeAvatar;
 }
 
 impl_op_ex!(+ |a: &ServerPermission, b: &ServerPermission| -> u32 { *a as u32 | *b as u32 });
@@ -52,9 +60,26 @@ impl<'a> PermissionCalculator<'a> {
         if self.perspective.id == server.owner {
             Ok(u32::MAX)
         } else {
-            Ok(ServerPermission::View
-                + ServerPermission::ChangeNickname
-                + ServerPermission::ChangeAvatar)
+            match Ref::from_unchecked(self.perspective.id.clone()).fetch_member(&server.id).await {
+                Ok(member) => {
+                    let mut perm = server.default_permissions.0 as u32;
+                    if let Some(roles) = member.roles {
+                        for role in roles {
+                            if let Some(server_role) = server.roles.get(&role) {
+                                perm |= server_role.permissions.0 as u32;
+                            }
+                        }
+                    }
+
+                    Ok(perm)
+                }
+                Err(error) => {
+                    match &error {
+                        Error::NotFound => Ok(0),
+                        _ => Err(error)
+                    }
+                }
+            }
         }
     }
 

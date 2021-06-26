@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::database::*;
 use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
@@ -25,6 +27,23 @@ pub struct Member {
     pub nickname: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar: Option<File>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub roles: Option<Vec<String>>
+}
+
+pub type PermissionTuple = (
+    i32, // server permission
+    i32  // channel permission
+);
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Role {
+    pub name: String,
+    pub permissions: PermissionTuple,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub colour: Option<String>
+    // Bri'ish API conventions
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -59,9 +78,14 @@ pub struct Server {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    
     pub channels: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub system_messages: Option<SystemMessageChannels>,
+
+    #[serde(default = "HashMap::new", skip_serializing_if = "HashMap::is_empty")]
+    pub roles: HashMap<String, Role>,
+    pub default_permissions: PermissionTuple,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub icon: Option<File>,

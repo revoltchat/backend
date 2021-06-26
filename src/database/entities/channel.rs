@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::database::*;
 use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
@@ -50,6 +52,9 @@ pub enum Channel {
         icon: Option<File>,
         #[serde(skip_serializing_if = "Option::is_none")]
         last_message: Option<LastMessage>,
+
+        #[serde(skip_serializing_if = "Option::is_none")]
+        permissions: Option<i32>,
     },
     TextChannel {
         #[serde(rename = "_id")]
@@ -61,10 +66,16 @@ pub enum Channel {
         name: String,
         #[serde(skip_serializing_if = "Option::is_none")]
         description: Option<String>,
+
         #[serde(skip_serializing_if = "Option::is_none")]
         icon: Option<File>,
         #[serde(skip_serializing_if = "Option::is_none")]
         last_message: Option<String>,
+
+        #[serde(skip_serializing_if = "Option::is_none")]
+        default_permissions: Option<i32>,
+        #[serde(default = "HashMap::new", skip_serializing_if = "HashMap::is_empty")]
+        role_permissions: HashMap<String, i32>
     },
     VoiceChannel {
         #[serde(rename = "_id")]
@@ -78,6 +89,11 @@ pub enum Channel {
         description: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         icon: Option<File>,
+
+        #[serde(skip_serializing_if = "Option::is_none")]
+        default_permissions: Option<i32>,
+        #[serde(default = "HashMap::new", skip_serializing_if = "HashMap::is_empty")]
+        role_permissions: HashMap<String, i32>
     },
 }
 

@@ -1,5 +1,5 @@
 use crate::database::*;
-use crate::util::result::Result;
+use crate::util::result::{Error, Result};
 
 use super::PermissionCalculator;
 
@@ -17,6 +17,25 @@ pub enum ChannelPermission {
     InviteOthers = 0b00000000000000000000000000100000,   // 32
     EmbedLinks = 0b00000000000000000000000001000000,     // 64
     UploadFiles = 0b00000000000000000000000010000000,   // 128
+}
+
+lazy_static! {
+    pub static ref DEFAULT_PERMISSION_DM: u32 =
+        ChannelPermission::View
+        + ChannelPermission::SendMessage
+        + ChannelPermission::ManageChannel
+        + ChannelPermission::VoiceCall
+        + ChannelPermission::InviteOthers
+        + ChannelPermission::EmbedLinks
+        + ChannelPermission::UploadFiles;
+
+    pub static ref DEFAULT_PERMISSION_SERVER: u32 =
+        ChannelPermission::View
+        + ChannelPermission::SendMessage
+        + ChannelPermission::VoiceCall
+        + ChannelPermission::InviteOthers
+        + ChannelPermission::EmbedLinks
+        + ChannelPermission::UploadFiles;
 }
 
 impl_op_ex!(+ |a: &ChannelPermission, b: &ChannelPermission| -> u32 { *a as u32 | *b as u32 });
@@ -62,11 +81,7 @@ impl<'a> PermissionCalculator<'a> {
                         let perms = self.for_user(recipient).await?;
 
                         if perms.get_send_message() {
-                            return Ok(ChannelPermission::View
-                                + ChannelPermission::SendMessage
-                                + ChannelPermission::VoiceCall
-                                + ChannelPermission::EmbedLinks
-                                + ChannelPermission::UploadFiles);
+                            return Ok(*DEFAULT_PERMISSION_DM);
                         }
 
                         return Ok(ChannelPermission::View as u32);
@@ -75,36 +90,61 @@ impl<'a> PermissionCalculator<'a> {
 
                 Ok(0)
             }
-            Channel::Group { recipients, .. } => {
+            Channel::Group { recipients, permissions, owner, .. } => {
+                if &self.perspective.id == owner {
+                    return Ok(*DEFAULT_PERMISSION_DM)
+                }
+
                 if recipients
                     .iter()
                     .find(|x| *x == &self.perspective.id)
                     .is_some()
                 {
-                    Ok(ChannelPermission::View
-                        + ChannelPermission::SendMessage
-                        + ChannelPermission::ManageChannel
-                        + ChannelPermission::VoiceCall
-                        + ChannelPermission::InviteOthers
-                        + ChannelPermission::EmbedLinks
-                        + ChannelPermission::UploadFiles)
+                    if let Some(permissions) = permissions {
+                        Ok(permissions.clone() as u32)
+                    } else {
+                        Ok(*DEFAULT_PERMISSION_DM)
+                    }
                 } else {
                     Ok(0)
                 }
             }
-            Channel::TextChannel { server, .. }
-            | Channel::VoiceChannel { server, .. } => {
+            Channel::TextChannel { server, default_permissions, role_permissions, .. }
+            | Channel::VoiceChannel { server, default_permissions, role_permissions, .. } => {
                 let server = Ref::from_unchecked(server.clone()).fetch_server().await?;
 
                 if self.perspective.id == server.owner {
                     Ok(u32::MAX)
                 } else {
-                    Ok(ChannelPermission::View
-                        + ChannelPermission::SendMessage
-                        + ChannelPermission::VoiceCall
-                        + ChannelPermission::InviteOthers
-                        + ChannelPermission::EmbedLinks
-                        + ChannelPermission::UploadFiles)
+                    match Ref::from_unchecked(self.perspective.id.clone()).fetch_member(&server.id).await {
+                        Ok(member) => {
+                            let mut perm = if let Some(permission) = default_permissions {
+                                *permission as u32
+                            } else {
+                                server.default_permissions.1 as u32
+                            };
+
+                            if let Some(roles) = member.roles {
+                                for role in roles {
+                                    if let Some(permission) = role_permissions.get(&role) {
+                                        perm |= *permission as u32;
+                                    }
+
+                                    if let Some(server_role) = server.roles.get(&role) {
+                                        perm |= server_role.permissions.1 as u32;
+                                    }
+                                }
+                            }
+
+                            Ok(perm)
+                        }
+                        Err(error) => {
+                            match &error {
+                                Error::NotFound => Ok(0),
+                                _ => Err(error)
+                            }
+                        }
+                    }
                 }
             }
         }

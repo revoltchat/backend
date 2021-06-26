@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::database::*;
 use crate::util::result::{Error, Result};
 
@@ -76,6 +78,9 @@ pub async fn req(user: User, target: Ref, info: Json<Data>) -> Result<JsonValue>
             description: info.description,
             icon: None,
             last_message: None,
+
+            default_permissions: None,
+            role_permissions: HashMap::new()
         },
         ChannelType::Voice => Channel::VoiceChannel {
             id: id.clone(),
@@ -84,7 +89,10 @@ pub async fn req(user: User, target: Ref, info: Json<Data>) -> Result<JsonValue>
 
             name: info.name,
             description: info.description,
-            icon: None
+            icon: None,
+
+            default_permissions: None,
+            role_permissions: HashMap::new()
         }
     };
 

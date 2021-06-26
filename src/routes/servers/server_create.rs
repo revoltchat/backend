@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::database::*;
 use crate::util::result::{Error, Result};
 
@@ -51,6 +53,7 @@ pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
 
         name: info.name,
         description: info.description,
+
         channels: vec![cid.clone()],
         system_messages: Some(SystemMessageChannels {
             user_joined: Some(cid.clone()),
@@ -58,6 +61,12 @@ pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
             user_kicked: Some(cid.clone()),
             user_banned: Some(cid.clone()),
         }),
+
+        roles: HashMap::new(),
+        default_permissions: (
+            *permissions::server::DEFAULT_PERMISSION as i32,
+            *permissions::channel::DEFAULT_PERMISSION_SERVER as i32
+        ),
 
         icon: None,
         banner: None,
@@ -69,8 +78,12 @@ pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
         nonce: Some(info.nonce),
         name: "general".to_string(),
         description: None,
+
         icon: None,
         last_message: None,
+
+        default_permissions: None,
+        role_permissions: HashMap::new()
     }
     .publish()
     .await?;
