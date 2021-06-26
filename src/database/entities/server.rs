@@ -47,6 +47,13 @@ pub struct Role {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Category {
+    pub id: String,
+    pub title: String,
+    pub channels: Vec<String>
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Ban {
     #[serde(rename = "_id")]
     pub id: MemberCompositeKey,
@@ -80,6 +87,8 @@ pub struct Server {
     pub description: Option<String>,
     
     pub channels: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub categories: Option<Vec<Category>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub system_messages: Option<SystemMessageChannels>,
 

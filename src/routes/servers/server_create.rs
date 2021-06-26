@@ -55,6 +55,7 @@ pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
         description: info.description,
 
         channels: vec![cid.clone()],
+        categories: None,
         system_messages: Some(SystemMessageChannels {
             user_joined: Some(cid.clone()),
             user_left: Some(cid.clone()),
