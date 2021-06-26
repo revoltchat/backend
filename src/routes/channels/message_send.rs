@@ -106,7 +106,7 @@ pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonVal
 
     let mut attachments = vec![];
     if let Some(ids) = &message.attachments {
-        if ids.len() > 0 && !perm.get_embed_links() {
+        if ids.len() > 0 && !perm.get_upload_files() {
             return Err(Error::MissingPermission)
         }
 
