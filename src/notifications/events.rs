@@ -36,7 +36,7 @@ pub enum RemoveUserField {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum RemoveChannelField {
     Icon,
-    Description,
+    Description
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
