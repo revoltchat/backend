@@ -15,6 +15,8 @@ pub struct Data {
     description: Option<String>,
     icon: Option<String>,
     banner: Option<String>,
+    categories: Option<Vec<Category>>,
+    system_messages: Option<SystemMessageChannels>,
     remove: Option<RemoveServerField>,
 }
 
@@ -24,7 +26,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if data.name.is_none() && data.icon.is_none() && data.banner.is_none() && data.remove.is_none()
+    if data.name.is_none() && data.icon.is_none() && data.banner.is_none() && data.remove.is_none() && data.categories.is_none() && data.system_messages.is_none()
     {
         return Ok(());
     }
@@ -93,6 +95,14 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
         );
 
         remove_banner = true;
+    }
+
+    if let Some(categories) = &data.categories {
+        set.insert("categories", to_document(&categories).map_err(|_| Error::DatabaseError { operation: "to_document", with: "categories" })?);
+    }
+
+    if let Some(system_messages) = &data.system_messages {
+        set.insert("system_messages", to_document(&system_messages).map_err(|_| Error::DatabaseError { operation: "to_document", with: "system_messages" })?);
     }
 
     let mut operations = doc! {};

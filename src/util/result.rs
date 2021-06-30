@@ -41,6 +41,7 @@ pub enum Error {
 
     // ? Server related errors.
     UnknownServer,
+    InvalidRole,
     Banned,
 
     // ? General errors.
@@ -94,6 +95,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::NotInGroup => Status::NotFound,
 
             Error::UnknownServer => Status::NotFound,
+            Error::InvalidRole => Status::NotFound,
             Error::Banned => Status::Forbidden,
 
             Error::FailedValidation { .. } => Status::UnprocessableEntity,

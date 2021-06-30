@@ -37,7 +37,7 @@ bitfield! {
     pub struct ServerPermissions(MSB0 [u32]);
     u32;
     pub get_view, _: 31;
-    pub get_manage_members, _: 30;
+    pub get_manage_roles, _: 30;
     pub get_manage_channels, _: 29;
     pub get_manage_server, _: 28;
     pub get_kick_members, _: 27;

@@ -16,6 +16,8 @@ mod message_fetch;
 mod message_query;
 mod message_query_stale;
 mod message_send;
+mod permissions_set;
+mod permissions_set_default;
 
 pub fn routes() -> Vec<Route> {
     routes![
@@ -35,5 +37,7 @@ pub fn routes() -> Vec<Route> {
         group_add_member::req,
         group_remove_member::req,
         voice_join::req,
+        permissions_set::req,
+        permissions_set_default::req,
     ]
 }

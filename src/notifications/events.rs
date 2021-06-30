@@ -129,6 +129,15 @@ pub enum ClientboundNotification {
         id: String,
         user: String,
     },
+    ServerRoleUpdate {
+        id: String,
+        role_id: String,
+        data: JsonValue
+    },
+    ServerRoleDelete {
+        id: String,
+        role_id: String
+    },
 
     UserUpdate {
         id: String,

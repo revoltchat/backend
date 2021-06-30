@@ -18,6 +18,9 @@ mod ban_remove;
 
 mod invites_fetch;
 
+mod roles_create;
+mod roles_delete;
+
 pub fn routes() -> Vec<Route> {
     routes![
         server_create::req,
@@ -32,6 +35,8 @@ pub fn routes() -> Vec<Route> {
         ban_create::req,
         ban_remove::req,
         ban_list::req,
-        invites_fetch::req
+        invites_fetch::req,
+        roles_create::req,
+        roles_delete::req
     ]
 }

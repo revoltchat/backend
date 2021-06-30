@@ -14,8 +14,8 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
         .for_server()
         .await?;
 
-    if !perm.get_manage_members() {
-        Err(Error::MissingPermission)?
+    if !perm.get_ban_members() {
+        return Err(Error::MissingPermission);
     }
 
     let mut cursor = get_collection("server_bans")

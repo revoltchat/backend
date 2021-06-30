@@ -12,7 +12,7 @@ pub async fn req(user: User, target: Ref, member: String) -> Result<()> {
         .for_server()
         .await?;
 
-    if !perm.get_manage_members() {
+    if !perm.get_kick_members() {
         return Err(Error::MissingPermission);
     }
 
