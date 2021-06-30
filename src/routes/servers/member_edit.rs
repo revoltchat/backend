@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
 use crate::{database::*, notifications::events::RemoveMemberField};
@@ -12,6 +14,7 @@ pub struct Data {
     #[validate(length(min = 1, max = 32))]
     nickname: Option<String>,
     avatar: Option<String>,
+    roles: Option<Vec<String>>,
     remove: Option<RemoveMemberField>,
 }
 
@@ -21,7 +24,7 @@ pub async fn req(user: User, server: Ref, target: String, data: Json<Data>) -> R
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if data.nickname.is_none() && data.avatar.is_none() && data.remove.is_none() {
+    if data.nickname.is_none() && data.avatar.is_none() && data.roles.is_none() && data.remove.is_none() {
         return Ok(());
     }
 
@@ -32,6 +35,10 @@ pub async fn req(user: User, server: Ref, target: String, data: Json<Data>) -> R
         .with_server(&server)
         .for_server()
         .await?;
+
+    if data.roles.is_some() && !perm.get_manage_roles() {
+        return Err(Error::MissingPermission);
+    }
 
     if target.id.user == user.id {
         if (data.nickname.is_some() && !perm.get_change_nickname())
@@ -95,6 +102,18 @@ pub async fn req(user: User, server: Ref, target: String, data: Json<Data>) -> R
         );
 
         remove_avatar = true;
+    }
+
+    if let Some(role_ids) = &data.roles {
+        let mut ids = HashSet::new();
+
+        for role in role_ids {
+            if server.roles.contains_key(role) {
+                ids.insert(role.clone());
+            }
+        }
+
+        set.insert("roles", ids.into_iter().collect::<Vec<String>>());
     }
 
     let mut operations = doc! {};

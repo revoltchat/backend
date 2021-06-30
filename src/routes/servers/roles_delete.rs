@@ -20,7 +20,7 @@ pub async fn req(user: User, target: Ref, role_id: String) -> Result<()> {
     get_collection("servers")
         .update_one(
             doc! {
-                "_id": &role_id
+                "_id": &target.id
             },
             doc! {
                 "$unset": {
@@ -34,9 +34,42 @@ pub async fn req(user: User, target: Ref, role_id: String) -> Result<()> {
             operation: "update_one",
             with: "servers"
         })?;
-    
-    // remove role from members
-    // remove role from channels
+
+    get_collection("channels")
+        .update_one(
+            doc! {
+                "server": &target.id
+            },
+            doc! {
+                "$unset": {
+                    "role_permissions.".to_owned() + &role_id: 1
+                }
+            },
+            None
+        )
+        .await
+        .map_err(|_| Error::DatabaseError {
+            operation: "update_one",
+            with: "channels"
+        })?;
+
+    get_collection("server_members")
+        .update_many(
+            doc! {
+                "_id.server": &target.id
+            },
+            doc! {
+                "$pull": {
+                    "roles": &role_id
+                }
+            },
+            None
+        )
+        .await
+        .map_err(|_| Error::DatabaseError {
+            operation: "update_many",
+            with: "server_members"
+        })?;
     
     ClientboundNotification::ServerRoleDelete {
         id: target.id.clone(),

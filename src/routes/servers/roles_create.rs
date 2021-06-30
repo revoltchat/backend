@@ -40,7 +40,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<JsonValue>
     get_collection("servers")
         .update_one(
             doc! {
-                "_id": &id
+                "_id": &target.id
             },
             doc! {
                 "$set": {

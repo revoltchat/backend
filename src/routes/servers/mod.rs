@@ -20,6 +20,8 @@ mod invites_fetch;
 
 mod roles_create;
 mod roles_delete;
+mod permissions_set;
+mod permissions_set_default;
 
 pub fn routes() -> Vec<Route> {
     routes![
@@ -37,6 +39,8 @@ pub fn routes() -> Vec<Route> {
         ban_list::req,
         invites_fetch::req,
         roles_create::req,
-        roles_delete::req
+        roles_delete::req,
+        permissions_set::req,
+        permissions_set_default::req
     ]
 }
