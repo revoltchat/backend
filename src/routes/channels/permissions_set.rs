@@ -13,7 +13,7 @@ pub struct Data {
     permissions: u32
 }
 
-#[put("/<target>/permissions/<role>", data = "<data>")]
+#[put("/<target>/permissions/<role>", data = "<data>", rank = 2)]
 pub async fn req(user: User, target: Ref, role: String, data: Json<Data>) -> Result<()> {
     let target = target.fetch_channel().await?;
 
@@ -33,7 +33,7 @@ pub async fn req(user: User, target: Ref, role: String, data: Json<Data>) -> Res
             if !target.roles.has_element(&role) {
                 return Err(Error::NotFound);
             }
-
+            
             let permissions: u32 = ChannelPermission::View as u32 | data.permissions;
             
             get_collection("channels")

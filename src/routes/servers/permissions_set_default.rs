@@ -9,9 +9,14 @@ use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
 
 #[derive(Serialize, Deserialize)]
-pub struct Data {
+pub struct Values {
     server: u32,
     channel: u32
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Data {
+    permissions: Values
 }
 
 #[put("/<target>/permissions/default", data = "<data>", rank = 1)]
@@ -27,8 +32,8 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
         return Err(Error::MissingPermission);
     }
 
-    let server_permissions: u32 = ServerPermission::View as u32 | data.server;
-    let channel_permissions: u32 = ChannelPermission::View as u32 | data.channel;
+    let server_permissions: u32 = ServerPermission::View as u32 | data.permissions.server;
+    let channel_permissions: u32 = ChannelPermission::View as u32 | data.permissions.channel;
     
     get_collection("servers")
         .update_one(

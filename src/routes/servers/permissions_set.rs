@@ -9,12 +9,17 @@ use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
 
 #[derive(Serialize, Deserialize)]
-pub struct Data {
+pub struct Values {
     server: u32,
     channel: u32
 }
 
-#[put("/<target>/permissions/<role_id>", data = "<data>")]
+#[derive(Serialize, Deserialize)]
+pub struct Data {
+    permissions: Values
+}
+
+#[put("/<target>/permissions/<role_id>", data = "<data>", rank = 2)]
 pub async fn req(user: User, target: Ref, role_id: String, data: Json<Data>) -> Result<()> {
     let target = target.fetch_server().await?;
 
@@ -31,8 +36,8 @@ pub async fn req(user: User, target: Ref, role_id: String, data: Json<Data>) -> 
         return Err(Error::NotFound);
     }
 
-    let server_permissions: u32 = ServerPermission::View as u32 | data.server;
-    let channel_permissions: u32 = ChannelPermission::View as u32 | data.channel;
+    let server_permissions: u32 = ServerPermission::View as u32 | data.permissions.server;
+    let channel_permissions: u32 = ChannelPermission::View as u32 | data.permissions.channel;
     
     get_collection("servers")
         .update_one(
