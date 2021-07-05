@@ -69,7 +69,31 @@ impl<'a> PermissionCalculator<'a> {
             _ => {}
         }
 
+        let check_server_overlap = async || {
+            let server_ids = self.perspective.fetch_server_ids().await?;
+
+            Ok(
+                get_collection("server_members")
+                    .find_one(
+                        doc! {
+                            "_id.user": &target,
+                            "_id.server": {
+                                "$in": server_ids
+                            }
+                        },
+                        None
+                    )
+                    .await
+                    .map_err(|_| Error::DatabaseError {
+                        operation: "find_one",
+                        with: "server_members",
+                    })?
+                    .is_some()
+            )
+        };
+
         if self.has_mutual_connection
+            || check_server_overlap().await?
             || get_collection("channels")
                 .find_one(
                     doc! {
@@ -84,7 +108,7 @@ impl<'a> PermissionCalculator<'a> {
                 )
                 .await
                 .map_err(|_| Error::DatabaseError {
-                    operation: "find",
+                    operation: "find_one",
                     with: "channels",
                 })?
                 .is_some()
