@@ -42,7 +42,7 @@ async-std = { version = "1.8.0", features = ["tokio02", "attributes"] }
 async-tungstenite = { version = "0.10.0", features = ["async-std-runtime"] }
 rocket_cors = { git = "https://github.com/insertish/rocket_cors", branch = "master" }
 mongodb = { version = "1.1.1", features = ["tokio-runtime"], default-features = false }
-rauth = { git = "https://gitlab.insrt.uk/insert/rauth", rev = "1db825a0059639144ea8802f6d51b5d27c5b986e" }
+rauth = { git = "https://gitlab.insrt.uk/insert/rauth", rev = "e17673d046f5e447b6805c4ec9a10525b0526d02" }
 rocket_contrib = { git = "https://github.com/SergioBenitez/Rocket", rev = "031948c1daaa146128d8a435be116476f2adde00" }
 rocket_prometheus = { git = "https://github.com/insertish/rocket_prometheus", rev = "3d825aedb42793246c306a81fe67c5b187948983" }
 rocket = { git = "https://github.com/SergioBenitez/Rocket", rev = "031948c1daaa146128d8a435be116476f2adde00", default-features = false }
