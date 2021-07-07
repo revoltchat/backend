@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use crate::database::*;
 use crate::util::result::{Error, Result};
 
-use futures::StreamExt;
+use futures::{StreamExt, try_join};
 use mongodb::{
     bson::{doc, from_document},
     options::FindOptions,
@@ -28,6 +28,11 @@ pub struct Options {
     #[validate(length(min = 26, max = 26))]
     after: Option<String>,
     sort: Option<Sort>,
+    // Specifying 'nearby' ignores 'before', 'after' and 'sort'.
+    // It will also take half of limit rounded as the limits to each side.
+    // It also fetches the message ID specified.
+    #[validate(length(min = 26, max = 26))]
+    nearby: Option<String>,
     include_users: Option<bool>,
 }
 
@@ -48,46 +53,100 @@ pub async fn req(user: User, target: Ref, options: Form<Options>) -> Result<Json
         Err(Error::MissingPermission)?
     }
 
-    let mut query = doc! { "channel": target.id() };
+    let mut messages = vec![];
 
-    if let Some(before) = &options.before {
-        query.insert("_id", doc! { "$lt": before });
-    }
-
-    if let Some(after) = &options.after {
-        query.insert("_id", doc! { "$gt": after });
-    }
-
-    let sort = if let Sort::Latest = options.sort.as_ref().unwrap_or_else(|| &Sort::Latest) {
-        -1
-    } else {
-        1
-    };
-    let mut cursor = get_collection("messages")
-        .find(
-            query,
-            FindOptions::builder()
-                .limit(options.limit.unwrap_or(50))
-                .sort(doc! {
-                    "_id": sort
-                })
-                .build(),
+    let collection = get_collection("messages");
+    let limit = options.limit.unwrap_or(50);
+    let channel = target.id();
+    if let Some(nearby) = &options.nearby {
+        let cursors = try_join!(
+            collection.find(
+                doc! {
+                    "channel": channel,
+                    "_id": {
+                        "$gte": &nearby
+                    }
+                },
+                FindOptions::builder()
+                    .limit(limit / 2 + 1)
+                    .sort(doc! {
+                        "_id": 1
+                    })
+                    .build(),
+            ),
+            collection.find(
+                doc! {
+                    "channel": channel,
+                    "_id": {
+                        "$lt": &nearby
+                    }
+                },
+                FindOptions::builder()
+                    .limit(limit / 2)
+                    .sort(doc! {
+                        "_id": -1
+                    })
+                    .build(),
+            )
         )
-        .await
         .map_err(|_| Error::DatabaseError {
             operation: "find",
             with: "messages",
         })?;
 
-    let mut messages = vec![];
-    while let Some(result) = cursor.next().await {
-        if let Ok(doc) = result {
-            messages.push(
-                from_document::<Message>(doc).map_err(|_| Error::DatabaseError {
-                    operation: "from_document",
-                    with: "message",
-                })?,
-            );
+        for mut cursor in [ cursors.0, cursors.1 ] {
+            while let Some(result) = cursor.next().await {
+                if let Ok(doc) = result {
+                    messages.push(
+                        from_document::<Message>(doc).map_err(|_| Error::DatabaseError {
+                            operation: "from_document",
+                            with: "message",
+                        })?,
+                    );
+                }
+            }
+        }
+    } else {
+        let mut query = doc! { "channel": target.id() };
+        if let Some(before) = &options.before {
+            query.insert("_id", doc! { "$lt": before });
+        }
+
+        if let Some(after) = &options.after {
+            query.insert("_id", doc! { "$gt": after });
+        }
+
+        let sort: i32 = if let Sort::Latest = options.sort.as_ref().unwrap_or_else(|| &Sort::Latest) {
+            -1
+        } else {
+            1
+        };
+
+        let mut cursor = collection
+            .find(
+                query,
+                FindOptions::builder()
+                    .limit(limit)
+                    .sort(doc! {
+                        "_id": sort
+                    })
+                    .build(),
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "find",
+                with: "messages",
+            })?;
+
+        while let Some(result) = cursor.next().await {
+            if let Ok(doc) = result {
+                messages.push(
+                    from_document::<Message>(doc).map_err(|_| Error::DatabaseError {
+                        operation: "from_document",
+                        with: "message",
+                    })?,
+                );
+            }
         }
     }
 
