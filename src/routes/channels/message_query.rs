@@ -59,7 +59,7 @@ pub async fn req(user: User, target: Ref, options: Form<Options>) -> Result<Json
     let limit = options.limit.unwrap_or(50);
     let channel = target.id();
     if let Some(nearby) = &options.nearby {
-        let cursors = try_join!(
+        let mut cursors = try_join!(
             collection.find(
                 doc! {
                     "channel": channel,
@@ -94,16 +94,25 @@ pub async fn req(user: User, target: Ref, options: Form<Options>) -> Result<Json
             with: "messages",
         })?;
 
-        for mut cursor in [ cursors.0, cursors.1 ] {
-            while let Some(result) = cursor.next().await {
-                if let Ok(doc) = result {
-                    messages.push(
-                        from_document::<Message>(doc).map_err(|_| Error::DatabaseError {
-                            operation: "from_document",
-                            with: "message",
-                        })?,
-                    );
-                }
+        while let Some(result) = cursors.0.next().await {
+            if let Ok(doc) = result {
+                messages.push(
+                    from_document::<Message>(doc).map_err(|_| Error::DatabaseError {
+                        operation: "from_document",
+                        with: "message",
+                    })?,
+                );
+            }
+        }
+
+        while let Some(result) = cursors.1.next().await {
+            if let Ok(doc) = result {
+                messages.push(
+                    from_document::<Message>(doc).map_err(|_| Error::DatabaseError {
+                        operation: "from_document",
+                        with: "message",
+                    })?,
+                );
             }
         }
     } else {

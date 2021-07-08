@@ -67,6 +67,7 @@ pub enum Badges {
     Translator = 2,
     Supporter = 4,
     ResponsibleDisclosure = 8,
+    RevoltTeam = 16,
     EarlyAdopter = 256,
 }
 
