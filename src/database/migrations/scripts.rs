@@ -11,7 +11,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 6;
+pub const LATEST_REVISION: i32 = 7;
 
 pub async fn migrate_database() {
     let migrations = get_collection("migrations");
@@ -179,6 +179,28 @@ pub async fn run_migrations(revision: i32) -> i32 {
             )
             .await
             .expect("Failed to migrate servers.");
+    }
+
+    if revision <= 6 {
+        info!("Running migration [revision 6 / 2021-07-09]: Add message text index.");
+
+        get_db()
+        .run_command(
+            doc! {
+                "createIndexes": "messages",
+                "indexes": [
+                    {
+                        "key": {
+                            "content": "text"
+                        },
+                        "name": "content"
+                    }
+                ]
+            },
+            None,
+        )
+        .await
+        .expect("Failed to create message index.");
     }
 
     // Reminder to update LATEST_REVISION when adding new migrations.

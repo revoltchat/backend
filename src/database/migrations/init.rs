@@ -122,6 +122,23 @@ pub async fn create_database() {
     .await
     .expect("Failed to create username index.");
 
+    db.run_command(
+        doc! {
+            "createIndexes": "messages",
+            "indexes": [
+                {
+                    "key": {
+                        "content": "text"
+                    },
+                    "name": "content"
+                }
+            ]
+        },
+        None,
+    )
+    .await
+    .expect("Failed to create message index.");
+
     db.collection("migrations")
         .insert_one(
             doc! {
