@@ -47,6 +47,11 @@ pub enum RemoveServerField {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum RemoveRoleField {
+    Colour,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum RemoveMemberField {
     Nickname,
     Avatar,
@@ -132,7 +137,9 @@ pub enum ClientboundNotification {
     ServerRoleUpdate {
         id: String,
         role_id: String,
-        data: JsonValue
+        data: JsonValue,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        clear: Option<RemoveRoleField>
     },
     ServerRoleDelete {
         id: String,

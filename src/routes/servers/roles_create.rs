@@ -67,7 +67,8 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<JsonValue>
         data: json!({
             "name": data.name,
             "permissions": &perm_tuple
-        })
+        }),
+        clear: None
     }
     .publish(target.id);
 

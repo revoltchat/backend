@@ -66,7 +66,8 @@ pub async fn req(user: User, target: Ref, role_id: String, data: Json<Data>) -> 
                 server_permissions as i32,
                 channel_permissions as i32
             ]
-        })
+        }),
+        clear: None
     }
     .publish(target.id);
 
