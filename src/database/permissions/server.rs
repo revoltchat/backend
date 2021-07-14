@@ -18,8 +18,8 @@ pub enum ServerPermission {
     // 6 bits of space
     ChangeNickname = 0b00000000000000000001000000000000, // 4096
     ManageNicknames = 0b00000000000000000010000000000000, // 8192
-    ChangeAvatar = 0b00000000000000000100000000000000,   // 16392
-    RemoveAvatars = 0b00000000000000001000000000000000,  // 32784
+    ChangeAvatar = 0b00000000000000000100000000000000,   // 16382
+    RemoveAvatars = 0b00000000000000001000000000000000,  // 32768
                                                          // 16 bits of space
 }
 

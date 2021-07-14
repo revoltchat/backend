@@ -159,7 +159,7 @@ impl User {
 
     /// Utility function for checking claimed usernames.
     pub async fn is_username_taken(username: &str) -> Result<bool> {
-        if username.to_lowercase() == "revolt" && username.to_lowercase() == "admin" {
+        if username.to_lowercase() == "revolt" || username.to_lowercase() == "admin" {
             return Ok(true);
         }
 
