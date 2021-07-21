@@ -19,6 +19,12 @@ pub enum Sort {
     Oldest,
 }
 
+impl Default for Sort {
+    fn default() -> Sort {
+        Sort::Relevance
+    }
+}
+
 #[derive(Validate, Serialize, Deserialize, FromForm)]
 pub struct Options {
     #[validate(length(min = 1, max = 64))]
@@ -30,7 +36,8 @@ pub struct Options {
     before: Option<String>,
     #[validate(length(min = 26, max = 26))]
     after: Option<String>,
-    sort: Option<Sort>,
+    #[serde(default = "Sort::default")]
+    sort: Sort,
     include_users: Option<bool>,
 }
 
@@ -54,26 +61,60 @@ pub async fn req(user: User, target: Ref, options: Json<Options>) -> Result<Json
     let mut messages = vec![];
     let limit = options.limit.unwrap_or(50);
 
+    let mut filter = doc! {
+        "channel": target.id(),
+        "$text": {
+            "$search": &options.query
+        }
+    };
+
+    if let Some(doc) = match (&options.before, &options.after) {
+        (Some(before), Some(after)) => Some(doc! {
+            "lt": before,
+            "gt": after
+        }),
+        (Some(before), _) => Some(doc! {
+            "lt": before
+        }),
+        (_, Some(after)) => Some(doc! {
+            "gt": after
+        }),
+        _ => None
+    } {
+        filter.insert("_id", doc);
+    }
+
     let mut cursor = get_collection("messages")
         .find(
-            doc! {
-                "channel": target.id(),
-                "$text": {
-                    "$search": &options.query
-                }
-            },
+            filter,
             FindOptions::builder()
-                .projection(doc! {
-                    "score": {
-                        "$meta": "textScore"
+                .projection(
+                    if let Sort::Relevance = &options.sort {
+                        doc! {
+                            "score": {
+                                "$meta": "textScore"
+                            }
+                        }
+                    } else {
+                        doc! {}
                     }
-                })
+                )
                 .limit(limit)
-                .sort(doc! {
-                    "score": {
-                        "$meta": "textScore"
+                .sort(
+                    match &options.sort {
+                        Sort::Relevance => doc! {
+                            "score": {
+                                "$meta": "textScore"
+                            }
+                        },
+                        Sort::Latest => doc! {
+                            "_id": -1
+                        },
+                        Sort::Oldest => doc! {
+                            "_id": 1
+                        }
                     }
-                })
+                )
                 .build(),
         )
         .await
