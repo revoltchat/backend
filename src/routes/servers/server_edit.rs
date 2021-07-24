@@ -2,7 +2,7 @@ use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
 use crate::{database::*, notifications::events::RemoveServerField};
 
-use mongodb::bson::{doc, to_document};
+use mongodb::bson::{doc, to_bson, to_document};
 use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -98,11 +98,11 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
     }
 
     if let Some(categories) = &data.categories {
-        set.insert("categories", to_document(&categories).map_err(|_| Error::DatabaseError { operation: "to_document", with: "categories" })?);
+        set.insert("categories", to_bson(&categories).map_err(|_| Error::DatabaseError { operation: "to_document", with: "categories" })?);
     }
 
     if let Some(system_messages) = &data.system_messages {
-        set.insert("system_messages", to_document(&system_messages).map_err(|_| Error::DatabaseError { operation: "to_document", with: "system_messages" })?);
+        set.insert("system_messages", to_bson(&system_messages).map_err(|_| Error::DatabaseError { operation: "to_document", with: "system_messages" })?);
     }
 
     let mut operations = doc! {};

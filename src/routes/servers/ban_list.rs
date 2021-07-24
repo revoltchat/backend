@@ -2,8 +2,17 @@ use crate::database::*;
 use crate::util::result::{Error, Result};
 
 use futures::StreamExt;
-use mongodb::bson::{doc, from_document};
+use mongodb::options::FindOptions;
+use serde::{Serialize, Deserialize};
 use rocket_contrib::json::JsonValue;
+use mongodb::bson::{doc, from_document};
+
+#[derive(Serialize, Deserialize)]
+struct BannedUser {
+    _id: String,
+    username: String,
+    avatar: Option<File>
+}
 
 #[get("/<target>/bans")]
 pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
@@ -32,13 +41,47 @@ pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
         })?;
 
     let mut bans = vec![];
+    let mut user_ids = vec![];
     while let Some(result) = cursor.next().await {
         if let Ok(doc) = result {
             if let Ok(ban) = from_document::<Ban>(doc) {
+                user_ids.push(ban.id.user.clone());
                 bans.push(ban);
             }
         }
     }
 
-    Ok(json!(bans))
+    let mut cursor = get_collection("users")
+        .find(
+            doc! {
+                "_id": {
+                    "$in": user_ids
+                }
+            },
+            FindOptions::builder()
+                .projection(doc! {
+                    "username": 1,
+                    "avatar": 1
+                })
+                .build(),
+        )
+        .await
+        .map_err(|_| Error::DatabaseError {
+            operation: "find",
+            with: "users",
+        })?;
+
+    let mut users = vec![];
+    while let Some(result) = cursor.next().await {
+        if let Ok(doc) = result {
+            if let Ok(user) = from_document::<BannedUser>(doc) {
+                users.push(user);
+            }
+        }
+    }
+
+    Ok(json!({
+        "users": users,
+        "bans": bans
+    }))
 }
