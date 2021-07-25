@@ -425,4 +425,19 @@ impl Server {
 
         Ok(())
     }
+
+    pub async fn get_member_count(id: &str) -> Result<i64> {
+        Ok(get_collection("server_members")
+            .count_documents(
+                doc! {
+                    "_id.server": id
+                },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "count_documents",
+                with: "server_members",
+            })?)
+    }
 }
