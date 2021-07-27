@@ -26,7 +26,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if data.name.is_none() && data.icon.is_none() && data.banner.is_none() && data.remove.is_none() && data.categories.is_none() && data.system_messages.is_none()
+    if data.name.is_none() && data.description.is_none() && data.icon.is_none() && data.banner.is_none() && data.remove.is_none() && data.categories.is_none() && data.system_messages.is_none()
     {
         return Ok(());
     }
