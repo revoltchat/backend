@@ -157,10 +157,6 @@ pub enum ClientboundNotification {
         user: User,
         status: RelationshipStatus,
     },
-    UserPresence {
-        id: String,
-        online: bool,
-    },
     UserSettingsUpdate {
         id: String,
         update: JsonValue,

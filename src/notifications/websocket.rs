@@ -129,9 +129,12 @@ async fn accept(stream: TcpStream) {
                                         send(payload);
 
                                         if !was_online {
-                                            ClientboundNotification::UserPresence {
+                                            ClientboundNotification::UserUpdate {
                                                 id: id.clone(),
-                                                online: true,
+                                                data: json!({
+                                                    "online": true
+                                                }),
+                                                clear: None
                                             }
                                             .publish(id);
                                         }
@@ -228,9 +231,12 @@ async fn accept(stream: TcpStream) {
     }
 
     if let Some(id) = offline {
-        ClientboundNotification::UserPresence {
+        ClientboundNotification::UserUpdate {
             id: id.clone(),
-            online: false,
+            data: json!({
+                "online": false
+            }),
+            clear: None
         }
         .publish(id);
     }
