@@ -87,13 +87,18 @@ async fn launch_web() {
                 templates: Templates {
                     verify_email: Template {
                         title: "Verify your Revolt account.",
-                        text: "You're almost there! Verify your account to be able to log into the platform. If you did not perform this action you can safely ignore this email.\nPlease verify your account here: {{url}}\n\nSent by Revolt. · Website: https://revolt.chat\nRevolt is a user-first chat platform built with modern web technologies.",
-                        html: include_str!("../assets/templates/verify_plain.html"),
+                        text: "You're almost there!
+If you did not perform this action you can safely ignore this email.
+
+Please verify your account here: {{url}}",
+                        html: None,
                     },
                     reset_password: Template {
                         title: "Reset your Revolt password.",
-                        text: "You requested a password reset, if you did not perform this action you can safely ignore this email.\nReset your password here: {{url}}\n\nSent by Revolt. · Website: https://revolt.chat\nRevolt is a user-first chat platform built with modern web technologies.",
-                        html: include_str!("../assets/templates/reset_plain.html"),
+                        text: "You requested a password reset, if you did not perform this action you can safely ignore this email.
+
+Reset your password here: {{url}}",
+                        html: None,
                     },
                     welcome: None,
                 },

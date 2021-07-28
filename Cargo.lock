@@ -2342,7 +2342,7 @@ dependencies = [
 [[package]]
 name = "rauth"
 version = "0.2.7-patch.0"
-source = "git+https://gitlab.insrt.uk/insert/rauth?rev=e17673d046f5e447b6805c4ec9a10525b0526d02#e17673d046f5e447b6805c4ec9a10525b0526d02"
+source = "git+https://gitlab.insrt.uk/insert/rauth?rev=00d3c3dff51cf3242a7d4adda4c5184c97fa2a03#00d3c3dff51cf3242a7d4adda4c5184c97fa2a03"
 dependencies = [
  "chrono",
  "handlebars",
