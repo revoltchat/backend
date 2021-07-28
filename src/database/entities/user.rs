@@ -229,11 +229,11 @@ impl User {
     }
 
     /// Utility function to get all the server IDs the user is in.
-    pub async fn fetch_server_ids(&self) -> Result<Vec<String>> {
+    pub async fn fetch_server_ids(id: &str) -> Result<Vec<String>> {
         Ok(get_collection("server_members")
             .find(
                 doc! {
-                    "_id.user": &self.id
+                    "_id.user": id
                 },
                 None,
             )
@@ -256,11 +256,11 @@ impl User {
     }
 
     /// Utility function to fetch unread objects for user.
-    pub async fn fetch_unreads(&self) -> Result<Vec<Document>> {
+    pub async fn fetch_unreads(id: &str) -> Result<Vec<Document>> {
         Ok(get_collection("channel_unreads")
             .find(
                 doc! {
-                    "_id.user": &self.id
+                    "_id.user": id
                 },
                 None,
             )

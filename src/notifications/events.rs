@@ -172,6 +172,18 @@ impl ClientboundNotification {
                 .ok();
         });
     }
+
+    pub fn publish_as_user(self, user: String) {
+        self.clone().publish(user.clone());
+
+        async_std::task::spawn(async move {
+            if let Ok(server_ids) = User::fetch_server_ids(&user).await {
+                for server in server_ids {
+                    self.clone().publish(server.clone());
+                }
+            }
+        });
+    }
 }
 
 pub async fn prehandle_hook(notification: &ClientboundNotification) -> Result<()> {

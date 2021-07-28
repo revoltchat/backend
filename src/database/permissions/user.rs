@@ -70,7 +70,7 @@ impl<'a> PermissionCalculator<'a> {
         }
 
         let check_server_overlap = async || {
-            let server_ids = self.perspective.fetch_server_ids().await?;
+            let server_ids = User::fetch_server_ids(&self.perspective.id).await?;
 
             Ok(
                 get_collection("server_members")

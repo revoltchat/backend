@@ -4,11 +4,10 @@ use crate::database::*;
 use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
 use futures::StreamExt;
-use mongodb::bson::doc;
+use mongodb::bson::{Bson, doc};
 use mongodb::bson::from_document;
 use mongodb::bson::to_document;
 use mongodb::bson::Document;
-use mongodb::options::FindOptions;
 use rocket_contrib::json::JsonValue;
 use serde::{Deserialize, Serialize};
 
@@ -133,58 +132,11 @@ impl Server {
     }
 
     pub async fn delete(&self) -> Result<()> {
-        let messages = get_collection("messages");
-
         // Check if there are any attachments we need to delete.
-        // ! FIXME: make this generic and merge with channel delete
-        // ! e.g. delete_channel(filter: doc!)
-        let message_ids = messages
-            .find(
-                doc! {
-                    "server": &self.id,
-                    "attachment": {
-                        "$exists": 1
-                    }
-                },
-                FindOptions::builder().projection(doc! { "_id": 1 }).build(),
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "fetch_many",
-                with: "messages",
-            })?
-            .filter_map(async move |s| s.ok())
-            .collect::<Vec<Document>>()
-            .await
-            .into_iter()
-            .filter_map(|x| x.get_str("_id").ok().map(|x| x.to_string()))
-            .collect::<Vec<String>>();
+        Channel::delete_messages(Bson::Document(doc! { "$in": &self.channels })).await?;
 
-        // If we found any, mark them as deleted.
-        if message_ids.len() > 0 {
-            get_collection("attachments")
-                .update_many(
-                    doc! {
-                        "message_id": {
-                            "$in": message_ids
-                        }
-                    },
-                    doc! {
-                        "$set": {
-                            "deleted": true
-                        }
-                    },
-                    None,
-                )
-                .await
-                .map_err(|_| Error::DatabaseError {
-                    operation: "update_many",
-                    with: "attachments",
-                })?;
-        }
-
-        // And then delete said messages.
-        messages
+        // Delete all channels.
+        get_collection("channels")
             .delete_many(
                 doc! {
                     "server": &self.id
@@ -194,27 +146,13 @@ impl Server {
             .await
             .map_err(|_| Error::DatabaseError {
                 operation: "delete_many",
-                with: "messages",
+                with: "channels",
             })?;
 
-        // Delete all channels, members, bans and invites.
-        for with in &["channels", "channel_invites"] {
-            get_collection(with)
-                .delete_many(
-                    doc! {
-                        "server": &self.id
-                    },
-                    None,
-                )
-                .await
-                .map_err(|_| Error::DatabaseError {
-                    operation: "delete_many",
-                    with,
-                })?;
-        }
+        // Delete any associated objects, e.g. unreads and invites.
+        Channel::delete_associated_objects(Bson::Document(doc! { "$in": &self.channels })).await?;
 
-        // ! FIXME: delete any unreads
-
+        // Delete members and bans.
         for with in &["server_members", "server_bans"] {
             get_collection(with)
                 .delete_many(
@@ -230,6 +168,16 @@ impl Server {
                 })?;
         }
 
+        // Delete server icon / banner.
+        if let Some(attachment) = &self.icon {
+            attachment.delete().await?;
+        }
+
+        if let Some(attachment) = &self.banner {
+            attachment.delete().await?;
+        }
+
+        // Delete the server
         get_collection("servers")
             .delete_one(
                 doc! {
@@ -247,14 +195,6 @@ impl Server {
             id: self.id.clone(),
         }
         .publish(self.id.clone());
-
-        if let Some(attachment) = &self.icon {
-            attachment.delete().await?;
-        }
-
-        if let Some(attachment) = &self.banner {
-            attachment.delete().await?;
-        }
 
         Ok(())
     }

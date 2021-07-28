@@ -17,8 +17,7 @@ pub async fn generate_subscriptions(user: &User) -> Result<(), String> {
         }
     }
 
-    let server_ids = user
-        .fetch_server_ids()
+    let server_ids = User::fetch_server_ids(&user.id)
         .await
         .map_err(|_| "Failed to fetch memberships.".to_string())?;
 

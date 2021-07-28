@@ -62,7 +62,7 @@ pub async fn req(
         }),
         clear: None,
     }
-    .publish(user.id.clone());
+    .publish_as_user(user.id.clone());
 
     Ok(())
 }

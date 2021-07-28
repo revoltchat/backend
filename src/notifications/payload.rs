@@ -19,7 +19,7 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
         );
     }
 
-    let server_ids = user.fetch_server_ids().await?;
+    let server_ids = User::fetch_server_ids(&user.id).await?;
     let mut cursor = get_collection("servers")
         .find(
             doc! {

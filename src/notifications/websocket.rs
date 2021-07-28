@@ -136,7 +136,7 @@ async fn accept(stream: TcpStream) {
                                                 }),
                                                 clear: None
                                             }
-                                            .publish(id);
+                                            .publish_as_user(id);
                                         }
                                     }
                                     Err(_) => {
@@ -238,7 +238,7 @@ async fn accept(stream: TcpStream) {
             }),
             clear: None
         }
-        .publish(id);
+        .publish_as_user(id);
     }
 }
 

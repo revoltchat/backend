@@ -99,7 +99,7 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
     }
 
     let avatar = std::mem::replace(&mut data.avatar, None);
-    let attachment = if let Some(attachment_id) = avatar {
+    if let Some(attachment_id) = avatar {
         let attachment = File::find_and_use(&attachment_id, "avatars", "user", &user.id).await?;
         set.insert(
             "avatar",
@@ -110,14 +110,11 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
         );
 
         remove_avatar = true;
-        Some(attachment)
-    } else {
-        None
-    };
+    }
 
     let mut operations = doc! {};
     if set.len() > 0 {
-        operations.insert("$set", set);
+        operations.insert("$set", &set);
     }
 
     if unset.len() > 0 {
@@ -134,32 +131,12 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
             })?;
     }
 
-    if let Some(status) = &data.status {
-        ClientboundNotification::UserUpdate {
-            id: user.id.clone(),
-            data: json!({ "status": status }),
-            clear: None,
-        }
-        .publish(user.id.clone());
+    ClientboundNotification::UserUpdate {
+        id: user.id.clone(),
+        data: json!(set),
+        clear: data.remove,
     }
-
-    if let Some(avatar) = attachment {
-        ClientboundNotification::UserUpdate {
-            id: user.id.clone(),
-            data: json!({ "avatar": avatar }),
-            clear: None,
-        }
-        .publish(user.id.clone());
-    }
-
-    if let Some(clear) = data.remove {
-        ClientboundNotification::UserUpdate {
-            id: user.id.clone(),
-            data: json!({}),
-            clear: Some(clear),
-        }
-        .publish(user.id.clone());
-    }
+    .publish_as_user(user.id.clone());
 
     if remove_avatar {
         if let Some(old_avatar) = user.avatar {
