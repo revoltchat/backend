@@ -29,7 +29,7 @@ pub async fn req(user: User, target: Ref, msg: Ref, edit: Json<Data>) -> Result<
         Err(Error::MissingPermission)?
     }
 
-    let message = msg.fetch_message(&channel).await?;
+    let mut message = msg.fetch_message(&channel).await?;
     if message.author != user.id {
         Err(Error::CannotEditMessage)?
     }
@@ -40,6 +40,7 @@ pub async fn req(user: User, target: Ref, msg: Ref, edit: Json<Data>) -> Result<
         "edited": Bson::DateTime(edited)
     };
 
+    message.content = Content::Text(edit.content.clone());
     let mut update = json!({ "content": edit.content, "edited": DateTime(edited) });
 
     if let Some(embeds) = &message.embeds {

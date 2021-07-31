@@ -228,6 +228,30 @@ impl User {
         Ok(users)
     }
 
+    /// Utility function to get all of a user's memberships.
+    pub async fn fetch_memberships(id: &str) -> Result<Vec<Member>> {
+        Ok(get_collection("server_members")
+            .find(
+                doc! {
+                    "_id.user": id
+                },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "find",
+                with: "server_members",
+            })?
+            .filter_map(async move |s| s.ok())
+            .collect::<Vec<Document>>()
+            .await
+            .into_iter()
+            .filter_map(|x| {
+                from_document(x).ok()
+            })
+            .collect::<Vec<Member>>())
+    }
+
     /// Utility function to get all the server IDs the user is in.
     pub async fn fetch_server_ids(id: &str) -> Result<Vec<String>> {
         Ok(get_collection("server_members")

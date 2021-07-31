@@ -19,7 +19,11 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
         );
     }
 
-    let server_ids = User::fetch_server_ids(&user.id).await?;
+    let members = User::fetch_memberships(&user.id).await?;
+    let server_ids: Vec<String> = members.iter()
+        .map(|x| x.id.server.clone())
+        .collect();
+    
     let mut cursor = get_collection("servers")
         .find(
             doc! {
@@ -114,5 +118,6 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
         users,
         servers,
         channels,
+        members
     })
 }

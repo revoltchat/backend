@@ -66,6 +66,7 @@ pub enum ClientboundNotification {
         users: Vec<User>,
         servers: Vec<Server>,
         channels: Vec<Channel>,
+        members: Vec<Member>
     },
 
     Message(Message),
