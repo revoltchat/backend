@@ -4,7 +4,7 @@ use crate::util::result::{Error, Result};
 use mongodb::bson::doc;
 use rauth::auth::Session;
 use regex::Regex;
-use rocket_contrib::json::Json;
+use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 

@@ -4,10 +4,10 @@ use crate::util::result::{Error, Result};
 use futures::StreamExt;
 use mongodb::bson::{doc, Document};
 use mongodb::options::FindOptions;
-use rocket_contrib::json::JsonValue;
+use rocket::serde::json::Value;
 
 #[get("/<target>/mutual")]
-pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
+pub async fn req(user: User, target: Ref) -> Result<Value> {
     let users = get_collection("users")
         .find(
             doc! {

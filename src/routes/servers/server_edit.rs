@@ -3,7 +3,7 @@ use crate::util::result::{Error, Result};
 use crate::{database::*, notifications::events::RemoveServerField};
 
 use mongodb::bson::{doc, to_bson, to_document};
-use rocket_contrib::json::Json;
+use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 

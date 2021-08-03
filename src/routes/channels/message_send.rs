@@ -5,7 +5,7 @@ use crate::util::result::{Error, Result};
 
 use mongodb::{bson::doc, options::FindOneOptions};
 use regex::Regex;
-use rocket_contrib::json::{Json, JsonValue};
+use rocket::serde::json::{Json, Value};
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use validator::Validate;
@@ -33,7 +33,7 @@ lazy_static! {
 }
 
 #[post("/<target>/messages", data = "<message>")]
-pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<JsonValue> {
+pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<Value> {
     let message = message.into_inner();
     message
         .validate()

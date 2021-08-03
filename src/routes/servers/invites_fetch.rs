@@ -3,7 +3,7 @@ use crate::util::result::{Error, Result};
 
 use futures::StreamExt;
 use mongodb::bson::{doc, from_document};
-use rocket_contrib::json::JsonValue;
+use rocket::serde::json::Value;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -15,7 +15,7 @@ pub struct ServerInvite {
 }
 
 #[get("/<target>/invites")]
-pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
+pub async fn req(user: User, target: Ref) -> Result<Value> {
     let target = target.fetch_server().await?;
 
     let perm = permissions::PermissionCalculator::new(&user)

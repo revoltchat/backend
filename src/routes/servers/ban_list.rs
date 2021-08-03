@@ -4,7 +4,7 @@ use crate::util::result::{Error, Result};
 use futures::StreamExt;
 use mongodb::options::FindOptions;
 use serde::{Serialize, Deserialize};
-use rocket_contrib::json::JsonValue;
+use rocket::serde::json::Value;
 use mongodb::bson::{doc, from_document};
 
 #[derive(Serialize, Deserialize)]
@@ -15,7 +15,7 @@ struct BannedUser {
 }
 
 #[get("/<target>/bans")]
-pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
+pub async fn req(user: User, target: Ref) -> Result<Value> {
     let target = target.fetch_server().await?;
 
     let perm = permissions::PermissionCalculator::new(&user)

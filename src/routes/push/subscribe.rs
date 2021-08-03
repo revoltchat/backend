@@ -3,7 +3,7 @@ use crate::util::result::{Error, Result};
 
 use mongodb::bson::{doc, to_document};
 use rauth::auth::Session;
-use rocket_contrib::json::Json;
+use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]

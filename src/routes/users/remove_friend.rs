@@ -4,10 +4,10 @@ use crate::util::result::{Error, Result};
 
 use futures::try_join;
 use mongodb::bson::doc;
-use rocket_contrib::json::JsonValue;
+use rocket::serde::json::Value;
 
 #[delete("/<target>/friend")]
-pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
+pub async fn req(user: User, target: Ref) -> Result<Value> {
     let col = get_collection("users");
 
     let target = target.fetch_user().await?;

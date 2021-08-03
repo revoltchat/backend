@@ -11,7 +11,7 @@ use mongodb::{
     bson::{doc, to_bson, DateTime},
     options::FindOptions,
 };
-use rocket_contrib::json::JsonValue;
+use rocket::serde::json::Value;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use web_push::{
@@ -323,7 +323,7 @@ impl Message {
         Ok(())
     }
 
-    pub async fn publish_update(self, data: JsonValue) -> Result<()> {
+    pub async fn publish_update(self, data: Value) -> Result<()> {
         let channel = self.channel.clone();
         ClientboundNotification::MessageUpdate {
             id: self.id.clone(),

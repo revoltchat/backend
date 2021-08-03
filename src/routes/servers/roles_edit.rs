@@ -3,7 +3,7 @@ use crate::util::result::{Error, Result};
 use crate::{database::*, notifications::events::RemoveRoleField};
 
 use mongodb::bson::doc;
-use rocket_contrib::json::Json;
+use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 

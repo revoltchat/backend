@@ -1,13 +1,14 @@
-use crate::util::variables::{
+use crate::util::{ratelimit::RateLimitGuard, variables::{
     APP_URL, AUTUMN_URL, EXTERNAL_WS_URL, HCAPTCHA_SITEKEY, INVITE_ONLY, JANUARY_URL, USE_AUTUMN,
     USE_EMAIL, USE_HCAPTCHA, USE_JANUARY, USE_VOSO, VAPID_PUBLIC_KEY, VOSO_URL, VOSO_WS_HOST,
-};
+}};
 
 use mongodb::bson::doc;
-use rocket_contrib::json::JsonValue;
+use rocket::serde::json::Value;
+use rocket_governor::RocketGovernor;
 
 #[get("/")]
-pub async fn root() -> JsonValue {
+pub async fn root(_limitguard: RocketGovernor<'_, RateLimitGuard>) -> Value {
     json!({
         "revolt": crate::version::VERSION,
         "features": {

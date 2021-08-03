@@ -32,17 +32,17 @@ serde_json = "1.0.57"
 lazy_static = "1.4.0"
 urlencoding = "1.1.1"
 many-to-many = "0.1.2"
-lettre = "0.10.0-alpha.1"
+lettre = "0.10.0-alpha.4"
+rocket-governor = "0.0.1-rc.9"
 reqwest = { version = "0.10.8", features = ["json"] }
 serde = { version = "1.0.115", features = ["derive"] }
 validator = { version = "0.11", features = ["derive"] }
 ctrlc = { version = "3.0", features = ["termination"] }
-hive_pubsub = { version = "0.4.4", features = ["mongo"] }
 async-std = { version = "1.8.0", features = ["tokio02", "attributes"] }
 async-tungstenite = { version = "0.10.0", features = ["async-std-runtime"] }
+rocket = { version = "0.5.0-rc.1", default-features = false, features = ["json"] }
 rocket_cors = { git = "https://github.com/insertish/rocket_cors", branch = "master" }
-mongodb = { version = "1.1.1", features = ["tokio-runtime"], default-features = false }
-rauth = { git = "https://gitlab.insrt.uk/insert/rauth", rev = "00d3c3dff51cf3242a7d4adda4c5184c97fa2a03" }
-rocket_contrib = { git = "https://github.com/SergioBenitez/Rocket", rev = "031948c1daaa146128d8a435be116476f2adde00" }
+mongodb = { version = "1.2.2", features = ["tokio-runtime"], default-features = false }
+rauth = { git = "https://gitlab.insrt.uk/insert/rauth", rev = "51546e5a1ba0dfe3ec3bd0b060fa51fc3102c96f" }
 rocket_prometheus = { git = "https://github.com/insertish/rocket_prometheus", rev = "3d825aedb42793246c306a81fe67c5b187948983" }
-rocket = { git = "https://github.com/SergioBenitez/Rocket", rev = "031948c1daaa146128d8a435be116476f2adde00", default-features = false }
+hive_pubsub = { git = "https://gitlab.insrt.uk/insert/hive", rev = "a89826df2b30166220e68a6ed01a58b751456604", features = ["mongo"] }

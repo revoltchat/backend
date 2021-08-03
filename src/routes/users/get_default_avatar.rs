@@ -1,5 +1,6 @@
 use rocket::{Request, Response};
-use rocket::response::{self, NamedFile, Responder};
+use rocket::response::{self, Responder};
+use rocket::fs::NamedFile;
 use std::path::Path;
 
 use crate::database::Ref;
