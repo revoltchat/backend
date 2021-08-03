@@ -8,7 +8,7 @@ use mongodb::bson::{Bson, doc};
 use mongodb::bson::from_document;
 use mongodb::bson::to_document;
 use mongodb::bson::Document;
-use rocket_contrib::json::JsonValue;
+use rocket::serde::json::Value;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -120,7 +120,7 @@ impl Server {
         Ok(())
     }
 
-    pub async fn publish_update(&self, data: JsonValue) -> Result<()> {
+    pub async fn publish_update(&self, data: Value) -> Result<()> {
         ClientboundNotification::ServerUpdate {
             id: self.id.clone(),
             data,

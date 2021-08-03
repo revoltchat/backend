@@ -8,11 +8,11 @@ use mongodb::{
     bson::{doc, from_document},
     options::FindOptions,
 };
-use rocket_contrib::json::{Json, JsonValue};
+use rocket::serde::json::{Json, Value};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Serialize, Deserialize, FromFormValue)]
+#[derive(Serialize, Deserialize, FromFormField)]
 pub enum Sort {
     Relevance,
     Latest,
@@ -42,7 +42,7 @@ pub struct Options {
 }
 
 #[post("/<target>/search", data = "<options>")]
-pub async fn req(user: User, target: Ref, options: Json<Options>) -> Result<JsonValue> {
+pub async fn req(user: User, target: Ref, options: Json<Options>) -> Result<Value> {
     options
         .validate()
         .map_err(|error| Error::FailedValidation { error })?;

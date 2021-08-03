@@ -1,10 +1,10 @@
 use crate::database::*;
 use crate::util::result::Result;
 
-use rocket_contrib::json::JsonValue;
+use rocket::serde::json::Value;
 
 #[post("/<target>")]
-pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
+pub async fn req(user: User, target: Ref) -> Result<Value> {
     let target = target.fetch_invite().await?;
 
     match target {

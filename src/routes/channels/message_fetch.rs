@@ -1,10 +1,10 @@
 use crate::database::*;
 use crate::util::result::{Error, Result};
 
-use rocket_contrib::json::JsonValue;
+use rocket::serde::json::Value;
 
 #[get("/<target>/messages/<msg>")]
-pub async fn req(user: User, target: Ref, msg: Ref) -> Result<JsonValue> {
+pub async fn req(user: User, target: Ref, msg: Ref) -> Result<Value> {
     let channel = target.fetch_channel().await?;
     channel.has_messaging()?;
 

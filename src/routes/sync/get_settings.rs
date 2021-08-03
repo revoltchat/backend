@@ -3,7 +3,7 @@ use crate::util::result::{Error, Result};
 
 use mongodb::bson::doc;
 use mongodb::options::FindOneOptions;
-use rocket_contrib::json::{Json, JsonValue};
+use rocket::serde::json::{Json, Value};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -12,7 +12,7 @@ pub struct Options {
 }
 
 #[post("/settings/fetch", data = "<options>")]
-pub async fn req(user: User, options: Json<Options>) -> Result<JsonValue> {
+pub async fn req(user: User, options: Json<Options>) -> Result<Value> {
     let options = options.into_inner();
     let mut projection = doc! {
         "_id": 0,

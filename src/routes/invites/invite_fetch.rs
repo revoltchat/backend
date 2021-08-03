@@ -1,7 +1,7 @@
 use crate::database::*;
 use crate::util::result::Result;
 
-use rocket_contrib::json::JsonValue;
+use rocket::serde::json::Value;
 use serde::Serialize;
 
 #[derive(Serialize, Debug, Clone)]
@@ -26,7 +26,7 @@ pub enum InviteResponse {
 }
 
 #[get("/<target>")]
-pub async fn req(target: Ref) -> Result<JsonValue> {
+pub async fn req(target: Ref) -> Result<Value> {
     let target = target.fetch_invite().await?;
 
     match target {

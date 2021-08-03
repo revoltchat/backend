@@ -2,7 +2,7 @@ use crate::database::*;
 use crate::util::result::{Error, Result};
 use crate::util::variables::{USE_VOSO, VOSO_MANAGE_TOKEN, VOSO_URL};
 
-use rocket_contrib::json::JsonValue;
+use rocket::serde::json::Value;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -11,7 +11,7 @@ struct CreateUserResponse {
 }
 
 #[post("/<target>/join_call")]
-pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
+pub async fn req(user: User, target: Ref) -> Result<Value> {
     if !*USE_VOSO {
         return Err(Error::VosoUnavailable);
     }

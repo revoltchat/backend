@@ -5,10 +5,10 @@ use crate::util::result::{Error, Result};
 use futures::try_join;
 use mongodb::bson::doc;
 use mongodb::options::{Collation, FindOneOptions};
-use rocket_contrib::json::JsonValue;
+use rocket::serde::json::Value;
 
 #[put("/<username>/friend")]
-pub async fn req(user: User, username: String) -> Result<JsonValue> {
+pub async fn req(user: User, username: String) -> Result<Value> {
     let col = get_collection("users");
     let doc = col
         .find_one(

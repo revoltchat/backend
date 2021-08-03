@@ -3,10 +3,10 @@ use crate::util::result::{Error, Result};
 
 use futures::StreamExt;
 use mongodb::bson::doc;
-use rocket_contrib::json::JsonValue;
+use rocket::serde::json::Value;
 
 #[get("/dms")]
-pub async fn req(user: User) -> Result<JsonValue> {
+pub async fn req(user: User) -> Result<Value> {
     let mut cursor = get_collection("channels")
         .find(
             doc! {

@@ -2,7 +2,7 @@ use crate::database::*;
 use crate::util::result::{Error, Result};
 
 use mongodb::bson::doc;
-use rocket_contrib::json::Json;
+use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 

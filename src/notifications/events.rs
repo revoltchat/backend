@@ -1,7 +1,7 @@
 use hive_pubsub::PubSub;
 use mongodb::bson::doc;
 use rauth::auth::Session;
-use rocket_contrib::json::JsonValue;
+use rocket::serde::json::Value;
 use serde::{Deserialize, Serialize};
 
 use super::hive::{get_hive, subscribe_if_exists};
@@ -73,7 +73,7 @@ pub enum ClientboundNotification {
     MessageUpdate {
         id: String,
         channel: String,
-        data: JsonValue,
+        data: Value,
     },
     MessageDelete {
         id: String,
@@ -83,7 +83,7 @@ pub enum ClientboundNotification {
     ChannelCreate(Channel),
     ChannelUpdate {
         id: String,
-        data: JsonValue,
+        data: Value,
         #[serde(skip_serializing_if = "Option::is_none")]
         clear: Option<RemoveChannelField>,
     },
@@ -114,7 +114,7 @@ pub enum ClientboundNotification {
 
     ServerUpdate {
         id: String,
-        data: JsonValue,
+        data: Value,
         #[serde(skip_serializing_if = "Option::is_none")]
         clear: Option<RemoveServerField>,
     },
@@ -123,7 +123,7 @@ pub enum ClientboundNotification {
     },
     ServerMemberUpdate {
         id: MemberCompositeKey,
-        data: JsonValue,
+        data: Value,
         #[serde(skip_serializing_if = "Option::is_none")]
         clear: Option<RemoveMemberField>,
     },
@@ -138,7 +138,7 @@ pub enum ClientboundNotification {
     ServerRoleUpdate {
         id: String,
         role_id: String,
-        data: JsonValue,
+        data: Value,
         #[serde(skip_serializing_if = "Option::is_none")]
         clear: Option<RemoveRoleField>
     },
@@ -149,7 +149,7 @@ pub enum ClientboundNotification {
 
     UserUpdate {
         id: String,
-        data: JsonValue,
+        data: Value,
         #[serde(skip_serializing_if = "Option::is_none")]
         clear: Option<RemoveUserField>,
     },
@@ -160,7 +160,7 @@ pub enum ClientboundNotification {
     },
     UserSettingsUpdate {
         id: String,
-        update: JsonValue,
+        update: Value,
     },
 }
 

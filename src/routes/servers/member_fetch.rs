@@ -2,10 +2,10 @@ use crate::database::*;
 use crate::util::result::{Error, Result};
 
 use mongodb::bson::doc;
-use rocket_contrib::json::JsonValue;
+use rocket::serde::json::Value;
 
 #[get("/<target>/members/<member>")]
-pub async fn req(user: User, target: Ref, member: String) -> Result<JsonValue> {
+pub async fn req(user: User, target: Ref, member: String) -> Result<Value> {
     let target = target.fetch_server().await?;
 
     let perm = permissions::PermissionCalculator::new(&user)

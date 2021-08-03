@@ -9,7 +9,7 @@ use mongodb::{
     bson::{doc, to_document, Document},
     options::FindOptions,
 };
-use rocket_contrib::json::JsonValue;
+use rocket::serde::json::Value;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -139,7 +139,7 @@ impl Channel {
         Ok(())
     }
 
-    pub async fn publish_update(&self, data: JsonValue) -> Result<()> {
+    pub async fn publish_update(&self, data: Value) -> Result<()> {
         let id = self.id().to_string();
         ClientboundNotification::ChannelUpdate {
             id: id.clone(),

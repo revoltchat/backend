@@ -1,5 +1,5 @@
 use mongodb::bson::doc;
-use rocket_contrib::json::Json;
+use rocket::serde::json::Json;
 use serde::{Serialize, Deserialize};
 
 use crate::database::*;

@@ -3,12 +3,12 @@ use crate::util::result::{Error, Result};
 
 use futures::StreamExt;
 use mongodb::bson::{doc, from_document, Document};
-use rocket_contrib::json::JsonValue;
+use rocket::serde::json::Value;
 
 // ! FIXME: this is a temporary route while permissions are being worked on.
 
 #[get("/<target>/members")]
-pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
+pub async fn req(user: User, target: Ref) -> Result<Value> {
     let target = target.fetch_server().await?;
 
     let perm = permissions::PermissionCalculator::new(&user)

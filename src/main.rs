@@ -4,8 +4,6 @@
 #[macro_use]
 extern crate rocket;
 #[macro_use]
-extern crate rocket_contrib;
-#[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate impl_ops;
@@ -30,6 +28,7 @@ use rauth::{
 };
 use rocket_cors::AllowedOrigins;
 use rocket_prometheus::PrometheusMetrics;
+use rocket::catchers;
 use util::variables::{
     APP_URL, HCAPTCHA_KEY, INVITE_ONLY, PUBLIC_URL, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD,
     SMTP_USERNAME, USE_EMAIL, USE_HCAPTCHA, USE_PROMETHEUS,
@@ -140,6 +139,7 @@ Reset your password here: {{url}}",
         .manage(auth)
         .manage(cors.clone())
         .attach(cors)
+        .register("/", catchers![rocket_governor::rocket_governor_catcher])
         .launch()
         .await
         .unwrap();

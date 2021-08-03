@@ -3,7 +3,7 @@ use crate::util::result::{Error, Result};
 
 use mongodb::bson::doc;
 use nanoid::nanoid;
-use rocket_contrib::json::JsonValue;
+use rocket::serde::json::Value;
 
 lazy_static! {
     static ref ALPHABET: [char; 54] = [
@@ -14,7 +14,7 @@ lazy_static! {
 }
 
 #[post("/<target>/invites")]
-pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
+pub async fn req(user: User, target: Ref) -> Result<Value> {
     let target = target.fetch_channel().await?;
     let perm = permissions::PermissionCalculator::new(&user)
         .with_channel(&target)

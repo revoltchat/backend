@@ -5,8 +5,8 @@ use crate::util::result::{Error, Result};
 use chrono::prelude::*;
 use mongodb::bson::{doc, to_bson};
 use mongodb::options::UpdateOptions;
-use rocket::request::Form;
-use rocket_contrib::json::Json;
+use rocket::form::Form;
+use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

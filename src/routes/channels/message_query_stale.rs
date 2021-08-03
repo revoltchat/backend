@@ -3,7 +3,7 @@ use crate::util::result::{Error, Result};
 
 use futures::StreamExt;
 use mongodb::bson::{doc, from_document};
-use rocket_contrib::json::{Json, JsonValue};
+use rocket::serde::json::{Json, Value};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -12,7 +12,7 @@ pub struct Options {
 }
 
 #[post("/<target>/messages/stale", data = "<data>")]
-pub async fn req(user: User, target: Ref, data: Json<Options>) -> Result<JsonValue> {
+pub async fn req(user: User, target: Ref, data: Json<Options>) -> Result<Value> {
     if data.ids.len() > 150 {
         return Err(Error::TooManyIds);
     }

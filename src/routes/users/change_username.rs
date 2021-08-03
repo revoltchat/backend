@@ -6,7 +6,7 @@ use mongodb::bson::doc;
 use rauth::auth::{Auth, Session};
 use regex::Regex;
 use rocket::State;
-use rocket_contrib::json::Json;
+use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -25,7 +25,7 @@ pub struct Data {
 
 #[patch("/<_ignore_id>/username", data = "<data>")]
 pub async fn req(
-    auth: State<'_, Auth>,
+    auth: &State<Auth>,
     session: Session,
     user: User,
     data: Json<Data>,

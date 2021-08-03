@@ -3,7 +3,7 @@ use crate::util::result::{Error, Result};
 
 use chrono::Utc;
 use mongodb::bson::{doc, Bson, DateTime, Document};
-use rocket_contrib::json::Json;
+use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 

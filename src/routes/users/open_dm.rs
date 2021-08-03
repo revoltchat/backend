@@ -2,11 +2,11 @@ use crate::database::*;
 use crate::util::result::{Error, Result};
 
 use mongodb::bson::doc;
-use rocket_contrib::json::JsonValue;
+use rocket::serde::json::Value;
 use ulid::Ulid;
 
 #[get("/<target>/dm")]
-pub async fn req(user: User, target: Ref) -> Result<JsonValue> {
+pub async fn req(user: User, target: Ref) -> Result<Value> {
     let query = if user.id == target.id {
         doc! {
             "channel_type": "SavedMessages",

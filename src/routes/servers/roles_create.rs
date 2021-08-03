@@ -6,7 +6,7 @@ use ulid::Ulid;
 use mongodb::bson::doc;
 use validator::Validate;
 use serde::{Serialize, Deserialize};
-use rocket_contrib::json::{Json, JsonValue};
+use rocket::serde::json::{Json, Value};
 
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
@@ -15,7 +15,7 @@ pub struct Data {
 }
 
 #[post("/<target>/roles", data = "<data>")]
-pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<JsonValue> {
+pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<Value> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;

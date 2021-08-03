@@ -3,7 +3,7 @@ use crate::util::result::{Error, Result};
 use crate::util::variables::MAX_GROUP_SIZE;
 
 use mongodb::bson::doc;
-use rocket_contrib::json::{Json, JsonValue};
+use rocket::serde::json::{Json, Value};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::iter::FromIterator;
@@ -23,7 +23,7 @@ pub struct Data {
 }
 
 #[post("/create", data = "<info>")]
-pub async fn req(user: User, info: Json<Data>) -> Result<JsonValue> {
+pub async fn req(user: User, info: Json<Data>) -> Result<Value> {
     let info = info.into_inner();
     info.validate()
         .map_err(|error| Error::FailedValidation { error })?;
