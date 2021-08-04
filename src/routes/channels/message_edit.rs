@@ -53,7 +53,7 @@ pub async fn req(user: User, target: Ref, msg: Ref, edit: Json<Data>) -> Result<
         }
 
         let obj = update.as_object_mut().unwrap();
-        obj.insert("embeds".to_string(), json!(new_embeds).0);
+        obj.insert("embeds".to_string(), json!(new_embeds));
         set.insert("embeds", new_embeds);
     }
 

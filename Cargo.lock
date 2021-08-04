@@ -94,6 +94,7 @@ dependencies = [
  "num_cpus",
  "once_cell",
  "tokio 0.2.25",
+ "tokio 1.9.0",
 ]
 
 [[package]]
@@ -503,16 +504,6 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 
 [[package]]
 name = "cookie"
-version = "0.15.0-dev"
-source = "git+https://github.com/SergioBenitez/cookie-rs.git?rev=1c3ca83#1c3ca838543b60a4448d279dc4b903cc7a2bc22a"
-dependencies = [
- "percent-encoding",
- "time 0.2.25",
- "version_check",
-]
-
-[[package]]
-name = "cookie"
 version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d5f1c7727e460397e56abc4bddc1d49e07a1ad78fc98eb2e1c8f032a58a2f80d"
@@ -643,30 +634,12 @@ dependencies = [
 
 [[package]]
 name = "devise"
-version = "0.3.0"
-source = "git+https://github.com/SergioBenitez/Devise.git?rev=3648468#3648468a9ede9ca896cd35bc1eb818c7a9fb3047"
-dependencies = [
- "devise_codegen 0.3.0",
- "devise_core 0.3.0",
-]
-
-[[package]]
-name = "devise"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "50c7580b072f1c8476148f16e0a0d5dedddab787da98d86c5082c5e9ed8ab595"
 dependencies = [
- "devise_codegen 0.3.1",
- "devise_core 0.3.1",
-]
-
-[[package]]
-name = "devise_codegen"
-version = "0.3.0"
-source = "git+https://github.com/SergioBenitez/Devise.git?rev=3648468#3648468a9ede9ca896cd35bc1eb818c7a9fb3047"
-dependencies = [
- "devise_core 0.3.0",
- "quote",
+ "devise_codegen",
+ "devise_core",
 ]
 
 [[package]]
@@ -675,20 +648,8 @@ version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "123c73e7a6e51b05c75fe1a1b2f4e241399ea5740ed810b0e3e6cacd9db5e7b2"
 dependencies = [
- "devise_core 0.3.1",
+ "devise_core",
  "quote",
-]
-
-[[package]]
-name = "devise_core"
-version = "0.3.0"
-source = "git+https://github.com/SergioBenitez/Devise.git?rev=3648468#3648468a9ede9ca896cd35bc1eb818c7a9fb3047"
-dependencies = [
- "bitflags",
- "proc-macro2",
- "proc-macro2-diagnostics",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -1691,17 +1652,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mio-uds"
-version = "0.6.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "afcb699eb26d4332647cc848492bbc15eafb26f08d0304550d5aa1f612e066f0"
-dependencies = [
- "iovec",
- "libc",
- "mio 0.6.23",
-]
-
-[[package]]
 name = "miow"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2273,20 +2223,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "prometheus"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8425533e7122f0c3cc7a37e6244b16ad3a2cc32ae7ac6276e2a75da0d9c200d"
-dependencies = [
- "cfg-if 1.0.0",
- "fnv",
- "lazy_static",
- "parking_lot",
- "regex",
- "thiserror",
-]
-
-[[package]]
 name = "quanta"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2541,7 +2477,7 @@ dependencies = [
 [[package]]
 name = "rauth"
 version = "0.3.0"
-source = "git+https://gitlab.insrt.uk/insert/rauth?rev=51546e5a1ba0dfe3ec3bd0b060fa51fc3102c96f#51546e5a1ba0dfe3ec3bd0b060fa51fc3102c96f"
+source = "git+https://gitlab.insrt.uk/insert/rauth?rev=840ad003263fd5570aba4866e7d72e4fc1b3e95a#840ad003263fd5570aba4866e7d72e4fc1b3e95a"
 dependencies = [
  "chrono",
  "handlebars",
@@ -2552,8 +2488,7 @@ dependencies = [
  "nanoid 0.3.0",
  "regex",
  "reqwest",
- "rocket 0.5.0-dev",
- "rocket_contrib",
+ "rocket",
  "rust-argon2",
  "serde",
  "serde_json",
@@ -2711,10 +2646,9 @@ dependencies = [
  "rauth",
  "regex",
  "reqwest",
- "rocket 0.5.0-rc.1",
+ "rocket",
  "rocket-governor",
  "rocket_cors",
- "rocket_prometheus",
  "serde",
  "serde_json",
  "time 0.2.25",
@@ -2741,35 +2675,6 @@ dependencies = [
 
 [[package]]
 name = "rocket"
-version = "0.5.0-dev"
-source = "git+https://github.com/SergioBenitez/Rocket?rev=031948c1daaa146128d8a435be116476f2adde00#031948c1daaa146128d8a435be116476f2adde00"
-dependencies = [
- "async-trait",
- "atomic",
- "atty",
- "binascii",
- "either",
- "figment",
- "futures",
- "log",
- "memchr",
- "num_cpus",
- "parking_lot",
- "rand 0.7.3",
- "ref-cast",
- "rocket_codegen 0.5.0-dev",
- "rocket_http 0.5.0-dev",
- "serde",
- "state 0.4.2",
- "time 0.2.25",
- "tokio 0.2.25",
- "ubyte",
- "version_check",
- "yansi",
-]
-
-[[package]]
-name = "rocket"
 version = "0.5.0-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0a71c18c42a0eb15bf3816831caf0dad11e7966f2a41aaf486a701979c4dd1f2"
@@ -2792,11 +2697,11 @@ dependencies = [
  "pin-project-lite 0.2.4",
  "rand 0.8.3",
  "ref-cast",
- "rocket_codegen 0.5.0-rc.1",
- "rocket_http 0.5.0-rc.1",
+ "rocket_codegen",
+ "rocket_http",
  "serde",
  "serde_json",
- "state 0.5.2",
+ "state",
  "tempfile",
  "time 0.2.25",
  "tokio 1.9.0",
@@ -2815,19 +2720,7 @@ checksum = "3a7603d1d66d1c4c41997f1f80fb624c16fd8a063a0f562d6e511e7eec4d26d2"
 dependencies = [
  "governor",
  "lazy_static",
- "rocket 0.5.0-rc.1",
-]
-
-[[package]]
-name = "rocket_codegen"
-version = "0.5.0-dev"
-source = "git+https://github.com/SergioBenitez/Rocket?rev=031948c1daaa146128d8a435be116476f2adde00#031948c1daaa146128d8a435be116476f2adde00"
-dependencies = [
- "devise 0.3.0",
- "glob",
- "indexmap",
- "quote",
- "rocket_http 0.5.0-dev",
+ "rocket",
 ]
 
 [[package]]
@@ -2836,36 +2729,24 @@ version = "0.5.0-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "66f5fa462f7eb958bba8710c17c5d774bbbd59809fa76fb1957af7e545aea8bb"
 dependencies = [
- "devise 0.3.1",
+ "devise",
  "glob",
  "indexmap",
  "proc-macro2",
  "quote",
- "rocket_http 0.5.0-rc.1",
+ "rocket_http",
  "syn",
  "unicode-xid",
 ]
 
 [[package]]
-name = "rocket_contrib"
-version = "0.5.0-dev"
-source = "git+https://github.com/SergioBenitez/Rocket?rev=031948c1daaa146128d8a435be116476f2adde00#031948c1daaa146128d8a435be116476f2adde00"
-dependencies = [
- "log",
- "rocket 0.5.0-dev",
- "serde",
- "serde_json",
- "tokio 0.2.25",
-]
-
-[[package]]
 name = "rocket_cors"
 version = "0.5.2"
-source = "git+https://github.com/insertish/rocket_cors?branch=master#a301882a3ae80be9cbe2de7030c5ca7842e1307e"
+source = "git+https://github.com/lawliet89/rocket_cors?rev=5843861a88958c16bfaa0b40f0d8910772bcd2f6#5843861a88958c16bfaa0b40f0d8910772bcd2f6"
 dependencies = [
  "log",
  "regex",
- "rocket 0.5.0-dev",
+ "rocket",
  "serde",
  "serde_derive",
  "unicase",
@@ -2875,36 +2756,11 @@ dependencies = [
 
 [[package]]
 name = "rocket_http"
-version = "0.5.0-dev"
-source = "git+https://github.com/SergioBenitez/Rocket?rev=031948c1daaa146128d8a435be116476f2adde00#031948c1daaa146128d8a435be116476f2adde00"
-dependencies = [
- "cookie 0.15.0-dev",
- "either",
- "http",
- "hyper 0.13.10",
- "indexmap",
- "log",
- "mime",
- "parking_lot",
- "pear",
- "percent-encoding",
- "ref-cast",
- "smallvec",
- "state 0.4.2",
- "time 0.2.25",
- "tokio 0.2.25",
- "uncased",
- "unicode-xid",
- "version_check",
-]
-
-[[package]]
-name = "rocket_http"
 version = "0.5.0-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23c8b7d512d2fcac2316ebe590cde67573844b99e6cc9ee0f53375fa16e25ebd"
 dependencies = [
- "cookie 0.15.1",
+ "cookie",
  "either",
  "http",
  "hyper 0.14.11",
@@ -2920,19 +2776,10 @@ dependencies = [
  "serde",
  "smallvec",
  "stable-pattern",
- "state 0.5.2",
+ "state",
  "time 0.2.25",
  "tokio 1.9.0",
  "uncased",
-]
-
-[[package]]
-name = "rocket_prometheus"
-version = "0.7.0"
-source = "git+https://github.com/insertish/rocket_prometheus?rev=3d825aedb42793246c306a81fe67c5b187948983#3d825aedb42793246c306a81fe67c5b187948983"
-dependencies = [
- "prometheus",
- "rocket 0.5.0-dev",
 ]
 
 [[package]]
@@ -3277,12 +3124,6 @@ dependencies = [
 
 [[package]]
 name = "state"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3015a7d0a5fd5105c91c3710d42f9ccf0abfb287d62206484dcc67f9569a6483"
-
-[[package]]
-name = "state"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "87cf4f5369e6d3044b5e365c9690f451516ac8f0954084622b49ea3fde2f6de5"
@@ -3529,16 +3370,12 @@ dependencies = [
  "futures-core",
  "iovec",
  "lazy_static",
- "libc",
  "memchr",
  "mio 0.6.23",
- "mio-uds",
  "num_cpus",
  "pin-project-lite 0.1.11",
- "signal-hook-registry",
  "slab",
  "tokio-macros 0.2.6",
- "winapi 0.3.9",
 ]
 
 [[package]]

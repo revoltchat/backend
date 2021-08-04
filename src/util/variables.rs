@@ -46,7 +46,6 @@ lazy_static! {
         |v| v == *"1"
     );
     pub static ref USE_HCAPTCHA: bool = env::var("REVOLT_HCAPTCHA_KEY").is_ok();
-    pub static ref USE_PROMETHEUS: bool = env::var("REVOLT_ENABLE_PROMETHEUS").map_or(false, |v| v == "1");
     pub static ref USE_AUTUMN: bool = env::var("AUTUMN_PUBLIC_URL").is_ok();
     pub static ref USE_JANUARY: bool = env::var("JANUARY_PUBLIC_URL").is_ok();
     pub static ref USE_VOSO: bool = env::var("VOSO_PUBLIC_URL").is_ok() && env::var("VOSO_MANAGE_TOKEN").is_ok();

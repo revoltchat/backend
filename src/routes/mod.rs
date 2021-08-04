@@ -1,6 +1,6 @@
 pub use rocket::response::Redirect;
 pub use rocket::http::Status;
-use rocket::{Phase, Rocket};
+use rocket::{Build, Rocket};
 
 mod channels;
 mod invites;
@@ -11,9 +11,9 @@ mod servers;
 mod sync;
 mod users;
 
-pub fn mount<T: Phase>(rocket: Rocket<T>) -> Rocket<T> {
+pub fn mount(rocket: Rocket<Build>) -> Rocket<Build> {
     rocket
-        .mount("/", routes![root::root])
+        .mount("/", routes![root::root, root::ping])
         .mount("/onboard", onboard::routes())
         .mount("/users", users::routes())
         .mount("/channels", channels::routes())
