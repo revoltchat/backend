@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use rocket_governor::{Method, Quota, RocketGovernable};
 
 pub struct RateLimitGuard;
