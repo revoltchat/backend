@@ -2,7 +2,6 @@ use crate::database::*;
 use crate::util::result::{Error, Result};
 
 use mongodb::bson::{doc, from_document};
-use rocket::http::RawStr;
 use rocket::request::FromParam;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use validator::Validate;
@@ -127,9 +126,9 @@ impl User {
 }
 
 impl<'r> FromParam<'r> for Ref {
-    type Error = &'r RawStr;
+    type Error = &'r str;
 
-    fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
+    fn from_param(param: &'r str) -> Result<Self, Self::Error> {
         if let Ok(result) = Ref::from(param.to_string()) {
             if result.validate().is_ok() {
                 return Ok(result);

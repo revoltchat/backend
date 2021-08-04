@@ -3,15 +3,14 @@ use crate::database::*;
 use mongodb::bson::{doc, from_document};
 use rauth::auth::Session;
 use rocket::http::Status;
-use rocket::outcome::try_outcome;
 use rocket::request::{self, FromRequest, Outcome, Request};
 
 #[rocket::async_trait]
-impl<'a, 'r> FromRequest<'a, 'r> for User {
+impl<'r> FromRequest<'r> for User {
     type Error = rauth::util::Error;
 
-    async fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
-        let session: Session = try_outcome!(request.guard::<Session>().await);
+    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+        let session: Session = request.guard::<Session>().await.unwrap();
 
         if let Ok(result) = get_collection("users")
             .find_one(

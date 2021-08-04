@@ -4,7 +4,7 @@ use crate::util::{ratelimit::RateLimitGuard, variables::{
 }};
 
 use mongodb::bson::doc;
-use rocket::serde::json::Value;
+use rocket::{http::Status, serde::json::Value};
 use rocket_governor::RocketGovernor;
 
 #[get("/")]
@@ -36,4 +36,9 @@ pub async fn root(_limitguard: RocketGovernor<'_, RateLimitGuard>) -> Value {
         "app": *APP_URL,
         "vapid": *VAPID_PUBLIC_KEY
     })
+}
+
+#[get("/ping")]
+pub async fn ping(_limitguard: RocketGovernor<'_, RateLimitGuard>) -> Status {
+    Status::Ok
 }

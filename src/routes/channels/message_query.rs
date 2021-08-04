@@ -8,7 +8,6 @@ use mongodb::{
     bson::{doc, from_document},
     options::FindOptions,
 };
-use rocket::form::Form;
 use rocket::serde::json::Value;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -37,7 +36,7 @@ pub struct Options {
 }
 
 #[get("/<target>/messages?<options..>")]
-pub async fn req(user: User, target: Ref, options: Form<Options>) -> Result<Value> {
+pub async fn req(user: User, target: Ref, options: Options) -> Result<Value> {
     options
         .validate()
         .map_err(|error| Error::FailedValidation { error })?;

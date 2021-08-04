@@ -4,6 +4,8 @@
 #[macro_use]
 extern crate rocket;
 #[macro_use]
+extern crate serde_json;
+#[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate impl_ops;
@@ -27,11 +29,10 @@ use rauth::{
     options::{Template, Templates},
 };
 use rocket_cors::AllowedOrigins;
-use rocket_prometheus::PrometheusMetrics;
 use rocket::catchers;
 use util::variables::{
     APP_URL, HCAPTCHA_KEY, INVITE_ONLY, PUBLIC_URL, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD,
-    SMTP_USERNAME, USE_EMAIL, USE_HCAPTCHA, USE_PROMETHEUS,
+    SMTP_USERNAME, USE_EMAIL, USE_HCAPTCHA,
 };
 
 #[async_std::main]
@@ -122,16 +123,7 @@ Reset your password here: {{url}}",
     }
 
     let auth = Auth::new(database::get_collection("accounts"), options);
-
-    let mut rocket = rocket::ignite();
-
-    if *USE_PROMETHEUS {
-        info!("Enabled Prometheus metrics!");
-        let prometheus = PrometheusMetrics::new();
-        rocket = rocket
-            .attach(prometheus.clone())
-            .mount("/metrics", prometheus);
-    }
+    let rocket = rocket::build();
 
     routes::mount(rocket)
         .mount("/", rocket_cors::catch_all_options_routes())
