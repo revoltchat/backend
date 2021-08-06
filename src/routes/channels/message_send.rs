@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use crate::database::*;
+use crate::util::ratelimit::RateLimited;
 use crate::util::result::{Error, Result};
 
 use mongodb::{bson::doc, options::FindOneOptions};
@@ -33,7 +34,7 @@ lazy_static! {
 }
 
 #[post("/<target>/messages", data = "<message>")]
-pub async fn req(user: User, target: Ref, message: Json<Data>) -> Result<Value> {
+pub async fn message_send(_r: RateLimited<'_>, user: User, target: Ref, message: Json<Data>) -> Result<Value> {
     let message = message.into_inner();
     message
         .validate()

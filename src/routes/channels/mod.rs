@@ -28,7 +28,7 @@ pub fn routes() -> Vec<Route> {
         channel_delete::req,
         channel_edit::req,
         invite_create::req,
-        message_send::req,
+        message_send::message_send,
         message_query::req,
         message_search::req,
         message_query_stale::req,
