@@ -119,8 +119,8 @@ impl User {
         self
     }
 
-    /// Mutate the user object to appear as seen by user.
-    pub fn with(mut self, permissions: UserPermissions<[u32; 1]>) -> User {
+    /// Apply any relevant badges.
+    pub fn apply_badges(mut self) -> User {
         let mut badges = self.badges.unwrap_or_else(|| 0);
         if let Ok(id) = Ulid::from_string(&self.id) {
             if id.datetime().timestamp_millis() < *EARLY_ADOPTER_BADGE {
@@ -129,15 +129,21 @@ impl User {
         }
 
         self.badges = Some(badges);
+        self
+    }
+
+    /// Mutate the user object to appear as seen by user.
+    pub fn with(self, permissions: UserPermissions<[u32; 1]>) -> User {
+        let mut user = self.apply_badges();
 
         if permissions.get_view_profile() {
-            self.online = Some(is_online(&self.id));
+            user.online = Some(is_online(&user.id));
         } else {
-            self.status = None;
+            user.status = None;
         }
 
-        self.profile = None;
-        self
+        user.profile = None;
+        user
     }
 
     /// Mutate the user object to appear as seen by user.

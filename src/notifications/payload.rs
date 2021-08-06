@@ -112,7 +112,8 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
 
     user.relationship = Some(RelationshipStatus::User);
     user.online = Some(true);
-    users.push(user);
+    
+    users.push(user.apply_badges());
 
     Ok(ClientboundNotification::Ready {
         users,
