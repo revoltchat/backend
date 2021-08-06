@@ -24,6 +24,7 @@ regex = "1"
 num_enum = "0.5.1"
 impl_ops = "0.1.1"
 bitfield = "0.13.2"
+phf = { version = "0.9.0", features = ["macros"] }
 
 # ID / key generation
 ulid = "0.4.1"

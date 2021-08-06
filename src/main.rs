@@ -1,5 +1,6 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 #![feature(async_closure)]
+#![feature(const_option)]
 
 #[macro_use]
 extern crate rocket;
