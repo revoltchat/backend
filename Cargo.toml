@@ -39,14 +39,14 @@ validator = { version = "0.11", features = ["derive"] }
 # async
 futures = "0.3.8"
 chrono = "0.4.15"
-reqwest = { version = "0.10.8", features = ["json"] }
+reqwest = { version = "0.11.4", features = ["json"] }
 async-std = { version = "1.8.0", features = ["tokio1", "tokio02", "attributes"] }
 
 # internal util
 web-push = "0.7.2"
 many-to-many = "0.1.2"
 lettre = "0.10.0-alpha.4"
-rauth = { git = "https://gitlab.insrt.uk/insert/rauth", rev = "840ad003263fd5570aba4866e7d72e4fc1b3e95a" }
+rauth = { git = "https://gitlab.insrt.uk/insert/rauth", rev = "19bef300ecc269c028e3d746f0a2f09842d3b37b" }
 hive_pubsub = { git = "https://gitlab.insrt.uk/insert/hive", rev = "a89826df2b30166220e68a6ed01a58b751456604", features = ["mongo"] }
 
 # web

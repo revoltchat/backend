@@ -10,6 +10,7 @@ use mongodb::bson::to_document;
 use mongodb::bson::Document;
 use rocket::serde::json::Value;
 use serde::{Deserialize, Serialize};
+use ulid::Ulid;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MemberCompositeKey {
@@ -246,7 +247,48 @@ impl Server {
             .collect::<Vec<String>>())
     }
 
+    pub async fn mark_as_read(&self, id: &str) -> Result<()> {
+        let current_time = Ulid::new().to_string();
+        let unreads = get_collection("channel_unreads");
+
+        unreads.delete_many(
+            doc! {
+                "_id.channel": {
+                    "$in": &self.channels
+                },
+                "_id.user": &id
+            },
+            None
+        )
+        .await
+        .map_err(|_| Error::DatabaseError {
+            operation: "delete_many",
+            with: "channel_unreads",
+        })?;
+
+        unreads.insert_many(
+        self.channels
+                .iter()
+                .map(|channel| doc! {
+                    "_id": {
+                        "channel": channel,
+                        "user": &id
+                    },
+                    "last_id": &current_time
+                })
+                .collect::<Vec<Document>>(),
+            None
+        )
+        .await
+        .map_err(|_| Error::DatabaseError {
+            operation: "update_many",
+            with: "channel_unreads",
+        })
+        .map(|_| ())
+    }
+
     pub async fn join_member(&self, id: &str) -> Result<()> {
+        // Check if user is banned.
         if get_collection("server_bans")
             .find_one(
                 doc! {
@@ -265,6 +307,7 @@ impl Server {
             return Err(Error::Banned);
         }
 
+        // Add user to server.
         get_collection("server_members")
             .insert_one(
                 doc! {
@@ -281,12 +324,14 @@ impl Server {
                 with: "server_members",
             })?;
 
+        // Announce that user joined server.
         ClientboundNotification::ServerMemberJoin {
             id: self.id.clone(),
             user: id.to_string(),
         }
         .publish(self.id.clone());
 
+        // Broadcast join message.
         if let Some(channels) = &self.system_messages {
             if let Some(cid) = &channels.user_joined {
                 let channel = Ref::from_unchecked(cid.clone()).fetch_channel().await?;
@@ -295,6 +340,9 @@ impl Server {
                     .await?;
             }
         }
+
+        // Mark entire server as read.
+        self.mark_as_read(&id).await?;
 
         Ok(())
     }

@@ -4,6 +4,7 @@ mod server_create;
 mod server_delete;
 mod server_edit;
 mod server_fetch;
+mod server_ack;
 
 mod channel_create;
 
@@ -30,6 +31,7 @@ pub fn routes() -> Vec<Route> {
         server_delete::req,
         server_fetch::req,
         server_edit::req,
+        server_ack::req,
         channel_create::req,
         member_fetch_all::req,
         member_remove::req,
