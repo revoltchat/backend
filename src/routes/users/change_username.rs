@@ -19,7 +19,7 @@ lazy_static! {
 pub struct Data {
     #[validate(length(min = 2, max = 32), regex = "RE_USERNAME")]
     username: Option<String>,
-    #[validate(length(min = 8, max = 72))]
+    #[validate(length(min = 8, max = 1024))]
     password: String,
 }
 
