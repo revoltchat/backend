@@ -62,6 +62,8 @@ lazy_static! {
     // Application Logic Settings
     pub static ref MAX_GROUP_SIZE: usize =
         env::var("REVOLT_MAX_GROUP_SIZE").unwrap_or_else(|_| "50".to_string()).parse().unwrap();
+    pub static ref MAX_BOT_COUNT: usize =
+        env::var("REVOLT_MAX_BOT_COUNT").unwrap_or_else(|_| "5".to_string()).parse().unwrap();
     pub static ref EARLY_ADOPTER_BADGE: i64 =
         env::var("REVOLT_EARLY_ADOPTER_BADGE").unwrap_or_else(|_| "0".to_string()).parse().unwrap();
 }

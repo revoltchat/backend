@@ -37,13 +37,20 @@ pub type PermissionTuple = (
     i32  // channel permission
 );
 
+fn if_false(t: &bool) -> bool {
+    *t == false
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Role {
     pub name: String,
     pub permissions: PermissionTuple,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub colour: Option<String>
-    // Bri'ish API conventions
+    pub colour: Option<String>,
+    #[serde(skip_serializing_if = "if_false", default)]
+    pub hoist: bool,
+    #[serde(default)]
+    pub rank: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

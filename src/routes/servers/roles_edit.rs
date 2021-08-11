@@ -13,6 +13,8 @@ pub struct Data {
     name: Option<String>,
     #[validate(length(min = 1, max = 32))]
     colour: Option<String>,
+    hoist: Option<bool>,
+    rank: Option<i64>,
     remove: Option<RemoveRoleField>,
 }
 
@@ -22,7 +24,7 @@ pub async fn req(user: User, target: Ref, role_id: String, data: Json<Data>) -> 
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if data.name.is_none() && data.colour.is_none() && data.remove.is_none()
+    if data.name.is_none() && data.colour.is_none() && data.hoist.is_none() && data.rank.is_none() && data.remove.is_none()
     {
         return Ok(());
     }
@@ -65,6 +67,16 @@ pub async fn req(user: User, target: Ref, role_id: String, data: Json<Data>) -> 
     if let Some(colour) = &data.colour {
         set.insert(role_key.clone() + ".colour", colour);
         set_update.insert("colour", colour);
+    }
+
+    if let Some(hoist) = &data.hoist {
+        set.insert(role_key.clone() + ".hoist", hoist);
+        set_update.insert("hoist", hoist);
+    }
+
+    if let Some(rank) = &data.rank {
+        set.insert(role_key.clone() + ".rank", rank);
+        set_update.insert("rank", rank);
     }
 
     let mut operations = doc! {};

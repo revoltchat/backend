@@ -1,4 +1,5 @@
 use crate::database::*;
+use crate::notifications::events::{AuthType, BotAuth};
 use crate::util::variables::WS_HOST;
 
 use super::subscriptions;
@@ -12,8 +13,9 @@ use futures::{pin_mut, prelude::*};
 use hive_pubsub::PubSub;
 use log::{debug, info};
 use many_to_many::ManyToMany;
+use mongodb::bson::doc;
 use rauth::{
-    auth::{Auth, Session},
+    auth::{Auth},
     options::Options,
 };
 use std::collections::HashMap;
@@ -66,15 +68,15 @@ async fn accept(stream: TcpStream) {
         }
     };
 
-    let session: Arc<Mutex<Option<Session>>> = Arc::new(Mutex::new(None));
-    let mutex_generator = || session.clone();
+    let user_id: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+    let mutex_generator = || user_id.clone();
     let fwd = rx.map(Ok).forward(write);
     let incoming = read.try_for_each(async move |msg| {
         let mutex = mutex_generator();
         if let Message::Text(text) = msg {
             if let Ok(notification) = serde_json::from_str::<ServerboundNotification>(&text) {
                 match notification {
-                    ServerboundNotification::Authenticate(new_session) => {
+                    ServerboundNotification::Authenticate(auth) => {
                         {
                             if mutex.lock().unwrap().is_some() {
                                 send(ClientboundNotification::Error(
@@ -85,12 +87,34 @@ async fn accept(stream: TcpStream) {
                             }
                         }
 
-                        if let Ok(validated_session) =
-                            Auth::new(get_collection("accounts"), Options::new())
-                                .verify_session(new_session)
-                                .await
-                        {
-                            let id = validated_session.user_id.clone();
+                        if let Some(id) = match auth {
+                            AuthType::User(new_session) => {
+                                if let Ok(validated_session) =
+                                Auth::new(get_collection("accounts"), Options::new())
+                                    .verify_session(new_session)
+                                    .await
+                                {
+                                    Some(validated_session.user_id.clone())
+                                } else {
+                                    None
+                                }
+                            }
+                            AuthType::Bot(BotAuth { token }) => {
+                                if let Ok(doc) = get_collection("bots")
+                                    .find_one(
+                                        doc! { "token": token },
+                                        None
+                                    ).await {
+                                        if let Some(doc) = doc {
+                                            Some(doc.get_str("_id").unwrap().to_string())
+                                        } else {
+                                            None
+                                        }
+                                    } else {
+                                        None
+                                    }
+                            }
+                        } {
                             if let Ok(user) = (Ref { id: id.clone() }).fetch_user().await {
                                 let was_online = is_online(&id);
                                 {
@@ -110,7 +134,7 @@ async fn accept(stream: TcpStream) {
                                     }
                                 }
 
-                                *mutex.lock().unwrap() = Some(validated_session);
+                                *mutex.lock().unwrap() = Some(id.clone());
 
                                 if let Err(_) = subscriptions::generate_subscriptions(&user).await {
                                     send(ClientboundNotification::Error(
@@ -166,8 +190,7 @@ async fn accept(stream: TcpStream) {
                         if mutex.lock().unwrap().is_some() {
                             let user = {
                                 let mutex = mutex.lock().unwrap();
-                                let session = mutex.as_ref().unwrap();
-                                session.user_id.clone()
+                                mutex.as_ref().unwrap().clone()
                             };
 
                             ClientboundNotification::ChannelStartTyping {
@@ -187,8 +210,7 @@ async fn accept(stream: TcpStream) {
                         if mutex.lock().unwrap().is_some() {
                             let user = {
                                 let mutex = mutex.lock().unwrap();
-                                let session = mutex.as_ref().unwrap();
-                                session.user_id.clone()
+                                mutex.as_ref().unwrap().clone()
                             };
 
                             ClientboundNotification::ChannelStopTyping {
@@ -219,13 +241,13 @@ async fn accept(stream: TcpStream) {
 
     let mut offline = None;
     {
-        let session = session.lock().unwrap();
-        if let Some(session) = session.as_ref() {
+        let user_id = user_id.lock().unwrap();
+        if let Some(user_id) = user_id.as_ref() {
             let mut users = USERS.write().unwrap();
-            users.remove(&session.user_id, &addr);
-            if users.get_left(&session.user_id).is_none() {
-                get_hive().drop_client(&session.user_id).unwrap();
-                offline = Some(session.user_id.clone());
+            users.remove(&user_id, &addr);
+            if users.get_left(&user_id).is_none() {
+                get_hive().drop_client(&user_id).unwrap();
+                offline = Some(user_id.clone());
             }
         }
     }

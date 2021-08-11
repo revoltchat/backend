@@ -10,6 +10,7 @@ mod root;
 mod servers;
 mod sync;
 mod users;
+mod bots;
 
 pub fn mount(rocket: Rocket<Build>) -> Rocket<Build> {
     rocket
@@ -18,6 +19,7 @@ pub fn mount(rocket: Rocket<Build>) -> Rocket<Build> {
         .mount("/users", users::routes())
         .mount("/channels", channels::routes())
         .mount("/servers", servers::routes())
+        .mount("/bots", bots::routes())
         .mount("/invites", invites::routes())
         .mount("/push", push::routes())
         .mount("/sync", sync::routes())

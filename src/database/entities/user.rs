@@ -73,7 +73,12 @@ pub enum Badges {
 
 impl_op_ex_commutative!(+ |a: &i32, b: &Badges| -> i32 { *a | *b as i32 });
 
-// When changing this struct, update notifications/payload.rs#80
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct BotInformation {
+    owner: String
+}
+
+// When changing this struct, update notifications/payload.rs#113
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {
     #[serde(rename = "_id")]
@@ -90,6 +95,11 @@ pub struct User {
     pub status: Option<UserStatus>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub profile: Option<UserProfile>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub flags: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bot: Option<BotInformation>,
 
     // ? This should never be pushed to the collection.
     #[serde(skip_serializing_if = "Option::is_none")]

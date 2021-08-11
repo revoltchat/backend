@@ -18,9 +18,21 @@ pub enum WebSocketError {
 }
 
 #[derive(Deserialize, Debug)]
+pub struct BotAuth {
+    pub token: String
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+pub enum AuthType {
+    User(Session),
+    Bot(BotAuth)
+}
+
+#[derive(Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum ServerboundNotification {
-    Authenticate(Session),
+    Authenticate(AuthType),
     BeginTyping { channel: String },
     EndTyping { channel: String },
 }

@@ -57,6 +57,10 @@ pub async fn create_database() {
         .await
         .expect("Failed to create user_settings collection.");
 
+    db.create_collection("bots", None)
+        .await
+        .expect("Failed to create bots collection.");
+
     db.create_collection(
         "pubsub",
         CreateCollectionOptions::builder()

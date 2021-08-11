@@ -5,6 +5,7 @@ mod microservice;
 mod server;
 mod sync;
 mod user;
+mod bots;
 
 use microservice::*;
 
@@ -16,3 +17,4 @@ pub use message::*;
 pub use server::*;
 pub use sync::*;
 pub use user::*;
+pub use bots::*;

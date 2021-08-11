@@ -44,6 +44,9 @@ pub enum Error {
     InvalidRole,
     Banned,
 
+    // ? Bot related errors.
+    ReachedMaximumBots,
+
     // ? General errors.
     TooManyIds,
     FailedValidation {
@@ -97,6 +100,8 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::UnknownServer => Status::NotFound,
             Error::InvalidRole => Status::NotFound,
             Error::Banned => Status::Forbidden,
+
+            Error::ReachedMaximumBots => Status::BadRequest,
 
             Error::FailedValidation { .. } => Status::UnprocessableEntity,
             Error::DatabaseError { .. } => Status::InternalServerError,
