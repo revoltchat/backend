@@ -22,6 +22,10 @@ pub struct Data {
 
 #[post("/create", data = "<info>")]
 pub async fn req(user: User, info: Json<Data>) -> Result<Value> {
+    if user.bot.is_some() {
+        return Err(Error::IsBot)
+    }
+    
     let info = info.into_inner();
     info.validate()
         .map_err(|error| Error::FailedValidation { error })?;

@@ -8,8 +8,11 @@ use rocket::serde::json::Value;
 
 #[put("/<target>/block")]
 pub async fn req(user: User, target: Ref) -> Result<Value> {
-    let col = get_collection("users");
+    if user.bot.is_some() {
+        return Err(Error::IsBot)
+    }
 
+    let col = get_collection("users");
     let target = target.fetch_user().await?;
 
     match get_relationship(&user, &target.id) {

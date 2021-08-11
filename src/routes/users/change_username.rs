@@ -32,6 +32,10 @@ pub async fn req(
     data: Json<Data>,
     _ignore_id: String,
 ) -> Result<()> {
+    if user.bot.is_some() {
+        return Err(Error::IsBot)
+    }
+    
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 

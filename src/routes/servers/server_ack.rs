@@ -3,6 +3,10 @@ use crate::util::result::{Error, Result};
 
 #[put("/<target>/ack")]
 pub async fn req(user: User, target: Ref) -> Result<()> {
+    if user.bot.is_some() {
+        return Err(Error::IsBot)
+    }
+    
     let target = target.fetch_server().await?;
 
     let perm = permissions::PermissionCalculator::new(&user)

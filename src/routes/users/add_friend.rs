@@ -9,6 +9,10 @@ use rocket::serde::json::Value;
 
 #[put("/<username>/friend")]
 pub async fn req(user: User, username: String) -> Result<Value> {
+    if user.bot.is_some() {
+        return Err(Error::IsBot)
+    }
+
     let col = get_collection("users");
     let doc = col
         .find_one(

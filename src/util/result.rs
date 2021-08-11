@@ -46,6 +46,7 @@ pub enum Error {
 
     // ? Bot related errors.
     ReachedMaximumBots,
+    IsBot,
 
     // ? General errors.
     TooManyIds,
@@ -102,6 +103,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::Banned => Status::Forbidden,
 
             Error::ReachedMaximumBots => Status::BadRequest,
+            Error::IsBot => Status::BadRequest,
 
             Error::FailedValidation { .. } => Status::UnprocessableEntity,
             Error::DatabaseError { .. } => Status::InternalServerError,

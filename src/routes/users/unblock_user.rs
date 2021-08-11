@@ -8,6 +8,10 @@ use rocket::serde::json::Value;
 
 #[delete("/<target>/block")]
 pub async fn req(user: User, target: Ref) -> Result<Value> {
+    if user.bot.is_some() {
+        return Err(Error::IsBot)
+    }
+    
     let col = get_collection("users");
     let target = target.fetch_user().await?;
 

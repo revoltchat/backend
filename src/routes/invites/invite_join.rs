@@ -1,10 +1,14 @@
 use crate::database::*;
-use crate::util::result::Result;
+use crate::util::result::{Error, Result};
 
 use rocket::serde::json::Value;
 
 #[post("/<target>")]
 pub async fn req(user: User, target: Ref) -> Result<Value> {
+    if user.bot.is_some() {
+        return Err(Error::IsBot)
+    }
+    
     let target = target.fetch_invite().await?;
 
     match target {

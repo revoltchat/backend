@@ -19,6 +19,10 @@ pub struct Options {
 
 #[post("/settings/set?<options..>", data = "<data>")]
 pub async fn req(user: User, data: Json<Data>, options: Options) -> Result<()> {
+    if user.bot.is_some() {
+        return Err(Error::IsBot)
+    }
+    
     let data = data.into_inner();
     let current_time = Utc::now().timestamp_millis();
     let timestamp = if let Some(timestamp) = options.timestamp {

@@ -7,6 +7,10 @@ use mongodb::options::UpdateOptions;
 
 #[put("/<target>/ack/<message>")]
 pub async fn req(user: User, target: Ref, message: Ref) -> Result<()> {
+    if user.bot.is_some() {
+        return Err(Error::IsBot)
+    }
+    
     let target = target.fetch_channel().await?;
 
     let perm = permissions::PermissionCalculator::new(&user)
