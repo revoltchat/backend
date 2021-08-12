@@ -39,11 +39,8 @@ pub async fn edit_bot(user: User, target: Ref, data: Json<Data>) -> Result<()> {
     }
 
     let bot = target.fetch_bot().await?;
-
-    if !bot.public {
-        if bot.owner != user.id {
-            return Err(Error::BotIsPrivate);
-        }
+    if bot.owner != user.id {
+        return Err(Error::MissingPermission);
     }
 
     if let Some(name) = &data.name {
