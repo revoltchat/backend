@@ -63,32 +63,32 @@ impl<'r> FromRequest<'r> for User {
                     },
                 ))
             }
-        }
-
-        let session: Session = request.guard::<Session>().await.unwrap();
-
-        if let Ok(result) = get_collection("users")
-            .find_one(
-                doc! {
-                    "_id": &session.user_id
-                },
-                None,
-            )
-            .await
-        {
-            if let Some(doc) = result {
-                Outcome::Success(from_document(doc).unwrap())
-            } else {
-                Outcome::Failure((Status::Forbidden, rauth::util::Error::InvalidSession))
-            }
         } else {
-            Outcome::Failure((
-                Status::InternalServerError,
-                rauth::util::Error::DatabaseError {
-                    operation: "find_one",
-                    with: "user",
-                },
-            ))
+            let session: Session = request.guard::<Session>().await.unwrap();
+
+            if let Ok(result) = get_collection("users")
+                .find_one(
+                    doc! {
+                        "_id": &session.user_id
+                    },
+                    None,
+                )
+                .await
+            {
+                if let Some(doc) = result {
+                    Outcome::Success(from_document(doc).unwrap())
+                } else {
+                    Outcome::Failure((Status::Forbidden, rauth::util::Error::InvalidSession))
+                }
+            } else {
+                Outcome::Failure((
+                    Status::InternalServerError,
+                    rauth::util::Error::DatabaseError {
+                        operation: "find_one",
+                        with: "user",
+                    },
+                ))
+            }
         }
     }
 }

@@ -214,7 +214,7 @@ impl User {
                 },
                 FindOptions::builder()
                     .projection(
-                        doc! { "_id": 1, "username": 1, "avatar": 1, "badges": 1, "status": 1 },
+                        doc! { "_id": 1, "username": 1, "avatar": 1, "badges": 1, "status": 1, "flags": 1, "bot": 1 },
                     )
                     .build(),
             )
