@@ -61,6 +61,10 @@ impl Ref {
         self.fetch("channel_invites").await
     }
 
+    pub async fn fetch_bot(&self) -> Result<Bot> {
+        self.fetch("bots").await
+    }
+
     pub async fn fetch_member(&self, server: &str) -> Result<Member> {
         let doc = get_collection("server_members")
             .find_one(

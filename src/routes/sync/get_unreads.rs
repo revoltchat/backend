@@ -1,5 +1,5 @@
 use crate::database::*;
-use crate::util::result::Result;
+use crate::util::result::{Error, Result};
 
 use mongodb::bson::doc;
 use rocket::serde::json::Value;

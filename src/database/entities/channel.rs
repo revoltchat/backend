@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::database::*;
 use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result};
+use crate::util::variables::MAX_GROUP_SIZE;
 use futures::StreamExt;
 use mongodb::bson::Bson;
 use mongodb::{
@@ -343,5 +344,54 @@ impl Channel {
         }
 
         Ok(())
+    }
+
+    pub async fn add_to_group(&self, member: String, by_user: String) -> Result<()> {
+        if let Channel::Group { id, recipients, .. } = &self {
+            if recipients.len() >= *MAX_GROUP_SIZE {
+                Err(Error::GroupTooLarge {
+                    max: *MAX_GROUP_SIZE,
+                })?
+            }
+
+            if recipients.iter().find(|x| *x == &member).is_some() {
+                Err(Error::AlreadyInGroup)?
+            }
+
+            get_collection("channels")
+                .update_one(
+                    doc! {
+                        "_id": &id
+                    },
+                    doc! {
+                        "$push": {
+                            "recipients": &member
+                        }
+                    },
+                    None,
+                )
+                .await
+                .map_err(|_| Error::DatabaseError {
+                    operation: "update_one",
+                    with: "channel",
+                })?;
+
+            ClientboundNotification::ChannelGroupJoin {
+                id: id.clone(),
+                user: member.clone(),
+            }
+            .publish(id.clone());
+
+            Content::SystemMessage(SystemMessage::UserAdded {
+                id: member,
+                by: by_user,
+            })
+            .send_as_system(&self)
+            .await
+            .ok();
+            Ok(())
+        } else {
+            Err(Error::InvalidOperation)
+        }
     }
 }
