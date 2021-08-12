@@ -70,6 +70,11 @@ pub enum RemoveMemberField {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum RemoveBotField {
+    InteractionsURL,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum ClientboundNotification {
     Error(WebSocketError),

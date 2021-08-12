@@ -5,6 +5,7 @@ mod invite;
 mod fetch_public;
 mod fetch;
 mod fetch_owned;
+mod edit;
 
 pub fn routes() -> Vec<Route> {
     routes![
@@ -13,5 +14,6 @@ pub fn routes() -> Vec<Route> {
         fetch_public::fetch_public_bot,
         fetch::fetch_bot,
         fetch_owned::fetch_owned_bots,
+        edit::edit_bot,
     ]
 }
