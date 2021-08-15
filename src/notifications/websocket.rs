@@ -116,7 +116,13 @@ async fn accept(stream: TcpStream) {
                             }
                         } {
                             if let Ok(user) = (Ref { id: id.clone() }).fetch_user().await {
+                                let is_invisible = if let Some(status) = user.status {
+                                    if let Some(presence) = status.presence {
+                                        presence == Presence::Invisible
+                                    }
+                                };
                                 let was_online = is_online(&id);
+
                                 {
                                     match USERS.write() {
                                         Ok(mut map) => {
@@ -152,7 +158,7 @@ async fn accept(stream: TcpStream) {
                                     Ok(payload) => {
                                         send(payload);
 
-                                        if !was_online {
+                                        if !was_online && !is_invisible {
                                             ClientboundNotification::UserUpdate {
                                                 id: id.clone(),
                                                 data: json!({
