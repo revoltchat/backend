@@ -152,6 +152,17 @@ impl User {
             user.status = None;
         }
 
+        // If the user's status is `Presence::Invisible`, return it as `Presence::Offline`
+        if let Some(mut status) = user.status {
+            if let Some(presence) = status.presence {
+                if presence == Presence::Invisible {
+                    status.presence = Some(Presence::Offline);
+                    user.status = Some(status);
+                    user.online = Some(False);
+                }
+            }
+        }
+
         user.profile = None;
         user
     }

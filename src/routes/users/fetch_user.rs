@@ -16,15 +16,5 @@ pub async fn req(user: User, target: Ref) -> Result<Value> {
         Err(Error::MissingPermission)?
     }
 
-    // If the user's status is `Presence::Invisible`, return it as `Presence::Offline`
-    if let Some(mut status) = target.status {
-        if let Some(presence) = status.presence {
-            if presence == Presence::Invisible {
-                status.presence = Some(Presence::Offline);
-                target.status = Some(status);
-            }
-        }
-    }
-
     Ok(json!(target.from(&user).with(perm)))
 }
