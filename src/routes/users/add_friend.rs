@@ -36,6 +36,9 @@ pub async fn req(user: User, username: String) -> Result<Value> {
     })?;
 
     let target_user = Ref::from(target_id.to_string())?.fetch_user().await?;
+    if target_user.bot.is_some() {
+        return Err(Error::IsBot)
+    }
 
     match get_relationship(&user, &target_id) {
         RelationshipStatus::User => return Err(Error::NoEffect),

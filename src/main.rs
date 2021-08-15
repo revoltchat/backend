@@ -29,6 +29,7 @@ use rauth::{
     auth::Auth,
     options::{Template, Templates},
 };
+use std::str::FromStr;
 use rocket_cors::AllowedOrigins;
 use rocket::catchers;
 use util::variables::{
@@ -69,6 +70,20 @@ async fn main() {
 async fn launch_web() {
     let cors = rocket_cors::CorsOptions {
         allowed_origins: AllowedOrigins::All,
+        allowed_methods: [
+            "Get",
+            "Put",
+            "Post",
+            "Delete",
+            "Options",
+            "Head",
+            "Trace",
+            "Connect",
+            "Patch",
+        ]
+            .iter()
+            .map(|s| FromStr::from_str(s).unwrap())
+            .collect(),
         ..Default::default()
     }
     .to_cors()
