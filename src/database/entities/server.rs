@@ -107,6 +107,9 @@ pub struct Server {
     pub icon: Option<File>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub banner: Option<File>,
+
+    #[serde(skip_serializing_if = "is_false", default)]
+    pub nsfw: bool
 }
 
 impl Server {
@@ -435,4 +438,8 @@ impl Server {
                 with: "server_members",
             })?)
     }
+}
+
+fn is_false(value: &bool) -> bool {
+    !value
 }

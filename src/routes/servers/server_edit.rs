@@ -18,6 +18,8 @@ pub struct Data {
     categories: Option<Vec<Category>>,
     system_messages: Option<SystemMessageChannels>,
     remove: Option<RemoveServerField>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    nsfw: Option<bool>
 }
 
 #[patch("/<target>", data = "<data>")]
@@ -103,6 +105,10 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
 
     if let Some(system_messages) = &data.system_messages {
         set.insert("system_messages", to_bson(&system_messages).map_err(|_| Error::DatabaseError { operation: "to_document", with: "system_messages" })?);
+    }
+
+    if let Some(nsfw) = &data.nsfw {
+        set.insert("nsfw", nsfw);
     }
 
     let mut operations = doc! {};

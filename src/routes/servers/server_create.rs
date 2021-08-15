@@ -18,6 +18,8 @@ pub struct Data {
     // Maximum length of 36 allows both ULIDs and UUIDs.
     #[validate(length(min = 1, max = 36))]
     nonce: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    nsfw: Option<bool>
 }
 
 #[post("/create", data = "<info>")]
@@ -75,6 +77,7 @@ pub async fn req(user: User, info: Json<Data>) -> Result<Value> {
 
         icon: None,
         banner: None,
+        nsfw: info.nsfw.unwrap_or_default()
     };
 
     Channel::TextChannel {
@@ -88,7 +91,8 @@ pub async fn req(user: User, info: Json<Data>) -> Result<Value> {
         last_message: None,
 
         default_permissions: None,
-        role_permissions: HashMap::new()
+        role_permissions: HashMap::new(),
+        nsfw: false
     }
     .publish()
     .await?;

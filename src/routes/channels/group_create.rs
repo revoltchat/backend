@@ -20,6 +20,8 @@ pub struct Data {
     #[validate(length(min = 1, max = 36))]
     nonce: String,
     users: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    nsfw: Option<bool>
 }
 
 #[post("/create", data = "<info>")]
@@ -77,7 +79,8 @@ pub async fn req(user: User, info: Json<Data>) -> Result<Value> {
         recipients: set.into_iter().collect::<Vec<String>>(),
         icon: None,
         last_message: None,
-        permissions: None
+        permissions: None,
+        nsfw: info.nsfw.unwrap_or_default()
     };
 
     channel.clone().publish().await?;
