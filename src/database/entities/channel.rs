@@ -105,7 +105,6 @@ pub enum Channel {
 
         #[serde(skip_serializing_if = "is_false", default)]
         nsfw: bool
-
     },
 }
 
