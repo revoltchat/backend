@@ -58,7 +58,7 @@ pub enum Channel {
         #[serde(skip_serializing_if = "Option::is_none")]
         permissions: Option<i32>,
 
-        #[serde(skip_serializing_if = "is_false", default)]
+        #[serde(skip_serializing_if = "entities::server::if_false", default)]
         nsfw: bool
    },
     TextChannel {
@@ -82,7 +82,7 @@ pub enum Channel {
         #[serde(default = "HashMap::new", skip_serializing_if = "HashMap::is_empty")]
         role_permissions: HashMap<String, i32>,
         
-        #[serde(skip_serializing_if = "is_false", default)]
+        #[serde(skip_serializing_if = "entities::server::if_false", default)]
         nsfw: bool
     },
     VoiceChannel {
@@ -403,9 +403,4 @@ impl Channel {
             Err(Error::InvalidOperation)
         }
     }
-}
-
-
-pub fn is_false(value: &bool) -> bool {
-    !value
 }
