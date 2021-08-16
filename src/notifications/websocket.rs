@@ -74,7 +74,20 @@ async fn accept(stream: TcpStream) {
     let incoming = read.try_for_each(async move |msg| {
         let mutex = mutex_generator();
         if let Message::Text(text) = msg {
-            if let Ok(notification) = serde_json::from_str::<ServerboundNotification>(&text) {
+            let maybe_decoded = serde_json::from_str::<ServerboundNotification>(&text);
+
+            // If serde fails to decode the data, return a `MalformedData` error
+            if let Err(why) = maybe_decoded {
+                send(ClientboundNotification::Error(
+                    WebSocketError::MalformedData {
+                        msg: why.to_string()
+                    }
+                ));
+
+                return Ok(());
+            }
+
+            if let Ok(notification) = maybe_decoded {
                 match notification {
                     ServerboundNotification::Authenticate(auth) => {
                         {
