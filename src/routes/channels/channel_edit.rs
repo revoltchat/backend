@@ -18,6 +18,8 @@ pub struct Data {
     #[validate(length(min = 1, max = 128))]
     icon: Option<String>,
     remove: Option<RemoveChannelField>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    nsfw: Option<bool>
 }
 
 #[patch("/<target>", data = "<data>")]
@@ -86,6 +88,10 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyRespo
                 remove_icon = true;
             }
 
+            if let Some(nsfw) = &data.nsfw {
+                set.insert("nsfw", nsfw);
+            }
+            
             let mut operations = doc! {};
             if set.len() > 0 {
                 operations.insert("$set", &set);

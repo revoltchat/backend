@@ -32,6 +32,8 @@ pub struct Data {
     // Maximum length of 36 allows both ULIDs and UUIDs.
     #[validate(length(min = 1, max = 36))]
     nonce: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    nsfw: Option<bool>,
 }
 
 #[post("/<target>/channels", data = "<info>")]
@@ -80,7 +82,9 @@ pub async fn req(user: User, target: Ref, info: Json<Data>) -> Result<Value> {
             last_message: None,
 
             default_permissions: None,
-            role_permissions: HashMap::new()
+            role_permissions: HashMap::new(),
+            
+            nsfw: info.nsfw.unwrap_or_default(),
         },
         ChannelType::Voice => Channel::VoiceChannel {
             id: id.clone(),
@@ -92,7 +96,9 @@ pub async fn req(user: User, target: Ref, info: Json<Data>) -> Result<Value> {
             icon: None,
 
             default_permissions: None,
-            role_permissions: HashMap::new()
+            role_permissions: HashMap::new(),
+
+            nsfw: info.nsfw.unwrap_or_default()
         }
     };
 

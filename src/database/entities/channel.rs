@@ -57,7 +57,10 @@ pub enum Channel {
 
         #[serde(skip_serializing_if = "Option::is_none")]
         permissions: Option<i32>,
-    },
+
+        #[serde(skip_serializing_if = "entities::server::if_false", default)]
+        nsfw: bool
+   },
     TextChannel {
         #[serde(rename = "_id")]
         id: String,
@@ -77,7 +80,10 @@ pub enum Channel {
         #[serde(skip_serializing_if = "Option::is_none")]
         default_permissions: Option<i32>,
         #[serde(default = "HashMap::new", skip_serializing_if = "HashMap::is_empty")]
-        role_permissions: HashMap<String, i32>
+        role_permissions: HashMap<String, i32>,
+        
+        #[serde(skip_serializing_if = "entities::server::if_false", default)]
+        nsfw: bool
     },
     VoiceChannel {
         #[serde(rename = "_id")]
@@ -95,7 +101,10 @@ pub enum Channel {
         #[serde(skip_serializing_if = "Option::is_none")]
         default_permissions: Option<i32>,
         #[serde(default = "HashMap::new", skip_serializing_if = "HashMap::is_empty")]
-        role_permissions: HashMap<String, i32>
+        role_permissions: HashMap<String, i32>,
+
+        #[serde(skip_serializing_if = "entities::server::if_false", default)]
+        nsfw: bool
     },
 }
 
