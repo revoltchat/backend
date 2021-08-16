@@ -35,7 +35,7 @@ pub struct Relationship {
     pub status: RelationshipStatus,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum Presence {
     Online,
     Idle,
@@ -153,12 +153,11 @@ impl User {
         }
 
         // If the user's status is `Presence::Invisible`, return it as `Presence::Offline`
-        if let Some(mut status) = user.status {
-            if let Some(presence) = status.presence {
-                if presence == Presence::Invisible {
-                    status.presence = Some(Presence::Offline);
-                    user.status = Some(status);
-                    user.online = Some(False);
+        if let Some(status) = &user.status {
+            if let Some(presence) = &status.presence {
+                if presence == &Presence::Invisible {
+                    user.status = None;
+                    user.online = Some(false);
                 }
             }
         }

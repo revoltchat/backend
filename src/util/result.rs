@@ -71,8 +71,8 @@ pub enum Error {
 pub struct EmptyResponse;
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
-impl<'r> Responder<'r> for EmptyResponse {
-    fn respond_to(self, req: &Request) -> response::Result<'r> {
+impl<'r> Responder<'r, 'static> for EmptyResponse {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         Response::build()
             .status(rocket::http::Status { code: 204 })
             .ok()

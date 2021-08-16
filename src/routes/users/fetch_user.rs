@@ -5,7 +5,7 @@ use rocket::serde::json::Value;
 
 #[get("/<target>")]
 pub async fn req(user: User, target: Ref) -> Result<Value> {
-    let mut target = target.fetch_user().await?;
+    let target = target.fetch_user().await?;
 
     let perm = permissions::PermissionCalculator::new(&user)
         .with_user(&target)

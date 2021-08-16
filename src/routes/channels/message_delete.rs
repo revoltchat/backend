@@ -24,6 +24,6 @@ pub async fn req(user: User, target: Ref, msg: Ref) -> Result<EmptyResponse> {
         }
     }
 
-    message.delete().await;
+    message.delete().await?;
     Ok(EmptyResponse {})
 }

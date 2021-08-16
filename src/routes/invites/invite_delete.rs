@@ -6,7 +6,7 @@ pub async fn req(user: User, target: Ref) -> Result<EmptyResponse> {
     let target = target.fetch_invite().await?;
 
     if target.creator() == &user.id {
-        target.delete().await
+        target.delete().await?;
     } else {
         match &target {
             Invite::Server { server, .. } => {
@@ -20,10 +20,11 @@ pub async fn req(user: User, target: Ref) -> Result<EmptyResponse> {
                     return Err(Error::MissingPermission);
                 }
 
-                target.delete().await;
-                Ok(EmptyResponse {})
+                target.delete().await?;
             }
             _ => unreachable!(),
         }
     }
+
+    Ok(EmptyResponse {})
 }

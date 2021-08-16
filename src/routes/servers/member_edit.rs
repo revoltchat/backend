@@ -25,7 +25,7 @@ pub async fn req(user: User, server: Ref, target: String, data: Json<Data>) -> R
         .map_err(|error| Error::FailedValidation { error })?;
 
     if data.nickname.is_none() && data.avatar.is_none() && data.roles.is_none() && data.remove.is_none() {
-        return Ok(());
+        return Ok(EmptyResponse {});
     }
 
     let server = server.fetch_server().await?;

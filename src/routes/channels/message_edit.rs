@@ -73,6 +73,6 @@ pub async fn req(user: User, target: Ref, msg: Ref, edit: Json<Data>) -> Result<
             with: "message",
         })?;
 
-    message.publish_update(update).await;
+    message.publish_update(update).await?;
     Ok(EmptyResponse {})
 }

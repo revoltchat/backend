@@ -70,7 +70,8 @@ pub async fn req(user: User, target: Ref) -> Result<EmptyResponse> {
 
                     target.publish_update(json!({ "owner": new_owner })).await?;
                 } else {
-                    return target.delete().await;
+                    target.delete().await?;
+                    return Ok(EmptyResponse {});
                 }
             } else {
                 get_collection("channels")
@@ -108,7 +109,8 @@ pub async fn req(user: User, target: Ref) -> Result<EmptyResponse> {
         Channel::TextChannel { .. } |
         Channel::VoiceChannel { .. } => {
             if perm.get_manage_channel() {
-                target.delete().await
+                target.delete().await?;
+                Ok(EmptyResponse {})
             } else {
                 Err(Error::MissingPermission)
             }

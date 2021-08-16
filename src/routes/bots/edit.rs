@@ -35,7 +35,7 @@ pub async fn edit_bot(user: User, target: Ref, data: Json<Data>) -> Result<Empty
         && data.interactions_url.is_none()
         && data.remove.is_none()
     {
-        return Ok(());
+        return Ok(EmptyResponse {});
     }
 
     let bot = target.fetch_bot().await?;

@@ -16,8 +16,10 @@ pub async fn req(user: User, target: Ref) -> Result<EmptyResponse> {
     }
 
     if user.id == target.owner {
-        target.delete().await
+        target.delete().await?;
     } else {
-        target.remove_member(&user.id, RemoveMember::Leave).await
+        target.remove_member(&user.id, RemoveMember::Leave).await?;
     }
+
+    Ok(EmptyResponse {})
 }

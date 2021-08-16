@@ -1,10 +1,10 @@
 use crate::database::*;
-use crate::util::result::{Error, Result};
+use crate::util::result::{EmptyResponse, Error, Result};
 
 use mongodb::bson::{doc, to_document};
 use rauth::auth::Session;
 use rocket::serde::json::Json;
-use serde::{Deserialize, Serialize, EmptyResponse};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct Subscription {

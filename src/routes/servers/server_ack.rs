@@ -18,6 +18,6 @@ pub async fn req(user: User, target: Ref) -> Result<EmptyResponse> {
         Err(Error::MissingPermission)?
     }
 
-    target.mark_as_read(&user.id).await;
+    target.mark_as_read(&user.id).await?;
     Ok(EmptyResponse {})
 }

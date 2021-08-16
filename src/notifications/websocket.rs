@@ -129,11 +129,16 @@ async fn accept(stream: TcpStream) {
                             }
                         } {
                             if let Ok(user) = (Ref { id: id.clone() }).fetch_user().await {
-                                let is_invisible = if let Some(status) = user.status {
-                                    if let Some(presence) = status.presence {
-                                        presence == Presence::Invisible
+                                let is_invisible = if let Some(status) = &user.status {
+                                    if let Some(presence) = &status.presence {
+                                        presence == &Presence::Invisible
+                                    } else {
+                                        false
                                     }
+                                } else {
+                                    false
                                 };
+
                                 let was_online = is_online(&id);
 
                                 {

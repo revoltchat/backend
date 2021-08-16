@@ -26,7 +26,7 @@ pub async fn req(user: User, target: Ref, role_id: String, data: Json<Data>) -> 
 
     if data.name.is_none() && data.colour.is_none() && data.hoist.is_none() && data.rank.is_none() && data.remove.is_none()
     {
-        return Ok(());
+        return Ok(EmptyResponse {});
     }
 
     let target = target.fetch_server().await?;

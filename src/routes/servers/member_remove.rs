@@ -27,7 +27,7 @@ pub async fn req(user: User, target: Ref, member: String) -> Result<EmptyRespons
 
     target
         .remove_member(&member.id.user, RemoveMember::Kick)
-        .await;
+        .await?;
 
     Ok(EmptyResponse {})
 }

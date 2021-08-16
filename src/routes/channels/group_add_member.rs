@@ -19,6 +19,6 @@ pub async fn req(user: User, target: Ref, member: Ref) -> Result<EmptyResponse> 
         Err(Error::MissingPermission)?
     }
 
-    channel.add_to_group(member.id, user.id).await;
+    channel.add_to_group(member.id, user.id).await?;
     Ok(EmptyResponse {})
 }

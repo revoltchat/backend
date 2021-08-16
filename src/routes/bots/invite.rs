@@ -59,7 +59,8 @@ pub async fn invite_bot(user: User, target: Ref, dest: Json<Destination>) -> Res
                 Err(Error::MissingPermission)?
             }
 
-            channel.add_to_group(bot.id, user.id).await
+            channel.add_to_group(bot.id, user.id).await?;
+            Ok(EmptyResponse {})
         }
     }
 }
