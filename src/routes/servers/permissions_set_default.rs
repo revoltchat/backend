@@ -6,7 +6,7 @@ use crate::database::*;
 use crate::database::permissions::channel::ChannelPermission;
 use crate::database::permissions::server::ServerPermission;
 use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, Result, EmptyResponse};
 
 #[derive(Serialize, Deserialize)]
 pub struct Values {
@@ -20,7 +20,7 @@ pub struct Data {
 }
 
 #[put("/<target>/permissions/default", data = "<data>", rank = 1)]
-pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
+pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyResponse> {
     let target = target.fetch_server().await?;
 
     let perm = permissions::PermissionCalculator::new(&user)
@@ -34,7 +34,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
 
     let server_permissions: u32 = ServerPermission::View as u32 | data.permissions.server;
     let channel_permissions: u32 = ChannelPermission::View as u32 | data.permissions.channel;
-    
+
     get_collection("servers")
         .update_one(
             doc! { "_id": &target.id },
@@ -53,7 +53,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
             operation: "update_one",
             with: "server"
         })?;
-    
+
     ClientboundNotification::ServerUpdate {
         id: target.id.clone(),
         data: json!({
@@ -66,5 +66,5 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
     }
     .publish(target.id);
 
-    Ok(())
+    Ok(EmptyResponse {})
 }

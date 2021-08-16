@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, Result, EmptyResponse};
 use crate::{database::*, notifications::events::RemoveMemberField};
 
 use mongodb::bson::{doc, to_document};
@@ -19,7 +19,7 @@ pub struct Data {
 }
 
 #[patch("/<server>/members/<target>", data = "<data>")]
-pub async fn req(user: User, server: Ref, target: String, data: Json<Data>) -> Result<()> {
+pub async fn req(user: User, server: Ref, target: String, data: Json<Data>) -> Result<EmptyResponse> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
@@ -154,5 +154,5 @@ pub async fn req(user: User, server: Ref, target: String, data: Json<Data>) -> R
         }
     }
 
-    Ok(())
+    Ok(EmptyResponse {})
 }

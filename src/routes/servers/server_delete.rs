@@ -1,10 +1,10 @@
 use crate::database::*;
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, Result, EmptyResponse};
 
 use mongodb::bson::doc;
 
 #[delete("/<target>")]
-pub async fn req(user: User, target: Ref) -> Result<()> {
+pub async fn req(user: User, target: Ref) -> Result<EmptyResponse> {
     let target = target.fetch_server().await?;
     let perm = permissions::PermissionCalculator::new(&user)
         .with_server(&target)

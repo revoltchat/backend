@@ -1,12 +1,12 @@
 use crate::database::*;
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, Result, EmptyResponse};
 
 #[put("/<target>/ack")]
-pub async fn req(user: User, target: Ref) -> Result<()> {
+pub async fn req(user: User, target: Ref) -> Result<EmptyResponse> {
     if user.bot.is_some() {
         return Err(Error::IsBot)
     }
-    
+
     let target = target.fetch_server().await?;
 
     let perm = permissions::PermissionCalculator::new(&user)
@@ -18,5 +18,6 @@ pub async fn req(user: User, target: Ref) -> Result<()> {
         Err(Error::MissingPermission)?
     }
 
-    target.mark_as_read(&user.id).await
+    target.mark_as_read(&user.id).await;
+    Ok(EmptyResponse {})
 }

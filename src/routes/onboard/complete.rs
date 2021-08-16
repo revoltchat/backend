@@ -1,5 +1,5 @@
 use crate::database::*;
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, Result, EmptyResponse};
 
 use mongodb::bson::doc;
 use rauth::auth::Session;
@@ -19,7 +19,7 @@ pub struct Data {
 }
 
 #[post("/complete", data = "<data>")]
-pub async fn req(session: Session, user: Option<User>, data: Json<Data>) -> Result<()> {
+pub async fn req(session: Session, user: Option<User>, data: Json<Data>) -> Result<EmptyResponse> {
     if user.is_some() {
         Err(Error::AlreadyOnboarded)?
     }
@@ -45,5 +45,5 @@ pub async fn req(session: Session, user: Option<User>, data: Json<Data>) -> Resu
             with: "user",
         })?;
 
-    Ok(())
+    Ok(EmptyResponse {})
 }

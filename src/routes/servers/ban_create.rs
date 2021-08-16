@@ -1,5 +1,5 @@
 use crate::database::*;
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, Result, EmptyResponse};
 
 use mongodb::bson::doc;
 use rocket::serde::json::Json;
@@ -13,7 +13,7 @@ pub struct Data {
 }
 
 #[put("/<server>/bans/<target>", data = "<data>")]
-pub async fn req(user: User, server: Ref, target: Ref, data: Json<Data>) -> Result<()> {
+pub async fn req(user: User, server: Ref, target: Ref, data: Json<Data>) -> Result<EmptyResponse> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
@@ -57,5 +57,6 @@ pub async fn req(user: User, server: Ref, target: Ref, data: Json<Data>) -> Resu
             with: "server_ban",
         })?;
 
-    server.remove_member(&target.id, RemoveMember::Ban).await
+    server.remove_member(&target.id, RemoveMember::Ban).await;
+    Ok(EmptyResponse {})
 }

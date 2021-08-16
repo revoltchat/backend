@@ -1,10 +1,10 @@
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, Result, EmptyResponse};
 use crate::{database::*, notifications::events::ClientboundNotification};
 
 use mongodb::bson::doc;
 
 #[delete("/<target>/recipients/<member>")]
-pub async fn req(user: User, target: Ref, member: Ref) -> Result<()> {
+pub async fn req(user: User, target: Ref, member: Ref) -> Result<EmptyResponse> {
     if &user.id == &member.id {
         Err(Error::CannotRemoveYourself)?
     }
@@ -59,7 +59,7 @@ pub async fn req(user: User, target: Ref, member: Ref) -> Result<()> {
         .await
         .ok();
 
-        Ok(())
+        Ok(EmptyResponse {})
     } else {
         Err(Error::InvalidOperation)
     }

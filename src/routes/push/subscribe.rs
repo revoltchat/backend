@@ -4,7 +4,7 @@ use crate::util::result::{Error, Result};
 use mongodb::bson::{doc, to_document};
 use rauth::auth::Session;
 use rocket::serde::json::Json;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, EmptyResponse};
 
 #[derive(Serialize, Deserialize)]
 pub struct Subscription {
@@ -14,7 +14,7 @@ pub struct Subscription {
 }
 
 #[post("/subscribe", data = "<data>")]
-pub async fn req(session: Session, data: Json<Subscription>) -> Result<()> {
+pub async fn req(session: Session, data: Json<Subscription>) -> Result<EmptyResponse> {
     let data = data.into_inner();
     get_collection("accounts")
         .update_one(
@@ -33,5 +33,5 @@ pub async fn req(session: Session, data: Json<Subscription>) -> Result<()> {
         .await
         .map_err(|_| Error::DatabaseError { operation: "update_one", with: "account" })?;
 
-    Ok(())
+    Ok(EmptyResponse {})
 }

@@ -1,5 +1,5 @@
 use crate::database::*;
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, Result, EmptyResponse};
 
 use chrono::Utc;
 use mongodb::bson::{doc, Bson, DateTime, Document};
@@ -14,7 +14,7 @@ pub struct Data {
 }
 
 #[patch("/<target>/messages/<msg>", data = "<edit>")]
-pub async fn req(user: User, target: Ref, msg: Ref, edit: Json<Data>) -> Result<()> {
+pub async fn req(user: User, target: Ref, msg: Ref, edit: Json<Data>) -> Result<EmptyResponse> {
     edit.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
@@ -73,5 +73,6 @@ pub async fn req(user: User, target: Ref, msg: Ref, edit: Json<Data>) -> Result<
             with: "message",
         })?;
 
-    message.publish_update(update).await
+    message.publish_update(update).await;
+    Ok(EmptyResponse {})
 }

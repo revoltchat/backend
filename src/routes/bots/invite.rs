@@ -1,5 +1,5 @@
 use crate::database::*;
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, Result, EmptyResponse};
 
 use rocket::serde::json::Json;
 use serde::Deserialize;
@@ -22,7 +22,7 @@ pub enum Destination {
 }
 
 #[post("/<target>/invite", data = "<dest>")]
-pub async fn invite_bot(user: User, target: Ref, dest: Json<Destination>) -> Result<()> {
+pub async fn invite_bot(user: User, target: Ref, dest: Json<Destination>) -> Result<EmptyResponse> {
     let bot = target.fetch_bot().await?;
 
     if !bot.public {
@@ -39,13 +39,13 @@ pub async fn invite_bot(user: User, target: Ref, dest: Json<Destination>) -> Res
                 .with_server(&server)
                 .for_server()
                 .await?;
-        
+
             if !perm.get_manage_server() {
                 Err(Error::MissingPermission)?
             }
 
             server.join_member(&bot.id).await?;
-            Ok(())
+            Ok(EmptyResponse {})
         }
         Destination::Group(GroupId { group }) => {
             let channel = Ref::from(group)?.fetch_channel().await?;
@@ -54,7 +54,7 @@ pub async fn invite_bot(user: User, target: Ref, dest: Json<Destination>) -> Res
                 .with_channel(&channel)
                 .for_channel()
                 .await?;
-        
+
             if !perm.get_invite_others() {
                 Err(Error::MissingPermission)?
             }

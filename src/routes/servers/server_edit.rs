@@ -1,5 +1,5 @@
 use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, Result, EmptyResponse};
 use crate::{database::*, notifications::events::RemoveServerField};
 
 use mongodb::bson::{doc, to_bson, to_document};
@@ -21,14 +21,14 @@ pub struct Data {
 }
 
 #[patch("/<target>", data = "<data>")]
-pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
+pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyResponse> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
     if data.name.is_none() && data.description.is_none() && data.icon.is_none() && data.banner.is_none() && data.remove.is_none() && data.categories.is_none() && data.system_messages.is_none()
     {
-        return Ok(());
+        return Ok(EmptyResponse {});
     }
 
     let target = target.fetch_server().await?;
@@ -145,5 +145,5 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<()> {
         }
     }
 
-    Ok(())
+    Ok(EmptyResponse {})
 }

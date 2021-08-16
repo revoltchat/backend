@@ -1,6 +1,6 @@
 use crate::database::*;
 use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, Result, EmptyResponse};
 
 use mongodb::bson::doc;
 use rauth::auth::{Auth, Session};
@@ -31,11 +31,11 @@ pub async fn req(
     user: User,
     data: Json<Data>,
     _ignore_id: String,
-) -> Result<()> {
+) -> Result<EmptyResponse> {
     if user.bot.is_some() {
         return Err(Error::IsBot)
     }
-    
+
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
@@ -69,5 +69,5 @@ pub async fn req(
     }
     .publish_as_user(user.id.clone());
 
-    Ok(())
+    Ok(EmptyResponse {})
 }

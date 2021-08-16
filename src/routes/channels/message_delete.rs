@@ -1,10 +1,10 @@
 use crate::database::*;
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, Result, EmptyResponse};
 
 use mongodb::bson::doc;
 
 #[delete("/<target>/messages/<msg>")]
-pub async fn req(user: User, target: Ref, msg: Ref) -> Result<()> {
+pub async fn req(user: User, target: Ref, msg: Ref) -> Result<EmptyResponse> {
     let channel = target.fetch_channel().await?;
     channel.has_messaging()?;
 
@@ -24,5 +24,6 @@ pub async fn req(user: User, target: Ref, msg: Ref) -> Result<()> {
         }
     }
 
-    message.delete().await
+    message.delete().await;
+    Ok(EmptyResponse {})
 }

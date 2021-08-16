@@ -15,6 +15,7 @@ pub enum WebSocketError {
     InvalidSession,
     OnboardingNotFinished,
     AlreadyAuthenticated,
+    MalformedData { msg: String },
 }
 
 #[derive(Deserialize, Debug)]
