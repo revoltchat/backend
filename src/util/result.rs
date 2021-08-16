@@ -68,7 +68,16 @@ pub enum Error {
     NoEffect,
 }
 
+pub struct EmptyResponse;
 pub type Result<T, E = Error> = std::result::Result<T, E>;
+
+impl<'r> Responder<'r> for EmptyResponse {
+    fn respond_to(self, req: &Request) -> response::Result<'r> {
+        Response::build()
+            .status(rocket::http::Status { code: 204 })
+            .ok()
+    }
+}
 
 /// HTTP response builder for Error enum
 impl<'r> Responder<'r, 'static> for Error {
