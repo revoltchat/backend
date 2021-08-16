@@ -2,7 +2,7 @@
 
 ## Description
 
-Delta is a blazing fast API server built with Rust for REVOLT.
+Delta is a blazing fast API server built with Rust for Revolt.
 
 **Features:**
 
@@ -29,7 +29,7 @@ Delta is a blazing fast API server built with Rust for REVOLT.
 
 ### Docker Helper Scripts
 
-If you have Docker installed, you can use the helper scripts to deploy Revolt in your development environment.
+If you have Docker installed, you can use the helper scripts to deploy Delta in your development environment.
 
 | Command        | Description                |
 | -------------- | -------------------------- |
