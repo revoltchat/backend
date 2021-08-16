@@ -1,5 +1,5 @@
 use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, Result, EmptyResponse};
 use crate::{database::*, notifications::events::RemoveBotField};
 
 use mongodb::bson::doc;
@@ -25,7 +25,7 @@ pub struct Data {
 }
 
 #[patch("/<target>", data = "<data>")]
-pub async fn edit_bot(user: User, target: Ref, data: Json<Data>) -> Result<()> {
+pub async fn edit_bot(user: User, target: Ref, data: Json<Data>) -> Result<EmptyResponse> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
@@ -112,5 +112,5 @@ pub async fn edit_bot(user: User, target: Ref, data: Json<Data>) -> Result<()> {
             })?;
     }
 
-    Ok(())
+    Ok(EmptyResponse {})
 }

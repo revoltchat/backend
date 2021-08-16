@@ -1,8 +1,8 @@
 use crate::database::*;
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, Result, EmptyResponse};
 
 #[delete("/<target>")]
-pub async fn req(user: User, target: Ref) -> Result<()> {
+pub async fn req(user: User, target: Ref) -> Result<EmptyResponse> {
     let target = target.fetch_invite().await?;
 
     if target.creator() == &user.id {
@@ -20,7 +20,8 @@ pub async fn req(user: User, target: Ref) -> Result<()> {
                     return Err(Error::MissingPermission);
                 }
 
-                target.delete().await
+                target.delete().await;
+                Ok(EmptyResponse {})
             }
             _ => unreachable!(),
         }

@@ -1,5 +1,5 @@
 use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, Result, EmptyResponse};
 use crate::{database::*, notifications::events::RemoveRoleField};
 
 use mongodb::bson::doc;
@@ -19,7 +19,7 @@ pub struct Data {
 }
 
 #[patch("/<target>/roles/<role_id>", data = "<data>")]
-pub async fn req(user: User, target: Ref, role_id: String, data: Json<Data>) -> Result<()> {
+pub async fn req(user: User, target: Ref, role_id: String, data: Json<Data>) -> Result<EmptyResponse> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
@@ -106,5 +106,5 @@ pub async fn req(user: User, target: Ref, role_id: String, data: Json<Data>) -> 
     }
     .publish(target.id.clone());
 
-    Ok(())
+    Ok(EmptyResponse {})
 }

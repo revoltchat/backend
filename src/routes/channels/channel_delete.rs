@@ -1,10 +1,10 @@
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, Result, EmptyResponse};
 use crate::{database::*, notifications::events::ClientboundNotification};
 
 use mongodb::bson::doc;
 
 #[delete("/<target>")]
-pub async fn req(user: User, target: Ref) -> Result<()> {
+pub async fn req(user: User, target: Ref) -> Result<EmptyResponse> {
     let target = target.fetch_channel().await?;
 
     let perm = permissions::PermissionCalculator::new(&user)
@@ -37,7 +37,7 @@ pub async fn req(user: User, target: Ref) -> Result<()> {
                     with: "channel",
                 })?;
 
-            Ok(())
+            Ok(EmptyResponse {})
         }
         Channel::Group {
             id,
@@ -103,7 +103,7 @@ pub async fn req(user: User, target: Ref) -> Result<()> {
                 .await
                 .ok();
 
-            Ok(())
+            Ok(EmptyResponse {})
         }
         Channel::TextChannel { .. } |
         Channel::VoiceChannel { .. } => {

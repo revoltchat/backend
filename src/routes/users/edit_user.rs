@@ -1,5 +1,5 @@
 use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, Result, EmptyResponse};
 use crate::{database::*, notifications::events::RemoveUserField};
 
 use mongodb::bson::{doc, to_document};
@@ -29,7 +29,7 @@ pub struct Data {
 }
 
 #[patch("/<_ignore_id>", data = "<data>")]
-pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()> {
+pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<EmptyResponse> {
     let mut data = data.into_inner();
 
     data.validate()
@@ -40,7 +40,7 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
         && data.avatar.is_none()
         && data.remove.is_none()
     {
-        return Ok(());
+        return Ok(EmptyResponse {});
     }
 
     let mut unset = doc! {};
@@ -152,5 +152,5 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<()>
         }
     }
 
-    Ok(())
+    Ok(EmptyResponse {})
 }

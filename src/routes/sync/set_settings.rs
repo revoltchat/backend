@@ -1,6 +1,6 @@
 use crate::database::*;
 use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, Result, EmptyResponse};
 
 use chrono::prelude::*;
 use mongodb::bson::{doc, to_bson};
@@ -18,11 +18,11 @@ pub struct Options {
 }
 
 #[post("/settings/set?<options..>", data = "<data>")]
-pub async fn req(user: User, data: Json<Data>, options: Options) -> Result<()> {
+pub async fn req(user: User, data: Json<Data>, options: Options) -> Result<EmptyResponse> {
     if user.bot.is_some() {
         return Err(Error::IsBot)
     }
-    
+
     let data = data.into_inner();
     let current_time = Utc::now().timestamp_millis();
     let timestamp = if let Some(timestamp) = options.timestamp {
@@ -70,5 +70,5 @@ pub async fn req(user: User, data: Json<Data>, options: Options) -> Result<()> {
     }
     .publish(user.id);
 
-    Ok(())
+    Ok(EmptyResponse {})
 }

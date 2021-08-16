@@ -1,16 +1,16 @@
 use crate::database::*;
 use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, Result, EmptyResponse};
 
 use mongodb::bson::doc;
 use mongodb::options::UpdateOptions;
 
 #[put("/<target>/ack/<message>")]
-pub async fn req(user: User, target: Ref, message: Ref) -> Result<()> {
+pub async fn req(user: User, target: Ref, message: Ref) -> Result<EmptyResponse> {
     if user.bot.is_some() {
         return Err(Error::IsBot)
     }
-    
+
     let target = target.fetch_channel().await?;
 
     let perm = permissions::PermissionCalculator::new(&user)
@@ -52,5 +52,5 @@ pub async fn req(user: User, target: Ref, message: Ref) -> Result<()> {
     }
     .publish(user.id);
 
-    Ok(())
+    Ok(EmptyResponse {})
 }

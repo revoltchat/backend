@@ -1,11 +1,11 @@
 use crate::database::*;
 use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, EmptyResponse, Result};
 
 use mongodb::bson::doc;
 
 #[delete("/<target>")]
-pub async fn delete_bot(user: User, target: Ref) -> Result<()> {
+pub async fn delete_bot(user: User, target: Ref) -> Result<EmptyResponse> {
     let bot = target.fetch_bot().await?;
     if bot.owner != user.id {
         return Err(Error::MissingPermission);
@@ -58,6 +58,6 @@ pub async fn delete_bot(user: User, target: Ref) -> Result<()> {
             with: "bot",
             operation: "delete_one"
         })?;
-    
-    Ok(())
+
+    Ok(EmptyResponse {})
 }

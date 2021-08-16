@@ -1,11 +1,11 @@
 use crate::database::*;
 use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result};
+use crate::util::result::{Error, Result, EmptyResponse};
 
 use mongodb::bson::doc;
 
 #[delete("/<target>/roles/<role_id>")]
-pub async fn req(user: User, target: Ref, role_id: String) -> Result<()> {
+pub async fn req(user: User, target: Ref, role_id: String) -> Result<EmptyResponse> {
     let target = target.fetch_server().await?;
 
     let perm = permissions::PermissionCalculator::new(&user)
@@ -70,12 +70,12 @@ pub async fn req(user: User, target: Ref, role_id: String) -> Result<()> {
             operation: "update_many",
             with: "server_members"
         })?;
-    
+
     ClientboundNotification::ServerRoleDelete {
         id: target.id.clone(),
         role_id
     }
     .publish(target.id);
 
-    Ok(())
+    Ok(EmptyResponse {})
 }
