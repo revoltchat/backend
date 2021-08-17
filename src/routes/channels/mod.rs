@@ -16,6 +16,7 @@ mod message_fetch;
 mod message_query;
 mod message_search;
 mod message_query_stale;
+mod message_report;
 mod message_send;
 mod permissions_set;
 mod permissions_set_default;
@@ -32,6 +33,7 @@ pub fn routes() -> Vec<Route> {
         message_query::req,
         message_search::req,
         message_query_stale::req,
+        message_report::req,
         message_fetch::req,
         message_edit::req,
         message_delete::req,

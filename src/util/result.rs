@@ -49,6 +49,9 @@ pub enum Error {
     IsBot,
     BotIsPrivate,
 
+    // ? Reporting errors.
+    CannotSelfReport,
+
     // ? General errors.
     TooManyIds,
     FailedValidation {
@@ -106,6 +109,8 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::ReachedMaximumBots => Status::BadRequest,
             Error::IsBot => Status::BadRequest,
             Error::BotIsPrivate => Status::Forbidden,
+
+            Error::CannotSelfReport => Status::BadRequest,
 
             Error::FailedValidation { .. } => Status::UnprocessableEntity,
             Error::DatabaseError { .. } => Status::InternalServerError,
