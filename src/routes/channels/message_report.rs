@@ -35,18 +35,15 @@ pub async fn req(user: User, target: Ref, msg: Ref, data: Json<Data>) -> Result<
         Err(Error::CannotSelfReport)?
     }
 
-    let mut document = doc! {
-        "_id": {
-            "message": message.id,
-            "reason": data.reason,
-            "comments": data.comments,
-        }
-    };
-
-    let reported = Utc::now();
-
     get_collection("message_reports")
-        .insert_one(document, None)
+        .insert_one(
+            doc! {
+                "_id": Ulid::new().to_string(),
+                "message": message,
+                "reason": data.reason,
+                "comments": data.comments
+            }
+        )
         .await
         .map_err(|_| Error::DatabaseError {
             operation: "insert_one",
