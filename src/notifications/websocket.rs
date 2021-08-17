@@ -6,8 +6,8 @@ use super::subscriptions;
 
 use async_std::net::{TcpListener, TcpStream};
 use async_std::task;
-use async_tungstenite::tungstenite::Message;
-use futures::channel::mpsc::{unbounded, UnboundedSender};
+use async_tungstenite::tungstenite::{Message, handshake::server};
+use futures::channel::{oneshot, mpsc::{unbounded, UnboundedSender}};
 use futures::stream::TryStreamExt;
 use futures::{pin_mut, prelude::*};
 use hive_pubsub::PubSub;
@@ -18,6 +18,8 @@ use rauth::{
     auth::{Auth},
     options::Options,
 };
+use rmp_serde;
+use url::Url;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex, RwLock};
@@ -46,13 +48,45 @@ pub async fn launch_server() {
     }
 }
 
+#[derive(Debug)]
+enum MSGFormat {
+    JSON,
+    MSGPACK
+}
+
+struct HeaderCallback {
+    sender: oneshot::Sender<MSGFormat>
+}
+
+impl server::Callback for HeaderCallback {
+    fn on_request(self, request: &server::Request, response: server::Response) -> Result<server::Response, server::ErrorResponse> {
+        // we dont get some of the data sometimes so im generating a fake url with the only data we actually need
+        let url = format!("ws://example.com?{}", request.uri().query().unwrap_or("?format=json"));
+        let mut query: HashMap<_, _> = url.parse::<Url>().unwrap().query_pairs().into_owned().collect();  // should be safe to use unwrap here as it was just a Uri
+        let format_query: Option<String> = query.remove("format");
+
+        let format = match format_query.as_deref().unwrap_or("json") {
+            "msgpack" => MSGFormat::MSGPACK,
+            "json" => MSGFormat::JSON,
+            _ => panic!("unknown format")  // TODO: not use panic
+        };
+
+        self.sender.send(format).unwrap();  // TODO: not use unwrap
+        Ok(response)
+    }
+}
+
 async fn accept(stream: TcpStream) {
     let addr = stream
         .peer_addr()
         .expect("Connected streams should have a peer address.");
-    let ws_stream = async_tungstenite::accept_async(stream)
+    let (sender, receiver) = oneshot::channel::<MSGFormat>();
+    
+    let ws_stream = async_tungstenite::accept_hdr_async_with_config(stream, HeaderCallback { sender }, None)
         .await
         .expect("Error during websocket handshake.");
+
+    let msg_format = receiver.await.unwrap();  // TODO: not use unwrap
 
     info!("User established WebSocket connection from {}.", &addr);
 
@@ -61,10 +95,19 @@ async fn accept(stream: TcpStream) {
     CONNECTIONS.lock().unwrap().insert(addr, tx.clone());
 
     let send = |notification: ClientboundNotification| {
-        if let Ok(response) = serde_json::to_string(&notification) {
-            if let Err(_) = tx.unbounded_send(Message::Text(response)) {
-                debug!("Failed unbounded_send to websocket stream.");
+        let res = match msg_format {
+            MSGFormat::JSON => match serde_json::to_string(&notification) {
+                Ok(s) => Message::Text(s),
+                Err(_) => return
             }
+            MSGFormat::MSGPACK => match rmp_serde::to_vec(&notification) {
+                Ok(v) => Message::Binary(v),
+                Err(_) => return
+            }
+        };
+
+        if let Err(_) = tx.unbounded_send(res) {
+            debug!("Failed unbounded_send to websocket stream.");
         }
     };
 
@@ -73,187 +116,187 @@ async fn accept(stream: TcpStream) {
     let fwd = rx.map(Ok).forward(write);
     let incoming = read.try_for_each(async move |msg| {
         let mutex = mutex_generator();
-        if let Message::Text(text) = msg {
-            let maybe_decoded = serde_json::from_str::<ServerboundNotification>(&text);
 
-            // If serde fails to decode the data, return a `MalformedData` error
-            if let Err(why) = maybe_decoded {
+        let maybe_decoded = match msg {
+            Message::Text(text) => serde_json::from_str::<ServerboundNotification>(&text).map_err(|e| e.to_string()),
+            Message::Binary(vec) => rmp_serde::decode::from_read::<&[u8], ServerboundNotification>(vec.as_slice()).map_err(|e| e.to_string()),
+            _ => return Ok(())
+        };
+
+        let notification = match maybe_decoded {
+            Err(why) => {
                 send(ClientboundNotification::Error(
                     WebSocketError::MalformedData {
                         msg: why.to_string()
+                }));
+                return Ok(())
+            },
+            Ok(n) => n
+        };
+
+        match notification {
+            ServerboundNotification::Authenticate(auth) => {
+                {
+                    if mutex.lock().unwrap().is_some() {
+                        send(ClientboundNotification::Error(
+                            WebSocketError::AlreadyAuthenticated,
+                        ));
+
+                        return Ok(());
                     }
-                ));
+                }
 
-                return Ok(());
-            }
-
-            if let Ok(notification) = maybe_decoded {
-                match notification {
-                    ServerboundNotification::Authenticate(auth) => {
+                if let Some(id) = match auth {
+                    AuthType::User(new_session) => {
+                        if let Ok(validated_session) =
+                        Auth::new(get_collection("accounts"), Options::new())
+                            .verify_session(new_session)
+                            .await
                         {
-                            if mutex.lock().unwrap().is_some() {
-                                send(ClientboundNotification::Error(
-                                    WebSocketError::AlreadyAuthenticated,
-                                ));
-
-                                return Ok(());
-                            }
+                            Some(validated_session.user_id.clone())
+                        } else {
+                            None
                         }
-
-                        if let Some(id) = match auth {
-                            AuthType::User(new_session) => {
-                                if let Ok(validated_session) =
-                                Auth::new(get_collection("accounts"), Options::new())
-                                    .verify_session(new_session)
-                                    .await
-                                {
-                                    Some(validated_session.user_id.clone())
+                    }
+                    AuthType::Bot(BotAuth { token }) => {
+                        if let Ok(doc) = get_collection("bots")
+                            .find_one(
+                                doc! { "token": token },
+                                None
+                            ).await {
+                                if let Some(doc) = doc {
+                                    Some(doc.get_str("_id").unwrap().to_string())
                                 } else {
                                     None
                                 }
+                            } else {
+                                None
                             }
-                            AuthType::Bot(BotAuth { token }) => {
-                                if let Ok(doc) = get_collection("bots")
-                                    .find_one(
-                                        doc! { "token": token },
-                                        None
-                                    ).await {
-                                        if let Some(doc) = doc {
-                                            Some(doc.get_str("_id").unwrap().to_string())
-                                        } else {
-                                            None
-                                        }
-                                    } else {
-                                        None
-                                    }
+                    }
+                } {
+                    if let Ok(user) = (Ref { id: id.clone() }).fetch_user().await {
+                        let is_invisible = if let Some(status) = &user.status {
+                            if let Some(presence) = &status.presence {
+                                presence == &Presence::Invisible
+                            } else {
+                                false
                             }
-                        } {
-                            if let Ok(user) = (Ref { id: id.clone() }).fetch_user().await {
-                                let is_invisible = if let Some(status) = &user.status {
-                                    if let Some(presence) = &status.presence {
-                                        presence == &Presence::Invisible
-                                    } else {
-                                        false
-                                    }
-                                } else {
-                                    false
-                                };
+                        } else {
+                            false
+                        };
 
-                                let was_online = is_online(&id);
+                        let was_online = is_online(&id);
 
-                                {
-                                    match USERS.write() {
-                                        Ok(mut map) => {
-                                            map.insert(id.clone(), addr);
-                                        }
-                                        Err(_) => {
-                                            send(ClientboundNotification::Error(
-                                                WebSocketError::InternalError {
-                                                    at: "Writing users map.".to_string(),
-                                                },
-                                            ));
-
-                                            return Ok(());
-                                        }
-                                    }
+                        {
+                            match USERS.write() {
+                                Ok(mut map) => {
+                                    map.insert(id.clone(), addr);
                                 }
-
-                                *mutex.lock().unwrap() = Some(id.clone());
-
-                                if let Err(_) = subscriptions::generate_subscriptions(&user).await {
+                                Err(_) => {
                                     send(ClientboundNotification::Error(
                                         WebSocketError::InternalError {
-                                            at: "Generating subscriptions.".to_string(),
+                                            at: "Writing users map.".to_string(),
                                         },
                                     ));
 
                                     return Ok(());
                                 }
+                            }
+                        }
 
-                                send(ClientboundNotification::Authenticated);
+                        *mutex.lock().unwrap() = Some(id.clone());
 
-                                match super::payload::generate_ready(user).await {
-                                    Ok(payload) => {
-                                        send(payload);
+                        if let Err(_) = subscriptions::generate_subscriptions(&user).await {
+                            send(ClientboundNotification::Error(
+                                WebSocketError::InternalError {
+                                    at: "Generating subscriptions.".to_string(),
+                                },
+                            ));
 
-                                        if !was_online && !is_invisible {
-                                            ClientboundNotification::UserUpdate {
-                                                id: id.clone(),
-                                                data: json!({
-                                                    "online": true
-                                                }),
-                                                clear: None
-                                            }
-                                            .publish_as_user(id);
-                                        }
+                            return Ok(());
+                        }
+
+                        send(ClientboundNotification::Authenticated);
+
+                        match super::payload::generate_ready(user).await {
+                            Ok(payload) => {
+                                send(payload);
+
+                                if !was_online && !is_invisible {
+                                    ClientboundNotification::UserUpdate {
+                                        id: id.clone(),
+                                        data: json!({
+                                            "online": true
+                                        }),
+                                        clear: None
                                     }
-                                    Err(_) => {
-                                        send(ClientboundNotification::Error(
-                                            WebSocketError::InternalError {
-                                                at: "Generating payload.".to_string(),
-                                            },
-                                        ));
-
-                                        return Ok(());
-                                    }
+                                    .publish_as_user(id);
                                 }
-                            } else {
+                            }
+                            Err(_) => {
                                 send(ClientboundNotification::Error(
-                                    WebSocketError::OnboardingNotFinished,
+                                    WebSocketError::InternalError {
+                                        at: "Generating payload.".to_string(),
+                                    },
                                 ));
+
+                                return Ok(());
                             }
-                        } else {
-                            send(ClientboundNotification::Error(
-                                WebSocketError::InvalidSession,
-                            ));
                         }
+                    } else {
+                        send(ClientboundNotification::Error(
+                            WebSocketError::OnboardingNotFinished,
+                        ));
                     }
-                    // ! TEMP: verify user part of channel
-                    // ! Could just run permission check here.
-                    ServerboundNotification::BeginTyping { channel } => {
-                        if mutex.lock().unwrap().is_some() {
-                            let user = {
-                                let mutex = mutex.lock().unwrap();
-                                mutex.as_ref().unwrap().clone()
-                            };
+                } else {
+                    send(ClientboundNotification::Error(
+                        WebSocketError::InvalidSession,
+                    ));
+                }
+            }
+            // ! TEMP: verify user part of channel
+            // ! Could just run permission check here.
+            ServerboundNotification::BeginTyping { channel } => {
+                if mutex.lock().unwrap().is_some() {
+                    let user = {
+                        let mutex = mutex.lock().unwrap();
+                        mutex.as_ref().unwrap().clone()
+                    };
 
-                            ClientboundNotification::ChannelStartTyping {
-                                id: channel.clone(),
-                                user,
-                            }
-                            .publish(channel);
-                        } else {
-                            send(ClientboundNotification::Error(
-                                WebSocketError::AlreadyAuthenticated,
-                            ));
-
-                            return Ok(());
-                        }
+                    ClientboundNotification::ChannelStartTyping {
+                        id: channel.clone(),
+                        user,
                     }
-                    ServerboundNotification::EndTyping { channel } => {
-                        if mutex.lock().unwrap().is_some() {
-                            let user = {
-                                let mutex = mutex.lock().unwrap();
-                                mutex.as_ref().unwrap().clone()
-                            };
+                    .publish(channel);
+                } else {
+                    send(ClientboundNotification::Error(
+                        WebSocketError::AlreadyAuthenticated,
+                    ));
 
-                            ClientboundNotification::ChannelStopTyping {
-                                id: channel.clone(),
-                                user,
-                            }
-                            .publish(channel);
-                        } else {
-                            send(ClientboundNotification::Error(
-                                WebSocketError::AlreadyAuthenticated,
-                            ));
+                    return Ok(());
+                }
+            }
+            ServerboundNotification::EndTyping { channel } => {
+                if mutex.lock().unwrap().is_some() {
+                    let user = {
+                        let mutex = mutex.lock().unwrap();
+                        mutex.as_ref().unwrap().clone()
+                    };
 
-                            return Ok(());
-                        }
+                    ClientboundNotification::ChannelStopTyping {
+                        id: channel.clone(),
+                        user,
                     }
+                    .publish(channel);
+                } else {
+                    send(ClientboundNotification::Error(
+                        WebSocketError::AlreadyAuthenticated,
+                    ));
+
+                    return Ok(());
                 }
             }
         }
-
         Ok(())
     });
 
