@@ -62,7 +62,7 @@ impl server::Callback for HeaderCallback {
     fn on_request(self, request: &server::Request, response: server::Response) -> Result<server::Response, server::ErrorResponse> {
         // we dont get some of the data sometimes so im generating a fake url with the only data we actually need
         let url = format!("ws://example.com?{}", request.uri().query().unwrap_or("?format=json"));
-        let mut query: HashMap<_, _> = url.parse::<Url>().unwrap().query_pairs().into_owned().collect();  // should be safe to use unwrap here as it was just a Uri
+        let mut query: HashMap<_, _> = url.parse::<Url>().unwrap().query_pairs().into_owned().collect();  // should be safe to use unwrap here as we just made the url ourself
         let format_query: Option<String> = query.remove("format");
 
         let format = match format_query.as_deref().unwrap_or("json") {
