@@ -129,7 +129,16 @@ pub enum ClientboundNotification {
         user: String,
         message_id: String,
     },
-
+    ChannelPin {
+        id: String,
+        user: String,
+        message_id: String
+    },
+    ChannelUnpin {
+        id: String,
+        user: String,
+        message_id: String
+    },
     ServerUpdate {
         id: String,
         data: Value,

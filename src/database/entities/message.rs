@@ -83,7 +83,9 @@ pub struct Message {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mentions: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub replies: Option<Vec<String>>
+    pub replies: Option<Vec<String>>,
+    #[serde(default)]
+    pub pinned: bool
 }
 
 impl Message {
@@ -104,6 +106,7 @@ impl Message {
             attachments: None,
             edited: None,
             embeds: None,
+            pinned: false,
             mentions,
             replies
         }

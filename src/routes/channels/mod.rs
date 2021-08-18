@@ -4,6 +4,7 @@ mod channel_ack;
 mod channel_delete;
 mod channel_edit;
 mod channel_fetch;
+mod channel_pins;
 mod members_fetch;
 mod group_add_member;
 mod group_create;
@@ -17,6 +18,8 @@ mod message_query;
 mod message_search;
 mod message_query_stale;
 mod message_send;
+mod message_unpin;
+mod message_pin;
 mod permissions_set;
 mod permissions_set_default;
 
@@ -27,6 +30,7 @@ pub fn routes() -> Vec<Route> {
         members_fetch::req,
         channel_delete::req,
         channel_edit::req,
+        channel_pins::req,
         invite_create::req,
         message_send::message_send,
         message_query::req,
@@ -35,6 +39,8 @@ pub fn routes() -> Vec<Route> {
         message_fetch::req,
         message_edit::req,
         message_delete::req,
+        message_pin::req,
+        message_unpin::req,
         group_create::req,
         group_add_member::req,
         group_remove_member::req,

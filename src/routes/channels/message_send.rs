@@ -131,6 +131,7 @@ pub async fn message_send(_r: RateLimited<'_>, user: User, target: Ref, message:
         nonce: Some(message.nonce.clone()),
         edited: None,
         embeds: None,
+        pinned: false,
 
         attachments: if attachments.len() > 0 { Some(attachments) } else { None },
         mentions: if mentions.len() > 0 {

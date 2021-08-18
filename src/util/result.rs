@@ -38,6 +38,8 @@ pub enum Error {
     },
     AlreadyInGroup,
     NotInGroup,
+    AlreadyPinned,
+    NotPinned,
 
     // ? Server related errors.
     UnknownServer,
@@ -107,6 +109,8 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::GroupTooLarge { .. } => Status::Forbidden,
             Error::AlreadyInGroup => Status::Conflict,
             Error::NotInGroup => Status::NotFound,
+            Error::AlreadyPinned => Status::BadRequest,
+            Error::NotPinned => Status::BadRequest,
 
             Error::UnknownServer => Status::NotFound,
             Error::InvalidRole => Status::NotFound,
