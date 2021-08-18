@@ -5,7 +5,6 @@ use serde::{Serialize, Deserialize};
 use crate::database::*;
 use crate::database::permissions::channel::ChannelPermission;
 use crate::database::permissions::server::ServerPermission;
-use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result, EmptyResponse};
 
 #[derive(Serialize, Deserialize)]
@@ -54,17 +53,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyRespo
             with: "server"
         })?;
 
-    ClientboundNotification::ServerUpdate {
-        id: target.id.clone(),
-        data: json!({
-            "default_permissions": [
-                server_permissions as i32,
-                channel_permissions as i32
-            ]
-        }),
-        clear: None
-    }
-    .publish(target.id);
+    target.publish_update(None);
 
     Ok(EmptyResponse {})
 }

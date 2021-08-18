@@ -3,6 +3,7 @@ use mongodb::bson::doc;
 use rauth::auth::Session;
 use rocket::serde::json::Value;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use super::hive::{get_hive, subscribe_if_exists};
 use crate::{database::*, util::result::Result};
@@ -129,13 +130,6 @@ pub enum ClientboundNotification {
         user: String,
         message_id: String,
     },
-
-    ServerUpdate {
-        id: String,
-        data: Value,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        clear: Option<RemoveServerField>,
-    },
     ServerDelete {
         id: String,
     },
@@ -164,7 +158,37 @@ pub enum ClientboundNotification {
         id: String,
         role_id: String
     },
+    ServerUpdate {
+        id: String,
 
+        #[serde(skip_serializing_if = "Option::is_none")]
+        nonce: Option<String>,
+        owner: String,
+        name: String,
+
+        #[serde(skip_serializing_if = "Option::is_none")]
+        description: Option<String>,
+        channels: Vec<String>,
+
+        #[serde(skip_serializing_if = "Option::is_none")]
+        categories: Option<Vec<Category>>,
+
+        #[serde(skip_serializing_if = "Option::is_none")]
+        system_messages: Option<SystemMessageChannels>,
+
+        #[serde(default = "HashMap::new", skip_serializing_if = "HashMap::is_empty")]
+        roles: HashMap<String, Role>,
+        default_permissions: PermissionTuple,
+
+        #[serde(skip_serializing_if = "Option::is_none")]
+        icon: Option<File>,
+
+        #[serde(skip_serializing_if = "Option::is_none")]
+        banner: Option<File>,
+
+        #[serde(skip_serializing_if = "if_false", default)]
+        nsfw: bool
+    },
     UserUpdate {
         id: String,
         data: Value,

@@ -8,7 +8,6 @@ use mongodb::bson::{Bson, doc};
 use mongodb::bson::from_document;
 use mongodb::bson::to_document;
 use mongodb::bson::Document;
-use rocket::serde::json::Value;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 
@@ -92,7 +91,7 @@ pub struct Server {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    
+
     pub channels: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub categories: Option<Vec<Category>>,
@@ -131,13 +130,28 @@ impl Server {
         Ok(())
     }
 
-    pub async fn publish_update(&self, data: Value) -> Result<()> {
-        ClientboundNotification::ServerUpdate {
+    pub fn publish_update(&self, to_user: Option<&str>) {
+        let update = ClientboundNotification::ServerUpdate {
             id: self.id.clone(),
-            data,
-            clear: None,
+            nonce: self.nonce.clone(),
+            owner: self.owner.clone(),
+            name: self.name.clone(),
+            description: self.description.clone(),
+            channels: self.channels.clone(),
+            roles: self.roles.clone(),
+            default_permissions: self.default_permissions.clone(),
+            categories: self.categories.clone(),
+            system_messages: self.system_messages.clone(),
+            icon: self.icon.clone(),
+            banner: self.banner.clone(),
+            nsfw: self.nsfw.clone(),
+        };
+
+        if let Some(user) = to_user {
+            update.publish_as_user(user.into());
+        } else {
+            update.publish(self.id.clone());
         }
-        .publish(self.id.clone());
 
         Ok(())
     }
@@ -340,6 +354,9 @@ impl Server {
             user: id.to_string(),
         }
         .publish(self.id.clone());
+
+        // Send the server object to the user.
+        self.publish_update(Some(id));
 
         // Broadcast join message.
         if let Some(channels) = &self.system_messages {

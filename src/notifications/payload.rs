@@ -99,7 +99,7 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
             }
 
             let perm = PermissionCalculator::new(&user)
-                .with_target(&channel)
+                .with_channel(&channel)
                 .for_channel().await?;
 
             // Push the channel to the vector only if the user can view it

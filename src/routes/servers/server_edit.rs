@@ -130,13 +130,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyRespo
             })?;
     }
 
-    ClientboundNotification::ServerUpdate {
-        id: target.id.clone(),
-        data: json!(set),
-        clear: data.remove,
-    }
-    .publish(target.id.clone());
-
+    target.publish_update(None);
     let Server { icon, banner, .. } = target;
 
     if remove_icon {
