@@ -152,8 +152,6 @@ impl Server {
         } else {
             update.publish(self.id.clone());
         }
-
-        Ok(())
     }
 
     pub async fn delete(&self) -> Result<()> {
