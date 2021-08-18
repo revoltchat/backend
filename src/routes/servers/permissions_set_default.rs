@@ -53,7 +53,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyRespo
             with: "server"
         })?;
 
-    target.publish_update(None);
+    target.publish_update(None).await?;
 
     Ok(EmptyResponse {})
 }

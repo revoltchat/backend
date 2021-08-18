@@ -1,4 +1,3 @@
-use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result, EmptyResponse};
 use crate::{database::*, notifications::events::RemoveServerField};
 
@@ -130,7 +129,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyRespo
             })?;
     }
 
-    target.publish_update(None);
+    target.publish_update(None).await?;
     let Server { icon, banner, .. } = target;
 
     if remove_icon {

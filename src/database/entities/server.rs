@@ -130,28 +130,104 @@ impl Server {
         Ok(())
     }
 
-    pub fn publish_update(&self, to_user: Option<&str>) {
-        let update = ClientboundNotification::ServerUpdate {
-            id: self.id.clone(),
-            nonce: self.nonce.clone(),
-            owner: self.owner.clone(),
-            name: self.name.clone(),
-            description: self.description.clone(),
-            channels: self.channels.clone(),
-            roles: self.roles.clone(),
-            default_permissions: self.default_permissions.clone(),
-            categories: self.categories.clone(),
-            system_messages: self.system_messages.clone(),
-            icon: self.icon.clone(),
-            banner: self.banner.clone(),
-            nsfw: self.nsfw.clone(),
-        };
-
+    pub async fn publish_update(&self, to_user: Option<&str>) -> Result<()> {
         if let Some(user) = to_user {
-            update.publish_as_user(user.into());
+            let mut channels = Vec::new();
+
+            // Find the user
+            let mut user_cursor = get_collection("users")
+                .find(
+                    doc! {
+                        "_id": user
+                    },
+                    None
+                )
+                .await
+                .map_err(|_| Error::DatabaseError {
+                    operation: "find",
+                    with: "users",
+                })?;
+
+            // Find the channels
+            let mut channel_cursor = get_collection("channels")
+                .find(
+                    doc! {
+                        "_id": {
+                            "$in": &self.channels
+                        }
+                    },
+                    None
+                )
+                .await
+                .map_err(|_| Error::DatabaseError {
+                    operation: "find",
+                    with: "channels",
+                })?;
+
+            // Only include channels the user can see
+            while let Some(maybe_user) = user_cursor.next().await {
+                if let Ok(user_document) = maybe_user {
+                    let user: User = from_document(user_document).map_err(|_| Error::DatabaseError {
+                        operation: "from_document",
+                        with: "user",
+                    })?;
+
+                    while let Some(maybe_channel) = channel_cursor.next().await {
+                        if let Ok(channel_document) = maybe_channel {
+                            let channel: Channel = from_document(channel_document)
+                                .map_err(|_| Error::DatabaseError {
+                                    operation: "from_document",
+                                    with: "channel",
+                                })?;
+
+                            let perms = PermissionCalculator::new(&user)
+                                .with_channel(&channel)
+                                .for_channel().await?;
+
+                            if perms.get_view() {
+                                channels.push(channel.id().into());
+                            }
+                        }
+                    }
+                }
+            }
+
+            ClientboundNotification::ServerUpdate {
+                id: self.id.clone(),
+                nonce: self.nonce.clone(),
+                owner: self.owner.clone(),
+                name: self.name.clone(),
+                description: self.description.clone(),
+                channels,
+                roles: self.roles.clone(),
+                default_permissions: self.default_permissions.clone(),
+                categories: self.categories.clone(),
+                system_messages: self.system_messages.clone(),
+                icon: self.icon.clone(),
+                banner: self.banner.clone(),
+                nsfw: self.nsfw.clone(),
+            }
+            .publish_as_user(user.into());
         } else {
-            update.publish(self.id.clone());
+            ClientboundNotification::ServerUpdate {
+                id: self.id.clone(),
+                nonce: self.nonce.clone(),
+                owner: self.owner.clone(),
+                name: self.name.clone(),
+                description: self.description.clone(),
+                channels: self.channels.clone(),
+                roles: self.roles.clone(),
+                default_permissions: self.default_permissions.clone(),
+                categories: self.categories.clone(),
+                system_messages: self.system_messages.clone(),
+                icon: self.icon.clone(),
+                banner: self.banner.clone(),
+                nsfw: self.nsfw.clone(),
+            }
+            .publish(self.id.clone());
         }
+
+        Ok(())
     }
 
     pub async fn delete(&self) -> Result<()> {
@@ -354,7 +430,7 @@ impl Server {
         .publish(self.id.clone());
 
         // Send the server object to the user.
-        self.publish_update(Some(id));
+        self.publish_update(Some(id)).await?;
 
         // Broadcast join message.
         if let Some(channels) = &self.system_messages {
