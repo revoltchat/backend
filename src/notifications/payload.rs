@@ -23,7 +23,7 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
     let server_ids: Vec<String> = members.iter()
         .map(|x| x.id.server.clone())
         .collect();
-    
+
     let mut cursor = get_collection("servers")
         .find(
             doc! {
@@ -98,7 +98,14 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
                 user_ids.extend(recipients.iter().cloned());
             }
 
-            channels.push(channel);
+            let perm = PermissionCalculator::new(&user)
+                .with_target(&channel)
+                .for_channel().await?;
+
+            // Push the channel to the vector only if the user can view it
+            if perm.get_view() {
+                channels.push(channel);
+            }
         }
     }
 
@@ -112,7 +119,7 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
 
     user.relationship = Some(RelationshipStatus::User);
     user.online = Some(true);
-    
+
     users.push(user.apply_badges());
 
     Ok(ClientboundNotification::Ready {
