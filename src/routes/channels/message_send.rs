@@ -27,6 +27,8 @@ pub struct Data {
     #[validate(length(min = 1, max = 128))]
     attachments: Option<Vec<String>>,
     replies: Option<Vec<Reply>>,
+    #[validate(length(min = 1, max = 5))]
+    embeds: Option<Vec<Embed>>,
 }
 
 lazy_static! {
@@ -105,6 +107,17 @@ pub async fn message_send(_r: RateLimited<'_>, user: User, target: Ref, message:
         }
     }
 
+    if let Some(embeds) = &message.embeds {
+        for embed in embeds.iter() {
+            match embed {
+                Embed::Text(_) => {},
+                _ => return Err(Error::InvalidEmbedType)
+            }
+        }
+    }
+
+    // TODO: embed length limits
+
     let mut attachments = vec![];
     if let Some(ids) = &message.attachments {
         if ids.len() > 0 && !perm.get_upload_files() {
@@ -130,7 +143,7 @@ pub async fn message_send(_r: RateLimited<'_>, user: User, target: Ref, message:
         content: Content::Text(message.content.clone()),
         nonce: Some(message.nonce.clone()),
         edited: None,
-        embeds: None,
+        embeds: message.embeds,
 
         attachments: if attachments.len() > 0 { Some(attachments) } else { None },
         mentions: if mentions.len() > 0 {

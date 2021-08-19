@@ -38,6 +38,7 @@ pub enum Error {
     },
     AlreadyInGroup,
     NotInGroup,
+    InvalidEmbedType,
 
     // ? Server related errors.
     UnknownServer,
@@ -107,6 +108,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::GroupTooLarge { .. } => Status::Forbidden,
             Error::AlreadyInGroup => Status::Conflict,
             Error::NotInGroup => Status::NotFound,
+            Error::InvalidEmbedType => Status::BadRequest,
 
             Error::UnknownServer => Status::NotFound,
             Error::InvalidRole => Status::NotFound,

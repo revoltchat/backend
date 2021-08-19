@@ -89,10 +89,29 @@ pub struct Metadata {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct BotEmbed {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    icon_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    image: Option<Image>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    video: Option<Video>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    color: Option<String>
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum Embed {
     Website(Metadata),
     Image(Image),
+    Text(BotEmbed),
     None,
 }
 

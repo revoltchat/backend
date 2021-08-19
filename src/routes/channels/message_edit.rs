@@ -2,7 +2,7 @@ use crate::database::*;
 use crate::util::result::{Error, Result, EmptyResponse};
 
 use chrono::Utc;
-use mongodb::bson::{doc, Bson, DateTime, Document};
+use mongodb::bson::{doc, Bson, DateTime, Document, to_document};
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -11,6 +11,8 @@ use validator::Validate;
 pub struct Data {
     #[validate(length(min = 1, max = 2000))]
     content: String,
+    #[validate(length(max = 5))]
+    embeds: Option<Vec<Embed>>,
 }
 
 #[patch("/<target>/messages/<msg>", data = "<edit>")]
@@ -43,12 +45,16 @@ pub async fn req(user: User, target: Ref, msg: Ref, edit: Json<Data>) -> Result<
     message.content = Content::Text(edit.content.clone());
     let mut update = json!({ "content": edit.content, "edited": DateTime(edited) });
 
-    if let Some(embeds) = &message.embeds {
-        let new_embeds: Vec<Document> = vec![];
+    if let Some(embeds) = edit.embeds.clone().or(message.embeds.clone()) {
+        let mut new_embeds: Vec<Document> = vec![];
 
         for embed in embeds {
             match embed {
-                Embed::Website(_) | Embed::Image(_) | Embed::None => {} // Otherwise push to new_embeds.
+                Embed::Website(_) | Embed::Image(_) | Embed::None => {}, // We regenerate link embeds so we filter them out first
+                Embed::Text(embed) => new_embeds.push(to_document(&Embed::Text(embed)).map_err(|_| Error::DatabaseError {
+                    operation: "to_document",
+                    with: "embed",
+                })?)
             }
         }
 
