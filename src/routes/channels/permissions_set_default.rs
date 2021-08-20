@@ -46,7 +46,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyRespo
                 }
                 .publish(id);
 
-                Ok(EmptyResponse {})
+                Ok(EmptyResponse)
             } else {
                 Err(Error::MissingPermission)
             }
@@ -90,7 +90,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyRespo
             }
             .publish(id);
 
-            Ok(EmptyResponse {})
+            Ok(EmptyResponse)
         }
         _ => Err(Error::InvalidOperation)
     }

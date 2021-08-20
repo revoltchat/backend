@@ -53,7 +53,9 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyRespo
             with: "server"
         })?;
 
-    target.publish_update(None).await?;
+    for member in Server::fetch_members(&target.id).await? {
+        target.publish_update(Some(&member.id.user)).await?;
+    }
 
-    Ok(EmptyResponse {})
+    Ok(EmptyResponse)
 }

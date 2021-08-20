@@ -1,6 +1,6 @@
-use mongodb::bson::doc;
 use rocket::serde::json::Json;
 use serde::{Serialize, Deserialize};
+use mongodb::bson::doc;
 
 use crate::database::*;
 use crate::database::permissions::channel::ChannelPermission;
@@ -57,6 +57,10 @@ pub async fn req(user: User, target: Ref, role_id: String, data: Json<Data>) -> 
             operation: "update_one",
             with: "server"
         })?;
+
+    for member in Server::fetch_members(&target.id).await? {
+        target.publish_update(Some(&member.id.user)).await?;
+    }
 
     ClientboundNotification::ServerRoleUpdate {
         id: target.id.clone(),
