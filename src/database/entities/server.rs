@@ -131,22 +131,8 @@ impl Server {
     }
 
     pub async fn publish_update(&self, to_user: Option<&str>) -> Result<()> {
-        if let Some(user) = to_user {
+        if let Some(user_id) = to_user {
             let mut channels = Vec::new();
-
-            // Find the user
-            let mut user_cursor = get_collection("users")
-                .find(
-                    doc! {
-                        "_id": user
-                    },
-                    None
-                )
-                .await
-                .map_err(|_| Error::DatabaseError {
-                    operation: "find",
-                    with: "users",
-                })?;
 
             // Find the channels
             let mut channel_cursor = get_collection("channels")
@@ -165,29 +151,22 @@ impl Server {
                 })?;
 
             // Only include channels the user can see
-            while let Some(maybe_user) = user_cursor.next().await {
-                if let Ok(user_document) = maybe_user {
-                    let user: User = from_document(user_document).map_err(|_| Error::DatabaseError {
-                        operation: "from_document",
-                        with: "user",
-                    })?;
+            let user = User::from_id(user_id).await?;
 
-                    while let Some(maybe_channel) = channel_cursor.next().await {
-                        if let Ok(channel_document) = maybe_channel {
-                            let channel: Channel = from_document(channel_document)
-                                .map_err(|_| Error::DatabaseError {
-                                    operation: "from_document",
-                                    with: "channel",
-                                })?;
+            while let Some(maybe_channel) = channel_cursor.next().await {
+                if let Ok(channel_document) = maybe_channel {
+                    let channel: Channel = from_document(channel_document)
+                        .map_err(|_| Error::DatabaseError {
+                            operation: "from_document",
+                            with: "channel",
+                        })?;
 
-                            let perms = PermissionCalculator::new(&user)
-                                .with_channel(&channel)
-                                .for_channel().await?;
+                    let perms = PermissionCalculator::new(&user)
+                        .with_channel(&channel)
+                        .for_channel().await?;
 
-                            if perms.get_view() {
-                                channels.push(channel.id().into());
-                            }
-                        }
+                    if perms.get_view() {
+                        channels.push(channel.id().into());
                     }
                 }
             }
@@ -207,7 +186,7 @@ impl Server {
                 banner: self.banner.clone(),
                 nsfw: self.nsfw.clone(),
             }
-            .publish_as_user(user.into());
+            .publish_as_user(user_id.into());
         } else {
             ClientboundNotification::ServerUpdate {
                 id: self.id.clone(),
