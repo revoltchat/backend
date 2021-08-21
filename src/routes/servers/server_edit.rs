@@ -6,6 +6,7 @@ use mongodb::bson::{doc, to_bson, to_document};
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
+use rocket::http::ext::IntoCollection;
 
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
@@ -104,6 +105,12 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyRespo
     }
 
     if let Some(system_messages) = &data.system_messages {
+        for channel_id in system_messages {
+            let system_message_channel = Ref::from_unchecked(channel_id).fetch_channel().await?;
+            if system_messages_channel != Channel::TextChannel {
+                Err(Error::InvalidOperation);
+            }
+        }
         set.insert("system_messages", to_bson(&system_messages).map_err(|_| Error::DatabaseError { operation: "to_document", with: "system_messages" })?);
     }
 
