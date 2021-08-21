@@ -33,14 +33,14 @@ pub async fn req(user: User, target: Ref) -> Result<Value> {
         }
         Channel::TextChannel { id, server, .. }
         | Channel::VoiceChannel { id, server, .. } => {
-            let invite = Invite::Server {
+            Invite::Server {
                 code: code.clone(),
                 creator: user.id,
                 server: server.clone(),
                 channel: id.clone(),
-            };
-            
-            invite.clone().save().await?;
+            }
+            .save()
+            .await?;
 
             ClientboundNotification::InviteCreate(invite).publish(id.clone());
 
