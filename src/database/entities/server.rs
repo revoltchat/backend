@@ -108,6 +108,9 @@ pub struct Server {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub banner: Option<File>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub flags: Option<i32>,
+
     #[serde(skip_serializing_if = "if_false", default)]
     pub nsfw: bool
 }
