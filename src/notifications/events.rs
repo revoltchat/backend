@@ -180,6 +180,10 @@ pub enum ClientboundNotification {
         id: String,
         update: Value,
     },
+    InviteCreate(Invite),
+    InviteDelete {
+        code: String
+    },
 }
 
 impl ClientboundNotification {

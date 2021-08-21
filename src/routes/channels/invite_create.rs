@@ -1,5 +1,6 @@
 use crate::database::*;
 use crate::util::result::{Error, Result};
+use crate::notifications::events::ClientboundNotification;
 
 use mongodb::bson::doc;
 use nanoid::nanoid;
@@ -32,14 +33,16 @@ pub async fn req(user: User, target: Ref) -> Result<Value> {
         }
         Channel::TextChannel { id, server, .. }
         | Channel::VoiceChannel { id, server, .. } => {
-            Invite::Server {
+            let invite = Invite::Server {
                 code: code.clone(),
                 creator: user.id,
                 server: server.clone(),
                 channel: id.clone(),
-            }
-            .save()
-            .await?;
+            };
+            
+            invite.clone().save().await?;
+
+            ClientboundNotification::InviteCreate(invite).publish(id.clone());
 
             Ok(json!({ "code": code }))
         }

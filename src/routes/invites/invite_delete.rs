@@ -1,5 +1,6 @@
 use crate::database::*;
 use crate::util::result::{Error, Result, EmptyResponse};
+use crate::notifications::events::ClientboundNotification;
 
 #[delete("/<target>")]
 pub async fn req(user: User, target: Ref) -> Result<EmptyResponse> {
@@ -26,5 +27,6 @@ pub async fn req(user: User, target: Ref) -> Result<EmptyResponse> {
         }
     }
 
+    ClientboundNotification::InviteDelete { code: target.code().to_string() }.publish(target.channel().to_string());
     Ok(EmptyResponse {})
 }

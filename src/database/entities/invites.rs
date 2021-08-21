@@ -43,6 +43,13 @@ impl Invite {
         }
     }
 
+    pub fn channel(&self) -> &String {
+        match &self {
+            Invite::Server { channel, .. } => channel,
+            Invite::Group { channel, .. } => channel,
+        }
+    }
+
     pub async fn get(code: &str) -> Result<Invite> {
         let doc = get_collection("channel_invites")
             .find_one(doc! { "_id": code }, None)
