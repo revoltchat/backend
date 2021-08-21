@@ -36,13 +36,18 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyRespo
         return Ok(EmptyResponse {});
     }
 
+    let server = target.fetch_server().await?;
     let target = target.fetch_channel().await?;
-    let perm = permissions::PermissionCalculator::new(&user)
+    let serverPerm = permissions::PermissionCalculator::new(&user)
+        .with_server(&server)
+        .for_channel()
+        .await?;
+    let channelPerm = permissions::PermissionCalculator::new(&user)
         .with_channel(&target)
         .for_channel()
         .await?;
 
-    if !perm.get_manage_channel() {
+    if !serverPerm.get_manage_channel() && !channelPerm.get_manage_channel() {
         Err(Error::MissingPermission)?
     }
 
