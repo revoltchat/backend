@@ -36,14 +36,12 @@ pub async fn req(user: User, target: Ref, msg: Ref, data: Json<Data>) -> Result<
     }
 
     get_collection("message_reports")
-        .insert_one(
-            doc! {
+        .insert_one(doc! {
                 "_id": Ulid::new().to_string(),
                 "message": message,
                 "reason": data.reason,
                 "comments": data.comments
-            }
-        )
+            }, None)
         .await
         .map_err(|_| Error::DatabaseError {
             operation: "insert_one",
