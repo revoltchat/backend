@@ -48,7 +48,15 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
                 with: "server",
             })?;
 
-            channel_ids.extend(server.channels.iter().cloned());
+            fn can_view_channel(channel: &channel) -> bool {
+                let perm = permissions::PermissionCalculator::new(&user)
+                    .with_server(&target)
+                    .for_server()
+                    .await?;
+                return !perm.get_view()
+            }
+
+            channel_ids.extend(server.channels.iter().filter(|channel| can_view_channel(channel)).cloned());
             servers.push(server);
         }
     }
