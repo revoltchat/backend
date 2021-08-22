@@ -27,16 +27,18 @@ Delta is a blazing fast API server built with Rust for Revolt.
 
 ## CLI Commands
 
-### Docker Helper Scripts
+| Command            | Description                                                                               |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| `./publish.sh`     | Publish a Docker Image.                                                                   |
+| `./set_version.sh` | Update the version. **Not intended for PR use.**                                          |
+| `cargo build`      | Build/compile Delta.                                                                      |
+| `cargo run`        | Run Delta.                                                                                |
+| `cargo fmt`        | Format Delta. Not intended for PR use to avoid accidentally formatting unformatted files. |
 
-If you have Docker installed, you can use the helper scripts to deploy Delta in your development environment.
+## Contributing
 
-| Command        | Description                |
-| -------------- | -------------------------- |
-| `./build.sh`   | Build Docker Image.        |
-| `./run.sh`     | Run Docker container.      |
-| `./monitor.sh` | View container logs.       |
-| `./remove.sh`  | Kill and remove container. |
+The contribution guide is located at [developers.revolt.chat/contributing](https://developers.revolt.chat/contributing).
+Please note that a pull request should only take care of one issue so that we can review it quickly.
 
 ## License
 
