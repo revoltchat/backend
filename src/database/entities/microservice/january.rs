@@ -103,7 +103,7 @@ pub struct BotEmbed {
     #[serde(skip_serializing_if = "Option::is_none")]
     video: Option<Video>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    color: Option<String>
+    colour: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
