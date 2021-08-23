@@ -81,7 +81,7 @@ async fn accept(stream: TcpStream) {
         .peer_addr()
         .expect("Connected streams should have a peer address.");
     let (sender, receiver) = oneshot::channel::<MSGFormat>();
-
+    
     let ws_stream = async_tungstenite::accept_hdr_async_with_config(stream, HeaderCallback { sender }, None)
         .await
         .expect("Error during websocket handshake.");

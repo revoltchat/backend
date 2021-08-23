@@ -181,9 +181,6 @@ pub enum ClientboundNotification {
         id: String,
         update: Value,
     },
-    Pong {
-        data: Vec<u8>
-    }
 }
 
 impl ClientboundNotification {
