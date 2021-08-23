@@ -85,7 +85,7 @@ pub struct Metadata {
     #[serde(skip_serializing_if = "Option::is_none")]
     icon_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    color: Option<String>,
+    colour: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
