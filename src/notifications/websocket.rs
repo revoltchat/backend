@@ -81,7 +81,7 @@ async fn accept(stream: TcpStream) {
         .peer_addr()
         .expect("Connected streams should have a peer address.");
     let (sender, receiver) = oneshot::channel::<MSGFormat>();
-    
+
     let ws_stream = async_tungstenite::accept_hdr_async_with_config(stream, HeaderCallback { sender }, None)
         .await
         .expect("Error during websocket handshake.");
@@ -120,6 +120,7 @@ async fn accept(stream: TcpStream) {
         let maybe_decoded = match msg {
             Message::Text(text) => serde_json::from_str::<ServerboundNotification>(&text).map_err(|e| e.to_string()),
             Message::Binary(vec) => rmp_serde::decode::from_read::<&[u8], ServerboundNotification>(vec.as_slice()).map_err(|e| e.to_string()),
+            Message::Ping(vec) => Ok(ServerboundNotification::Ping { data: vec }),
             _ => return Ok(())
         };
 
@@ -295,6 +296,9 @@ async fn accept(stream: TcpStream) {
 
                     return Ok(());
                 }
+            }
+            ServerboundNotification::Ping { data } => {
+                info!("Ping received from User {}. Payload: {:?}", &addr, data);
             }
         }
         Ok(())

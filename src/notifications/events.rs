@@ -36,6 +36,7 @@ pub enum ServerboundNotification {
     Authenticate(AuthType),
     BeginTyping { channel: String },
     EndTyping { channel: String },
+    Ping { data: Vec<u8> }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -180,6 +181,9 @@ pub enum ClientboundNotification {
         id: String,
         update: Value,
     },
+    Pong {
+        data: Vec<u8>
+    }
 }
 
 impl ClientboundNotification {
