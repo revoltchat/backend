@@ -129,27 +129,6 @@ impl User {
         self
     }
 
-    pub async fn from_id(id: &str) -> Result<Self> {
-        let users = get_collection("users")
-            .find(
-                doc! {
-                    "_id": id
-                },
-                None
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "find",
-                with: "users",
-            })?
-            .filter_map(async move |s| s.ok())
-            .collect::<Vec<Document>>().await
-            .into_iter().filter_map(|x| from_document(x).ok())
-            .collect::<Vec<User>>();
-
-        Ok(users[0].clone())
-    }
-
     /// Apply any relevant badges.
     pub fn apply_badges(mut self) -> User {
         let mut badges = self.badges.unwrap_or_else(|| 0);
