@@ -151,7 +151,7 @@ impl Server {
                 })?;
 
             // Only include channels the user can see
-            let user = User::from_id(user_id).await?;
+            let user: User = Ref::from(user_id.into()).fetch_user().await?;
 
             while let Some(maybe_channel) = channel_cursor.next().await {
                 if let Ok(channel_document) = maybe_channel {
