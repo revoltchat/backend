@@ -79,7 +79,7 @@ pub async fn req(user: User, target: Ref, info: Json<Data>) -> Result<Value> {
             name: info.name,
             description: info.description,
             icon: None,
-            last_message: None,
+            last_message_id: None,
 
             default_permissions: None,
             role_permissions: HashMap::new(),
