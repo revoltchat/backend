@@ -30,7 +30,8 @@ pub struct Data {
 }
 
 lazy_static! {
-    static ref RE_ULID: Regex = Regex::new(r"<@([0-9A-Z]{26})>").unwrap();
+    // ignoring I L O and U is intentional
+    static ref RE_ULID: Regex = Regex::new(r"<@([0-9A-HJKMNPQRSTVWXYZ]{26})>").unwrap();
 }
 
 #[post("/<target>/messages", data = "<message>")]
