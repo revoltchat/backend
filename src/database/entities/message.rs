@@ -378,7 +378,6 @@ impl Message {
                         .unwrap();
                         let signature = sig_builder.build().unwrap();
                         builder.set_vapid_signature(signature);
-                        println!("{:#}", enc);
                         builder.set_payload(ContentEncoding::AesGcm, enc.as_bytes());
                         let m = builder.build().unwrap();
                         client.send(m).await.ok();
