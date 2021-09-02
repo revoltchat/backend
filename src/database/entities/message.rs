@@ -301,7 +301,6 @@ impl Message {
         }
 
         let mentions = self.mentions.clone();
-
         ClientboundNotification::Message(self.clone()).publish(channel.id().to_string());
 
         /*
