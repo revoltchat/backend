@@ -21,15 +21,17 @@ use std::time::SystemTime;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PushNotification {
+    pub author: String,
     pub icon: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image: Option<String>,
     pub body: String,
+    pub tag: String,
     pub timestamp: u64,
 }
 
 impl PushNotification {
-    pub async fn new(msg: Message) -> Self {
+    pub async fn new(msg: Message, channel: &Channel) -> Self {
         let author = Ref::from(msg.author)
             .expect("id valid")
             .fetch_user()
@@ -59,9 +61,11 @@ impl PushNotification {
             .as_secs();
 
         Self {
+            author: author.username,
             icon,
             image,
             body,
+            tag: channel.id().to_string(),
             timestamp,
         }
     }
@@ -364,7 +368,7 @@ impl Message {
                 }
 
                 if subscriptions.len() > 0 {
-                    let enc = serde_json::to_string(&PushNotification::new(self).await).unwrap();
+                    let enc = serde_json::to_string(&PushNotification::new(self, &c_clone).await).unwrap();
                     let client = WebPushClient::new();
                     let key =
                         base64::decode_config(VAPID_PRIVATE_KEY.clone(), base64::URL_SAFE).unwrap();
