@@ -301,8 +301,8 @@ impl Message {
         }
 
         let mentions = self.mentions.clone();
-        let enc = serde_json::to_string(&PushNotification::new(self.clone()).await).unwrap();
-        ClientboundNotification::Message(self).publish(channel.id().to_string());
+
+        ClientboundNotification::Message(self.clone()).publish(channel.id().to_string());
 
         /*
            Web Push Test Code
@@ -365,6 +365,7 @@ impl Message {
                 }
 
                 if subscriptions.len() > 0 {
+                    let enc = serde_json::to_string(&PushNotification::new(self).await).unwrap();
                     let client = WebPushClient::new();
                     let key =
                         base64::decode_config(VAPID_PRIVATE_KEY.clone(), base64::URL_SAFE).unwrap();
