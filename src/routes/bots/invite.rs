@@ -23,6 +23,10 @@ pub enum Destination {
 
 #[post("/<target>/invite", data = "<dest>")]
 pub async fn invite_bot(user: User, target: Ref, dest: Json<Destination>) -> Result<EmptyResponse> {
+    if user.bot.is_some() {
+        return Err(Error::IsBot)
+    }
+    
     let bot = target.fetch_bot().await?;
 
     if !bot.public {
