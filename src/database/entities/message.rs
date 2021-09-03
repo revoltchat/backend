@@ -1,4 +1,4 @@
-use crate::util::variables::{USE_JANUARY, VAPID_PRIVATE_KEY};
+use crate::util::variables::{USE_JANUARY, VAPID_PRIVATE_KEY, PUBLIC_URL};
 use crate::{
     database::*,
     notifications::{events::ClientboundNotification, websocket::is_online},
@@ -17,6 +17,59 @@ use ulid::Ulid;
 use web_push::{
     ContentEncoding, SubscriptionInfo, VapidSignatureBuilder, WebPushClient, WebPushMessageBuilder,
 };
+use std::time::SystemTime;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct PushNotification {
+    pub author: String,
+    pub icon: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image: Option<String>,
+    pub body: String,
+    pub tag: String,
+    pub timestamp: u64,
+}
+
+impl PushNotification {
+    pub async fn new(msg: Message, channel: &Channel) -> Self {
+        let author = Ref::from(msg.author)
+            .expect("id valid")
+            .fetch_user()
+            .await
+            .expect("user valid");
+
+        let icon = if let Some(avatar) = author.avatar {
+            avatar.get_autumn_url()
+        } else {
+            format!("{}/users/{}/default_avatar", PUBLIC_URL.as_str(), &author.id)
+        };
+
+        let image = msg.attachments.map_or(None, |attachments| {
+            attachments
+                .first()
+                .map_or(None, |v| Some(v.get_autumn_url()))
+        });
+
+        let body = match msg.content {
+            Content::Text(body) => body,
+            Content::SystemMessage(sys_msg) => sys_msg.into()
+        };
+
+        let timestamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .expect("system time should be valid")
+            .as_secs();
+
+        Self {
+            author: author.username,
+            icon,
+            image,
+            body,
+            tag: channel.id().to_string(),
+            timestamp,
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
@@ -41,6 +94,23 @@ pub enum SystemMessage {
     ChannelDescriptionChanged { by: String },
     #[serde(rename = "channel_icon_changed")]
     ChannelIconChanged { by: String },
+}
+
+impl Into<String> for SystemMessage {
+    fn into(self) -> String {
+        match self {
+            SystemMessage::Text { content } => content,
+            SystemMessage::UserAdded { .. } => "User added to the channel.".to_string(),
+            SystemMessage::UserRemove { .. } => "User removed from the channel.".to_string(),
+            SystemMessage::UserJoined { .. } => "User joined the channel.".to_string(),
+            SystemMessage::UserLeft { .. } => "User left the channel.".to_string(),
+            SystemMessage::UserKicked { .. } => "User kicked from the channel.".to_string(),
+            SystemMessage::UserBanned { .. } => "User banned from the channel.".to_string(),
+            SystemMessage::ChannelRenamed { .. } => "Channel renamed.".to_string(),
+            SystemMessage::ChannelDescriptionChanged { .. } => "Channel description changed.".to_string(),
+            SystemMessage::ChannelIconChanged { .. } => "Channel icon changed.".to_string()
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -235,8 +305,7 @@ impl Message {
         }
 
         let mentions = self.mentions.clone();
-        let enc = serde_json::to_string(&self).unwrap();
-        ClientboundNotification::Message(self).publish(channel.id().to_string());
+        ClientboundNotification::Message(self.clone()).publish(channel.id().to_string());
 
         /*
            Web Push Test Code
@@ -299,6 +368,7 @@ impl Message {
                 }
 
                 if subscriptions.len() > 0 {
+                    let enc = serde_json::to_string(&PushNotification::new(self, &c_clone).await).unwrap();
                     let client = WebPushClient::new();
                     let key =
                         base64::decode_config(VAPID_PRIVATE_KEY.clone(), base64::URL_SAFE).unwrap();
