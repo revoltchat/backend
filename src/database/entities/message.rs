@@ -32,16 +32,20 @@ pub struct PushNotification {
 
 impl PushNotification {
     pub async fn new(msg: Message, channel: &Channel) -> Self {
-        let author = Ref::from(msg.author)
-            .expect("id valid")
+        let author = Ref::from_unchecked(msg.author.clone())
             .fetch_user()
-            .await
-            .expect("user valid");
+            .await;
 
-        let icon = if let Some(avatar) = author.avatar {
+        let (author, avatar) = if let Ok(author) = author {
+            (Some(author.username), author.avatar)
+        } else {
+            (None, None)
+        };
+
+        let icon = if let Some(avatar) = avatar {
             avatar.get_autumn_url()
         } else {
-            format!("{}/users/{}/default_avatar", PUBLIC_URL.as_str(), &author.id)
+            format!("{}/users/{}/default_avatar", PUBLIC_URL.as_str(), msg.author)
         };
 
         let image = msg.attachments.map_or(None, |attachments| {
@@ -61,7 +65,7 @@ impl PushNotification {
             .as_secs();
 
         Self {
-            author: author.username,
+            author: author.unwrap_or_else(|| "Unknown".into()),
             icon,
             image,
             body,
