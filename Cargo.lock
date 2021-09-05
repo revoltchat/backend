@@ -2758,8 +2758,7 @@ dependencies = [
 [[package]]
 name = "rmp"
 version = "0.8.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f55e5fa1446c4d5dd1f5daeed2a4fe193071771a2636274d0d7a3b082aa7ad6"
+source = "git+https://github.com/3Hren/msgpack-rust?rev=5bf2c24203ad422233cf35b7b7bfad9f7e811814#5bf2c24203ad422233cf35b7b7bfad9f7e811814"
 dependencies = [
  "byteorder",
  "num-traits",
@@ -2768,8 +2767,7 @@ dependencies = [
 [[package]]
 name = "rmp-serde"
 version = "0.15.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "723ecff9ad04f4ad92fe1c8ca6c20d2196d9286e9c60727c4cb5511629260e9d"
+source = "git+https://github.com/3Hren/msgpack-rust?rev=5bf2c24203ad422233cf35b7b7bfad9f7e811814#5bf2c24203ad422233cf35b7b7bfad9f7e811814"
 dependencies = [
  "byteorder",
  "rmp",

@@ -30,7 +30,7 @@ use super::{
 };
 
 type Tx = UnboundedSender<Message>;
-type PeerMap = Arc<Mutex<HashMap<SocketAddr, Tx>>>;
+type PeerMap = Arc<Mutex<HashMap<SocketAddr, (Tx, MSGFormat)>>>;
 
 lazy_static! {
     static ref CONNECTIONS: PeerMap = Arc::new(Mutex::new(HashMap::new()));
@@ -48,7 +48,7 @@ pub async fn launch_server() {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum MSGFormat {
     JSON,
     MSGPACK
@@ -92,7 +92,7 @@ async fn accept(stream: TcpStream) {
 
     let (write, read) = ws_stream.split();
     let (tx, rx) = unbounded();
-    CONNECTIONS.lock().unwrap().insert(addr, tx.clone());
+    CONNECTIONS.lock().unwrap().insert(addr, (tx.clone(), msg_format.clone()));
 
     let send = |notification: ClientboundNotification| {
         let res = match msg_format {
@@ -100,7 +100,7 @@ async fn accept(stream: TcpStream) {
                 Ok(s) => Message::Text(s),
                 Err(_) => return
             }
-            MSGFormat::MSGPACK => match rmp_serde::to_vec(&notification) {
+            MSGFormat::MSGPACK => match rmp_serde::to_vec_named(&notification) {
                 Ok(v) => Message::Binary(v),
                 Err(_) => return
             }
@@ -358,12 +358,18 @@ pub fn publish(ids: Vec<String>, notification: ClientboundNotification) {
         }
     }
 
-    let msg = Message::Text(serde_json::to_string(&notification).unwrap());
+    let json_msg = Message::Text(serde_json::to_string(&notification.clone()).unwrap());
+    let msgpack_msg = Message::Binary(rmp_serde::to_vec_named(&notification).unwrap());
 
     let connections = CONNECTIONS.lock().unwrap();
     for target in targets {
-        if let Some(conn) = connections.get(&target) {
-            if let Err(_) = conn.unbounded_send(msg.clone()) {
+        if let Some((conn, msg_format)) = connections.get(&target) {
+            let msg = match msg_format {
+                MSGFormat::JSON => json_msg.clone(),
+                MSGFormat::MSGPACK => msgpack_msg.clone()
+            };
+
+            if let Err(_) = conn.unbounded_send(msg) {
                 debug!("Failed unbounded_send.");
             }
         }
