@@ -1,9 +1,9 @@
 # Build Stage
-FROM ekidd/rust-musl-builder:nightly-2021-02-13 AS builder
+FROM rustlang/rust:nightly-alpine AS builder
 USER 0:0
 WORKDIR /home/rust/src
 
-RUN USER=root cargo new --bin revolt
+RUN apk add --no-cache musl-dev openssl openssl-dev && USER=root cargo new --bin revolt
 WORKDIR /home/rust/src/revolt
 COPY Cargo.toml Cargo.lock ./
 COPY src/bin/dummy.rs ./src/bin/dummy.rs
