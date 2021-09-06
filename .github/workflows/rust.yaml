@@ -22,9 +22,6 @@ jobs:
             override: true
             components: rustfmt, clippy
 
-      # `cargo check` command here will use installed `nightly`
-      # as it is set as an "override" for current directory
-
       - name: Run cargo build
         uses: actions-rs/cargo@v1
         with:
@@ -34,8 +31,3 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          
-      - name: Run cargo build --release
-        uses: actions-rs/cargo@v1
-        with:
-          command: build --release
