@@ -2,9 +2,9 @@ name: Rust build and test
 
 on:
   push:
-    branches: [ master ]
+    branches: [ unit-tests ]
   pull_request:
-    branches: [ master ]
+    branches: [ unit-tests ]
 
 env:
   CARGO_TERM_COLOR: always
