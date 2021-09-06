@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::database::*;
 use crate::util::result::{Error, Result};
+use crate::util::variables::AUTUMN_URL;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
@@ -111,5 +112,9 @@ impl File {
                 operation: "update_one",
                 with: "attachment",
             })
+    }
+
+    pub fn get_autumn_url(&self) -> String {
+        format!("{}/{}/{}", AUTUMN_URL.as_str(), self.tag, self.id)
     }
 }

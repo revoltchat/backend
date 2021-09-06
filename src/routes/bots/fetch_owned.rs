@@ -7,6 +7,10 @@ use serde_json::Value;
 
 #[get("/@me")]
 pub async fn fetch_owned_bots(user: User) -> Result<Value> {
+    if user.bot.is_some() {
+        return Err(Error::IsBot)
+    }
+    
     let bots = get_collection("bots")
         .find(
             doc! {
