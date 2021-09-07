@@ -31,7 +31,6 @@ use rauth::{
 };
 use std::str::FromStr;
 use rocket_cors::AllowedOrigins;
-// use rocket::catchers;
 use util::variables::{
     APP_URL, HCAPTCHA_KEY, INVITE_ONLY, PUBLIC_URL, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD,
     SMTP_USERNAME, USE_EMAIL, USE_HCAPTCHA,
@@ -149,7 +148,6 @@ Reset your password here: {{url}}",
         .manage(cors.clone())
         .manage(RatelimitState::new())
         .attach(cors)
-        // .register("/", catchers![rocket_governor::rocket_governor_catcher])
         .launch()
         .await
         .unwrap();
