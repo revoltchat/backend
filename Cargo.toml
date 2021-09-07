@@ -52,7 +52,6 @@ rauth = { git = "https://gitlab.insrt.uk/insert/rauth", rev = "19bef300ecc269c02
 hive_pubsub = { git = "https://gitlab.insrt.uk/insert/hive", rev = "a89826df2b30166220e68a6ed01a58b751456604", features = ["mongo"] }
 
 # web
-rocket-governor = { version = "0.0.1-rc.9", features = ["logger"] }
 async-tungstenite = { version = "0.10.0", features = ["async-std-runtime"] }
 rocket = { version = "0.5.0-rc.1", default-features = false, features = ["json"] }
 mongodb = { version = "1.2.2", features = ["tokio-runtime"], default-features = false }

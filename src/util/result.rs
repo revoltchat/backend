@@ -6,7 +6,7 @@ use serde::Serialize;
 use std::io::Cursor;
 use validator::ValidationErrors;
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum Error {
     LabelMe,
@@ -66,6 +66,9 @@ pub enum Error {
     VosoUnavailable,
     NotFound,
     NoEffect,
+    TooManyRequests {
+        retry_after: f64
+    }
 }
 
 pub struct EmptyResponse;
@@ -127,6 +130,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::VosoUnavailable => Status::BadRequest,
             Error::NotFound => Status::NotFound,
             Error::NoEffect => Status::Ok,
+            Error::TooManyRequests { .. } => Status::TooManyRequests,
         };
 
         // Serialize the error data structure into JSON.

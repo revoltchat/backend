@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::database::*;
-use crate::util::ratelimit::RateLimited;
+use crate::util::ratelimit::{Ratelimiter, RatelimitResponse};
 use crate::util::result::{Error, Result};
 
 use mongodb::{bson::doc, options::FindOneOptions};
@@ -34,7 +34,7 @@ lazy_static! {
 }
 
 #[post("/<target>/messages", data = "<message>")]
-pub async fn message_send(_r: RateLimited<'_>, user: User, target: Ref, message: Json<Data>) -> Result<Value> {
+pub async fn message_send(_r: Ratelimiter, user: User, target: Ref, message: Json<Data>) -> Result<RatelimitResponse<Value>> {
     let message = message.into_inner();
     message
         .validate()
@@ -147,5 +147,5 @@ pub async fn message_send(_r: RateLimited<'_>, user: User, target: Ref, message:
 
     msg.clone().publish(&target, perm.get_embed_links()).await?;
 
-    Ok(json!(msg))
+    Ok(RatelimitResponse(json!(msg)))
 }
