@@ -108,7 +108,6 @@ impl RatelimitState {
     pub fn new() -> Self {
         let mut hashmap = HashMap::new();
         hashmap.insert("message_send", RatelimitMapping::new(10, 10));
-        hashmap.insert("root", RatelimitMapping::new(10, 10));
         let arc = Arc::new(Mutex::new(hashmap));
         RatelimitState(arc)
     }
