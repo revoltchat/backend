@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 #[inline]
 fn now() -> f64 {
     // will this ever actually panic?
-    time::SystemTime::now().duration_since(time::SystemTime::UNIX_EPOCH).expect("???").as_secs_f64()
+    time::SystemTime::now().duration_since(time::SystemTime::UNIX_EPOCH).unwrap().as_secs_f64()
 }
 
 struct Ratelimit {
