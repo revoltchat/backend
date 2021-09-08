@@ -100,10 +100,14 @@ impl Embed {
     pub async fn generate(content: String) -> Result<Vec<Embed>> {
         lazy_static! {
             static ref RE_CODE: Regex = Regex::new("```(?:.|\n)+?```|`(?:.|\n)+?`").unwrap();
+            static ref RE_IGNORED: Regex = Regex::new("(<http.+>)").unwrap();
         }
 
         // Ignore code blocks.
         let content = RE_CODE.replace_all(&content, "");
+
+        // Ignore all content between angle brackets starting with http.
+        let content = RE_IGNORED.replace_all(&content, "");
 
         let content = content
             // Ignore quoted lines.
@@ -121,7 +125,6 @@ impl Embed {
             .join("\n");
 
         // ! FIXME: allow multiple links
-        // ! FIXME: prevent generation if link is surrounded with < >
         let mut finder = LinkFinder::new();
         finder.kinds(&[LinkKind::Url]);
         let links: Vec<_> = finder.links(&content).collect();
