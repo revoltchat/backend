@@ -1,6 +1,7 @@
 use crate::util::{
     result::{Error, Result},
     variables::JANUARY_URL,
+    variables::MAX_EMBED_COUNT,
 };
 use linkify::{LinkFinder, LinkKind};
 use regex::Regex;
@@ -126,7 +127,7 @@ impl Embed {
 
         let mut finder = LinkFinder::new();
         finder.kinds(&[LinkKind::Url]);
-        let links: Vec<_> = finder.links(&content).take(5).collect();
+        let links: Vec<_> = finder.links(&content).take(*MAX_EMBED_COUNT).collect();
 
         if links.len() == 0 {
             return Err(Error::LabelMe);
@@ -134,14 +135,13 @@ impl Embed {
 
         let mut embeds: Vec<Embed> = Vec::new();
 
-        // ! FIXME: allow configuration of number of embeds
-        // ! FIXME: batch request to january?
         let mut link_index = 0;
 
+        // ! FIXME: batch request to january?
         while link_index < links.len() {
             let link = &links[link_index];
 
-            // Check if we did the same link already in for this message.
+            // Check if we already processed this link.
             if link_index != 0 && links.iter().take(link_index).any(|x| x.as_str() == link.as_str()) {
                 link_index = link_index + 1;
                 continue;
@@ -169,7 +169,7 @@ impl Embed {
             link_index = link_index + 1;
         }
 
-        // Prevent database update when no embeds are found
+        // Prevent database update when no embeds are found.
         if embeds.len() > 0 {
             Ok(embeds)
         } else {
