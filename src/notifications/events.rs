@@ -22,13 +22,20 @@ pub struct Auth {
     pub token: String,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(untagged)]
+pub enum Ping {
+    Binary(Vec<u8>),
+    Number(usize)
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum ServerboundNotification {
     Authenticate(Auth),
     BeginTyping { channel: String },
     EndTyping { channel: String },
-    Ping { data: Vec<u8>, responded: Option<()> },
+    Ping { data: Ping, responded: Option<()> },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -79,7 +86,7 @@ pub enum ClientboundNotification {
         channels: Vec<Channel>,
         members: Vec<Member>,
     },
-    Pong { data: Vec<u8> },
+    Pong { data: Ping },
 
     Message(Message),
     MessageUpdate {

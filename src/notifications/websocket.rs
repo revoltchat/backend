@@ -1,4 +1,5 @@
 use crate::database::*;
+use crate::notifications::events::Ping;
 use crate::util::variables::WS_HOST;
 
 use super::subscriptions;
@@ -140,7 +141,7 @@ async fn accept(stream: TcpStream) {
                 rmp_serde::decode::from_read::<&[u8], ServerboundNotification>(vec.as_slice())
                     .map_err(|e| e.to_string())
             }
-            Message::Ping(vec) => Ok(ServerboundNotification::Ping { data: vec, responded: Some(()) }),
+            Message::Ping(vec) => Ok(ServerboundNotification::Ping { data: Ping::Binary(vec), responded: Some(()) }),
             _ => return Ok(()),
         };
 
