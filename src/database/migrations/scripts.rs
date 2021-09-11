@@ -284,6 +284,8 @@ pub async fn run_migrations(revision: i32) -> i32 {
             .unwrap();
     }
 
+    // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.
+
     // Reminder to update LATEST_REVISION when adding new migrations.
     LATEST_REVISION
 }

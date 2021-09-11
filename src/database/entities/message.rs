@@ -467,7 +467,7 @@ impl Message {
             let attachment_ids: Vec<String> =
                 attachments.iter().map(|f| f.id.to_string()).collect();
             get_collection("attachments")
-                .update_one(
+                .update_many(
                     doc! {
                         "_id": {
                             "$in": attachment_ids
@@ -482,7 +482,7 @@ impl Message {
                 )
                 .await
                 .map_err(|_| Error::DatabaseError {
-                    operation: "update_one",
+                    operation: "update_many",
                     with: "attachment",
                 })?;
         }

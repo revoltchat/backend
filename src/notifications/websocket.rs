@@ -169,23 +169,15 @@ async fn accept(stream: TcpStream) {
                     }
                 }
 
-                let id = if let Ok(result) =
+                let id = if let Ok(Some(session)) =
                     Session::find_one(&get_db(), doc! { "token": &auth.token }, None).await
                 {
-                    if let Some(session) = result {
-                        Some(session.user_id)
-                    } else {
-                        None
-                    }
-                } else if let Ok(result) = get_collection("bots")
+                    Some(session.user_id)
+                } else if let Ok(Some(bot)) = get_collection("bots")
                     .find_one(doc! { "token": auth.token }, None)
                     .await
                 {
-                    if let Some(bot) = result {
-                        Some(bot.get_str("_id").unwrap().to_string())
-                    } else {
-                        None
-                    }
+                    Some(bot.get_str("_id").unwrap().to_string())
                 } else {
                     None
                 };
