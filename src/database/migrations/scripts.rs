@@ -233,25 +233,25 @@ pub async fn run_migrations(revision: i32) -> i32 {
             .unwrap();
         
         while let Some(doc) = cursor.next().await {
-            if let Ok(mut account) = doc {
-                if let Some(sessions) = account.remove("sessions") {
+            if let Ok(account) = doc {
+                let id = account.get_str("_id").unwrap();
+                if let Some(sessions) = account.get("sessions") {
                     #[derive(Deserialize)]
                     struct Session {
                         id: String,
                         token: String,
-                        user_id: String,
                         friendly_name: String,
                         subscription: Option<Document>,
                     }
 
-                    let sessions = from_bson::<Vec<Session>>(sessions).unwrap();
+                    let sessions = from_bson::<Vec<Session>>(sessions.clone()).unwrap();
                     for session in sessions {
                         info!("Converting session {} to new format.", &session.id);
 
                         let mut doc = doc! {
                             "_id": session.id,
                             "token": session.token,
-                            "user_id": session.user_id,
+                            "user_id": id.clone(),
                             "name": session.friendly_name,
                         };
 
