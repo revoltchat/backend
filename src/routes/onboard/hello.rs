@@ -1,6 +1,6 @@
 use crate::database::*;
 
-use rauth::auth::Session;
+use rauth::entities::Session;
 use rocket::serde::json::Value;
 
 #[get("/hello")]

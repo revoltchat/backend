@@ -1,28 +1,28 @@
 use crate::database::*;
-use crate::notifications::events::{AuthType, BotAuth};
+use crate::notifications::events::Ping;
 use crate::util::variables::WS_HOST;
 
 use super::subscriptions;
 
 use async_std::net::{TcpListener, TcpStream};
 use async_std::task;
-use async_tungstenite::tungstenite::{Message, handshake::server};
-use futures::channel::{oneshot, mpsc::{unbounded, UnboundedSender}};
+use async_tungstenite::tungstenite::{handshake::server, Message};
+use futures::channel::{
+    mpsc::{unbounded, UnboundedSender},
+    oneshot,
+};
 use futures::stream::TryStreamExt;
 use futures::{pin_mut, prelude::*};
 use hive_pubsub::PubSub;
 use log::{debug, info};
 use many_to_many::ManyToMany;
 use mongodb::bson::doc;
-use rauth::{
-    auth::{Auth},
-    options::Options,
-};
+use rauth::entities::{Model, Session};
 use rmp_serde;
-use url::Url;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex, RwLock};
+use url::Url;
 
 use super::{
     events::{ClientboundNotification, ServerboundNotification, WebSocketError},
@@ -51,28 +51,43 @@ pub async fn launch_server() {
 #[derive(Debug)]
 enum MSGFormat {
     JSON,
-    MSGPACK
+    MSGPACK,
 }
 
 struct HeaderCallback {
-    sender: oneshot::Sender<MSGFormat>
+    sender: oneshot::Sender<MSGFormat>,
 }
 
 impl server::Callback for HeaderCallback {
-    fn on_request(self, request: &server::Request, response: server::Response) -> Result<server::Response, server::ErrorResponse> {
+    fn on_request(
+        self,
+        request: &server::Request,
+        response: server::Response,
+    ) -> Result<server::Response, server::ErrorResponse> {
         // we dont get some of the data sometimes so im generating a fake url with the only data we actually need
-        let url = format!("ws://example.com?{}", request.uri().query().unwrap_or("?format=json"));
-        let mut query: HashMap<_, _> = url.parse::<Url>().unwrap().query_pairs().into_owned().collect();  // should be safe to use unwrap here as we just made the url ourself
+        let url = format!(
+            "ws://example.com?{}",
+            request.uri().query().unwrap_or("?format=json")
+        );
+        let mut query: HashMap<_, _> = url
+            .parse::<Url>()
+            .unwrap()
+            .query_pairs()
+            .into_owned()
+            .collect(); // should be safe to use unwrap here as we just made the url ourself
         let format_query: Option<String> = query.remove("format");
 
         let format = match format_query.as_deref().unwrap_or("json") {
             "msgpack" => MSGFormat::MSGPACK,
             "json" => MSGFormat::JSON,
-            _ => panic!("unknown format")  // TODO: not use panic
+            _ => MSGFormat::JSON, // Fallback to JSON.
         };
 
-        self.sender.send(format).unwrap();  // TODO: not use unwrap
-        Ok(response)
+        if self.sender.send(format).is_ok() {
+            Ok(response)
+        } else {
+            Err(server::ErrorResponse::new(None))
+        }
     }
 }
 
@@ -81,12 +96,13 @@ async fn accept(stream: TcpStream) {
         .peer_addr()
         .expect("Connected streams should have a peer address.");
     let (sender, receiver) = oneshot::channel::<MSGFormat>();
-    
-    let ws_stream = async_tungstenite::accept_hdr_async_with_config(stream, HeaderCallback { sender }, None)
-        .await
-        .expect("Error during websocket handshake.");
 
-    let msg_format = receiver.await.unwrap();  // TODO: not use unwrap
+    let ws_stream =
+        async_tungstenite::accept_hdr_async_with_config(stream, HeaderCallback { sender }, None)
+            .await
+            .expect("Error during websocket handshake.");
+
+    let msg_format = receiver.await.unwrap(); // TODO: not use unwrap
 
     info!("User established WebSocket connection from {}.", &addr);
 
@@ -98,12 +114,12 @@ async fn accept(stream: TcpStream) {
         let res = match msg_format {
             MSGFormat::JSON => match serde_json::to_string(&notification) {
                 Ok(s) => Message::Text(s),
-                Err(_) => return
-            }
+                Err(_) => return,
+            },
             MSGFormat::MSGPACK => match rmp_serde::to_vec(&notification) {
                 Ok(v) => Message::Binary(v),
-                Err(_) => return
-            }
+                Err(_) => return,
+            },
         };
 
         if let Err(_) = tx.unbounded_send(res) {
@@ -118,21 +134,27 @@ async fn accept(stream: TcpStream) {
         let mutex = mutex_generator();
 
         let maybe_decoded = match msg {
-            Message::Text(text) => serde_json::from_str::<ServerboundNotification>(&text).map_err(|e| e.to_string()),
-            Message::Binary(vec) => rmp_serde::decode::from_read::<&[u8], ServerboundNotification>(vec.as_slice()).map_err(|e| e.to_string()),
-            Message::Ping(vec) => Ok(ServerboundNotification::Ping { data: vec }),
-            _ => return Ok(())
+            Message::Text(text) => {
+                serde_json::from_str::<ServerboundNotification>(&text).map_err(|e| e.to_string())
+            }
+            Message::Binary(vec) => {
+                rmp_serde::decode::from_read::<&[u8], ServerboundNotification>(vec.as_slice())
+                    .map_err(|e| e.to_string())
+            }
+            Message::Ping(vec) => Ok(ServerboundNotification::Ping { data: Ping::Binary(vec), responded: Some(()) }),
+            _ => return Ok(()),
         };
 
         let notification = match maybe_decoded {
             Err(why) => {
                 send(ClientboundNotification::Error(
                     WebSocketError::MalformedData {
-                        msg: why.to_string()
-                }));
-                return Ok(())
-            },
-            Ok(n) => n
+                        msg: why.to_string(),
+                    },
+                ));
+                return Ok(());
+            }
+            Ok(n) => n,
         };
 
         match notification {
@@ -147,34 +169,20 @@ async fn accept(stream: TcpStream) {
                     }
                 }
 
-                if let Some(id) = match auth {
-                    AuthType::User(new_session) => {
-                        if let Ok(validated_session) =
-                        Auth::new(get_collection("accounts"), Options::new())
-                            .verify_session(new_session)
-                            .await
-                        {
-                            Some(validated_session.user_id.clone())
-                        } else {
-                            None
-                        }
-                    }
-                    AuthType::Bot(BotAuth { token }) => {
-                        if let Ok(doc) = get_collection("bots")
-                            .find_one(
-                                doc! { "token": token },
-                                None
-                            ).await {
-                                if let Some(doc) = doc {
-                                    Some(doc.get_str("_id").unwrap().to_string())
-                                } else {
-                                    None
-                                }
-                            } else {
-                                None
-                            }
-                    }
-                } {
+                let id = if let Ok(Some(session)) =
+                    Session::find_one(&get_db(), doc! { "token": &auth.token }, None).await
+                {
+                    Some(session.user_id)
+                } else if let Ok(Some(bot)) = get_collection("bots")
+                    .find_one(doc! { "token": auth.token }, None)
+                    .await
+                {
+                    Some(bot.get_str("_id").unwrap().to_string())
+                } else {
+                    None
+                };
+
+                if let Some(id) = id {
                     if let Ok(user) = (Ref { id: id.clone() }).fetch_user().await {
                         let is_invisible = if let Some(status) = &user.status {
                             if let Some(presence) = &status.presence {
@@ -229,7 +237,7 @@ async fn accept(stream: TcpStream) {
                                         data: json!({
                                             "online": true
                                         }),
-                                        clear: None
+                                        clear: None,
                                     }
                                     .publish_as_user(id);
                                 }
@@ -297,8 +305,12 @@ async fn accept(stream: TcpStream) {
                     return Ok(());
                 }
             }
-            ServerboundNotification::Ping { data } => {
-                info!("Ping received from User {}. Payload: {:?}", &addr, data);
+            ServerboundNotification::Ping { data, responded } => {
+                debug!("Ping received from connection {}. Payload: {:?}", &addr, data);
+
+                if responded.is_none() {
+                    send(ClientboundNotification::Pong { data });
+                }
             }
         }
         Ok(())
@@ -329,7 +341,7 @@ async fn accept(stream: TcpStream) {
             data: json!({
                 "online": false
             }),
-            clear: None
+            clear: None,
         }
         .publish_as_user(id);
     }

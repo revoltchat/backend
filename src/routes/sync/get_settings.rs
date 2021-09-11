@@ -14,9 +14,9 @@ pub struct Options {
 #[post("/settings/fetch", data = "<options>")]
 pub async fn req(user: User, options: Json<Options>) -> Result<Value> {
     if user.bot.is_some() {
-        return Err(Error::IsBot)
+        return Err(Error::IsBot);
     }
-    
+
     let options = options.into_inner();
     let mut projection = doc! {
         "_id": 0,
