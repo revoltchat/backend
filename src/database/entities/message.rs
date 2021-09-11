@@ -9,14 +9,12 @@ use futures::StreamExt;
 use mongodb::options::UpdateOptions;
 use mongodb::{
     bson::{doc, to_bson, DateTime},
-    options::FindOptions,
 };
+use rauth::entities::{Model, Session};
 use rocket::serde::json::Value;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
-use web_push::{
-    ContentEncoding, SubscriptionInfo, VapidSignatureBuilder, WebPushClient, WebPushMessageBuilder,
-};
+use web_push::{ContentEncoding, SubscriptionInfo, SubscriptionKeys, VapidSignatureBuilder, WebPushClient, WebPushMessageBuilder};
 use std::time::SystemTime;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -335,60 +333,47 @@ impl Message {
             }
 
             // Fetch their corresponding sessions.
-            if let Ok(mut cursor) = get_collection("accounts")
-                .find(
-                    doc! {
-                        "_id": {
-                            "$in": target_ids
-                        },
-                        "sessions.subscription": {
-                            "$exists": true
-                        }
-                    },
-                    FindOptions::builder()
-                        .projection(doc! { "sessions": 1 })
-                        .build(),
-                )
-                .await
-            {
-                let mut subscriptions = vec![];
-                while let Some(result) = cursor.next().await {
-                    if let Ok(doc) = result {
-                        if let Ok(sessions) = doc.get_array("sessions") {
-                            for session in sessions {
-                                if let Some(doc) = session.as_document() {
-                                    if let Ok(sub) = doc.get_document("subscription") {
-                                        let endpoint = sub.get_str("endpoint").unwrap().to_string();
-                                        let p256dh = sub.get_str("p256dh").unwrap().to_string();
-                                        let auth = sub.get_str("auth").unwrap().to_string();
-
-                                        subscriptions
-                                            .push(SubscriptionInfo::new(endpoint, p256dh, auth));
-                                    }
-                                }
+            if target_ids.len() > 0 {
+                if let Ok(mut cursor) = Session::find(
+                        &get_db(),
+                        doc! {
+                            "_id": {
+                                "$in": target_ids
+                            },
+                            "subscription": {
+                                "$exists": true
                             }
-                        }
-                    }
-                }
-
-                if subscriptions.len() > 0 {
+                        },
+                        None
+                    )
+                    .await {
                     let enc = serde_json::to_string(&PushNotification::new(self, &c_clone).await).unwrap();
                     let client = WebPushClient::new();
                     let key =
                         base64::decode_config(VAPID_PRIVATE_KEY.clone(), base64::URL_SAFE).unwrap();
 
-                    for subscription in subscriptions {
-                        let mut builder = WebPushMessageBuilder::new(&subscription).unwrap();
-                        let sig_builder = VapidSignatureBuilder::from_pem(
-                            std::io::Cursor::new(&key),
-                            &subscription,
-                        )
-                        .unwrap();
-                        let signature = sig_builder.build().unwrap();
-                        builder.set_vapid_signature(signature);
-                        builder.set_payload(ContentEncoding::AesGcm, enc.as_bytes());
-                        let m = builder.build().unwrap();
-                        client.send(m).await.ok();
+                    while let Some(Ok(session)) = cursor.next().await {
+                        if let Some(sub) = session.subscription {
+                            let subscription = SubscriptionInfo {
+                                endpoint: sub.endpoint,
+                                keys: SubscriptionKeys {
+                                    auth: sub.auth,
+                                    p256dh: sub.p256dh
+                                }
+                            };
+
+                            let mut builder = WebPushMessageBuilder::new(&subscription).unwrap();
+                            let sig_builder = VapidSignatureBuilder::from_pem(
+                                std::io::Cursor::new(&key),
+                                &subscription,
+                            )
+                            .unwrap();
+                            let signature = sig_builder.build().unwrap();
+                            builder.set_vapid_signature(signature);
+                            builder.set_payload(ContentEncoding::AesGcm, enc.as_bytes());
+                            let m = builder.build().unwrap();
+                            client.send(m).await.ok();
+                        }
                     }
                 }
             }

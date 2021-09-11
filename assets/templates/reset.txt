@@ -1,0 +1,5 @@
+You requested a password reset, if you did not perform this action you can safely ignore this email.
+
+Reset your password here: {{url}}
+
+Sent by Revolt.
