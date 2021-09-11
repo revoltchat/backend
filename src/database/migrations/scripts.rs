@@ -239,6 +239,7 @@ pub async fn run_migrations(revision: i32) -> i32 {
                     struct Session {
                         id: String,
                         token: String,
+                        user_id: String,
                         friendly_name: String,
                         subscription: Option<Document>,
                     }
@@ -250,6 +251,7 @@ pub async fn run_migrations(revision: i32) -> i32 {
                         let mut doc = doc! {
                             "_id": session.id,
                             "token": session.token,
+                            "user_id": session.user_id,
                             "name": session.friendly_name,
                         };
 
