@@ -45,7 +45,8 @@ pub async fn req(
 
     let mut set = doc! {};
     if let Some(username) = &data.username {
-        if User::is_username_taken(&username).await? {
+        if username.to_lowercase() == user.username.to_lowercase() {
+        } else if User::is_username_taken(&username).await? {
             return Err(Error::UsernameTaken);
         }
 
