@@ -2,7 +2,7 @@ use crate::database::{permissions, get_collection, get_db, PermissionTuple};
 
 use futures::StreamExt;
 use log::info;
-use mongodb::{bson::{doc, from_document, to_document}, options::FindOptions};
+use mongodb::{bson::{Document, doc, from_bson, from_document, to_document}, options::FindOptions};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -11,7 +11,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 8;
+pub const LATEST_REVISION: i32 = 9;
 
 pub async fn migrate_database() {
     let migrations = get_collection("migrations");
@@ -211,6 +211,82 @@ pub async fn run_migrations(revision: i32) -> i32 {
             .await
             .expect("Failed to create bots collection.");
     }
+
+    if revision <= 8 {
+        info!("Running migration [revision 8 / 2021-09-10]: Update to rAuth version 1.");
+
+        get_db()
+            .run_command(
+                doc! {
+                    "dropIndexes": "accounts",
+                    "index": ["email", "email_normalised"]
+                },
+                None,
+            )
+            .await
+            .expect("Failed to delete legacy account indexes.");
+
+        let col = get_collection("sessions");
+        let mut cursor = get_collection("accounts")
+            .find(doc! { }, None)
+            .await
+            .unwrap();
+        
+        while let Some(doc) = cursor.next().await {
+            if let Ok(account) = doc {
+                let id = account.get_str("_id").unwrap();
+                if let Some(sessions) = account.get("sessions") {
+                    #[derive(Deserialize)]
+                    struct Session {
+                        id: String,
+                        token: String,
+                        friendly_name: String,
+                        subscription: Option<Document>,
+                    }
+
+                    let sessions = from_bson::<Vec<Session>>(sessions.clone()).unwrap();
+                    for session in sessions {
+                        info!("Converting session {} to new format.", &session.id);
+
+                        let mut doc = doc! {
+                            "_id": session.id,
+                            "token": session.token,
+                            "user_id": id.clone(),
+                            "name": session.friendly_name,
+                        };
+
+                        if let Some(sub) = session.subscription {
+                            doc.insert("subscription", sub);
+                        }
+
+                        col.insert_one(doc, None).await.ok();
+                    }
+                } else {
+                    info!("Account doesn't have any sessions!");
+                }
+            }
+        }
+
+        get_collection("accounts")
+            .update_many(
+                doc! { },
+                doc! {
+                    "$unset": {
+                        "sessions": 1,
+                    },
+                    "$set": {
+                        "mfa": {
+                            "recovery_codes": []
+                        }
+                    }
+                },
+                None
+            )
+            .await
+            .unwrap();
+    }
+
+    // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.
 
     // Reminder to update LATEST_REVISION when adding new migrations.
     LATEST_REVISION

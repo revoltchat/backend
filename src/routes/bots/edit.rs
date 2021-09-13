@@ -26,6 +26,10 @@ pub struct Data {
 
 #[patch("/<target>", data = "<data>")]
 pub async fn edit_bot(user: User, target: Ref, data: Json<Data>) -> Result<EmptyResponse> {
+    if user.bot.is_some() {
+        return Err(Error::IsBot)
+    }
+    
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
