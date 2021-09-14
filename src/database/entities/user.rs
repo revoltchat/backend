@@ -16,6 +16,7 @@ use crate::database::*;
 use crate::notifications::websocket::is_online;
 use crate::util::result::{Error, Result};
 use crate::util::variables::EARLY_ADOPTER_BADGE;
+use crate::util::variables::MAX_SERVER_COUNT;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum RelationshipStatus {
@@ -322,5 +323,11 @@ impl User {
             .filter_map(async move |s| s.ok())
             .collect::<Vec<Document>>()
             .await)
+    }
+
+    /// Check if this user can acquire another server.
+    pub async fn can_acquire_server(id: &str) -> Result<bool> {
+        let server_ids = User::fetch_server_ids(&id).await?;
+        Ok(server_ids.len() < *MAX_SERVER_COUNT)
     }
 }

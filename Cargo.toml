@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 # Utility
+url = "2.2.2"
 log = "0.4.11"
 dotenv = "0.15.0"
 linkify = "0.6.0"
@@ -18,7 +19,6 @@ once_cell = "1.4.1"
 env_logger = "0.7.1"
 lazy_static = "1.4.0"
 ctrlc = { version = "3.0", features = ["termination"] }
-url = "2.2.2"
 
 # Lang. Utilities
 regex = "1"
@@ -48,7 +48,7 @@ async-std = { version = "1.8.0", features = ["tokio1", "tokio02", "attributes"] 
 web-push = "0.7.2"
 many-to-many = "0.1.2"
 lettre = "0.10.0-alpha.4"
-rauth = { git = "https://github.com/insertish/rauth", rev = "19bef300ecc269c028e3d746f0a2f09842d3b37b" }
+rauth = { git = "https://github.com/insertish/rauth", rev = "ad2f5ad1657f4b20c8e483cc1d6c513ff9b22ae1" }
 hive_pubsub = { git = "https://gitlab.insrt.uk/insert/hive", rev = "a89826df2b30166220e68a6ed01a58b751456604", features = ["mongo"] }
 
 # web

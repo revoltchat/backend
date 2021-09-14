@@ -47,6 +47,9 @@ pub enum Special {
     None,
     YouTube {
         id: String,
+
+        #[serde(skip_serializing_if = "Option::is_none")]
+        timestamp: Option<String>,
     },
     Twitch {
         content_type: TwitchType,

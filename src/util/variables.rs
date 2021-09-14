@@ -66,6 +66,8 @@ lazy_static! {
         env::var("REVOLT_MAX_BOT_COUNT").unwrap_or_else(|_| "5".to_string()).parse().unwrap();
     pub static ref MAX_EMBED_COUNT: usize =
         env::var("REVOLT_MAX_EMBED_COUNT").unwrap_or_else(|_| "5".to_string()).parse().unwrap();
+    pub static ref MAX_SERVER_COUNT: usize =
+        env::var("REVOLT_MAX_SERVER_COUNT").unwrap_or_else(|_| "100".to_string()).parse().unwrap();
     pub static ref EARLY_ADOPTER_BADGE: i64 =
         env::var("REVOLT_EARLY_ADOPTER_BADGE").unwrap_or_else(|_| "0".to_string()).parse().unwrap();
 }
