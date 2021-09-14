@@ -14,9 +14,11 @@ on:
             - ".gitlab-ci.yml"
             - "LICENSE"
             - "README"
-    #pull_request:
-    #    branches:
-    #        - "master"
+    pull_request:
+        branches:
+            - "master"
+        paths:
+            - "Dockerfile"
     workflow_dispatch:
 
 jobs:
