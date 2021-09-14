@@ -1,6 +1,7 @@
 use crate::util::{
     result::{Error, Result},
     variables::JANUARY_URL,
+    variables::MAX_EMBED_COUNT,
 };
 use linkify::{LinkFinder, LinkKind};
 use regex::Regex;
@@ -103,10 +104,14 @@ impl Embed {
     pub async fn generate(content: String) -> Result<Vec<Embed>> {
         lazy_static! {
             static ref RE_CODE: Regex = Regex::new("```(?:.|\n)+?```|`(?:.|\n)+?`").unwrap();
+            static ref RE_IGNORED: Regex = Regex::new("(<http.+>)").unwrap();
         }
 
         // Ignore code blocks.
         let content = RE_CODE.replace_all(&content, "");
+
+        // Ignore all content between angle brackets starting with http.
+        let content = RE_IGNORED.replace_all(&content, "");
 
         let content = content
             // Ignore quoted lines.
@@ -123,35 +128,55 @@ impl Embed {
             .collect::<Vec<&str>>()
             .join("\n");
 
-        // ! FIXME: allow multiple links
-        // ! FIXME: prevent generation if link is surrounded with < >
         let mut finder = LinkFinder::new();
         finder.kinds(&[LinkKind::Url]);
-        let links: Vec<_> = finder.links(&content).collect();
+        let links: Vec<_> = finder.links(&content).take(*MAX_EMBED_COUNT).collect();
 
         if links.len() == 0 {
             return Err(Error::LabelMe);
         }
 
-        let link = &links[0];
+        let mut embeds: Vec<Embed> = Vec::new();
 
-        let client = reqwest::Client::new();
-        let result = client
-            .get(&format!("{}/embed", *JANUARY_URL))
-            .query(&[("url", link.as_str())])
-            .send()
-            .await;
+        let mut link_index = 0;
 
-        match result {
-            Err(_) => return Err(Error::LabelMe),
-            Ok(result) => match result.status() {
-                reqwest::StatusCode::OK => {
-                    let res: Embed = result.json().await.map_err(|_| Error::InvalidOperation)?;
+        // ! FIXME: batch request to january?
+        while link_index < links.len() {
+            let link = &links[link_index];
 
-                    Ok(vec![res])
-                }
-                _ => return Err(Error::LabelMe),
-            },
+            // Check if we already processed this link.
+            if link_index != 0 && links.iter().take(link_index).any(|x| x.as_str() == link.as_str()) {
+                link_index = link_index + 1;
+                continue;
+            }
+
+            let client = reqwest::Client::new();
+            let result = client
+                .get(&format!("{}/embed", *JANUARY_URL))
+                .query(&[("url", link.as_str())])
+                .send()
+                .await;
+
+            if result.is_err() {
+                link_index = link_index + 1;
+                continue;
+            }
+
+            let response = result.unwrap();
+            if response.status().is_success() {
+                let res: Embed = response.json().await.map_err(|_| Error::InvalidOperation)?;
+
+                embeds.push(res);
+            }
+
+            link_index = link_index + 1;
+        }
+
+        // Prevent database update when no embeds are found.
+        if embeds.len() > 0 {
+            Ok(embeds)
+        } else {
+            Err(Error::LabelMe)
         }
     }
 }
