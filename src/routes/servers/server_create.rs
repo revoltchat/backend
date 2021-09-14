@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::database::*;
 use crate::util::result::{Error, Result};
+use crate::util::variables::MAX_SERVER_COUNT;
 
 use mongodb::bson::doc;
 use rocket::serde::json::{Json, Value};
@@ -26,6 +27,12 @@ pub struct Data {
 pub async fn req(user: User, info: Json<Data>) -> Result<Value> {
     if user.bot.is_some() {
         return Err(Error::IsBot)
+    }
+
+    if !User::can_acquire_server(&user.id).await? {
+        Err(Error::TooManyServers {
+            max: *MAX_SERVER_COUNT,
+        })?
     }
     
     let info = info.into_inner();
