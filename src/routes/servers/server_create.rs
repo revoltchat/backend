@@ -77,6 +77,8 @@ pub async fn req(user: User, info: Json<Data>) -> Result<Value> {
 
         icon: None,
         banner: None,
+
+        flags: None,
         nsfw: info.nsfw.unwrap_or_default()
     };
 
