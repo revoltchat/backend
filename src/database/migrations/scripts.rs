@@ -11,7 +11,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 9;
+pub const LATEST_REVISION: i32 = 10;
 
 pub async fn migrate_database() {
     let migrations = get_collection("migrations");
@@ -284,6 +284,62 @@ pub async fn run_migrations(revision: i32) -> i32 {
             )
             .await
             .unwrap();
+    }
+
+    if revision <= 9 {
+        info!("Running migration [revision 9 / 2021-09-14]: Switch from last_message to last_message_id.");
+
+        let mut cursor = get_collection("channels")
+            .find(doc! { }, None)
+            .await
+            .unwrap();
+        
+        while let Some(doc) = cursor.next().await {
+            if let Ok(channel) = doc {
+                let channel_id = channel.get_str("_id").unwrap();
+                if let Some(last_message) = channel.get("last_message") {
+                    #[derive(Serialize, Deserialize, Debug, Clone)]
+                    pub struct Obj {
+                        #[serde(rename = "_id")]
+                        id: String,
+                    }
+
+                    #[derive(Serialize, Deserialize, Debug, Clone)]
+                    #[serde(untagged)]
+                    pub enum LastMessage {
+                        Obj(Obj),
+                        Id(String)
+                    }
+
+                    let lm = from_bson::<LastMessage>(last_message.clone()).unwrap();
+                    let id = match lm {
+                        LastMessage::Obj(Obj { id }) => id,
+                        LastMessage::Id(id) => id
+                    };
+
+                    info!("Converting session {} to new format.", &channel_id);
+                    get_collection("channels")
+                        .update_one(
+                            doc! {
+                                "_id": channel_id
+                            },
+                            doc! {
+                                "$set": {
+                                    "last_message_id": id
+                                },
+                                "$unset": {
+                                    "last_message": 1,
+                                }
+                            },
+                            None
+                        )
+                        .await
+                        .unwrap();
+                } else {
+                    info!("{} has no last_message.", &channel_id);
+                }
+            }
+        }
     }
 
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.

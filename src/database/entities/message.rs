@@ -9,7 +9,6 @@ use futures::StreamExt;
 use mongodb::options::UpdateOptions;
 use mongodb::{
     bson::{doc, to_bson, DateTime, Document},
-    options::FindOptions,
 };
 use rauth::entities::{Model, Session};
 use rocket::serde::json::Value;
