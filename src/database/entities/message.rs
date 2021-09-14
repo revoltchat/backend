@@ -8,7 +8,8 @@ use crate::{
 use futures::StreamExt;
 use mongodb::options::UpdateOptions;
 use mongodb::{
-    bson::{doc, to_bson, DateTime},
+    bson::{doc, to_bson, DateTime, Document},
+    options::FindOptions,
 };
 use rauth::entities::{Model, Session};
 use rocket::serde::json::Value;
@@ -171,7 +172,6 @@ impl Message {
             nonce: None,
             channel,
             author,
-
             content,
             attachments: None,
             edited: None,
@@ -196,76 +196,19 @@ impl Message {
         let ss = self.clone();
         let c_clone = channel.clone();
         async_std::task::spawn(async move {
-            let mut set = if let Content::Text(text) = &ss.content {
-                doc! {
-                    "last_message": {
-                        "_id": ss.id.clone(),
-                        "author": ss.author.clone(),
-                        "short": text.chars().take(128).collect::<String>()
-                    }
-                }
-            } else {
-                doc! {}
-            };
 
-            // ! MARK AS ACTIVE
-            // ! FIXME: temp code
+            let last_message_id = ss.id.clone();
+            let mut set = doc! { "last_message_id": last_message_id };
+
             let channels = get_collection("channels");
             match &c_clone {
                 Channel::DirectMessage { id, .. } => {
+                    // ! MARK AS ACTIVE
                     set.insert("active", true);
-                    channels
-                        .update_one(
-                            doc! { "_id": id },
-                            doc! {
-                                "$set": set
-                            },
-                            None,
-                        )
-                        .await
-                        /*.map_err(|_| Error::DatabaseError {
-                            operation: "update_one",
-                            with: "channel",
-                        })?;*/
-                        .unwrap();
-                }
-                Channel::Group { id, .. } => {
-                    if let Content::Text(_) = &ss.content {
-                        channels
-                            .update_one(
-                                doc! { "_id": id },
-                                doc! {
-                                    "$set": set
-                                },
-                                None,
-                            )
-                            .await
-                            /*.map_err(|_| Error::DatabaseError {
-                                operation: "update_one",
-                                with: "channel",
-                            })?;*/
-                            .unwrap();
-                    }
-                }
-                Channel::TextChannel { id, .. } => {
-                    if let Content::Text(_) = &ss.content {
-                        channels
-                            .update_one(
-                                doc! { "_id": id },
-                                doc! {
-                                    "$set": {
-                                        "last_message": &ss.id
-                                    }
-                                },
-                                None,
-                            )
-                            .await
-                            /*.map_err(|_| Error::DatabaseError {
-                                operation: "update_one",
-                                with: "channel",
-                            })?;*/
-                            .unwrap();
-                    }
+                    update_channels_last_message(&channels, id, &set).await;
+                },
+                Channel::Group { id, .. } | Channel::TextChannel { id, .. } => {
+                    update_channels_last_message(&channels, id, &set).await;
                 }
                 _ => {}
             }
@@ -489,4 +432,16 @@ impl Message {
 
         Ok(())
     }
+}
+
+async fn update_channels_last_message(channels: &Collection, channel_id: &String, set: &Document) {
+    channels
+        .update_one(
+            doc! { "_id": channel_id },
+            doc! { "$set": set },
+            None,
+        )
+        .await
+        .expect("Server should not run with no, or a corrupted db");
+
 }
