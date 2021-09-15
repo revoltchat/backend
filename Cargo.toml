@@ -36,7 +36,7 @@ base64 = "0.13.0"
 serde_json = "1.0.57"
 serde = { version = "1.0.115", features = ["derive"] }
 validator = { version = "0.11", features = ["derive"] }
-rmp-serde = "0.15.5"
+rmp-serde = { git = "https://github.com/3Hren/msgpack-rust", rev = "5bf2c24203ad422233cf35b7b7bfad9f7e811814" }
 
 # async
 futures = "0.3.8"
