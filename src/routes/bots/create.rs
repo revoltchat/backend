@@ -1,20 +1,14 @@
 use crate::database::*;
 use crate::util::result::{Error, Result};
 use crate::util::variables::MAX_BOT_COUNT;
+use crate::util::regex::RE_USERNAME;
 
 use mongodb::bson::{doc, to_document};
-use regex::Regex;
 use rocket::serde::json::{Json, Value};
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use nanoid::nanoid;
 use validator::Validate;
-
-// ! FIXME: should be global somewhere; maybe use config(?)
-// ! tip: CTRL + F, RE_USERNAME
-lazy_static! {
-    static ref RE_USERNAME: Regex = Regex::new(r"^[a-zA-Z0-9_.]+$").unwrap();
-}
 
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {

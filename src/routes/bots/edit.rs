@@ -1,18 +1,12 @@
 use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result, EmptyResponse};
 use crate::{database::*, notifications::events::RemoveBotField};
+use crate::util::regex::RE_USERNAME;
 
 use mongodb::bson::doc;
-use regex::Regex;
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
-
-// ! FIXME: should be global somewhere; maybe use config(?)
-// ! tip: CTRL + F, RE_USERNAME
-lazy_static! {
-    static ref RE_USERNAME: Regex = Regex::new(r"^[a-zA-Z0-9_.]+$").unwrap();
-}
 
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
