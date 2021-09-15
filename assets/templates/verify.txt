@@ -1,0 +1,6 @@
+You're almost there!
+If you did not perform this action you can safely ignore this email.
+
+Please verify your account here: {{url}}
+
+Sent by Revolt.

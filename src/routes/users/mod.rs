@@ -14,10 +14,12 @@ mod get_default_avatar;
 mod open_dm;
 mod remove_friend;
 mod unblock_user;
+mod fetch_self;
 
 pub fn routes() -> Vec<Route> {
     routes![
         // User Information
+        fetch_self::req,
         fetch_user::req,
         edit_user::req,
         change_username::req,

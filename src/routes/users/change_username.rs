@@ -3,9 +3,8 @@ use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result, EmptyResponse};
 
 use mongodb::bson::doc;
-use rauth::auth::{Auth, Session};
+use rauth::entities::Account;
 use regex::Regex;
-use rocket::State;
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -26,8 +25,7 @@ pub struct Data {
 
 #[patch("/<_ignore_id>/username", data = "<data>")]
 pub async fn req(
-    auth: &State<Auth>,
-    session: Session,
+    account: Account,
     user: User,
     data: Json<Data>,
     _ignore_id: String,
@@ -39,8 +37,7 @@ pub async fn req(
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    auth.verify_password(&session, data.password.clone())
-        .await
+    account.verify_password(&data.password)
         .map_err(|_| Error::InvalidCredentials)?;
 
     let mut set = doc! {};
