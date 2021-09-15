@@ -116,7 +116,7 @@ impl RatelimitState {
 #[async_trait]
 impl<'r> FromRequest<'r> for Ratelimiter {
     type Error = Error;
- 
+
     async fn from_request(request: &'r rocket::Request<'_>) -> Outcome<Self, Self::Error> {
         let res = request.local_cache_async(async {
             if let Some(route) = request.route() {
@@ -125,7 +125,6 @@ impl<'r> FromRequest<'r> for Ratelimiter {
                     let state = request.guard::<&rocket::State<RatelimitState>>().await.unwrap().inner();
                     let arc = Arc::clone(&state.0);
                     let mut mutex = arc.lock().unwrap();
-                    println!("{}", route_name);
                     let mapping = mutex.get_mut(route_name.as_ref()).unwrap();
 
                     // create a unique key tied to the user id and route they use
@@ -149,16 +148,16 @@ impl<'r> FromRequest<'r> for Ratelimiter {
                         })
                     }
                 } else {
-                    todo!()
+                    unreachable!()
                 }
             } else {
-                todo!()
+                unreachable!()
             }
         }).await;
 
         match res {
-            Ok(rl) => Outcome::Success((*rl).clone()),
-            Err(e) => Outcome::Failure((Status::TooManyRequests, (*e).clone()))
+            Ok(rl) => Outcome::Success(*rl),
+            Err(e) => Outcome::Failure((Status::TooManyRequests, e.clone()))
         }
     }
 }
