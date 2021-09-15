@@ -40,7 +40,7 @@ pub async fn req(user: User, target: Ref) -> Result<Value> {
                 id,
                 active: false,
                 recipients: vec![user.id, target.id],
-                last_message: None,
+                last_message_id: None,
             }
         };
 

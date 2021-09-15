@@ -1,5 +1,6 @@
 use crate::database::*;
 use crate::util::result::{Error, Result};
+use crate::util::variables::MAX_SERVER_COUNT;
 
 use rocket::serde::json::Value;
 
@@ -7,6 +8,12 @@ use rocket::serde::json::Value;
 pub async fn req(user: User, target: Ref) -> Result<Value> {
     if user.bot.is_some() {
         return Err(Error::IsBot)
+    }
+
+    if !User::can_acquire_server(&user.id).await? {
+        Err(Error::TooManyServers {
+            max: *MAX_SERVER_COUNT,
+        })?
     }
     
     let target = target.fetch_invite().await?;
