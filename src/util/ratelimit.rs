@@ -1,6 +1,6 @@
 use rocket::{async_trait, http::Status, request::{Outcome, FromRequest}, response};
 use std::{collections::{HashMap, hash_map::DefaultHasher}, time};
-use rauth::auth::Session;
+use rauth::entities::Session;
 use crate::util::result::Error;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
