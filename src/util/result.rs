@@ -43,6 +43,9 @@ pub enum Error {
     UnknownServer,
     InvalidRole,
     Banned,
+    TooManyServers{
+        max: usize,
+    },
 
     // ? Bot related errors.
     ReachedMaximumBots,
@@ -114,6 +117,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::UnknownServer => Status::NotFound,
             Error::InvalidRole => Status::NotFound,
             Error::Banned => Status::Forbidden,
+            Error::TooManyServers { .. } => Status::Forbidden,
 
             Error::ReachedMaximumBots => Status::BadRequest,
             Error::IsBot => Status::BadRequest,

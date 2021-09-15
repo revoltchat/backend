@@ -30,7 +30,8 @@ pub struct Data {
 }
 
 lazy_static! {
-    static ref RE_ULID: Regex = Regex::new(r"<@([0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26})>").unwrap();
+    // ignoring I L O and U is intentional
+    static ref RE_ULID: Regex = Regex::new(r"<@([0-9A-HJKMNP-TV-Z]{26})>").unwrap();
 }
 
 #[post("/<target>/messages", data = "<message>")]
@@ -80,9 +81,10 @@ pub async fn message_send(_r: Ratelimiter, user: User, target: Ref, message: Jso
     let id = Ulid::new().to_string();
 
     let mut mentions = HashSet::new();
-    if let Some(captures) = RE_ULID.captures_iter(&message.content).next() {
-        // ! FIXME: in the future, verify in group so we can send out push
-        mentions.insert(captures[1].to_string());
+    for capture in RE_ULID.captures_iter(&message.content) {
+        if let Some(mention) =  capture.get(1) {
+            mentions.insert(mention.as_str().to_string());
+        }
     }
 
     let mut replies = HashSet::new();

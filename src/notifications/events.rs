@@ -1,6 +1,5 @@
 use hive_pubsub::PubSub;
 use mongodb::bson::doc;
-use rauth::auth::Session;
 use rocket::serde::json::Value;
 use serde::{Deserialize, Serialize};
 
@@ -19,24 +18,24 @@ pub enum WebSocketError {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct BotAuth {
-    pub token: String
+pub struct Auth {
+    pub token: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(untagged)]
-pub enum AuthType {
-    User(Session),
-    Bot(BotAuth)
+pub enum Ping {
+    Binary(Vec<u8>),
+    Number(usize)
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum ServerboundNotification {
-    Authenticate(AuthType),
+    Authenticate(Auth),
     BeginTyping { channel: String },
     EndTyping { channel: String },
-    Ping { data: Vec<u8> }
+    Ping { data: Ping, responded: Option<()> },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -50,7 +49,7 @@ pub enum RemoveUserField {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum RemoveChannelField {
     Icon,
-    Description
+    Description,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -85,8 +84,9 @@ pub enum ClientboundNotification {
         users: Vec<User>,
         servers: Vec<Server>,
         channels: Vec<Channel>,
-        members: Vec<Member>
+        members: Vec<Member>,
     },
+    Pong { data: Ping },
 
     Message(Message),
     MessageUpdate {
@@ -159,11 +159,11 @@ pub enum ClientboundNotification {
         role_id: String,
         data: Value,
         #[serde(skip_serializing_if = "Option::is_none")]
-        clear: Option<RemoveRoleField>
+        clear: Option<RemoveRoleField>,
     },
     ServerRoleDelete {
         id: String,
-        role_id: String
+        role_id: String,
     },
 
     UserUpdate {
@@ -222,8 +222,7 @@ pub async fn prehandle_hook(notification: &ClientboundNotification) -> Result<()
                         subscribe_if_exists(recipient.clone(), channel_id.to_string()).ok();
                     }
                 }
-                Channel::TextChannel { server, .. }
-                | Channel::VoiceChannel { server, .. } => {
+                Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => {
                     // ! FIXME: write a better algorithm?
                     let members = Server::fetch_member_ids(server).await?;
                     for member in members {

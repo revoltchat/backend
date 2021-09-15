@@ -6,6 +6,10 @@ use mongodb::bson::doc;
 
 #[delete("/<target>")]
 pub async fn delete_bot(user: User, target: Ref) -> Result<EmptyResponse> {
+    if user.bot.is_some() {
+        return Err(Error::IsBot)
+    }
+    
     let bot = target.fetch_bot().await?;
     if bot.owner != user.id {
         return Err(Error::MissingPermission);

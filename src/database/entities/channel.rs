@@ -14,14 +14,6 @@ use rocket::serde::json::Value;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct LastMessage {
-    #[serde(rename = "_id")]
-    id: String,
-    author: String,
-    short: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "channel_type")]
 pub enum Channel {
     SavedMessages {
@@ -36,7 +28,7 @@ pub enum Channel {
         active: bool,
         recipients: Vec<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
-        last_message: Option<LastMessage>,
+        last_message_id: Option<String>,
     },
     Group {
         #[serde(rename = "_id")]
@@ -53,7 +45,7 @@ pub enum Channel {
         #[serde(skip_serializing_if = "Option::is_none")]
         icon: Option<File>,
         #[serde(skip_serializing_if = "Option::is_none")]
-        last_message: Option<LastMessage>,
+        last_message_id: Option<String>,
 
         #[serde(skip_serializing_if = "Option::is_none")]
         permissions: Option<i32>,
@@ -75,7 +67,7 @@ pub enum Channel {
         #[serde(skip_serializing_if = "Option::is_none")]
         icon: Option<File>,
         #[serde(skip_serializing_if = "Option::is_none")]
-        last_message: Option<String>,
+        last_message_id: Option<String>,
 
         #[serde(skip_serializing_if = "Option::is_none")]
         default_permissions: Option<i32>,

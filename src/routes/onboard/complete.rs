@@ -2,7 +2,7 @@ use crate::database::*;
 use crate::util::result::{Error, Result, EmptyResponse};
 
 use mongodb::bson::doc;
-use rauth::auth::Session;
+use rauth::entities::Session;
 use regex::Regex;
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
