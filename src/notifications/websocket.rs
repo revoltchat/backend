@@ -358,7 +358,7 @@ pub fn publish(ids: Vec<String>, notification: ClientboundNotification) {
         }
     }
 
-    let json_msg = Message::Text(serde_json::to_string(&notification.clone()).unwrap());
+    let json_msg = Message::Text(serde_json::to_string(&notification).unwrap());
     let msgpack_msg = Message::Binary(rmp_serde::to_vec_named(&notification).unwrap());
 
     let connections = CONNECTIONS.lock().unwrap();
