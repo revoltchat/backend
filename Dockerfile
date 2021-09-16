@@ -7,16 +7,16 @@ RUN apk add --no-cache musl-dev openssl openssl-dev && USER=root cargo new --bin
 WORKDIR /home/rust/src/revolt
 COPY Cargo.toml Cargo.lock ./
 COPY src/bin/dummy.rs ./src/bin/dummy.rs
-RUN cargo build --release --bin dummy
+RUN apt-get update && apt-get install -y libssl-dev pkg-config && cargo build --release --bin dummy
 
 COPY assets/templates ./assets/templates
 COPY src ./src
-RUN cargo build --release
+RUN cargo install --locked --path .
 
 # Bundle Stage
-FROM alpine:latest
-RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
-COPY --from=builder /home/rust/src/revolt/target/x86_64-unknown-linux-musl/release/revolt ./
+FROM debian:buster-slim
+RUN apt-get update && apt-get install -y ca-certificates
+COPY --from=builder /usr/local/cargo/bin/revolt ./
 COPY assets ./assets
 EXPOSE 8000
 EXPOSE 9000

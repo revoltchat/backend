@@ -1,7 +1,8 @@
-pub use rocket::response::Redirect;
 pub use rocket::http::Status;
+pub use rocket::response::Redirect;
 use rocket::{Build, Rocket};
 
+mod bots;
 mod channels;
 mod invites;
 mod onboard;
@@ -10,7 +11,6 @@ mod root;
 mod servers;
 mod sync;
 mod users;
-mod bots;
 
 pub fn mount(rocket: Rocket<Build>) -> Rocket<Build> {
     rocket

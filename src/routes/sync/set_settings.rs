@@ -1,6 +1,6 @@
 use crate::database::*;
 use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result, EmptyResponse};
+use crate::util::result::{EmptyResponse, Error, Result};
 
 use chrono::prelude::*;
 use mongodb::bson::{doc, to_bson};
@@ -20,7 +20,7 @@ pub struct Options {
 #[post("/settings/set?<options..>", data = "<data>")]
 pub async fn req(user: User, data: Json<Data>, options: Options) -> Result<EmptyResponse> {
     if user.bot.is_some() {
-        return Err(Error::IsBot)
+        return Err(Error::IsBot);
     }
 
     let data = data.into_inner();

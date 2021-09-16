@@ -73,39 +73,6 @@ pub async fn create_database() {
 
     db.run_command(
         doc! {
-            "createIndexes": "accounts",
-            "indexes": [
-                {
-                    "key": {
-                        "email": 1
-                    },
-                    "name": "email",
-                    "unique": true,
-                    "collation": {
-                        "locale": "en",
-                        "strength": 2
-                    }
-                },
-                {
-                    "key": {
-                        "email_normalised": 1
-                    },
-                    "name": "email_normalised",
-                    "unique": true,
-                    "collation": {
-                        "locale": "en",
-                        "strength": 2
-                    }
-                }
-            ]
-        },
-        None,
-    )
-    .await
-    .expect("Failed to create account index.");
-
-    db.run_command(
-        doc! {
             "createIndexes": "users",
             "indexes": [
                 {

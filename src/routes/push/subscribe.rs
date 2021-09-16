@@ -1,37 +1,19 @@
 use crate::database::*;
 use crate::util::result::{EmptyResponse, Error, Result};
 
-use mongodb::bson::{doc, to_document};
-use rauth::auth::Session;
+use mongodb::bson::doc;
+use rauth::entities::{Model, Session, WebPushSubscription};
 use rocket::serde::json::Json;
-use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize)]
-pub struct Subscription {
-    endpoint: String,
-    p256dh: String,
-    auth: String,
-}
 
 #[post("/subscribe", data = "<data>")]
-pub async fn req(session: Session, data: Json<Subscription>) -> Result<EmptyResponse> {
-    let data = data.into_inner();
-    get_collection("accounts")
-        .update_one(
-            doc! {
-                "_id": session.user_id,
-                "sessions.id": session.id.unwrap()
-            },
-            doc! {
-                "$set": {
-                    "sessions.$.subscription": to_document(&data)
-                        .map_err(|_| Error::DatabaseError { operation: "to_document", with: "subscription" })?
-                }
-            },
-            None,
-        )
+pub async fn req(mut session: Session, data: Json<WebPushSubscription>) -> Result<EmptyResponse> {
+    session.subscription = Some(data.into_inner());
+    session
+        .save(&get_db(), None)
         .await
-        .map_err(|_| Error::DatabaseError { operation: "update_one", with: "account" })?;
-
-    Ok(EmptyResponse {})
+        .map(|_| EmptyResponse)
+        .map_err(|_| Error::DatabaseError {
+            operation: "save",
+            with: "session",
+        })
 }
