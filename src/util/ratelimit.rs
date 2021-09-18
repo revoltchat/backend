@@ -1,7 +1,6 @@
 use rocket::{async_trait, http::Status, request::{Outcome, FromRequest}, response};
 use std::{collections::{HashMap, hash_map::DefaultHasher}, time};
-use rauth::entities::Session;
-use crate::util::result::Error;
+use crate::{database::User, util::result::Error};
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 
@@ -121,14 +120,15 @@ impl<'r> FromRequest<'r> for Ratelimiter {
         let res = request.local_cache_async(async {
             if let Some(route) = request.route() {
                 if let Some(route_name) = &route.name {
-                    let session = request.guard::<Session>().await.unwrap();
+                    let user = request.guard::<User>().await.unwrap();
+
                     let state = request.guard::<&rocket::State<RatelimitState>>().await.unwrap().inner();
                     let arc = Arc::clone(&state.0);
                     let mut mutex = arc.lock().unwrap();
                     let mapping = mutex.get_mut(route_name.as_ref()).unwrap();
 
                     // create a unique key tied to the user id and route they use
-                    let key = format!("{}:{}:{}", session.user_id, route.method.as_str(), route.uri.as_str());
+                    let key = format!("{}:{}:{}", user.id, route.method.as_str(), route.uri.as_str());
                     let mut hasher = DefaultHasher::new();
 
                     key.hash(&mut hasher);
