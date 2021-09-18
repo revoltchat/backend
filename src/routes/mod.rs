@@ -3,12 +3,12 @@ pub use rocket::response::Redirect;
 use rocket::{Build, Rocket};
 
 mod bots;
-mod channels;
+pub mod channels;
 mod invites;
 mod onboard;
 mod push;
 mod root;
-mod servers;
+pub mod servers;
 mod sync;
 mod users;
 

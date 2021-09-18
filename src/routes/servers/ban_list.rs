@@ -8,7 +8,7 @@ use rocket::serde::json::Value;
 use mongodb::bson::{doc, from_document};
 
 #[derive(Serialize, Deserialize)]
-struct BannedUser {
+pub struct BannedUser {
     _id: String,
     username: String,
     avatar: Option<File>

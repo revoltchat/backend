@@ -25,6 +25,8 @@ mod roles_delete;
 mod permissions_set;
 mod permissions_set_default;
 
+pub use ban_list::BannedUser;
+
 pub fn routes() -> Vec<Route> {
     routes![
         server_create::req,

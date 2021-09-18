@@ -20,6 +20,8 @@ mod message_send;
 mod permissions_set;
 mod permissions_set_default;
 
+pub use message_search::Sort as MsgSearchSort;
+
 pub fn routes() -> Vec<Route> {
     routes![
         channel_ack::req,

@@ -2,7 +2,8 @@ use crate::database::{permissions, get_collection, get_db, PermissionTuple};
 
 use futures::StreamExt;
 use log::info;
-use mongodb::{bson::{Document, doc, from_bson, from_document, to_document}, options::FindOptions};
+use mongodb::{bson::{Document, doc, from_bson, from_document, to_document},
+              options::FindOptions, Database};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -13,8 +14,8 @@ struct MigrationInfo {
 
 pub const LATEST_REVISION: i32 = 10;
 
-pub async fn migrate_database() {
-    let migrations = get_collection("migrations");
+pub async fn migrate_database(db: &Database) {
+    let migrations = db.collection("migrations");
     let data = migrations
         .find_one(None, None)
         .await

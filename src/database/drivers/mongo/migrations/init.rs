@@ -1,13 +1,13 @@
-use super::super::get_db;
+use crate::database::get_db;
 use super::scripts::LATEST_REVISION;
 
 use log::info;
 use mongodb::bson::doc;
 use mongodb::options::CreateCollectionOptions;
+use mongodb::Database;
 
-pub async fn create_database() {
+pub async fn create_database(db: &Database) {
     info!("Creating database.");
-    let db = get_db();
 
     db.create_collection("accounts", None)
         .await

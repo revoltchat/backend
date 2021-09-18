@@ -19,6 +19,7 @@ once_cell = "1.4.1"
 env_logger = "0.7.1"
 lazy_static = "1.4.0"
 ctrlc = { version = "3.0", features = ["termination"] }
+enum_dispatch = "0.3.7"
 
 # Lang. Utilities
 regex = "1"
