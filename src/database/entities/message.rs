@@ -181,13 +181,7 @@ impl Message {
     }
 
     pub async fn publish(self, channel: &Channel, process_embeds: bool) -> Result<()> {
-        get_collection("messages")
-            .insert_one(to_bson(&self).unwrap().as_document().unwrap().clone(), None)
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "insert_one",
-                with: "message",
-            })?;
+        db_conn().add_message(&self).await?;
 
         // ! FIXME: all this code is legitimately crap
         // ! rewrite when can be asked
@@ -195,19 +189,13 @@ impl Message {
         let ss = self.clone();
         let c_clone = channel.clone();
         async_std::task::spawn(async move {
-
-            let last_message_id = ss.id.clone();
-            let mut set = doc! { "last_message_id": last_message_id };
-
-            let channels = get_collection("channels");
             match &c_clone {
                 Channel::DirectMessage { id, .. } => {
                     // ! MARK AS ACTIVE
-                    set.insert("active", true);
-                    update_channels_last_message(&channels, id, &set).await;
+                    db_conn().update_channels_last_message(id, &ss.id, true).await;
                 },
                 Channel::Group { id, .. } | Channel::TextChannel { id, .. } => {
-                    update_channels_last_message(&channels, id, &set).await;
+                    db_conn().update_channels_last_message(id, &ss.id, false).await;
                 }
                 _ => {}
             }
@@ -216,31 +204,8 @@ impl Message {
         // ! FIXME: also temp code
         // ! THIS ADDS ANY MENTIONS
         if let Some(mentions) = &self.mentions {
-            let message = self.id.clone();
-            let channel = self.channel.clone();
-            let mentions = mentions.clone();
             async_std::task::spawn(async move {
-                get_collection("channel_unreads")
-                    .update_many(
-                        doc! {
-                            "_id.channel": channel,
-                            "_id.user": {
-                                "$in": mentions
-                            }
-                        },
-                        doc! {
-                            "$push": {
-                                "mentions": message
-                            }
-                        },
-                        UpdateOptions::builder().upsert(true).build(),
-                    )
-                    .await
-                    /*.map_err(|_| Error::DatabaseError {
-                        operation: "update_many",
-                        with: "channel_unreads",
-                    })?;*/
-                    .unwrap();
+                db_conn().add_mentions_to_channel_unreads(&self.channel, mentions, &self.id).await.unwrap();
             });
         }
 

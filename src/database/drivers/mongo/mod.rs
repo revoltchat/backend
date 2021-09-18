@@ -950,7 +950,7 @@ impl Queries for MongoDB {
     async fn add_mentions_to_channel_unreads(
         &self,
         channel_id: &str,
-        mentions: Vec<&str>,
+        mentions: &Vec<String>,
         message: &str,
     ) -> Result<()> {
         self.revolt
@@ -1512,6 +1512,22 @@ impl Queries for MongoDB {
                 with: "channel",
             })?;
         Ok(())
+    }
+
+    async fn update_channels_last_message(&self, channel_id: &str, last_message_id: &str, mark_active: bool) {
+        let mut set = doc! { "last_message_id": last_message_id };
+        if mark_active {
+            set.insert("active", true);
+        }
+        self.revolt
+            .collection("channels")
+            .update_one(
+                doc! { "_id": channel_id },
+                doc! { "$set": set },
+                None,
+            )
+            .await
+            .expect("Server should not run with no, or a corrupted db");
     }
 
     async fn set_message_updates(&self, message_id: &str, set_doc: Document) -> Result<()> {

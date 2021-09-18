@@ -119,7 +119,7 @@ pub trait Queries {
     async fn add_mentions_to_channel_unreads(
         &self,
         channel_id: &str,
-        mentions: Vec<&str>,
+        mentions: &Vec<String>,
         message: &str,
     ) -> Result<()>;
     async fn add_channels_to_unreads_for_user(
@@ -185,6 +185,7 @@ pub trait Queries {
         old_owner: &str,
     ) -> Result<()>;
     async fn apply_channel_changes(&self, channel_id: &str, change_doc: Document) -> Result<()>;
+    async fn update_channels_last_message(&self, channel_id: &str, last_message_id: &str, mark_active: bool);
 
     // messages
     async fn set_message_updates(&self, message_id: &str, set_doc: Document) -> Result<()>;
@@ -286,6 +287,7 @@ pub trait Queries {
 }
 
 #[enum_dispatch(Queries)]
+#[derive(Debug, Clone)]
 pub enum Driver {
     Mongo(MongoDB),
     // Mockup(Mockup),
@@ -524,7 +526,7 @@ impl Queries for Database {
     async fn add_mentions_to_channel_unreads(
         &self,
         channel_id: &str,
-        mentions: Vec<&str>,
+        mentions: &Vec<String>,
         message: &str,
     ) -> Result<()> {
         self.driver
@@ -685,6 +687,10 @@ impl Queries for Database {
             .await
     }
 
+    async fn update_channels_last_message(&self, channel_id: &str, last_message_id: &str, mark_active: bool) {
+        self.driver.update_channels_last_message(channel_id, last_message_id, mark_active).await;
+    }
+
     async fn set_message_updates(&self, message_id: &str, set_doc: Document) -> Result<()> {
         self.driver.set_message_updates(message_id, set_doc).await
     }
@@ -699,7 +705,7 @@ impl Queries for Database {
     }
 
     async fn delete_messages_from_channels(&self, channel_ids: &Vec<String>) -> Result<()> {
-        self.driver.delete_messages_from_channel(channel_ids).await
+        self.driver.delete_messages_from_channels(channel_ids).await
     }
 
     async fn add_message(&self, message: &Message) -> Result<()> {
