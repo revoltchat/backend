@@ -1,10 +1,6 @@
-use mongodb::bson::doc;
-use mongodb::bson::from_document;
-use mongodb::bson::to_document;
 use serde::{Deserialize, Serialize};
 
-use crate::database::db_conn;
-use crate::util::result::Error;
+use crate::database::{db_conn, Queries};
 use crate::util::result::Result;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -44,53 +40,14 @@ impl Invite {
     }
 
     pub async fn get(code: &str) -> Result<Invite> {
-        let doc = get_collection("channel_invites")
-            .find_one(doc! { "_id": code }, None)
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "find_one",
-                with: "invite",
-            })?
-            .ok_or_else(|| Error::UnknownServer)?;
-
-        from_document::<Invite>(doc).map_err(|_| Error::DatabaseError {
-            operation: "from_document",
-            with: "invite",
-        })
+        db_conn().get_invite_by_id(&code).await
     }
 
     pub async fn save(self) -> Result<()> {
-        get_collection("channel_invites")
-            .insert_one(
-                to_document(&self).map_err(|_| Error::DatabaseError {
-                    operation: "to_bson",
-                    with: "invite",
-                })?,
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "insert_one",
-                with: "invite",
-            })?;
-
-        Ok(())
+        db_conn().add_invite(&self).await
     }
 
     pub async fn delete(&self) -> Result<()> {
-        get_collection("channel_invites")
-            .delete_one(
-                doc! {
-                    "_id": self.code()
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "delete_one",
-                with: "invite",
-            })?;
-
-        Ok(())
+        db_conn().delete_invite(self.code()).await
     }
 }
