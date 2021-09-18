@@ -3,7 +3,7 @@ use mongodb::{bson::Document, Client, Collection, Database as MoDatabase};
 use once_cell::sync::OnceCell;
 use web_push::SubscriptionInfo;
 
-use drivers::{mockup::Mockup, mongo::MongoDB};
+use drivers::{/*mockup::Mockup,*/mongo::MongoDB};
 pub use entities::*;
 pub use guards::*;
 pub use permissions::*;
@@ -12,27 +12,15 @@ use crate::routes::channels::MsgSearchSort;
 use crate::routes::servers::BannedUser;
 use crate::util::{result::Result, variables::MONGO_URI};
 
-static DBCONN: OnceCell<Client> = OnceCell::new();
+static DBCONN: OnceCell<Database> = OnceCell::new();
 
 pub async fn connect() {
-    let client = Client::with_uri_str(&MONGO_URI)
-        .await
-        .expect("Failed to init db connection.");
-
-    DBCONN.set(client).unwrap();
-    // migrations::run_migrations().await;
+    let dbconn = Database::new_from_mongo(&MONGO_URI).await;
+    DBCONN.set(dbconn).unwrap();
 }
 
-pub fn get_connection() -> &'static Client {
+pub fn db_conn() -> &'static Database {
     DBCONN.get().unwrap()
-}
-
-pub fn get_db() -> MoDatabase {
-    get_connection().database("revolt")
-}
-
-pub fn get_collection(collection: &str) -> Collection {
-    get_db().collection(collection)
 }
 
 mod drivers;
@@ -104,7 +92,7 @@ pub trait Queries {
     ) -> Result<()>;
     async fn delete_attachment(&self, id: &str) -> Result<()>;
     async fn delete_attachments(&self, ids: Vec<&str>) -> Result<()>;
-    async fn delete_attachments_of_messages(&self, message_ids: Vec<&str>) -> Result<()>;
+    async fn delete_attachments_of_messages(&self, message_ids: &Vec<String>) -> Result<()>;
 
     // bots
     async fn get_bot_count_owned_by_user(&self, user_id: &str) -> Result<u64>;
@@ -115,13 +103,14 @@ pub trait Queries {
 
     // channel_invites
     async fn delete_invites_associated_to_channel(&self, id: &str) -> Result<()>;
+    async fn delete_invites_associated_to_channels(&self, ids: &Vec<String>) -> Result<()>;
     async fn get_invite_by_id(&self, id: &str) -> Result<Invite>;
     async fn add_invite(&self, invite: &Invite) -> Result<()>;
     async fn delete_invite(&self, id: &str) -> Result<()>;
     async fn get_invites_of_server(&self, server_id: &str) -> Result<Vec<Invite>>;
 
     // channel_unreads
-    async fn delete_channel_unreads(&self, channel_id: &str) -> Result<()>;
+    async fn delete_channel_unreads(&self, channel_ids: &Vec<String>) -> Result<()>;
     async fn delete_multi_channel_unreads_for_user(
         &self,
         channel_ids: Vec<&str>,
@@ -199,9 +188,9 @@ pub trait Queries {
 
     // messages
     async fn set_message_updates(&self, message_id: &str, set_doc: Document) -> Result<()>;
-    async fn get_ids_from_messages_with_attachments(&self, channel_id: &str)
+    async fn get_ids_from_messages_with_attachments(&self, channel_ids: &Vec<String>)
                                                     -> Result<Vec<String>>;
-    async fn delete_messages_from_channel(&self, channel_id: &str) -> Result<()>;
+    async fn delete_messages_from_channels(&self, channel_ids: &Vec<String>) -> Result<()>;
     async fn add_message(&self, message: &Message) -> Result<()>;
     async fn add_embeds_to_message(&self, message_id: &str, embeds: &Vec<Embed>) -> Result<()>;
     async fn delete_message(&self, message_id: &str) -> Result<()>;
@@ -299,9 +288,10 @@ pub trait Queries {
 #[enum_dispatch(Queries)]
 pub enum Driver {
     Mongo(MongoDB),
-    Mockup(Mockup),
+    // Mockup(Mockup),
 }
 
+#[derive(Debug, Clone)]
 pub struct Database {
     driver: Driver,
 }
@@ -313,12 +303,13 @@ impl Database {
         }
     }
 
+    /*
     pub fn new_from_mockup() -> Self {
         let mockup = Mockup {};
         Self {
             driver: Driver::from(mockup),
         }
-    }
+    }*/
 }
 
 #[async_trait]
@@ -466,7 +457,7 @@ impl Queries for Database {
         self.driver.delete_attachments(ids).await
     }
 
-    async fn delete_attachments_of_messages(&self, message_ids: Vec<&str>) -> Result<()> {
+    async fn delete_attachments_of_messages(&self, message_ids: &Vec<String>) -> Result<()> {
         self.driver
             .delete_attachments_of_messages(message_ids)
             .await
@@ -496,6 +487,10 @@ impl Queries for Database {
         self.driver.delete_invites_associated_to_channel(id).await
     }
 
+    async fn delete_invites_associated_to_channels(&self, ids: &Vec<String>) -> Result<()> {
+        self.driver.delete_invites_associated_to_channels(ids).await
+    }
+
     async fn get_invite_by_id(&self, id: &str) -> Result<Invite> {
         self.driver.get_invite_by_id(id).await
     }
@@ -512,8 +507,8 @@ impl Queries for Database {
         self.driver.get_invites_of_server(server_id).await
     }
 
-    async fn delete_channel_unreads(&self, channel_id: &str) -> Result<()> {
-        self.driver.delete_channel_unreads(channel_id).await
+    async fn delete_channel_unreads(&self, channel_ids: &Vec<String>) -> Result<()> {
+        self.driver.delete_channel_unreads(channel_ids).await
     }
 
     async fn delete_multi_channel_unreads_for_user(
@@ -696,15 +691,15 @@ impl Queries for Database {
 
     async fn get_ids_from_messages_with_attachments(
         &self,
-        channel_id: &str,
+        channel_ids: &Vec<String>,
     ) -> Result<Vec<String>> {
         self.driver
-            .get_ids_from_messages_with_attachments(channel_id)
+            .get_ids_from_messages_with_attachments(channel_ids)
             .await
     }
 
-    async fn delete_messages_from_channel(&self, channel_id: &str) -> Result<()> {
-        self.driver.delete_messages_from_channel(channel_id).await
+    async fn delete_messages_from_channels(&self, channel_ids: &Vec<String>) -> Result<()> {
+        self.driver.delete_messages_from_channel(channel_ids).await
     }
 
     async fn add_message(&self, message: &Message) -> Result<()> {

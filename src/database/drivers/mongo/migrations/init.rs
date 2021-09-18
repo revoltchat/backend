@@ -1,4 +1,3 @@
-use crate::database::get_db;
 use super::scripts::LATEST_REVISION;
 
 use log::info;

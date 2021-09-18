@@ -1,12 +1,11 @@
-use futures::{StreamExt, TryStreamExt};
+use futures::StreamExt;
 use mongodb::{
     bson::{doc, Document, from_document, to_bson, to_document},
     Client,
-    Collection,
-    Database, error::Result as MongoResult, options::{Collation, FindOneOptions, FindOptions, UpdateOptions},
+    Database,
+    options::{Collation, FindOneOptions, FindOptions, UpdateOptions},
 };
 use rocket::async_trait;
-use rocket::http::ext::IntoCollection;
 use web_push::SubscriptionInfo;
 
 use migrations::{init, scripts};
@@ -680,7 +679,7 @@ impl Queries for MongoDB {
         Ok(())
     }
 
-    async fn delete_attachments_of_messages(&self, message_ids: Vec<&str>) -> Result<()> {
+    async fn delete_attachments_of_messages(&self, message_ids: &Vec<String>) -> Result<()> {
         self.revolt
             .collection("attachments")
             .update_many(
@@ -808,6 +807,25 @@ impl Queries for MongoDB {
             })
     }
 
+    async fn delete_invites_associated_to_channels(&self, ids: &Vec<String>) -> Result<()> {
+        self.revolt
+            .collection("channel_invites")
+            .delete_many(
+                doc! {
+                    "channel": {
+                        "$in": ids
+                    }
+                },
+                None,
+            )
+            .await
+            .map(|_| ())
+            .map_err(|_| Error::DatabaseError {
+                operation: "delete_many",
+                with: "channel_invites",
+            })
+    }
+
     async fn get_invite_by_id(&self, id: &str) -> Result<Invite> {
         let doc = self
             .revolt
@@ -888,12 +906,12 @@ impl Queries for MongoDB {
         Ok(invites)
     }
 
-    async fn delete_channel_unreads(&self, channel_id: &str) -> Result<()> {
+    async fn delete_channel_unreads(&self, channel_ids: &Vec<String>) -> Result<()> {
         self.revolt
             .collection("channel_unreads")
             .delete_many(
                 doc! {
-                    "_id.channel": channel_id
+                    "_id.channel": { "$in": channel_ids }
                 },
                 None,
             )
@@ -1518,14 +1536,14 @@ impl Queries for MongoDB {
 
     async fn get_ids_from_messages_with_attachments(
         &self,
-        channel_id: &str,
+        channel_ids: &Vec<String>,
     ) -> Result<Vec<String>> {
         Ok(self
             .revolt
             .collection("messages")
             .find(
                 doc! {
-                    "channel": channel_id,
+                    "channel": { "$in": channel_ids },
                     "attachment": {
                         "$exists": 1
                     }
@@ -1545,12 +1563,12 @@ impl Queries for MongoDB {
             .collect())
     }
 
-    async fn delete_messages_from_channel(&self, channel_id: &str) -> Result<()> {
+    async fn delete_messages_from_channels(&self, channel_ids: &Vec<String>) -> Result<()> {
         self.revolt
             .collection("messages")
             .delete_many(
                 doc! {
-                    "channel": channel_id
+                    "channel": { "$in": channel_ids }
                 },
                 None,
             )

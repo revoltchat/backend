@@ -3,7 +3,7 @@ use mongodb::bson::from_document;
 use mongodb::bson::to_document;
 use serde::{Deserialize, Serialize};
 
-use crate::database::get_collection;
+use crate::database::db_conn;
 use crate::util::result::Error;
 use crate::util::result::Result;
 

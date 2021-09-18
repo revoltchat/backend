@@ -121,20 +121,7 @@ impl Channel {
     }
 
     pub async fn publish(self) -> Result<()> {
-        get_collection("channels")
-            .insert_one(
-                to_document(&self).map_err(|_| Error::DatabaseError {
-                    operation: "to_bson",
-                    with: "channel",
-                })?,
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "insert_one",
-                with: "channel",
-            })?;
-
+        db_conn().add_channel(&self).await?;
         let channel_id = self.id().to_string();
         ClientboundNotification::ChannelCreate(self).publish(channel_id);
 
@@ -153,112 +140,34 @@ impl Channel {
         Ok(())
     }
 
-    pub async fn delete_associated_objects(id: Bson) -> Result<()> {
-        get_collection("channel_invites")
-            .delete_many(
-                doc! {
-                    "channel": id
-                },
-                None,
-            )
-            .await
-            .map(|_| ())
-            .map_err(|_| Error::DatabaseError {
-                operation: "delete_many",
-                with: "channel_invites",
-            })
-    }
-
-    pub async fn delete_messages(id: Bson) -> Result<()> {
-        let messages = get_collection("messages");
+    pub async fn delete_messages(channel_ids: &Vec<String>) -> Result<()> {
 
         // Delete any unreads.
-        get_collection("channel_unreads")
-            .delete_many(
-                doc! {
-                    "_id.channel": &id
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "delete_many",
-                with: "channel_unreads",
-            })?;
+        db_conn().delete_channel_unreads(channel_ids).await?;
 
         // Check if there are any attachments we need to delete.
-        let message_ids = messages
-            .find(
-                doc! {
-                    "channel": &id,
-                    "attachment": {
-                        "$exists": 1
-                    }
-                },
-                FindOptions::builder().projection(doc! { "_id": 1 }).build(),
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "fetch_many",
-                with: "messages",
-            })?
-            .filter_map(async move |s| s.ok())
-            .collect::<Vec<Document>>()
-            .await
-            .into_iter()
-            .filter_map(|x| x.get_str("_id").ok().map(|x| x.to_string()))
-            .collect::<Vec<String>>();
+        let message_ids = db_conn().get_ids_from_messages_with_attachments(channel_ids).await?;
 
         // If we found any, mark them as deleted.
         if message_ids.len() > 0 {
-            get_collection("attachments")
-                .update_many(
-                    doc! {
-                        "message_id": {
-                            "$in": message_ids
-                        }
-                    },
-                    doc! {
-                        "$set": {
-                            "deleted": true
-                        }
-                    },
-                    None,
-                )
-                .await
-                .map_err(|_| Error::DatabaseError {
-                    operation: "update_many",
-                    with: "attachments",
-                })?;
+            db_conn().delete_attachments_of_messages(&message_ids).await?;
         }
 
         // And then delete said messages.
-        messages
-            .delete_many(
-                doc! {
-                    "channel": id
-                },
-                None,
-            )
-            .await
-            .map(|_| ())
-            .map_err(|_| Error::DatabaseError {
-                operation: "delete_many",
-                with: "messages",
-            })
+        db_conn().delete_messages_from_channels(channel_ids).await
     }
 
     pub async fn delete(&self) -> Result<()> {
         let id = self.id();
 
         // Delete any invites.
-        Channel::delete_associated_objects(Bson::String(id.to_string())).await?;
+        db_conn().delete_invites_associated_to_channel(id).await?;
 
         // Delete messages.
         match &self {
             Channel::VoiceChannel { .. } => {},
             _ => {
-                Channel::delete_messages(Bson::String(id.to_string())).await?;
+                Channel::delete_messages(&vec![id.to_string()]).await?;
             }
         }
 
@@ -304,37 +213,13 @@ impl Channel {
                         update.insert("$unset", unset);
                     }
                 }
-
-                get_collection("servers")
-                    .update_one(
-                        doc! {
-                            "_id": server.id
-                        },
-                        update,
-                        None,
-                    )
-                    .await
-                    .map_err(|_| Error::DatabaseError {
-                        operation: "update_one",
-                        with: "servers",
-                    })?;
+                db_conn().apply_server_changes(&server.id, update).await?;
             },
             _ => {}
         }
 
         // Finally, delete the channel object.
-        get_collection("channels")
-            .delete_one(
-                doc! {
-                    "_id": id
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "delete_one",
-                with: "channel",
-            })?;
+        db_conn().delete_channel(id).await?;
 
         ClientboundNotification::ChannelDelete { id: id.to_string() }.publish(id.to_string());
 
@@ -358,24 +243,7 @@ impl Channel {
             if recipients.iter().find(|x| *x == &member).is_some() {
                 Err(Error::AlreadyInGroup)?
             }
-
-            get_collection("channels")
-                .update_one(
-                    doc! {
-                        "_id": &id
-                    },
-                    doc! {
-                        "$push": {
-                            "recipients": &member
-                        }
-                    },
-                    None,
-                )
-                .await
-                .map_err(|_| Error::DatabaseError {
-                    operation: "update_one",
-                    with: "channel",
-                })?;
+            db_conn().add_recipient_to_channel(&id, &member).await?;
 
             ClientboundNotification::ChannelGroupJoin {
                 id: id.clone(),

@@ -1,4 +1,4 @@
-use crate::database::{permissions, get_collection, get_db, PermissionTuple};
+use crate::database::{permissions, PermissionTuple};
 
 use futures::StreamExt;
 use log::info;
@@ -25,7 +25,7 @@ pub async fn migrate_database(db: &Database) {
         let info: MigrationInfo =
             from_document(doc).expect("Failed to read migration information.");
 
-        let revision = run_migrations(info.revision).await;
+        let revision = run_migrations(info.revision, db).await;
 
         migrations
             .update_one(
@@ -48,7 +48,7 @@ pub async fn migrate_database(db: &Database) {
     }
 }
 
-pub async fn run_migrations(revision: i32) -> i32 {
+pub async fn run_migrations(revision: i32, db: &Database) -> i32 {
     info!("Starting database migration.");
 
     if revision <= 0 {
@@ -58,8 +58,8 @@ pub async fn run_migrations(revision: i32) -> i32 {
     if revision <= 1 {
         info!("Running migration [revision 1 / 2021-04-24]: Migrate to Autumn v1.0.0.");
 
-        let messages = get_collection("messages");
-        let attachments = get_collection("attachments");
+        let messages = db.collection("messages");
+        let attachments = db.collection("attachments");
 
         messages
             .update_many(
@@ -83,7 +83,7 @@ pub async fn run_migrations(revision: i32) -> i32 {
     if revision <= 2 {
         info!("Running migration [revision 2 / 2021-05-08]: Add servers collection.");
 
-        get_db()
+        db
             .create_collection("servers", None)
             .await
             .expect("Failed to create servers collection.");
@@ -92,7 +92,7 @@ pub async fn run_migrations(revision: i32) -> i32 {
     if revision <= 3 {
         info!("Running migration [revision 3 / 2021-05-25]: Support multiple file uploads, add channel_unreads and user_settings.");
 
-        let messages = get_collection("messages");
+        let messages = db.collection("messages");
         let mut cursor = messages
             .find(
                 doc! {
@@ -125,12 +125,12 @@ pub async fn run_migrations(revision: i32) -> i32 {
                 .unwrap();
         }
 
-        get_db()
+        db
             .create_collection("channel_unreads", None)
             .await
             .expect("Failed to create channel_unreads collection.");
 
-        get_db()
+        db
             .create_collection("user_settings", None)
             .await
             .expect("Failed to create user_settings collection.");
@@ -139,17 +139,17 @@ pub async fn run_migrations(revision: i32) -> i32 {
     if revision <= 4 {
         info!("Running migration [revision 4 / 2021-06-01]: Add more server collections.");
 
-        get_db()
+        db
             .create_collection("server_members", None)
             .await
             .expect("Failed to create server_members collection.");
 
-        get_db()
+        db
             .create_collection("server_bans", None)
             .await
             .expect("Failed to create server_bans collection.");
 
-        get_db()
+        db
             .create_collection("channel_invites", None)
             .await
             .expect("Failed to create channel_invites collection.");
@@ -170,7 +170,7 @@ pub async fn run_migrations(revision: i32) -> i32 {
             )
         };
 
-        get_collection("servers")
+        db.collection("servers")
             .update_many(
                 doc! { },
                 doc! {
@@ -185,29 +185,29 @@ pub async fn run_migrations(revision: i32) -> i32 {
     if revision <= 6 {
         info!("Running migration [revision 6 / 2021-07-09]: Add message text index.");
 
-        get_db()
-        .run_command(
-            doc! {
-                "createIndexes": "messages",
-                "indexes": [
-                    {
-                        "key": {
-                            "content": "text"
-                        },
-                        "name": "content"
-                    }
-                ]
-            },
-            None,
-        )
-        .await
-        .expect("Failed to create message index.");
+        db
+            .run_command(
+                doc! {
+                    "createIndexes": "messages",
+                    "indexes": [
+                        {
+                            "key": {
+                                "content": "text"
+                            },
+                            "name": "content"
+                        }
+                    ]
+                },
+                None,
+            )
+            .await
+            .expect("Failed to create message index.");
     }
 
     if revision <= 7 {
         info!("Running migration [revision 7 / 2021-08-11]: Add message text index.");
 
-        get_db()
+            db
             .create_collection("bots", None)
             .await
             .expect("Failed to create bots collection.");
@@ -216,19 +216,19 @@ pub async fn run_migrations(revision: i32) -> i32 {
     if revision <= 8 {
         info!("Running migration [revision 8 / 2021-09-10]: Update to rAuth version 1.");
 
-        get_db()
-            .run_command(
-                doc! {
-                    "dropIndexes": "accounts",
-                    "index": ["email", "email_normalised"]
-                },
-                None,
-            )
-            .await
-            .expect("Failed to delete legacy account indexes.");
+            db
+                .run_command(
+                    doc! {
+                        "dropIndexes": "accounts",
+                        "index": ["email", "email_normalised"]
+                    },
+                    None,
+                )
+                .await
+                .expect("Failed to delete legacy account indexes.");
 
-        let col = get_collection("sessions");
-        let mut cursor = get_collection("accounts")
+        let col = db.collection("sessions");
+        let mut cursor = db.collection("accounts")
             .find(doc! { }, None)
             .await
             .unwrap();
@@ -268,7 +268,7 @@ pub async fn run_migrations(revision: i32) -> i32 {
             }
         }
 
-        get_collection("accounts")
+        db.collection("accounts")
             .update_many(
                 doc! { },
                 doc! {
@@ -290,7 +290,7 @@ pub async fn run_migrations(revision: i32) -> i32 {
     if revision <= 9 {
         info!("Running migration [revision 9 / 2021-09-14]: Switch from last_message to last_message_id.");
 
-        let mut cursor = get_collection("channels")
+        let mut cursor = db.collection("channels")
             .find(doc! { }, None)
             .await
             .unwrap();
@@ -319,7 +319,7 @@ pub async fn run_migrations(revision: i32) -> i32 {
                     };
 
                     info!("Converting session {} to new format.", &channel_id);
-                    get_collection("channels")
+                    db.collection("channels")
                         .update_one(
                             doc! {
                                 "_id": channel_id

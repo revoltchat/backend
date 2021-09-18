@@ -147,7 +147,7 @@ impl Server {
 
     pub async fn delete(&self) -> Result<()> {
         // Check if there are any attachments we need to delete.
-        Channel::delete_messages(Bson::Document(doc! { "$in": &self.channels })).await?;
+        Channel::delete_messages(&self.channels).await?;
 
         // Delete all channels.
         get_collection("channels")
@@ -164,7 +164,7 @@ impl Server {
             })?;
 
         // Delete any associated objects, e.g. unreads and invites.
-        Channel::delete_associated_objects(Bson::Document(doc! { "$in": &self.channels })).await?;
+        db_conn().delete_invites_associated_to_channels(&self.channels).await?;
 
         // Delete members and bans.
         for with in &["server_members", "server_bans"] {

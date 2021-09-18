@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::{database::*, notifications::events::ClientboundNotification};
 use crate::{
-    database::{entities::User, get_collection},
+    database::{entities::User, db_conn},
     util::result::{Error, Result},
 };
 use futures::StreamExt;
