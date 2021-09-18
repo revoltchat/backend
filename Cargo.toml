@@ -48,7 +48,7 @@ async-std = { version = "1.8.0", features = ["tokio1", "tokio02", "attributes"] 
 web-push = "0.7.2"
 many-to-many = "0.1.2"
 lettre = "0.10.0-alpha.4"
-rauth = { git = "https://github.com/insertish/rauth", rev = "ad2f5ad1657f4b20c8e483cc1d6c513ff9b22ae1" }
+rauth = { git = "https://github.com/insertish/rauth", rev = "775a6f3ffb9ffc0e382af32fac2924e9a707e890" }
 hive_pubsub = { git = "https://gitlab.insrt.uk/insert/hive", rev = "a89826df2b30166220e68a6ed01a58b751456604", features = ["mongo"] }
 
 # web
