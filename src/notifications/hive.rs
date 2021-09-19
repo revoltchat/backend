@@ -1,18 +1,23 @@
+use std::sync::{Arc, Mutex};
+
 use super::{events::ClientboundNotification, websocket};
-use crate::database::*;
+use crate::redis::get_pool;
+use crate::util::variables::REDIS_URI;
 
 use futures::FutureExt;
-use hive_pubsub::backend::mongo::MongodbPubSub;
+use hive_pubsub::backend::redis::RedisPubSub;
 use hive_pubsub::PubSub;
 use log::{debug, error};
 use once_cell::sync::OnceCell;
 use serde_json::to_string;
 
-type Hive = MongodbPubSub<String, String, ClientboundNotification>;
-static HIVE: OnceCell<Hive> = OnceCell::new();
+type Hive<'a> = RedisPubSub<'a, String, String, ClientboundNotification>;
+static HIVE: OnceCell<Hive<'static>> = OnceCell::new();
 
 pub async fn init_hive() {
-    let hive = MongodbPubSub::new(
+    let pubsub_con = redis::Client::open(REDIS_URI.to_string()).unwrap().get_async_connection().await.unwrap().into_pubsub();
+
+    let hive = RedisPubSub::new(
         |ids, notification: ClientboundNotification| {
             let notif = notification.clone();
             async_std::task::spawn(async move {
@@ -26,7 +31,8 @@ pub async fn init_hive() {
                 error!("Failed to serialise notification.");
             }
         },
-        get_collection("pubsub"),
+        get_pool(),
+        Arc::new(Mutex::new(pubsub_con))
     );
 
     if HIVE.set(hive).is_err() {
@@ -37,6 +43,7 @@ pub async fn init_hive() {
 pub async fn listen() {
     HIVE.get()
         .unwrap()
+        .clone()
         .listen()
         .fuse()
         .await
@@ -61,6 +68,6 @@ pub fn subscribe_if_exists(user: String, topic: String) -> Result<(), String> {
     Ok(())
 }
 
-pub fn get_hive() -> &'static Hive {
+pub fn get_hive() -> &'static Hive<'static> {
     HIVE.get().unwrap()
 }

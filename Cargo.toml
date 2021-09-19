@@ -49,7 +49,12 @@ web-push = "0.7.2"
 many-to-many = "0.1.2"
 lettre = "0.10.0-alpha.4"
 rauth = { git = "https://github.com/insertish/rauth", rev = "775a6f3ffb9ffc0e382af32fac2924e9a707e890" }
-hive_pubsub = { git = "https://gitlab.insrt.uk/insert/hive", rev = "a89826df2b30166220e68a6ed01a58b751456604", features = ["mongo"] }
+hive_pubsub = { git = "https://gitlab.insrt.uk/insert/hive", rev = "b0f3db9d33990530d7640d4bbb309c8d9eb5c0cf", features = ["redis-backend"] }
+
+# redis
+redis = { version = "0.21.2", features = ["async-std-comp"] }
+mobc = { version = "0.7.3" }
+mobc-redis = { version = "0.7.0", default-features = false, features = ["async-std-comp"] }
 
 # web
 async-tungstenite = { version = "0.10.0", features = ["async-std-runtime"] }
