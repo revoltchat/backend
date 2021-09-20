@@ -47,48 +47,8 @@ impl File {
         parent_type: &str,
         parent_id: &str,
     ) -> Result<File> {
-        let attachments = get_collection("attachments");
-        let key = format!("{}_id", parent_type);
-        if let Some(doc) = attachments
-            .find_one(
-                doc! {
-                    "_id": attachment_id,
-                    "tag": &tag,
-                    key.clone(): {
-                        "$exists": false
-                    }
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "find_one",
-                with: "attachment",
-            })?
-        {
-            let attachment = from_document::<File>(doc).map_err(|_| Error::DatabaseError {
-                operation: "from_document",
-                with: "attachment",
-            })?;
-
-            attachments
-                .update_one(
-                    doc! {
-                        "_id": &attachment.id
-                    },
-                    doc! {
-                        "$set": {
-                            key: &parent_id
-                        }
-                    },
-                    None,
-                )
-                .await
-                .map_err(|_| Error::DatabaseError {
-                    operation: "update_one",
-                    with: "attachment",
-                })?;
-
+        if let Ok(attachment) = db_conn().get_attachment(attachment_id, tag, parent_type).await {
+            db_conn().link_attachment_to_parent(&attachment.id, parent_type, parent_id).await?;
             Ok(attachment)
         } else {
             Err(Error::UnknownAttachment)
@@ -96,24 +56,7 @@ impl File {
     }
 
     pub async fn delete(&self) -> Result<()> {
-        get_collection("attachments")
-            .update_one(
-                doc! {
-                    "_id": &self.id
-                },
-                doc! {
-                    "$set": {
-                        "deleted": true
-                    }
-                },
-                None,
-            )
-            .await
-            .map(|_| ())
-            .map_err(|_| Error::DatabaseError {
-                operation: "update_one",
-                with: "attachment",
-            })
+        db_conn().delete_attachment(&self.id).await
     }
 
     pub fn get_autumn_url(&self) -> String {
