@@ -212,6 +212,7 @@ pub trait Queries {
         sort: MsgSearchSort,
     ) -> Result<Vec<Message>>;
     async fn does_message_exist_by_nonce(&self, nonce: &str) -> Result<bool>;
+    async fn get_message_by_id(&self, id: &str) -> Result<Message>;
 
     // server bans
     async fn delete_server_ban(&self, server_id: &str, user_id: &str) -> Result<()>;
@@ -770,6 +771,10 @@ impl Queries for Database {
 
     async fn does_message_exist_by_nonce(&self, nonce: &str) -> Result<bool> {
         self.driver.does_message_exist_by_nonce(nonce).await
+    }
+
+    async fn get_message_by_id(&self, id: &str) -> Result<Message> {
+        self.driver.get_message_by_id(id).await
     }
 
     async fn delete_server_ban(&self, server_id: &str, user_id: &str) -> Result<()> {

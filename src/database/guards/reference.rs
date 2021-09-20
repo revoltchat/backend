@@ -74,7 +74,7 @@ impl Ref {
     }
 
     pub async fn fetch_message(&self, channel: &Channel) -> Result<Message> {
-        let message: Message = self.fetch("messages").await?;
+        let message: Message = db_conn().get_message_by_id(&self.id).await?;
         if &message.channel != channel.id() {
             Err(Error::InvalidOperation)
         } else {

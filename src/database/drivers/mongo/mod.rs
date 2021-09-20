@@ -1,6 +1,6 @@
 use futures::StreamExt;
 use mongodb::{bson::{doc, Document, from_document, to_bson, to_document},
-              Client, Database, Collection
+              Client, Database, Collection,
               options::{Collation, FindOneOptions, FindOptions, UpdateOptions}};
 use rocket::async_trait;
 use web_push::SubscriptionInfo;
@@ -1784,6 +1784,10 @@ impl Queries for MongoDB {
                 with: "message",
             })?
             .is_some())
+    }
+
+    async fn get_message_by_id(&self, id: &str) -> Result<Message> {
+        fetch(id, &self.revolt.collection("messages")).await
     }
 
     async fn delete_server_ban(&self, server_id: &str, user_id: &str) -> Result<()> {
