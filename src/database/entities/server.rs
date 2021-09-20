@@ -117,21 +117,7 @@ pub struct Server {
 
 impl Server {
     pub async fn create(self) -> Result<()> {
-        get_collection("servers")
-            .insert_one(
-                to_document(&self).map_err(|_| Error::DatabaseError {
-                    operation: "to_bson",
-                    with: "channel",
-                })?,
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "insert_one",
-                with: "server",
-            })?;
-
-        Ok(())
+        db_conn().add_server(&self).await
     }
 
     pub async fn publish_update(&self, data: Value) -> Result<()> {
@@ -150,37 +136,14 @@ impl Server {
         Channel::delete_messages(&self.channels).await?;
 
         // Delete all channels.
-        get_collection("channels")
-            .delete_many(
-                doc! {
-                    "server": &self.id
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "delete_many",
-                with: "channels",
-            })?;
+        db_conn().delete_all_channels_from_server(&self.id).await?;
 
         // Delete any associated objects, e.g. unreads and invites.
         db_conn().delete_invites_associated_to_channels(&self.channels).await?;
 
         // Delete members and bans.
-        for with in &["server_members", "server_bans"] {
-            get_collection(with)
-                .delete_many(
-                    doc! {
-                        "_id.server": &self.id
-                    },
-                    None,
-                )
-                .await
-                .map_err(|_| Error::DatabaseError {
-                    operation: "delete_many",
-                    with,
-                })?;
-        }
+        db_conn().delete_bans_of_server(&self.id).await?;
+        db_conn().delete_members_of_server(&self.id).await?;
 
         // Delete server icon / banner.
         if let Some(attachment) = &self.icon {
@@ -192,18 +155,7 @@ impl Server {
         }
 
         // Delete the server
-        get_collection("servers")
-            .delete_one(
-                doc! {
-                    "_id": &self.id
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "delete_one",
-                with: "server",
-            })?;
+        db_conn().delete_server(&self.id).await?;
 
         ClientboundNotification::ServerDelete {
             id: self.id.clone(),
@@ -214,128 +166,27 @@ impl Server {
     }
 
     pub async fn fetch_members(id: &str) -> Result<Vec<Member>> {
-        Ok(get_collection("server_members")
-            .find(
-                doc! {
-                    "_id.server": id
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "find",
-                with: "server_members",
-            })?
-            .filter_map(async move |s| s.ok())
-            .collect::<Vec<Document>>()
-            .await
-            .into_iter()
-            .filter_map(|x| from_document(x).ok())
-            .collect::<Vec<Member>>())
+        db_conn().get_server_members(id).await
     }
 
     pub async fn fetch_member_ids(id: &str) -> Result<Vec<String>> {
-        Ok(get_collection("server_members")
-            .find(
-                doc! {
-                    "_id.server": id
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "find",
-                with: "server_members",
-            })?
-            .filter_map(async move |s| s.ok())
-            .collect::<Vec<Document>>()
-            .await
-            .into_iter()
-            .filter_map(|x| {
-                x.get_document("_id")
-                    .ok()
-                    .map(|i| i.get_str("user").ok().map(|x| x.to_string()))
-            })
-            .flatten()
-            .collect::<Vec<String>>())
+        Ok(db_conn().get_server_members(id).await?.iter().map(|e| e.id.user.to_string()).collect())
     }
 
     pub async fn mark_as_read(&self, id: &str) -> Result<()> {
         let current_time = Ulid::new().to_string();
-        let unreads = get_collection("channel_unreads");
-
-        unreads.delete_many(
-            doc! {
-                "_id.channel": {
-                    "$in": &self.channels
-                },
-                "_id.user": &id
-            },
-            None
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "delete_many",
-            with: "channel_unreads",
-        })?;
-
-        unreads.insert_many(
-        self.channels
-                .iter()
-                .map(|channel| doc! {
-                    "_id": {
-                        "channel": channel,
-                        "user": &id
-                    },
-                    "last_id": &current_time
-                })
-                .collect::<Vec<Document>>(),
-            None
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "update_many",
-            with: "channel_unreads",
-        })
-        .map(|_| ())
+        db_conn().delete_multi_channel_unreads_for_user(&self.channels, &id).await?;
+        db_conn().add_channels_to_unreads_for_user(&self.channels, id, &current_time).await
     }
 
     pub async fn join_member(&self, id: &str) -> Result<()> {
         // Check if user is banned.
-        if get_collection("server_bans")
-            .find_one(
-                doc! {
-                    "_id.server": &self.id,
-                    "_id.user": &id
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "find_one",
-                with: "server_bans",
-            })?
-            .is_some()
-        {
+        if db_conn().is_user_banned(&self.id, id).await? {
             return Err(Error::Banned);
         }
 
         // Add user to server.
-        get_collection("server_members")
-            .insert_one(
-                doc! {
-                    "_id": {
-                        "server": &self.id,
-                        "user": &id
-                    }
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "insert_one",
-                with: "server_members",
-            })?;
+        db_conn().add_server_member(&self.id, id).await?;
 
         // Announce that user joined server.
         ClientboundNotification::ServerMemberJoin {
@@ -361,23 +212,8 @@ impl Server {
     }
 
     pub async fn remove_member(&self, id: &str, removal: RemoveMember) -> Result<()> {
-        let result = get_collection("server_members")
-            .delete_one(
-                doc! {
-                    "_id": {
-                        "server": &self.id,
-                        "user": &id
-                    }
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "delete_one",
-                with: "server_members",
-            })?;
-
-        if result.deleted_count > 0 {
+        let delete_count = db_conn().delete_server_member(&self.id, id).await?;
+        if delete_count > 0 {
             ClientboundNotification::ServerMemberLeave {
                 id: self.id.clone(),
                 user: id.to_string(),
@@ -428,17 +264,6 @@ impl Server {
     }
 
     pub async fn get_member_count(id: &str) -> Result<i64> {
-        Ok(get_collection("server_members")
-            .count_documents(
-                doc! {
-                    "_id.server": id
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "count_documents",
-                with: "server_members",
-            })?)
+        db_conn().get_server_member_count(id).await
     }
 }

@@ -113,7 +113,7 @@ pub trait Queries {
     async fn delete_channel_unreads(&self, channel_ids: &Vec<String>) -> Result<()>;
     async fn delete_multi_channel_unreads_for_user(
         &self,
-        channel_ids: Vec<&str>,
+        channel_ids: &Vec<String>,
         user_id: &str,
     ) -> Result<()>;
     async fn add_mentions_to_channel_unreads(
@@ -124,7 +124,7 @@ pub trait Queries {
     ) -> Result<()>;
     async fn add_channels_to_unreads_for_user(
         &self,
-        channel_ids: Vec<&str>,
+        channel_ids: &Vec<String>,
         user_id: &str,
         current_time: &str,
     ) -> Result<()>;
@@ -222,6 +222,7 @@ pub trait Queries {
         user_id: &str,
         reason: Option<&str>,
     ) -> Result<()>;
+    async fn delete_bans_of_server(&self, server_id: &str) -> Result<()>;
 
     // server members
     async fn get_server_member(&self, server_id: &str, user_id: &str) -> Result<Member>;
@@ -247,6 +248,7 @@ pub trait Queries {
         user_id: &str,
         server_ids: Vec<&str>,
     ) -> Result<Vec<Member>>;
+    async fn delete_members_of_server(&self, server_id: &str) -> Result<()>;
 
     // servers
     async fn update_server_permissions(
@@ -276,6 +278,7 @@ pub trait Queries {
     ) -> Result<()>;
     async fn delete_role(&self, server_id: &str, role_id: &str) -> Result<()>;
     async fn does_server_exist_by_nonce(&self, nonce: &str) -> Result<bool>;
+    async fn delete_server(&self, server_id: &str) -> Result<()>;
 
     // user settings
     async fn update_user_settings(&self, user_id: &str, set_doc: Document) -> Result<()>;
@@ -518,7 +521,7 @@ impl Queries for Database {
 
     async fn delete_multi_channel_unreads_for_user(
         &self,
-        channel_ids: Vec<&str>,
+        channel_ids: &Vec<String>,
         user_id: &str,
     ) -> Result<()> {
         self.driver
@@ -539,7 +542,7 @@ impl Queries for Database {
 
     async fn add_channels_to_unreads_for_user(
         &self,
-        channel_ids: Vec<&str>,
+        channel_ids: &Vec<String>,
         user_id: &str,
         current_time: &str,
     ) -> Result<()> {
@@ -783,6 +786,10 @@ impl Queries for Database {
         self.driver.add_server_ban(server_id, user_id, reason).await
     }
 
+    async fn delete_bans_of_server(&self, server_id: &str) -> Result<()> {
+        self.driver.delete_bans_of_server(server_id).await
+    }
+
     async fn get_server_member(&self, server_id: &str, user_id: &str) -> Result<Member> {
         self.driver.get_server_member(server_id, user_id).await
     }
@@ -842,6 +849,10 @@ impl Queries for Database {
         self.driver
             .get_server_memberships_by_ids(user_id, server_ids)
             .await
+    }
+
+    async fn delete_members_of_server(&self, server_id: &str) -> Result<()> {
+        self.driver.delete_members_of_server(server_id).await
     }
 
     async fn update_server_permissions(

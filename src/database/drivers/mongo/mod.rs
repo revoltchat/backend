@@ -925,7 +925,7 @@ impl Queries for MongoDB {
 
     async fn delete_multi_channel_unreads_for_user(
         &self,
-        channel_ids: Vec<&str>,
+        channel_ids: &Vec<String>,
         user_id: &str,
     ) -> Result<()> {
         self.revolt
@@ -979,7 +979,7 @@ impl Queries for MongoDB {
 
     async fn add_channels_to_unreads_for_user(
         &self,
-        channel_ids: Vec<&str>,
+        channel_ids: &Vec<String>,
         user_id: &str,
         current_time: &str,
     ) -> Result<()> {
@@ -1908,6 +1908,22 @@ impl Queries for MongoDB {
         Ok(())
     }
 
+    async fn delete_bans_of_server(&self, server_id: &str) -> Result<()> {
+        self.revolt.collection("server_bans")
+            .delete_many(
+                doc! {
+                        "_id.server": server_id
+                    },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "delete_many",
+                with: "server_bans",
+            })?;
+        Ok(())
+    }
+
     async fn get_server_member(&self, server_id: &str, user_id: &str) -> Result<Member> {
         let doc = self
             .revolt
@@ -2137,6 +2153,22 @@ impl Queries for MongoDB {
             .collect::<Vec<Member>>())
     }
 
+    async fn delete_members_of_server(&self, server_id: &str) -> Result<()> {
+        self.revolt.collection("server_members")
+            .delete_many(
+                doc! {
+                        "_id.server": server_id
+                    },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "delete_many",
+                with: "server_members",
+            })?;
+        Ok(())
+    }
+
     async fn update_server_permissions(
         &self,
         server_id: &str,
@@ -2357,6 +2389,22 @@ impl Queries for MongoDB {
                 with: "server",
             })?
             .is_some())
+    }
+
+    async fn delete_server(&self, server_id: &str) -> Result<()> {
+        self.revolt.collection("servers")
+            .delete_one(
+                doc! {
+                    "_id": server_id
+                },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "delete_one",
+                with: "server",
+            })?;
+        Ok(())
     }
 
     async fn update_user_settings(&self, user_id: &str, set_doc: Document) -> Result<()> {
