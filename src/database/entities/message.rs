@@ -315,28 +315,13 @@ impl Message {
             let channel = self.channel.clone();
             async_std::task::spawn(async move {
                 if let Ok(embeds) = Embed::generate(content).await {
-                    if let Ok(bson) = to_bson(&embeds) {
-                        if let Ok(_) = get_collection("messages")
-                            .update_one(
-                                doc! {
-                                    "_id": &id
-                                },
-                                doc! {
-                                    "$set": {
-                                        "embeds": bson
-                                    }
-                                },
-                                None,
-                            )
-                            .await
-                        {
-                            ClientboundNotification::MessageUpdate {
-                                id,
-                                channel: channel.clone(),
-                                data: json!({ "embeds": embeds }),
-                            }
-                            .publish(channel);
+                    if let Ok(_) = db_conn().add_embeds_to_message(&id, &embeds).await {
+                        ClientboundNotification::MessageUpdate {
+                            id,
+                            channel: channel.clone(),
+                            data: json!({ "embeds": embeds }),
                         }
+                            .publish(channel);
                     }
                 }
             });
@@ -350,19 +335,7 @@ impl Message {
             }
         }
 
-        get_collection("messages")
-            .delete_one(
-                doc! {
-                    "_id": &self.id
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "delete_one",
-                with: "message",
-            })?;
-
+        db_conn().delete_message(&self.id).await?;
         let channel = self.channel.clone();
         ClientboundNotification::MessageDelete {
             id: self.id.clone(),
@@ -371,27 +344,9 @@ impl Message {
         .publish(channel);
 
         if let Some(attachments) = &self.attachments {
-            let attachment_ids: Vec<String> =
-                attachments.iter().map(|f| f.id.to_string()).collect();
-            get_collection("attachments")
-                .update_many(
-                    doc! {
-                        "_id": {
-                            "$in": attachment_ids
-                        }
-                    },
-                    doc! {
-                        "$set": {
-                            "deleted": true
-                        }
-                    },
-                    None,
-                )
-                .await
-                .map_err(|_| Error::DatabaseError {
-                    operation: "update_many",
-                    with: "attachment",
-                })?;
+            let attachment_ids: Vec<&str> =
+                attachments.iter().map(|f| f.id.as_str()).collect();
+            db_conn().delete_attachments(attachment_ids).await?;
         }
 
         Ok(())
