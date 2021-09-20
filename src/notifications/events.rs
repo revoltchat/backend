@@ -187,7 +187,7 @@ impl ClientboundNotification {
     pub fn publish(self, topic: String) {
         async_std::task::spawn(async move {
             prehandle_hook(&self).await.ok(); // ! FIXME: this should be moved to pubsub
-            hive_pubsub::backend::mongo::publish(get_hive(), &topic, self)
+            hive_pubsub::backend::redis::publish(get_hive(), topic, self)
                 .await
                 .ok();
         });

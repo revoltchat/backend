@@ -35,7 +35,7 @@ lazy_static! {
 }
 
 #[post("/<target>/messages", data = "<message>")]
-pub async fn message_send(_r: Ratelimiter, user: User, target: Ref, message: Json<Data>) -> Result<RatelimitResponse<Value>> {
+pub async fn message_send(user: User, _r: Ratelimiter, target: Ref, message: Json<Data>) -> Result<RatelimitResponse<Value>> {
     let message = message.into_inner();
     message
         .validate()
