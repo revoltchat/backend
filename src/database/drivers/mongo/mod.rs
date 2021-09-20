@@ -2405,4 +2405,8 @@ impl Queries for MongoDB {
                 with: "user_settings",
             })?)
     }
+
+    async fn get_db(&self) -> &Database {
+        &self.revolt
+    }
 }

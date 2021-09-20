@@ -35,6 +35,7 @@ use util::variables::{
     USE_EMAIL, USE_HCAPTCHA,
 };
 use crate::util::ratelimit::RatelimitState;
+use crate::database::{db_conn, Queries};
 
 #[async_std::main]
 async fn main() {
@@ -126,7 +127,7 @@ async fn launch_web() {
         };
     }
 
-    let auth = Auth::new(database::get_db(), config);
+    let auth = Auth::new(db_conn().get_db().await.clone(), config);
     let rocket = rocket::build();
     routes::mount(rocket)
         .mount("/", rocket_cors::catch_all_options_routes())

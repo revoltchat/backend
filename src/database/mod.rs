@@ -284,6 +284,9 @@ pub trait Queries {
         user_id: &str,
         option_keys: Vec<&str>,
     ) -> Result<Option<Document>>;
+
+    // util for now
+    async fn get_db(&self) -> &MoDatabase;
 }
 
 #[enum_dispatch(Queries)]
@@ -923,5 +926,9 @@ impl Queries for Database {
         self.driver
             .get_user_settings_doc(user_id, option_keys)
             .await
+    }
+
+    async fn get_db(&self) -> &MoDatabase {
+        self.driver.get_db().await
     }
 }

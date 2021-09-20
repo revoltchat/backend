@@ -242,7 +242,7 @@ impl Message {
             // Fetch their corresponding sessions.
             if target_ids.len() > 0 {
                 if let Ok(mut cursor) = Session::find(
-                        &get_db(),
+                        &db_conn().get_db().await,
                         doc! {
                             "_id": {
                                 "$in": target_ids
