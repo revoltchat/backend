@@ -189,140 +189,43 @@ impl User {
         if username.to_lowercase() == "revolt" || username.to_lowercase() == "admin" || username.to_lowercase() == "system" {
             return Ok(true);
         }
-
-        if get_collection("users")
-            .find_one(
-                doc! {
-                    "username": username
-                },
-                FindOneOptions::builder()
-                    .collation(Collation::builder().locale("en").strength(2).build())
-                    .build(),
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "find_one",
-                with: "user",
-            })?
-            .is_some()
-        {
-            Ok(true)
-        } else {
-            Ok(false)
+        match db_conn().get_user_by_username(username).await {
+            Ok(_) => Ok(true),
+            Err(Error::NotFound) => Ok(false),
+            Err(e) => Err(e)
         }
     }
 
     /// Utility function for fetching multiple users from the perspective of one.
     /// Assumes user has a mutual connection with others.
     pub async fn fetch_multiple_users(&self, user_ids: Vec<String>) -> Result<Vec<User>> {
+        let other_users = db_conn().get_users(&user_ids).await?;
         let mut users = vec![];
-        let mut cursor = get_collection("users")
-            .find(
-                doc! {
-                    "_id": {
-                        "$in": user_ids
-                    }
-                },
-                FindOptions::builder()
-                    .projection(
-                        doc! { "_id": 1, "username": 1, "avatar": 1, "badges": 1, "status": 1, "flags": 1, "bot": 1 },
-                    )
-                    .build(),
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "find",
-                with: "users",
-            })?;
-
-        while let Some(result) = cursor.next().await {
-            if let Ok(doc) = result {
-                let other: User = from_document(doc).map_err(|_| Error::DatabaseError {
-                    operation: "from_document",
-                    with: "user",
-                })?;
-
-                let permissions = PermissionCalculator::new(&self)
-                    .with_mutual_connection()
-                    .with_user(&other)
-                    .for_user_given()
-                    .await?;
-
-                users.push(other.from(&self).with(permissions));
-            }
+        for other in other_users {
+            let permissions = PermissionCalculator::new(&self)
+                .with_mutual_connection()
+                .with_user(&other)
+                .for_user_given()
+                .await?;
+            users.push(other.from(&self).with(permissions));
         }
-
         Ok(users)
     }
 
     /// Utility function to get all of a user's memberships.
     pub async fn fetch_memberships(id: &str) -> Result<Vec<Member>> {
-        Ok(get_collection("server_members")
-            .find(
-                doc! {
-                    "_id.user": id
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "find",
-                with: "server_members",
-            })?
-            .filter_map(async move |s| s.ok())
-            .collect::<Vec<Document>>()
-            .await
-            .into_iter()
-            .filter_map(|x| {
-                from_document(x).ok()
-            })
-            .collect::<Vec<Member>>())
+        db_conn().get_users_memberships(id).await
     }
 
     /// Utility function to get all the server IDs the user is in.
     pub async fn fetch_server_ids(id: &str) -> Result<Vec<String>> {
-        Ok(get_collection("server_members")
-            .find(
-                doc! {
-                    "_id.user": id
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "find",
-                with: "server_members",
-            })?
-            .filter_map(async move |s| s.ok())
-            .collect::<Vec<Document>>()
-            .await
-            .into_iter()
-            .filter_map(|x| {
-                x.get_document("_id")
-                    .ok()
-                    .map(|i| i.get_str("server").ok().map(|x| x.to_string()))
-            })
-            .flatten()
-            .collect::<Vec<String>>())
+        let memberships = db_conn().get_users_memberships(id).await?;
+        Ok(memberships.iter().map(|e| e.id.server.to_string()).collect())
     }
 
     /// Utility function to fetch unread objects for user.
     pub async fn fetch_unreads(id: &str) -> Result<Vec<Document>> {
-        Ok(get_collection("channel_unreads")
-            .find(
-                doc! {
-                    "_id.user": id
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "find_one",
-                with: "user_settings",
-            })?
-            .filter_map(async move |s| s.ok())
-            .collect::<Vec<Document>>()
-            .await)
+        db_conn().get_unreads_for_user(id).await
     }
 
     /// Check if this user can acquire another server.

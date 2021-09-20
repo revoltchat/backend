@@ -35,7 +35,7 @@ pub trait Queries {
     async fn get_user_by_id(&self, id: &str) -> Result<User>;
     async fn get_user_by_username(&self, username: &str) -> Result<User>;
     async fn get_user_id_by_bot_token(&self, token: &str) -> Result<String>;
-    async fn get_users(&self, user_ids: Vec<&str>) -> Result<Vec<User>>;
+    async fn get_users(&self, user_ids: &Vec<String>) -> Result<Vec<User>>;
     async fn get_users_as_banned_users(&self, user_ids: Vec<&str>) -> Result<Vec<BannedUser>>;
     async fn get_bot_users_owned_by_user_id(&self, id: &str) -> Result<Vec<User>>;
     async fn get_mutual_friends_ids(&self, user_id_a: &str, user_id_b: &str)
@@ -334,7 +334,7 @@ impl Queries for Database {
         self.driver.get_user_id_by_bot_token(token).await
     }
 
-    async fn get_users(&self, user_ids: Vec<&str>) -> Result<Vec<User>> {
+    async fn get_users(&self, user_ids: &Vec<String>) -> Result<Vec<User>> {
         self.driver.get_users(user_ids).await
     }
 

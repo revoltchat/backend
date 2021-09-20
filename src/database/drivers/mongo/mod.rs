@@ -123,7 +123,7 @@ impl Queries for MongoDB {
         }
     }
 
-    async fn get_users(&self, user_ids: Vec<&str>) -> Result<Vec<User>> {
+    async fn get_users(&self, user_ids: &Vec<String>) -> Result<Vec<User>> {
         let mut cursor = self.revolt.collection("users")
             .find(
                 doc! {
