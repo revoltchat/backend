@@ -46,69 +46,31 @@ impl Ref {
     }
 
     pub async fn fetch_user(&self) -> Result<User> {
-        self.fetch("users").await
+        db_conn().get_user_by_id(&self.id).await
     }
 
     pub async fn fetch_channel(&self) -> Result<Channel> {
-        self.fetch("channels").await
+        db_conn().get_channel_by_id(&self.id).await
     }
 
     pub async fn fetch_server(&self) -> Result<Server> {
-        self.fetch("servers").await
+        db_conn().get_server_by_id(&self.id).await
     }
 
     pub async fn fetch_invite(&self) -> Result<Invite> {
-        self.fetch("channel_invites").await
+        db_conn().get_invite_by_id(&self.id).await
     }
 
     pub async fn fetch_bot(&self) -> Result<Bot> {
-        self.fetch("bots").await
+        db_conn().get_bot_by_id(&self.id).await
     }
 
     pub async fn fetch_member(&self, server: &str) -> Result<Member> {
-        let doc = get_collection("server_members")
-            .find_one(
-                doc! {
-                    "_id.user": &self.id,
-                    "_id.server": server
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "find_one",
-                with: "server_member",
-            })?
-            .ok_or_else(|| Error::NotFound)?;
-
-        Ok(
-            from_document::<Member>(doc).map_err(|_| Error::DatabaseError {
-                operation: "from_document",
-                with: "server_member",
-            })?,
-        )
+        db_conn().get_server_member(server, &self.id).await
     }
 
     pub async fn fetch_ban(&self, server: &str) -> Result<Ban> {
-        let doc = get_collection("server_bans")
-            .find_one(
-                doc! {
-                    "_id.user": &self.id,
-                    "_id.server": server
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "find_one",
-                with: "server_ban",
-            })?
-            .ok_or_else(|| Error::NotFound)?;
-
-        Ok(from_document::<Ban>(doc).map_err(|_| Error::DatabaseError {
-            operation: "from_document",
-            with: "server_ban",
-        })?)
+        db_conn().get_ban(server, &self.id).await
     }
 
     pub async fn fetch_message(&self, channel: &Channel) -> Result<Message> {

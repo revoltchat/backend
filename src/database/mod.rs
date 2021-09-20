@@ -100,6 +100,7 @@ pub trait Queries {
     async fn add_bot(&self, bot: &Bot) -> Result<()>;
     async fn delete_bot(&self, id: &str) -> Result<()>;
     async fn apply_bot_changes(&self, id: &str, change_doc: Document) -> Result<()>;
+    async fn get_bot_by_id(&self, id: &str) -> Result<Bot>;
 
     // channel_invites
     async fn delete_invites_associated_to_channel(&self, id: &str) -> Result<()>;
@@ -186,6 +187,7 @@ pub trait Queries {
     ) -> Result<()>;
     async fn apply_channel_changes(&self, channel_id: &str, change_doc: Document) -> Result<()>;
     async fn update_channels_last_message(&self, channel_id: &str, last_message_id: &str, mark_active: bool);
+    async fn get_channel_by_id(&self, channel_id: &str) -> Result<Channel>;
 
     // messages
     async fn set_message_updates(&self, message_id: &str, set_doc: Document) -> Result<()>;
@@ -279,6 +281,7 @@ pub trait Queries {
     async fn delete_role(&self, server_id: &str, role_id: &str) -> Result<()>;
     async fn does_server_exist_by_nonce(&self, nonce: &str) -> Result<bool>;
     async fn delete_server(&self, server_id: &str) -> Result<()>;
+    async fn get_server_by_id(&self, server_id: &str) -> Result<Server>;
 
     // user settings
     async fn update_user_settings(&self, user_id: &str, set_doc: Document) -> Result<()>;
@@ -491,6 +494,10 @@ impl Queries for Database {
         self.driver.apply_bot_changes(id, change_doc).await
     }
 
+    async fn get_bot_by_id(&self, id: &str) -> Result<Bot> {
+        self.driver.get_bot_by_id(id).await
+    }
+
     async fn delete_invites_associated_to_channel(&self, id: &str) -> Result<()> {
         self.driver.delete_invites_associated_to_channel(id).await
     }
@@ -695,6 +702,10 @@ impl Queries for Database {
 
     async fn update_channels_last_message(&self, channel_id: &str, last_message_id: &str, mark_active: bool) {
         self.driver.update_channels_last_message(channel_id, last_message_id, mark_active).await;
+    }
+
+    async fn get_channel_by_id(&self, channel_id: &str) -> Result<Channel> {
+        self.driver.get_channel_by_id(channel_id).await
     }
 
     async fn set_message_updates(&self, message_id: &str, set_doc: Document) -> Result<()> {
@@ -923,6 +934,14 @@ impl Queries for Database {
 
     async fn does_server_exist_by_nonce(&self, nonce: &str) -> Result<bool> {
         self.driver.does_server_exist_by_nonce(nonce).await
+    }
+
+    async fn delete_server(&self, server_id: &str) -> Result<()> {
+        self.driver.delete_server(server_id).await
+    }
+
+    async fn get_server_by_id(&self, server_id: &str) -> Result<Server> {
+        self.driver.get_server_by_id(server_id).await
     }
 
     async fn update_user_settings(&self, user_id: &str, set_doc: Document) -> Result<()> {

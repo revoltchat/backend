@@ -1,10 +1,7 @@
 use futures::StreamExt;
-use mongodb::{
-    bson::{doc, Document, from_document, to_bson, to_document},
-    Client,
-    Database,
-    options::{Collation, FindOneOptions, FindOptions, UpdateOptions},
-};
+use mongodb::{bson::{doc, Document, from_document, to_bson, to_document},
+              Client, Database, Collection
+              options::{Collation, FindOneOptions, FindOptions, UpdateOptions}};
 use rocket::async_trait;
 use web_push::SubscriptionInfo;
 
@@ -15,8 +12,29 @@ use crate::routes::servers::BannedUser;
 use crate::routes::channels::MsgSearchSort;
 use crate::database::Embed;
 use crate::util::result::*;
-
+use serde::de::DeserializeOwned;
 mod migrations;
+
+async fn fetch<T: DeserializeOwned>(id: &str, collection: &Collection) -> Result<T> {
+    let doc = collection
+        .find_one(
+            doc! {
+                    "_id": id
+                },
+            None,
+        )
+        .await
+        .map_err(|_| Error::DatabaseError {
+            operation: "find_one",
+            with: &collection.name(),
+        })?
+        .ok_or_else(|| Error::NotFound)?;
+
+    Ok(from_document::<T>(doc).map_err(|_| Error::DatabaseError {
+        operation: "from_document",
+        with: &collection.name(),
+    })?)
+}
 
 pub struct MongoDB {
     connection: Client,
@@ -56,25 +74,7 @@ impl MongoDB {
 #[async_trait]
 impl Queries for MongoDB {
     async fn get_user_by_id(&self, id: &str) -> Result<User> {
-        if let Some(doc) = self
-            .revolt
-            .collection("users")
-            .find_one(
-                doc! {
-                    "_id": &id
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "find_one",
-                with: "server",
-            })?
-        {
-            Ok(from_document(doc).expect("schema should match"))
-        } else {
-            Err(Error::NotFound)
-        }
+        fetch(id, &self.revolt.collection("users")).await
     }
 
     async fn get_user_by_username(&self, username: &str) -> Result<User> {
@@ -790,6 +790,10 @@ impl Queries for MongoDB {
         Ok(())
     }
 
+    async fn get_bot_by_id(&self, id: &str) -> Result<Bot> {
+        fetch(id, &self.revolt.collection("bots")).await
+    }
+
     async fn delete_invites_associated_to_channel(&self, id: &str) -> Result<()> {
         self.revolt
             .collection("channel_invites")
@@ -827,21 +831,7 @@ impl Queries for MongoDB {
     }
 
     async fn get_invite_by_id(&self, id: &str) -> Result<Invite> {
-        let doc = self
-            .revolt
-            .collection("channel_invites")
-            .find_one(doc! { "_id": id }, None)
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "find_one",
-                with: "invite",
-            })?
-            .ok_or_else(|| Error::UnknownServer)?;
-
-        from_document::<Invite>(doc).map_err(|_| Error::DatabaseError {
-            operation: "from_document",
-            with: "invite",
-        })
+        fetch(id, &self.revolt.collection("channel_invites")).await
     }
 
     async fn add_invite(&self, invite: &Invite) -> Result<()> {
@@ -1528,6 +1518,10 @@ impl Queries for MongoDB {
             )
             .await
             .expect("Server should not run with no, or a corrupted db");
+    }
+
+    async fn get_channel_by_id(&self, channel_id: &str) -> Result<Channel> {
+        fetch(channel_id, &self.revolt.collection("channels")).await
     }
 
     async fn set_message_updates(&self, message_id: &str, set_doc: Document) -> Result<()> {
@@ -2405,6 +2399,10 @@ impl Queries for MongoDB {
                 with: "server",
             })?;
         Ok(())
+    }
+
+    async fn get_server_by_id(&self, server_id: &str) -> Result<Server> {
+        fetch(server_id, &self.revolt.collection("servers")).await
     }
 
     async fn update_user_settings(&self, user_id: &str, set_doc: Document) -> Result<()> {
