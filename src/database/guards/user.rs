@@ -18,54 +18,18 @@ impl<'r> FromRequest<'r> for User {
                 .map(|x| x.to_string());
 
             if let Some(bot_token) = header_bot_token {
-                if let Ok(result) = get_collection("bots")
-                    .find_one(
-                        doc! {
-                            "token": bot_token
-                        },
-                        None,
-                    )
-                    .await
-                {
-                    if let Some(doc) = result {
-                        let id = doc.get_str("_id").unwrap();
-                        if let Ok(result) = get_collection("users")
-                            .find_one(
-                                doc! {
-                                    "_id": &id
-                                },
-                                None,
-                            )
-                            .await
-                        {
-                            if let Some(doc) = result {
-                                if let Ok(user) = from_document(doc) {
-                                    return Some(user)
-                                }
-                            }
-                        }
+                if let Ok(id) = db_conn().get_user_id_by_bot_token(&bot_token).await {
+                    if let Ok(user) = db_conn().get_user_by_id(&id).await {
+                        return Some(user)
                     }
                 }
             } else {
                 if let Outcome::Success(session) = request.guard::<Session>().await {
-                    if let Ok(result) = get_collection("users")
-                        .find_one(
-                            doc! {
-                                "_id": &session.user_id
-                            },
-                            None,
-                        )
-                        .await
-                    {
-                        if let Some(doc) = result {
-                            if let Ok(user) = from_document(doc) {
-                                return Some(user)
-                            }
-                        }
+                    if let Ok(user) = db_conn().get_user_by_id(&session.user_id).await {
+                        return Some(user)
                     }
                 }
             }
-
             None
         }).await;
 

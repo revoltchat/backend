@@ -24,27 +24,6 @@ impl Ref {
         Ok(r)
     }
 
-    async fn fetch<T: DeserializeOwned>(&self, collection: &'static str) -> Result<T> {
-        let doc = get_collection(&collection)
-            .find_one(
-                doc! {
-                    "_id": &self.id
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "find_one",
-                with: &collection,
-            })?
-            .ok_or_else(|| Error::NotFound)?;
-
-        Ok(from_document::<T>(doc).map_err(|_| Error::DatabaseError {
-            operation: "from_document",
-            with: &collection,
-        })?)
-    }
-
     pub async fn fetch_user(&self) -> Result<User> {
         db_conn().get_user_by_id(&self.id).await
     }
