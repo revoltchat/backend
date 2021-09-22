@@ -1352,7 +1352,7 @@ impl Queries for MongoDB {
 
     async fn get_sms_dms_groups_where_user_is_recipient(
         &self,
-        channel_ids: Vec<&str>,
+        channel_ids: &Vec<String>,
         user_id: &str,
     ) -> Result<Vec<Channel>> {
         let mut cursor = self
@@ -2262,7 +2262,7 @@ impl Queries for MongoDB {
         Ok(())
     }
 
-    async fn get_servers(&self, server_ids: Vec<&str>) -> Result<Vec<Server>> {
+    async fn get_servers(&self, server_ids: &Vec<String>) -> Result<Vec<Server>> {
         let mut cursor = self
             .revolt
             .collection("servers")

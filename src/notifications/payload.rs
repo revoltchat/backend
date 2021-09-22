@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::{database::*, notifications::events::ClientboundNotification};
 use crate::{
-    database::{entities::User, db_conn},
+    database::{db_conn, entities::User},
     util::result::{Error, Result},
 };
 use futures::StreamExt;
@@ -20,85 +20,23 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
     }
 
     let members = User::fetch_memberships(&user.id).await?;
-    let server_ids: Vec<String> = members.iter()
-        .map(|x| x.id.server.clone())
-        .collect();
-    
-    let mut cursor = get_collection("servers")
-        .find(
-            doc! {
-                "_id": {
-                    "$in": server_ids
-                }
-            },
-            None,
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "find",
-            with: "servers",
-        })?;
+    let server_ids: Vec<String> = members.iter().map(|x| x.id.server.clone()).collect();
+    let servers = db_conn().get_servers(&server_ids).await?;
+    let channel_ids = servers
+        .iter()
+        .map(|&e| e.channels)
+        .flatten()
+        .collect::<Vec<String>>();
 
-    let mut servers = vec![];
-    let mut channel_ids = vec![];
-    while let Some(result) = cursor.next().await {
-        if let Ok(doc) = result {
-            let server: Server = from_document(doc).map_err(|_| Error::DatabaseError {
-                operation: "from_document",
-                with: "server",
-            })?;
+    let channels = db_conn()
+        .get_sms_dms_groups_where_user_is_recipient(&channel_ids, &user.id)
+        .await?;
 
-            channel_ids.extend(server.channels.iter().cloned());
-            servers.push(server);
-        }
-    }
-
-    let mut cursor = get_collection("channels")
-        .find(
-            doc! {
-                "$or": [
-                    {
-                        "_id": {
-                            "$in": channel_ids
-                        }
-                    },
-                    {
-                        "channel_type": "SavedMessages",
-                        "user": &user.id
-                    },
-                    {
-                        "channel_type": "DirectMessage",
-                        "recipients": &user.id
-                    },
-                    {
-                        "channel_type": "Group",
-                        "recipients": &user.id
-                    }
-                ]
-            },
-            None,
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "find",
-            with: "channels",
-        })?;
-
-    let mut channels = vec![];
-    while let Some(result) = cursor.next().await {
-        if let Ok(doc) = result {
-            let channel = from_document(doc).map_err(|_| Error::DatabaseError {
-                operation: "from_document",
-                with: "channel",
-            })?;
-
-            if let Channel::Group { recipients, .. } = &channel {
-                user_ids.extend(recipients.iter().cloned());
-            } else if let Channel::DirectMessage { recipients, .. } = &channel {
-                user_ids.extend(recipients.iter().cloned());
-            }
-
-            channels.push(channel);
+    for channel in channels {
+        if let Channel::Group { recipients, .. } = &channel {
+            user_ids.extend(recipients.iter().cloned());
+        } else if let Channel::DirectMessage { recipients, .. } = &channel {
+            user_ids.extend(recipients.iter().cloned());
         }
     }
 
@@ -112,13 +50,12 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
 
     user.relationship = Some(RelationshipStatus::User);
     user.online = Some(true);
-    
     users.push(user.apply_badges());
 
     Ok(ClientboundNotification::Ready {
         users,
         servers,
         channels,
-        members
+        members,
     })
 }
