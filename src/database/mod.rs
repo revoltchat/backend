@@ -237,7 +237,7 @@ pub trait Queries {
     async fn is_user_member_in_one_of_servers(
         &self,
         user_id: &str,
-        server_ids: Vec<&str>,
+        server_ids: &Vec<String>,
     ) -> Result<bool>;
     async fn apply_server_member_changes(
         &self,
@@ -833,7 +833,7 @@ impl Queries for Database {
     async fn is_user_member_in_one_of_servers(
         &self,
         user_id: &str,
-        server_ids: Vec<&str>,
+        server_ids: &Vec<String>,
     ) -> Result<bool> {
         self.driver
             .is_user_member_in_one_of_servers(user_id, server_ids)

@@ -73,45 +73,15 @@ impl<'a> PermissionCalculator<'a> {
             let server_ids = User::fetch_server_ids(&self.perspective.id).await?;
 
             Ok(
-                get_collection("server_members")
-                    .find_one(
-                        doc! {
-                            "_id.user": &target,
-                            "_id.server": {
-                                "$in": server_ids
-                            }
-                        },
-                        None
-                    )
+                db_conn()
+                    .is_user_member_in_one_of_servers(&target, &server_ids)
                     .await
-                    .map_err(|_| Error::DatabaseError {
-                        operation: "find_one",
-                        with: "server_members",
-                    })?
-                    .is_some()
             )
         };
 
         if self.has_mutual_connection
             || check_server_overlap().await?
-            || get_collection("channels")
-                .find_one(
-                    doc! {
-                        "channel_type": {
-                            "$in": ["Group", "DirectMessage"]
-                        },
-                        "recipients": {
-                            "$all": [ &self.perspective.id, target ]
-                        }
-                    },
-                    None,
-                )
-                .await
-                .map_err(|_| Error::DatabaseError {
-                    operation: "find_one",
-                    with: "channels",
-                })?
-                .is_some()
+            || db_conn().are_users_connected_in_dms_or_group(&self.perspective.id, &target).await?
         {
             // ! FIXME: add privacy settings
             return Ok(UserPermission::Access + UserPermission::ViewProfile);
