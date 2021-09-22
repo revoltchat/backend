@@ -2410,6 +2410,33 @@ impl Queries for MongoDB {
         self.fetch(server_id, "servers").await
     }
 
+    async fn get_channel_ids_from_servers(&self, server_ids: &Vec<String>) -> Result<Vec<String>> {
+        Ok(self.revolt.collection("servers")
+            .find(
+                doc! {
+                "_id": {
+                    "$in": &server_ids
+                }
+            },
+                None,
+            )
+            .await
+            .map_err(|_| "Failed to fetch servers.".to_string())?
+            .filter_map(async move |s| s.ok())
+            .collect::<Vec<Document>>()
+            .await
+            .into_iter()
+            .filter_map(|x| {
+                x.get_array("channels").ok().map(|v| {
+                    v.into_iter()
+                        .filter_map(|x| x.as_str().map(|x| x.to_string()))
+                        .collect::<Vec<String>>()
+                })
+            })
+            .flatten()
+            .collect::<Vec<String>>())
+    }
+
     async fn update_user_settings(&self, user_id: &str, set_doc: Document) -> Result<()> {
         self.revolt
             .collection("user_settings")

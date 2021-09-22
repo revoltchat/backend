@@ -283,6 +283,7 @@ pub trait Queries {
     async fn does_server_exist_by_nonce(&self, nonce: &str) -> Result<bool>;
     async fn delete_server(&self, server_id: &str) -> Result<()>;
     async fn get_server_by_id(&self, server_id: &str) -> Result<Server>;
+    async fn get_channel_ids_from_servers(&self, server_ids: &Vec<String>) -> Result<Vec<String>>;
 
     // user settings
     async fn update_user_settings(&self, user_id: &str, set_doc: Document) -> Result<()>;
