@@ -32,6 +32,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyRespo
         && data.description.is_none()
         && data.icon.is_none()
         && data.remove.is_none()
+        && data.nsfw.is_none()
     {
         return Ok(EmptyResponse {});
     }
