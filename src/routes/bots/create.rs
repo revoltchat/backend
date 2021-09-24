@@ -26,18 +26,9 @@ pub async fn create_bot(user: User, info: Json<Data>) -> Result<Value> {
     info.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if get_collection("bots")
-        .count_documents(
-            doc! {
-                "owner": &user.id
-            },
-            None,
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "count_documents",
-            with: "bots",
-        })? as usize >= *MAX_BOT_COUNT {
+    let bot_count = db_conn()
+        .get_bot_count_owned_by_user(&user.id).await?;
+    if bot_count as usize >= *MAX_BOT_COUNT {
         return Err(Error::ReachedMaximumBots)
     }
 
@@ -55,33 +46,8 @@ pub async fn create_bot(user: User, info: Json<Data>) -> Result<Value> {
         return Err(Error::UsernameTaken);
     }
 
-    get_collection("users")
-        .insert_one(
-            doc! {
-                "_id": &id,
-                "username": &info.name,
-                "bot": {
-                    "owner": &user.id
-                }
-            },
-            None,
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "insert_one",
-            with: "user",
-        })?;
-
-    get_collection("bots")
-        .insert_one(
-            to_document(&bot).map_err(|_| Error::DatabaseError { with: "bot", operation: "to_document" })?,
-            None,
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "insert_one",
-            with: "user",
-        })?;
+    db_conn().add_bot_user(&id, &info.name, &user.id).await?;
+    db_conn().add_bot(&bot).await?;
 
     Ok(json!(bot))
 }
