@@ -52,19 +52,9 @@ pub async fn req(user: User, info: Json<Data>) -> Result<Value> {
         }
     }
 
-    if get_collection("channels")
-        .find_one(
-            doc! {
-                "nonce": &info.nonce
-            },
-            None,
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "find_one",
-            with: "channel",
-        })?
-        .is_some()
+    if db_conn()
+        .does_channel_exist_by_nonce(&info.nonce)
+        .await?
     {
         Err(Error::DuplicateNonce)?
     }

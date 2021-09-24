@@ -103,13 +103,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyRespo
             }
 
             if operations.len() > 0 {
-                get_collection("channels")
-                    .update_one(doc! { "_id": &id }, operations, None)
-                    .await
-                    .map_err(|_| Error::DatabaseError {
-                        operation: "update_one",
-                        with: "channel",
-                    })?;
+                db_conn().apply_channel_changes(&id, operations).await?;
             }
 
             ClientboundNotification::ChannelUpdate {

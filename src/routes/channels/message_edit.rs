@@ -45,34 +45,17 @@ pub async fn req(user: User, target: Ref, msg: Ref, edit: Json<Data>) -> Result<
 
     if let Some(embeds) = &message.embeds {
         let new_embeds: Vec<Document> = vec![];
-
         for embed in embeds {
             match embed {
                 Embed::Website(_) | Embed::Image(_) | Embed::None => {} // Otherwise push to new_embeds.
             }
         }
-
         let obj = update.as_object_mut().unwrap();
         obj.insert("embeds".to_string(), json!(new_embeds));
         set.insert("embeds", new_embeds);
     }
 
-    get_collection("messages")
-        .update_one(
-            doc! {
-                "_id": &message.id
-            },
-            doc! {
-                "$set": set
-            },
-            None,
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "update_one",
-            with: "message",
-        })?;
-
+    db_conn().set_message_updates(&message.id, set).await?;
     message.publish_update(update).await?;
     Ok(EmptyResponse {})
 }

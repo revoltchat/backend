@@ -26,25 +26,7 @@ pub async fn req(user: User, target: Ref, member: Ref) -> Result<EmptyResponse> 
         if recipients.iter().find(|x| *x == &member.id).is_none() {
             Err(Error::NotInGroup)?
         }
-
-        get_collection("channels")
-            .update_one(
-                doc! {
-                    "_id": &id
-                },
-                doc! {
-                    "$pull": {
-                        "recipients": &member.id
-                    }
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "update_one",
-                with: "channel",
-            })?;
-
+        db_conn().remove_recipient_from_channel(&id, &member.id).await?;
         ClientboundNotification::ChannelGroupLeave {
             id: id.clone(),
             user: member.id.clone(),
