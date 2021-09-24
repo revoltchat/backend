@@ -15,53 +15,17 @@ pub async fn delete_bot(user: User, target: Ref) -> Result<EmptyResponse> {
         return Err(Error::MissingPermission);
     }
 
-    let username = format!("Deleted User {}", &bot.id);
-    get_collection("users")
-        .update_one(
-            doc! {
-                "_id": &bot.id
-            },
-            doc! {
-                "$set": {
-                    "username": &username,
-                    "flags": 2
-                },
-                "$unset": {
-                    "avatar": 1,
-                    "status": 1,
-                    "profile": 1
-                }
-            },
-            None
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            with: "user",
-            operation: "update_one"
-        })?;
-
+    db_conn().delete_user(&bot.id).await?;
     ClientboundNotification::UserUpdate {
         id: target.id.clone(),
         data: json!({
-            "username": username,
+            "username": format!("Deleted User {}", &bot.id),
             "flags": 2
         }),
         clear: None,
     }
     .publish_as_user(target.id.clone());
-
-    get_collection("bots")
-        .delete_one(
-            doc! {
-                "_id": &bot.id
-            },
-            None
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            with: "bot",
-            operation: "delete_one"
-        })?;
+    db_conn().delete_bot(&bot.id).await?;
 
     Ok(EmptyResponse {})
 }
