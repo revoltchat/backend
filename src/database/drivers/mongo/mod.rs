@@ -2421,7 +2421,7 @@ impl Queries for MongoDB {
                 None,
             )
             .await
-            .map_err(|_| "Failed to fetch servers.".to_string())?
+            .map_err(|_| Error::DatabaseError { operation: "find", with: "servers" })?
             .filter_map(async move |s| s.ok())
             .collect::<Vec<Document>>()
             .await
