@@ -19,24 +19,7 @@ pub async fn req(user: User, target: Ref) -> Result<EmptyResponse> {
     match &target {
         Channel::SavedMessages { .. } => Err(Error::NoEffect),
         Channel::DirectMessage { .. } => {
-            get_collection("channels")
-                .update_one(
-                    doc! {
-                        "_id": target.id()
-                    },
-                    doc! {
-                        "$set": {
-                            "active": false
-                        }
-                    },
-                    None,
-                )
-                .await
-                .map_err(|_| Error::DatabaseError {
-                    operation: "update_one",
-                    with: "channel",
-                })?;
-
+            db_conn().make_channel_inactive(&target.id()).await?;
             Ok(EmptyResponse {})
         }
         Channel::Group {
@@ -47,50 +30,18 @@ pub async fn req(user: User, target: Ref) -> Result<EmptyResponse> {
         } => {
             if &user.id == owner {
                 if let Some(new_owner) = recipients.iter().find(|x| *x != &user.id) {
-                    get_collection("channels")
-                        .update_one(
-                            doc! {
-                                "_id": &id
-                            },
-                            doc! {
-                                "$set": {
-                                    "owner": new_owner
-                                },
-                                "$pull": {
-                                    "recipients": &user.id
-                                }
-                            },
-                            None,
-                        )
-                        .await
-                        .map_err(|_| Error::DatabaseError {
-                            operation: "update_one",
-                            with: "channel",
-                        })?;
-
+                    db_conn()
+                        .update_channel_owner(&id, new_owner, &user.id)
+                        .await?;
                     target.publish_update(json!({ "owner": new_owner })).await?;
                 } else {
                     target.delete().await?;
                     return Ok(EmptyResponse {});
                 }
             } else {
-                get_collection("channels")
-                    .update_one(
-                        doc! {
-                            "_id": &id
-                        },
-                        doc! {
-                            "$pull": {
-                                "recipients": &user.id
-                            }
-                        },
-                        None,
-                    )
-                    .await
-                    .map_err(|_| Error::DatabaseError {
-                        operation: "update_one",
-                        with: "channel",
-                    })?;
+                db_conn()
+                    .remove_recipient_from_channel(&id, &user.id)
+                    .await?;
             }
 
             ClientboundNotification::ChannelGroupLeave {
