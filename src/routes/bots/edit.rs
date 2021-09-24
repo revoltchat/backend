@@ -45,23 +45,7 @@ pub async fn edit_bot(user: User, target: Ref, data: Json<Data>) -> Result<Empty
         if User::is_username_taken(&name).await? {
             return Err(Error::UsernameTaken);
         }
-
-        get_collection("users")
-            .update_one(
-                doc! { "_id": &target.id },
-                doc! {
-                    "$set": {
-                        "username": name
-                    }
-                },
-                None
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "update_one",
-                with: "user",
-            })?;
-
+        db_conn().update_username(&target.id, name).await?;
         ClientboundNotification::UserUpdate {
             id: target.id.clone(),
             data: json!({
@@ -101,13 +85,7 @@ pub async fn edit_bot(user: User, target: Ref, data: Json<Data>) -> Result<Empty
     }
 
     if operations.len() > 0 {
-        get_collection("bots")
-            .update_one(doc! { "_id": &target.id }, operations, None)
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "update_one",
-                with: "bot",
-            })?;
+        db_conn().apply_bot_changes(&target.id, operations).await?;
     }
 
     Ok(EmptyResponse {})
