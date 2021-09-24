@@ -23,27 +23,9 @@ pub async fn req(user: User, target: Ref, message: Ref) -> Result<EmptyResponse>
     }
 
     let id = target.id();
-    get_collection("channel_unreads")
-        .update_one(
-            doc! {
-                "_id.channel": id,
-                "_id.user": &user.id
-            },
-            doc! {
-                "$unset": {
-                    "mentions": 1
-                },
-                "$set": {
-                    "last_id": &message.id
-                }
-            },
-            UpdateOptions::builder().upsert(true).build(),
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "update_one",
-            with: "channel_unreads",
-        })?;
+    db_conn()
+        .update_last_message_in_channel_unreads(&id, &user.id, &message.id)
+        .await?;
 
     ClientboundNotification::ChannelAck {
         id: id.to_string(),
