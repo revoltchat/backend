@@ -1,20 +1,12 @@
 use crate::database::*;
 use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result, EmptyResponse};
-
+use crate::util::regex::RE_USERNAME;
 use mongodb::bson::doc;
-use rauth::auth::{Auth, Session};
-use regex::Regex;
-use rocket::State;
+use rauth::entities::Account;
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
-
-// ! FIXME: should be global somewhere; maybe use config(?)
-// ! tip: CTRL + F, RE_USERNAME
-lazy_static! {
-    static ref RE_USERNAME: Regex = Regex::new(r"^[a-zA-Z0-9_.]+$").unwrap();
-}
 
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
@@ -26,8 +18,7 @@ pub struct Data {
 
 #[patch("/<_ignore_id>/username", data = "<data>")]
 pub async fn req(
-    auth: &State<Auth>,
-    session: Session,
+    account: Account,
     user: User,
     data: Json<Data>,
     _ignore_id: String,
@@ -39,13 +30,12 @@ pub async fn req(
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    auth.verify_password(&session, data.password.clone())
-        .await
+    account.verify_password(&data.password)
         .map_err(|_| Error::InvalidCredentials)?;
 
     let mut set = doc! {};
     if let Some(username) = &data.username {
-        if User::is_username_taken(&username).await? {
+        if (username.to_lowercase() != user.username.to_lowercase()) && User::is_username_taken(&username).await? {
             return Err(Error::UsernameTaken);
         }
 

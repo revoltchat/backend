@@ -7,6 +7,8 @@ lazy_static! {
     // Application Settings
     pub static ref MONGO_URI: String =
         env::var("REVOLT_MONGO_URI").expect("Missing REVOLT_MONGO_URI environment variable.");
+    pub static ref REDIS_URI: String =
+        env::var("REVOLT_REDIS_URI").expect("Missing REVOLT_REDIS_URI environment variable.");
     pub static ref WS_HOST: String =
         env::var("REVOLT_WS_HOST").unwrap_or_else(|_| "0.0.0.0:9000".to_string());
     pub static ref PUBLIC_URL: String =
@@ -64,6 +66,10 @@ lazy_static! {
         env::var("REVOLT_MAX_GROUP_SIZE").unwrap_or_else(|_| "50".to_string()).parse().unwrap();
     pub static ref MAX_BOT_COUNT: usize =
         env::var("REVOLT_MAX_BOT_COUNT").unwrap_or_else(|_| "5".to_string()).parse().unwrap();
+    pub static ref MAX_EMBED_COUNT: usize =
+        env::var("REVOLT_MAX_EMBED_COUNT").unwrap_or_else(|_| "5".to_string()).parse().unwrap();
+    pub static ref MAX_SERVER_COUNT: usize =
+        env::var("REVOLT_MAX_SERVER_COUNT").unwrap_or_else(|_| "100".to_string()).parse().unwrap();
     pub static ref EARLY_ADOPTER_BADGE: i64 =
         env::var("REVOLT_EARLY_ADOPTER_BADGE").unwrap_or_else(|_| "0".to_string()).parse().unwrap();
 }

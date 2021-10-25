@@ -1,16 +1,12 @@
 use crate::database::*;
 use crate::util::result::{Error, Result, EmptyResponse};
+use crate::util::regex::RE_USERNAME;
 
 use mongodb::bson::doc;
-use rauth::auth::Session;
-use regex::Regex;
+use rauth::entities::Session;
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
-
-lazy_static! {
-    static ref RE_USERNAME: Regex = Regex::new(r"^[a-zA-Z0-9_.]+$").unwrap();
-}
 
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
