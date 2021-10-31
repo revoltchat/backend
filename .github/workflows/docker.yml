@@ -5,7 +5,7 @@ on:
         branches:
             - "master"
         tags:
-            - "v*"
+            - "*"
         paths-ignore:
             - ".github/**"
             - "!.github/workflows/docker.yml"
