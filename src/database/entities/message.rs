@@ -181,10 +181,28 @@ impl Message {
     }
 
     pub async fn publish(self, channel: &Channel, process_embeds: bool) -> Result<()> {
-        // construct message and publish
-        // commit message to database
+        // Publish message event
+        ClientboundNotification::Message(self.clone())
+            .publish(channel.id().to_string());
+
+        // Commit message to database
+        get_collection("messages")
+            .insert_one(to_bson(&self).unwrap().as_document().unwrap().clone(), None)
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "insert_one",
+                with: "message",
+            })?;
 
         // spawn task_queue ( update last_message_id )
+        match channel {
+            Channel::DirectMessage { id, .. } =>
+                crate::task_queue::task_last_message_id::queue(id.clone(), self.id.clone(), true).await,
+            Channel::Group { id, .. } | Channel::TextChannel { id, .. } =>
+                crate::task_queue::task_last_message_id::queue(id.clone(), self.id.clone(), false).await,
+            _ => {}
+        }
+
         // spawn task_queue ( process embeds )
 
         // if mentions {
@@ -195,14 +213,7 @@ impl Message {
         //  spawn task_queue ( web push )
         // }
 
-        get_collection("messages")
-            .insert_one(to_bson(&self).unwrap().as_document().unwrap().clone(), None)
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "insert_one",
-                with: "message",
-            })?;
-
+        /*
         // ! FIXME: all this code is legitimately crap
         // ! rewrite when can be asked
 
@@ -263,7 +274,6 @@ impl Message {
         }
 
         let mentions = self.mentions.clone();
-        ClientboundNotification::Message(self.clone()).publish(channel.id().to_string());
 
         /*
            Web Push Test Code
@@ -333,7 +343,7 @@ impl Message {
                     }
                 }
             }
-        });
+        });*/
 
         Ok(())
     }

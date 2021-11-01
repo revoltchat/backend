@@ -20,6 +20,7 @@ pub mod routes;
 pub mod redis;
 pub mod util;
 pub mod version;
+pub mod task_queue;
 
 use async_std::task;
 use futures::join;
@@ -50,6 +51,7 @@ async fn main() {
     database::connect().await;
     redis::connect().await;
     notifications::hive::init_hive().await;
+    task_queue::start_queues().await;
 
     ctrlc::set_handler(move || {
         // Force ungraceful exit to avoid hang.

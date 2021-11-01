@@ -2794,6 +2794,7 @@ dependencies = [
 name = "revolt"
 version = "0.0.0"
 dependencies = [
+ "async-channel",
  "async-std",
  "async-tungstenite",
  "base64 0.13.0",

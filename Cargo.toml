@@ -42,6 +42,7 @@ rmp-serde = { git = "https://github.com/3Hren/msgpack-rust", rev = "5bf2c24203ad
 # async
 futures = "0.3.8"
 chrono = "0.4.15"
+async-channel = "1.6.1"
 reqwest = { version = "0.11.4", features = ["json"] }
 async-std = { version = "1.8.0", features = ["tokio1", "tokio02", "attributes"] }
 
