@@ -21,7 +21,7 @@ pub async fn req(user: User, target: Ref, member: String) -> Result<EmptyRespons
         return Err(Error::InvalidOperation);
     }
 
-    if target.id == target.owner {
+    if member.id.user == target.owner {
         return Err(Error::MissingPermission);
     }
 
