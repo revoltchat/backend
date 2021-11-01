@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::database::*;
+use crate::util::idempotency::IdempotencyKey;
 use crate::util::result::{Error, Result};
 
 use mongodb::bson::doc;
@@ -29,15 +30,12 @@ pub struct Data {
     name: String,
     #[validate(length(min = 0, max = 1024))]
     description: Option<String>,
-    // Maximum length of 36 allows both ULIDs and UUIDs.
-    #[validate(length(min = 1, max = 36))]
-    nonce: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     nsfw: Option<bool>,
 }
 
 #[post("/<target>/channels", data = "<info>")]
-pub async fn req(user: User, target: Ref, info: Json<Data>) -> Result<Value> {
+pub async fn req(_idempotency: IdempotencyKey, user: User, target: Ref, info: Json<Data>) -> Result<Value> {
     let info = info.into_inner();
     info.validate()
         .map_err(|error| Error::FailedValidation { error })?;
@@ -52,29 +50,11 @@ pub async fn req(user: User, target: Ref, info: Json<Data>) -> Result<Value> {
         Err(Error::MissingPermission)?
     }
 
-    if get_collection("channels")
-        .find_one(
-            doc! {
-                "nonce": &info.nonce
-            },
-            None,
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "find_one",
-            with: "channel",
-        })?
-        .is_some()
-    {
-        Err(Error::DuplicateNonce)?
-    }
-
     let id = Ulid::new().to_string();
     let channel = match info.channel_type {
         ChannelType::Text => Channel::TextChannel {
             id: id.clone(),
             server: target.id.clone(),
-            nonce: Some(info.nonce),
 
             name: info.name,
             description: info.description,
@@ -89,7 +69,6 @@ pub async fn req(user: User, target: Ref, info: Json<Data>) -> Result<Value> {
         ChannelType::Voice => Channel::VoiceChannel {
             id: id.clone(),
             server: target.id.clone(),
-            nonce: Some(info.nonce),
 
             name: info.name,
             description: info.description,

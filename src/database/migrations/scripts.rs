@@ -342,6 +342,36 @@ pub async fn run_migrations(revision: i32) -> i32 {
         }
     }
 
+    if revision <= 10 {
+        info!("Running migration [revision 10 / 2021-11-01]: Remove nonce values on channels and servers.");
+
+        get_collection("servers")
+            .update_many(
+                doc! {},
+                doc! {
+                    "$unset": {
+                        "nonce": 1,
+                    }
+                },
+                None
+            )
+            .await
+            .unwrap();
+
+        get_collection("channels")
+            .update_many(
+                doc! {},
+                doc! {
+                    "$unset": {
+                        "nonce": 1,
+                    }
+                },
+                None
+            )
+            .await
+            .unwrap();
+    }
+
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.
 
     // Reminder to update LATEST_REVISION when adding new migrations.

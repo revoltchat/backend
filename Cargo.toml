@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 # Utility
+lru = "0.7.0"
 url = "2.2.2"
 log = "0.4.11"
 dotenv = "0.15.0"

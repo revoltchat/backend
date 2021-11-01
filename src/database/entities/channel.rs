@@ -33,8 +33,6 @@ pub enum Channel {
     Group {
         #[serde(rename = "_id")]
         id: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        nonce: Option<String>,
 
         name: String,
         owner: String,
@@ -57,8 +55,6 @@ pub enum Channel {
         #[serde(rename = "_id")]
         id: String,
         server: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        nonce: Option<String>,
 
         name: String,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -81,8 +77,6 @@ pub enum Channel {
         #[serde(rename = "_id")]
         id: String,
         server: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        nonce: Option<String>,
 
         name: String,
         #[serde(skip_serializing_if = "Option::is_none")]

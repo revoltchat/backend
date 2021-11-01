@@ -1,10 +1,11 @@
 use std::collections::HashSet;
 
 use crate::database::*;
+use crate::util::idempotency::IdempotencyKey;
 use crate::util::ratelimit::{Ratelimiter, RatelimitResponse};
 use crate::util::result::{Error, Result};
 
-use mongodb::{bson::doc, options::FindOneOptions};
+use mongodb::bson::doc;
 use regex::Regex;
 use rocket::serde::json::{Json, Value};
 use serde::{Deserialize, Serialize};
@@ -21,22 +22,22 @@ pub struct Reply {
 pub struct Data {
     #[validate(length(min = 0, max = 2000))]
     content: String,
-    // Maximum length of 36 allows both ULIDs and UUIDs.
-    #[validate(length(min = 1, max = 36))]
-    nonce: String,
     #[validate(length(min = 1, max = 128))]
     attachments: Option<Vec<String>>,
+    nonce: Option<String>,
     replies: Option<Vec<Reply>>,
 }
 
 lazy_static! {
     // ignoring I L O and U is intentional
-    static ref RE_ULID: Regex = Regex::new(r"<@([0-9A-HJKMNP-TV-Z]{26})>").unwrap();
+    static ref RE_MENTION: Regex = Regex::new(r"<@([0-9A-HJKMNP-TV-Z]{26})>").unwrap();
 }
 
 #[post("/<target>/messages", data = "<message>")]
-pub async fn message_send(user: User, _r: Ratelimiter, target: Ref, message: Json<Data>) -> Result<RatelimitResponse<Value>> {
+pub async fn message_send(user: User, _r: Ratelimiter, mut idempotency: IdempotencyKey, target: Ref, message: Json<Data>) -> Result<RatelimitResponse<Value>> {
     let message = message.into_inner();
+    idempotency.consume_nonce(message.nonce.clone());
+
     message
         .validate()
         .map_err(|error| Error::FailedValidation { error })?;
@@ -59,29 +60,8 @@ pub async fn message_send(user: User, _r: Ratelimiter, target: Ref, message: Jso
         return Err(Error::MissingPermission)
     }
 
-    if get_collection("messages")
-        .find_one(
-            doc! {
-                "nonce": &message.nonce
-            },
-            FindOneOptions::builder()
-                .projection(doc! { "_id": 1 })
-                .build(),
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "find_one",
-            with: "message",
-        })?
-        .is_some()
-    {
-        Err(Error::DuplicateNonce)?
-    }
-
-    let id = Ulid::new().to_string();
-
     let mut mentions = HashSet::new();
-    for capture in RE_ULID.captures_iter(&message.content) {
+    for capture in RE_MENTION.captures_iter(&message.content) {
         if let Some(mention) =  capture.get(1) {
             mentions.insert(mention.as_str().to_string());
         }
@@ -90,7 +70,7 @@ pub async fn message_send(user: User, _r: Ratelimiter, target: Ref, message: Jso
     let mut replies = HashSet::new();
     if let Some(entries) = message.replies {
         // ! FIXME: move this to app config
-        if entries.len() >= 5 {
+        if entries.len() > 5 {
             return Err(Error::TooManyReplies)
         }
 
@@ -107,14 +87,16 @@ pub async fn message_send(user: User, _r: Ratelimiter, target: Ref, message: Jso
         }
     }
 
+    let id = Ulid::new().to_string();
     let mut attachments = vec![];
+
     if let Some(ids) = &message.attachments {
         if ids.len() > 0 && !perm.get_upload_files() {
             return Err(Error::MissingPermission)
         }
 
         // ! FIXME: move this to app config
-        if ids.len() >= 5 {
+        if ids.len() > 5 {
             return Err(Error::TooManyAttachments)
         }
 
@@ -130,7 +112,7 @@ pub async fn message_send(user: User, _r: Ratelimiter, target: Ref, message: Jso
         author: user.id,
 
         content: Content::Text(message.content.clone()),
-        nonce: Some(message.nonce.clone()),
+        nonce: Some(idempotency.key),
         edited: None,
         embeds: None,
 
@@ -148,6 +130,5 @@ pub async fn message_send(user: User, _r: Ratelimiter, target: Ref, message: Jso
     };
 
     msg.clone().publish(&target, perm.get_embed_links()).await?;
-
     Ok(RatelimitResponse(json!(msg)))
 }

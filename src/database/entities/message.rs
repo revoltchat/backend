@@ -181,6 +181,20 @@ impl Message {
     }
 
     pub async fn publish(self, channel: &Channel, process_embeds: bool) -> Result<()> {
+        // construct message and publish
+        // commit message to database
+
+        // spawn task_queue ( update last_message_id )
+        // spawn task_queue ( process embeds )
+
+        // if mentions {
+        //  spawn task_queue ( update channel_unreads )
+        // }
+
+        // if (channel => DM | Group) | mentions {
+        //  spawn task_queue ( web push )
+        // }
+
         get_collection("messages")
             .insert_one(to_bson(&self).unwrap().as_document().unwrap().clone(), None)
             .await

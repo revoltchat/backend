@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::database::*;
+use crate::util::idempotency::IdempotencyKey;
 use crate::util::result::{Error, Result};
 use crate::util::variables::MAX_SERVER_COUNT;
 
@@ -16,15 +17,12 @@ pub struct Data {
     name: String,
     #[validate(length(min = 0, max = 1024))]
     description: Option<String>,
-    // Maximum length of 36 allows both ULIDs and UUIDs.
-    #[validate(length(min = 1, max = 36))]
-    nonce: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     nsfw: Option<bool>
 }
 
 #[post("/create", data = "<info>")]
-pub async fn req(user: User, info: Json<Data>) -> Result<Value> {
+pub async fn req(_idempotency: IdempotencyKey, user: User, info: Json<Data>) -> Result<Value> {
     if user.bot.is_some() {
         return Err(Error::IsBot)
     }
@@ -39,29 +37,11 @@ pub async fn req(user: User, info: Json<Data>) -> Result<Value> {
     info.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if get_collection("servers")
-        .find_one(
-            doc! {
-                "nonce": &info.nonce
-            },
-            None,
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "find_one",
-            with: "server",
-        })?
-        .is_some()
-    {
-        Err(Error::DuplicateNonce)?
-    }
-
     let id = Ulid::new().to_string();
     let cid = Ulid::new().to_string();
 
     let server = Server {
         id: id.clone(),
-        nonce: Some(info.nonce.clone()),
         owner: user.id.clone(),
 
         name: info.name,
@@ -92,7 +72,6 @@ pub async fn req(user: User, info: Json<Data>) -> Result<Value> {
     Channel::TextChannel {
         id: cid,
         server: id,
-        nonce: Some(info.nonce),
         name: "general".to_string(),
         description: None,
 

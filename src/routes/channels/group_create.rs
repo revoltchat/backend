@@ -1,4 +1,5 @@
 use crate::database::*;
+use crate::util::idempotency::IdempotencyKey;
 use crate::util::result::{Error, Result};
 use crate::util::variables::MAX_GROUP_SIZE;
 
@@ -16,16 +17,13 @@ pub struct Data {
     name: String,
     #[validate(length(min = 0, max = 1024))]
     description: Option<String>,
-    // Maximum length of 36 allows both ULIDs and UUIDs.
-    #[validate(length(min = 1, max = 36))]
-    nonce: String,
     users: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     nsfw: Option<bool>
 }
 
 #[post("/create", data = "<info>")]
-pub async fn req(user: User, info: Json<Data>) -> Result<Value> {
+pub async fn req(_idempotency: IdempotencyKey, user: User, info: Json<Data>) -> Result<Value> {
     if user.bot.is_some() {
         return Err(Error::IsBot)
     }
@@ -52,27 +50,9 @@ pub async fn req(user: User, info: Json<Data>) -> Result<Value> {
         }
     }
 
-    if get_collection("channels")
-        .find_one(
-            doc! {
-                "nonce": &info.nonce
-            },
-            None,
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "find_one",
-            with: "channel",
-        })?
-        .is_some()
-    {
-        Err(Error::DuplicateNonce)?
-    }
-
     let id = Ulid::new().to_string();
     let channel = Channel::Group {
         id,
-        nonce: Some(info.nonce),
         name: info.name,
         description: info.description,
         owner: user.id,
