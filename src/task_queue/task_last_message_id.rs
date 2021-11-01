@@ -1,3 +1,4 @@
+// Queue Type: Debounced
 use std::{collections::HashMap, time::{Duration, Instant}};
 
 use async_channel::{ Sender, Receiver, bounded };

@@ -194,6 +194,11 @@ impl Message {
                 with: "message",
             })?;
 
+        // spawn task_queue ( process embeds )
+        if process_embeds {
+            self.process_embed().await;
+        }
+
         // spawn task_queue ( update last_message_id )
         match channel {
             Channel::DirectMessage { id, .. } =>
@@ -203,40 +208,18 @@ impl Message {
             _ => {}
         }
 
-        // spawn task_queue ( process embeds )
-
         // if mentions {
         //  spawn task_queue ( update channel_unreads )
         // }
+        /*if let Some(mentions) = &self.mentions {
+
+        }*/
 
         // if (channel => DM | Group) | mentions {
         //  spawn task_queue ( web push )
         // }
 
         /*
-        // ! FIXME: all this code is legitimately crap
-        // ! rewrite when can be asked
-
-        let ss = self.clone();
-        let c_clone = channel.clone();
-        async_std::task::spawn(async move {
-
-            let last_message_id = ss.id.clone();
-            let mut set = doc! { "last_message_id": last_message_id };
-
-            let channels = get_collection("channels");
-            match &c_clone {
-                Channel::DirectMessage { id, .. } => {
-                    // ! MARK AS ACTIVE
-                    set.insert("active", true);
-                    update_channels_last_message(&channels, id, &set).await;
-                },
-                Channel::Group { id, .. } | Channel::TextChannel { id, .. } => {
-                    update_channels_last_message(&channels, id, &set).await;
-                }
-                _ => {}
-            }
-        });
 
         // ! FIXME: also temp code
         // ! THIS ADDS ANY MENTIONS
@@ -267,10 +250,6 @@ impl Message {
                     })?;*/
                     .unwrap();
             });
-        }
-
-        if process_embeds {
-            self.process_embed();
         }
 
         let mentions = self.mentions.clone();
@@ -356,49 +335,18 @@ impl Message {
             data,
         }
         .publish(channel);
-        self.process_embed();
 
+        self.process_embed().await;
         Ok(())
     }
 
-    pub fn process_embed(&self) {
+    pub async fn process_embed(&self) {
         if !*USE_JANUARY {
             return;
         }
 
         if let Content::Text(text) = &self.content {
-            // ! FIXME: re-write this at some point,
-            // ! or just before we allow user generated embeds
-            let id = self.id.clone();
-            let content = text.clone();
-            let channel = self.channel.clone();
-            async_std::task::spawn(async move {
-                if let Ok(embeds) = Embed::generate(content).await {
-                    if let Ok(bson) = to_bson(&embeds) {
-                        if let Ok(_) = get_collection("messages")
-                            .update_one(
-                                doc! {
-                                    "_id": &id
-                                },
-                                doc! {
-                                    "$set": {
-                                        "embeds": bson
-                                    }
-                                },
-                                None,
-                            )
-                            .await
-                        {
-                            ClientboundNotification::MessageUpdate {
-                                id,
-                                channel: channel.clone(),
-                                data: json!({ "embeds": embeds }),
-                            }
-                            .publish(channel);
-                        }
-                    }
-                }
-            });
+            crate::task_queue::task_process_embeds::queue(self.channel.clone(), self.id.clone(), text.clone()).await;
         }
     }
 
