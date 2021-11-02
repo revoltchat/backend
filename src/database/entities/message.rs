@@ -5,9 +5,7 @@ use crate::{
     util::result::{Error, Result},
 };
 
-use mongodb::{
-    bson::{doc, to_bson, DateTime, Document},
-};
+use mongodb::bson::{doc, to_bson, DateTime};
 use rocket::serde::json::Value;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
@@ -324,16 +322,4 @@ impl Message {
 
         Ok(())
     }
-}
-
-async fn update_channels_last_message(channels: &Collection, channel_id: &String, set: &Document) {
-    channels
-        .update_one(
-            doc! { "_id": channel_id },
-            doc! { "$set": set },
-            None,
-        )
-        .await
-        .expect("Server should not run with no, or a corrupted db");
-
 }

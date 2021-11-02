@@ -1,5 +1,6 @@
 // Queue Type: Linear
 use async_channel::{ Sender, Receiver, bounded };
+use log::info;
 use mongodb::bson::{doc, to_bson};
 
 use crate::{database::*, notifications::events::ClientboundNotification};
@@ -38,6 +39,7 @@ pub async fn run() {
                     )
                     .await
                 {
+                    info!("Generated embeds for {}.", &id);
                     ClientboundNotification::MessageUpdate {
                         id,
                         channel: channel.clone(),

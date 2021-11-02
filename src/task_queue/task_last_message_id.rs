@@ -2,6 +2,7 @@
 use std::{collections::HashMap, time::{Duration, Instant}};
 
 use async_channel::{ Sender, Receiver, bounded };
+use log::info;
 use mongodb::bson::doc;
 
 use crate::database::*;
@@ -51,7 +52,7 @@ pub async fn run() {
         // Commit any due tasks to the database.
         for key in &keys {
             if let Some(Task { id, is_dm, .. }) = tasks.remove(key) {
-                let mut set = doc! { "last_message_id": id.clone() };
+                let mut set = doc! { "last_message_id": &id };
 
                 if is_dm {
                     set.insert("active", true);
@@ -65,6 +66,8 @@ pub async fn run() {
                     )
                     .await
                     .ok();
+
+                info!("Updated last_message_id for {} to {}.", key, id);
             }
         }
 

@@ -1,7 +1,10 @@
 // Queue Type: Debounced
+// TODO: Group similar events together with $in.
+
 use std::{collections::HashMap, time::{Duration, Instant}};
 
 use async_channel::{ Sender, Receiver, bounded };
+use log::info;
 use mongodb::{bson::doc, options::UpdateOptions};
 
 use crate::database::*;
@@ -76,6 +79,8 @@ pub async fn run() {
                         )
                         .await
                         .ok();
+
+                        info!("Added mentions for {} in {}.", user, channel);
                     },
                     AckEvent::AckMessage { id } => {
                         unreads.update_one(
@@ -95,6 +100,8 @@ pub async fn run() {
                         )
                         .await
                         .ok();
+
+                        info!("User {} acknowledged {}.", user, channel);
                     }
                 }
             }

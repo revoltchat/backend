@@ -63,6 +63,8 @@ pub async fn run() {
 
                     let msg = builder.build().unwrap();
                     client.send(msg).await.ok();
+
+                    info!("Sent Web Push notification to {:?}.", session.id);
                 }
             }
         }
