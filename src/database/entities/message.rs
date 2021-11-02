@@ -218,6 +218,28 @@ impl Message {
         // if (channel => DM | Group) | mentions {
         //  spawn task_queue ( web push )
         // }
+        let mut target_ids = vec![];
+        match &channel {
+            Channel::DirectMessage { recipients, .. } | Channel::Group { recipients, .. } => {
+                for recipient in recipients {
+                    if !is_online(recipient) {
+                        target_ids.push(recipient.clone());
+                    }
+                }
+            }
+            Channel::TextChannel { .. } => {
+                if let Some(mentions) = &self.mentions {
+                    target_ids.append(&mut mentions.clone());
+                }
+            }
+            _ => {}
+        }
+
+        if target_ids.len() > 0 {
+            if let Ok(payload) = serde_json::to_string(&PushNotification::new(self, &channel).await) {
+                crate::task_queue::task_web_push::queue(target_ids, payload).await;
+            }
+        }
 
         /*
 
@@ -250,79 +272,7 @@ impl Message {
                     })?;*/
                     .unwrap();
             });
-        }
-
-        let mentions = self.mentions.clone();
-
-        /*
-           Web Push Test Code
-        */
-        let c_clone = channel.clone();
-        async_std::task::spawn(async move {
-            // Find all offline users.
-            let mut target_ids = vec![];
-            match &c_clone {
-                Channel::DirectMessage { recipients, .. } | Channel::Group { recipients, .. } => {
-                    for recipient in recipients {
-                        if !is_online(recipient) {
-                            target_ids.push(recipient.clone());
-                        }
-                    }
-                }
-                Channel::TextChannel { .. } => {
-                    if let Some(mut mentions) = mentions {
-                        target_ids.append(&mut mentions);
-                    }
-                }
-                _ => {}
-            }
-
-            // Fetch their corresponding sessions.
-            if target_ids.len() > 0 {
-                if let Ok(mut cursor) = Session::find(
-                        &get_db(),
-                        doc! {
-                            "_id": {
-                                "$in": target_ids
-                            },
-                            "subscription": {
-                                "$exists": true
-                            }
-                        },
-                        None
-                    )
-                    .await {
-                    let enc = serde_json::to_string(&PushNotification::new(self, &c_clone).await).unwrap();
-                    let client = WebPushClient::new();
-                    let key =
-                        base64::decode_config(VAPID_PRIVATE_KEY.clone(), base64::URL_SAFE).unwrap();
-
-                    while let Some(Ok(session)) = cursor.next().await {
-                        if let Some(sub) = session.subscription {
-                            let subscription = SubscriptionInfo {
-                                endpoint: sub.endpoint,
-                                keys: SubscriptionKeys {
-                                    auth: sub.auth,
-                                    p256dh: sub.p256dh
-                                }
-                            };
-
-                            let mut builder = WebPushMessageBuilder::new(&subscription).unwrap();
-                            let sig_builder = VapidSignatureBuilder::from_pem(
-                                std::io::Cursor::new(&key),
-                                &subscription,
-                            )
-                            .unwrap();
-                            let signature = sig_builder.build().unwrap();
-                            builder.set_vapid_signature(signature);
-                            builder.set_payload(ContentEncoding::AesGcm, enc.as_bytes());
-                            let m = builder.build().unwrap();
-                            client.send(m).await.ok();
-                        }
-                    }
-                }
-            }
-        });*/
+        }*/
 
         Ok(())
     }
