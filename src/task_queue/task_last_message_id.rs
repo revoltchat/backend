@@ -12,7 +12,11 @@ static EXPIRE_CONSTANT: u64 = 30;
 // Otherwise, commit to database after 5 seconds.
 static SAVE_CONSTANT: u64 = 5;
 
-type Message = (String, String, bool);
+struct Message {
+    channel: String,
+    id: String,
+    is_dm: bool
+}
 
 #[derive(Debug)]
 struct Task {
@@ -27,7 +31,7 @@ lazy_static! {
 }
 
 pub async fn queue(channel: String, id: String, is_dm: bool) {
-    CHANNEL.0.send((channel, id, is_dm)).await.ok();
+    CHANNEL.0.send(Message { channel, id, is_dm }).await.ok();
 }
 
 pub async fn run() {
@@ -68,7 +72,7 @@ pub async fn run() {
         keys.clear();
 
         // Queue incoming tasks.
-        while let Ok((channel, id, is_dm)) = CHANNEL.1.try_recv() {
+        while let Ok(Message { channel, id, is_dm }) = CHANNEL.1.try_recv() {
             if let Some(mut existing_task) = tasks.get_mut(&channel) {
                 existing_task.id = id;
                 existing_task.last_updated = Instant::now();

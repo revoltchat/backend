@@ -8,14 +8,17 @@ use futures::StreamExt;
 use crate::util::variables::VAPID_PRIVATE_KEY;
 use crate::database::*;
 
-type Message = (Vec<String>, String);
+struct Message {
+    recipients: Vec<String>,
+    payload: String
+}
 
 lazy_static! {
     static ref CHANNEL: (Sender<Message>, Receiver<Message>) = bounded(100);
 }
 
 pub async fn queue(recipients: Vec<String>, payload: String) {
-    CHANNEL.0.send((recipients, payload)).await.ok();
+    CHANNEL.0.send(Message { recipients, payload }).await.ok();
 }
 
 pub async fn run() {
@@ -23,7 +26,7 @@ pub async fn run() {
     let key = base64::decode_config(VAPID_PRIVATE_KEY.clone(), base64::URL_SAFE)
         .expect("valid `VAPID_PRIVATE_KEY`");
 
-    while let Ok((recipients, payload)) = CHANNEL.1.recv().await {
+    while let Ok(Message { recipients, payload }) = CHANNEL.1.recv().await {
         if let Ok(mut cursor) = Session::find(
             &get_db(),
             doc! {

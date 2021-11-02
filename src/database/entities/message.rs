@@ -1,20 +1,16 @@
-use crate::util::variables::{USE_JANUARY, VAPID_PRIVATE_KEY, PUBLIC_URL};
+use crate::util::variables::{USE_JANUARY, PUBLIC_URL};
 use crate::{
     database::*,
     notifications::{events::ClientboundNotification, websocket::is_online},
     util::result::{Error, Result},
 };
 
-use futures::StreamExt;
-use mongodb::options::UpdateOptions;
 use mongodb::{
     bson::{doc, to_bson, DateTime, Document},
 };
-use rauth::entities::{Model, Session};
 use rocket::serde::json::Value;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
-use web_push::{ContentEncoding, SubscriptionInfo, SubscriptionKeys, VapidSignatureBuilder, WebPushClient, WebPushMessageBuilder};
 use std::time::SystemTime;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -211,9 +207,17 @@ impl Message {
         // if mentions {
         //  spawn task_queue ( update channel_unreads )
         // }
-        /*if let Some(mentions) = &self.mentions {
-
-        }*/
+        if let Some(mentions) = &self.mentions {
+            for user in mentions {
+                crate::task_queue::task_ack::queue(
+                    channel.id().into(),
+                    user.clone(),
+                    crate::task_queue::task_ack::AckEvent::AddMention {
+                        ids: vec![ self.id.clone() ]
+                    }
+                ).await;
+            }
+        }
 
         // if (channel => DM | Group) | mentions {
         //  spawn task_queue ( web push )
@@ -240,39 +244,6 @@ impl Message {
                 crate::task_queue::task_web_push::queue(target_ids, payload).await;
             }
         }
-
-        /*
-
-        // ! FIXME: also temp code
-        // ! THIS ADDS ANY MENTIONS
-        if let Some(mentions) = &self.mentions {
-            let message = self.id.clone();
-            let channel = self.channel.clone();
-            let mentions = mentions.clone();
-            async_std::task::spawn(async move {
-                get_collection("channel_unreads")
-                    .update_many(
-                        doc! {
-                            "_id.channel": channel,
-                            "_id.user": {
-                                "$in": mentions
-                            }
-                        },
-                        doc! {
-                            "$push": {
-                                "mentions": message
-                            }
-                        },
-                        UpdateOptions::builder().upsert(true).build(),
-                    )
-                    .await
-                    /*.map_err(|_| Error::DatabaseError {
-                        operation: "update_many",
-                        with: "channel_unreads",
-                    })?;*/
-                    .unwrap();
-            });
-        }*/
 
         Ok(())
     }
