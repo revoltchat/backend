@@ -9,6 +9,7 @@ use mongodb::bson::{doc, to_bson, DateTime};
 use rocket::serde::json::Value;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
+use validator::Validate;
 use std::time::SystemTime;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -123,11 +124,22 @@ impl Content {
             target.id().to_string(),
             self,
             None,
+            None,
             None
         )
         .publish(&target, false)
         .await
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Validate)]
+pub struct Masquerade {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(length(min = 1, max = 32))]
+    name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(length(min = 1, max = 128))]
+    avatar: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -149,7 +161,9 @@ pub struct Message {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mentions: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub replies: Option<Vec<String>>
+    pub replies: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub masquerade: Option<Masquerade>
 }
 
 impl Message {
@@ -159,6 +173,7 @@ impl Message {
         content: Content,
         mentions: Option<Vec<String>>,
         replies: Option<Vec<String>>,
+        masquerade: Option<Masquerade>,
     ) -> Message {
         Message {
             id: Ulid::new().to_string(),
@@ -170,7 +185,8 @@ impl Message {
             edited: None,
             embeds: None,
             mentions,
-            replies
+            replies,
+            masquerade
         }
     }
 

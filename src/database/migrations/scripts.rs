@@ -11,7 +11,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 10;
+pub const LATEST_REVISION: i32 = 11;
 
 pub async fn migrate_database() {
     let migrations = get_collection("migrations");

@@ -26,6 +26,8 @@ pub struct Data {
     attachments: Option<Vec<String>>,
     nonce: Option<String>,
     replies: Option<Vec<Reply>>,
+    #[validate]
+    masquerade: Option<Masquerade>
 }
 
 lazy_static! {
@@ -62,8 +64,14 @@ pub async fn message_send(user: User, _r: Ratelimiter, mut idempotency: Idempote
 
     let mut mentions = HashSet::new();
     for capture in RE_MENTION.captures_iter(&message.content) {
-        if let Some(mention) =  capture.get(1) {
+        if let Some(mention) = capture.get(1) {
             mentions.insert(mention.as_str().to_string());
+        }
+    }
+
+    if let Some(_) = &message.masquerade {
+        if !perm.get_masquerade() {
+            return Err(Error::MissingPermission)
         }
     }
 
@@ -127,6 +135,7 @@ pub async fn message_send(user: User, _r: Ratelimiter, mut idempotency: Idempote
         } else {
             None
         },
+        masquerade: message.masquerade
     };
 
     msg.clone().publish(&target, perm.get_embed_links()).await?;
