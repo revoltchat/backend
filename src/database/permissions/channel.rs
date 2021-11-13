@@ -17,6 +17,7 @@ pub enum ChannelPermission {
     InviteOthers = 0b00000000000000000000000000100000,   // 32
     EmbedLinks = 0b00000000000000000000000001000000,     // 64
     UploadFiles = 0b00000000000000000000000010000000,   // 128
+    Masquerade = 0b00000000000000000000000100000000,   // 256
 }
 
 lazy_static! {
@@ -27,7 +28,8 @@ lazy_static! {
         + ChannelPermission::VoiceCall
         + ChannelPermission::InviteOthers
         + ChannelPermission::EmbedLinks
-        + ChannelPermission::UploadFiles;
+        + ChannelPermission::UploadFiles
+        + ChannelPermission::Masquerade;
 
     pub static ref DEFAULT_PERMISSION_SERVER: u32 =
         ChannelPermission::View
@@ -52,6 +54,7 @@ bitfield! {
     pub get_invite_others, _: 26;
     pub get_embed_links, _: 25;
     pub get_upload_files, _: 24;
+    pub get_masquerade, _: 23;
 }
 
 impl<'a> PermissionCalculator<'a> {

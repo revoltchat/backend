@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 # Utility
+lru = "0.7.0"
 url = "2.2.2"
 log = "0.4.11"
 dotenv = "0.15.0"
@@ -41,6 +42,7 @@ rmp-serde = { git = "https://github.com/3Hren/msgpack-rust", rev = "5bf2c24203ad
 # async
 futures = "0.3.8"
 chrono = "0.4.15"
+async-channel = "1.6.1"
 reqwest = { version = "0.11.4", features = ["json"] }
 async-std = { version = "1.8.0", features = ["tokio1", "tokio02", "attributes"] }
 
@@ -49,7 +51,12 @@ web-push = "0.7.2"
 many-to-many = "0.1.2"
 lettre = "0.10.0-alpha.4"
 rauth = { git = "https://github.com/insertish/rauth", rev = "775a6f3ffb9ffc0e382af32fac2924e9a707e890" }
-hive_pubsub = { git = "https://gitlab.insrt.uk/insert/hive", rev = "a89826df2b30166220e68a6ed01a58b751456604", features = ["mongo"] }
+hive_pubsub = { git = "https://gitlab.insrt.uk/insert/hive", rev = "b0f3db9d33990530d7640d4bbb309c8d9eb5c0cf", features = ["redis-backend"] }
+
+# redis
+redis = { version = "0.21.2", features = ["async-std-comp"] }
+mobc = { version = "0.7.3" }
+mobc-redis = { version = "0.7.0", default-features = false, features = ["async-std-comp"] }
 
 # web
 async-tungstenite = { version = "0.10.0", features = ["async-std-runtime"] }

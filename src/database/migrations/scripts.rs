@@ -11,7 +11,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 10;
+pub const LATEST_REVISION: i32 = 11;
 
 pub async fn migrate_database() {
     let migrations = get_collection("migrations");
@@ -340,6 +340,36 @@ pub async fn run_migrations(revision: i32) -> i32 {
                 }
             }
         }
+    }
+
+    if revision <= 10 {
+        info!("Running migration [revision 10 / 2021-11-01]: Remove nonce values on channels and servers.");
+
+        get_collection("servers")
+            .update_many(
+                doc! {},
+                doc! {
+                    "$unset": {
+                        "nonce": 1,
+                    }
+                },
+                None
+            )
+            .await
+            .unwrap();
+
+        get_collection("channels")
+            .update_many(
+                doc! {},
+                doc! {
+                    "$unset": {
+                        "nonce": 1,
+                    }
+                },
+                None
+            )
+            .await
+            .unwrap();
     }
 
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.

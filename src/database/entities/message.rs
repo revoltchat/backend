@@ -1,20 +1,15 @@
-use crate::util::variables::{USE_JANUARY, VAPID_PRIVATE_KEY, PUBLIC_URL};
+use crate::util::variables::{USE_JANUARY, PUBLIC_URL};
 use crate::{
     database::*,
     notifications::{events::ClientboundNotification, websocket::is_online},
     util::result::{Error, Result},
 };
 
-use futures::StreamExt;
-use mongodb::options::UpdateOptions;
-use mongodb::{
-    bson::{doc, to_bson, DateTime, Document},
-};
-use rauth::entities::{Model, Session};
+use mongodb::bson::{doc, to_bson, DateTime};
 use rocket::serde::json::Value;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
-use web_push::{ContentEncoding, SubscriptionInfo, SubscriptionKeys, VapidSignatureBuilder, WebPushClient, WebPushMessageBuilder};
+use validator::Validate;
 use std::time::SystemTime;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -129,11 +124,22 @@ impl Content {
             target.id().to_string(),
             self,
             None,
+            None,
             None
         )
         .publish(&target, false)
         .await
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Validate)]
+pub struct Masquerade {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(length(min = 1, max = 32))]
+    name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(length(min = 1, max = 128))]
+    avatar: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -155,7 +161,9 @@ pub struct Message {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mentions: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub replies: Option<Vec<String>>
+    pub replies: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub masquerade: Option<Masquerade>
 }
 
 impl Message {
@@ -165,6 +173,7 @@ impl Message {
         content: Content,
         mentions: Option<Vec<String>>,
         replies: Option<Vec<String>>,
+        masquerade: Option<Masquerade>,
     ) -> Message {
         Message {
             id: Ulid::new().to_string(),
@@ -176,11 +185,17 @@ impl Message {
             edited: None,
             embeds: None,
             mentions,
-            replies
+            replies,
+            masquerade
         }
     }
 
     pub async fn publish(self, channel: &Channel, process_embeds: bool) -> Result<()> {
+        // Publish message event
+        ClientboundNotification::Message(self.clone())
+            .publish(channel.id().to_string());
+
+        // Commit message to database
         get_collection("messages")
             .insert_one(to_bson(&self).unwrap().as_document().unwrap().clone(), None)
             .await
@@ -189,137 +204,60 @@ impl Message {
                 with: "message",
             })?;
 
-        // ! FIXME: all this code is legitimately crap
-        // ! rewrite when can be asked
-
-        let ss = self.clone();
-        let c_clone = channel.clone();
-        async_std::task::spawn(async move {
-
-            let last_message_id = ss.id.clone();
-            let mut set = doc! { "last_message_id": last_message_id };
-
-            let channels = get_collection("channels");
-            match &c_clone {
-                Channel::DirectMessage { id, .. } => {
-                    // ! MARK AS ACTIVE
-                    set.insert("active", true);
-                    update_channels_last_message(&channels, id, &set).await;
-                },
-                Channel::Group { id, .. } | Channel::TextChannel { id, .. } => {
-                    update_channels_last_message(&channels, id, &set).await;
-                }
-                _ => {}
-            }
-        });
-
-        // ! FIXME: also temp code
-        // ! THIS ADDS ANY MENTIONS
-        if let Some(mentions) = &self.mentions {
-            let message = self.id.clone();
-            let channel = self.channel.clone();
-            let mentions = mentions.clone();
-            async_std::task::spawn(async move {
-                get_collection("channel_unreads")
-                    .update_many(
-                        doc! {
-                            "_id.channel": channel,
-                            "_id.user": {
-                                "$in": mentions
-                            }
-                        },
-                        doc! {
-                            "$push": {
-                                "mentions": message
-                            }
-                        },
-                        UpdateOptions::builder().upsert(true).build(),
-                    )
-                    .await
-                    /*.map_err(|_| Error::DatabaseError {
-                        operation: "update_many",
-                        with: "channel_unreads",
-                    })?;*/
-                    .unwrap();
-            });
-        }
-
+        // spawn task_queue ( process embeds )
         if process_embeds {
-            self.process_embed();
+            self.process_embed().await;
         }
 
-        let mentions = self.mentions.clone();
-        ClientboundNotification::Message(self.clone()).publish(channel.id().to_string());
+        // spawn task_queue ( update last_message_id )
+        match channel {
+            Channel::DirectMessage { id, .. } =>
+                crate::task_queue::task_last_message_id::queue(id.clone(), self.id.clone(), true).await,
+            Channel::Group { id, .. } | Channel::TextChannel { id, .. } =>
+                crate::task_queue::task_last_message_id::queue(id.clone(), self.id.clone(), false).await,
+            _ => {}
+        }
 
-        /*
-           Web Push Test Code
-        */
-        let c_clone = channel.clone();
-        async_std::task::spawn(async move {
-            // Find all offline users.
-            let mut target_ids = vec![];
-            match &c_clone {
-                Channel::DirectMessage { recipients, .. } | Channel::Group { recipients, .. } => {
-                    for recipient in recipients {
-                        if !is_online(recipient) {
-                            target_ids.push(recipient.clone());
-                        }
+        // if mentions {
+        //  spawn task_queue ( update channel_unreads )
+        // }
+        if let Some(mentions) = &self.mentions {
+            for user in mentions {
+                crate::task_queue::task_ack::queue(
+                    channel.id().into(),
+                    user.clone(),
+                    crate::task_queue::task_ack::AckEvent::AddMention {
+                        ids: vec![ self.id.clone() ]
                     }
-                }
-                Channel::TextChannel { .. } => {
-                    if let Some(mut mentions) = mentions {
-                        target_ids.append(&mut mentions);
-                    }
-                }
-                _ => {}
+                ).await;
             }
+        }
 
-            // Fetch their corresponding sessions.
-            if target_ids.len() > 0 {
-                if let Ok(mut cursor) = Session::find(
-                        &get_db(),
-                        doc! {
-                            "_id": {
-                                "$in": target_ids
-                            },
-                            "subscription": {
-                                "$exists": true
-                            }
-                        },
-                        None
-                    )
-                    .await {
-                    let enc = serde_json::to_string(&PushNotification::new(self, &c_clone).await).unwrap();
-                    let client = WebPushClient::new();
-                    let key =
-                        base64::decode_config(VAPID_PRIVATE_KEY.clone(), base64::URL_SAFE).unwrap();
-
-                    while let Some(Ok(session)) = cursor.next().await {
-                        if let Some(sub) = session.subscription {
-                            let subscription = SubscriptionInfo {
-                                endpoint: sub.endpoint,
-                                keys: SubscriptionKeys {
-                                    auth: sub.auth,
-                                    p256dh: sub.p256dh
-                                }
-                            };
-
-                            let mut builder = WebPushMessageBuilder::new(&subscription).unwrap();
-                            let sig_builder = VapidSignatureBuilder::from_pem(
-                                std::io::Cursor::new(&key),
-                                &subscription,
-                            )
-                            .unwrap();
-                            let signature = sig_builder.build().unwrap();
-                            builder.set_vapid_signature(signature);
-                            builder.set_payload(ContentEncoding::AesGcm, enc.as_bytes());
-                            let m = builder.build().unwrap();
-                            client.send(m).await.ok();
-                        }
+        // if (channel => DM | Group) | mentions {
+        //  spawn task_queue ( web push )
+        // }
+        let mut target_ids = vec![];
+        match &channel {
+            Channel::DirectMessage { recipients, .. } | Channel::Group { recipients, .. } => {
+                for recipient in recipients {
+                    if !is_online(recipient) {
+                        target_ids.push(recipient.clone());
                     }
                 }
             }
-        });
+            Channel::TextChannel { .. } => {
+                if let Some(mentions) = &self.mentions {
+                    target_ids.append(&mut mentions.clone());
+                }
+            }
+            _ => {}
+        }
+
+        if target_ids.len() > 0 {
+            if let Ok(payload) = serde_json::to_string(&PushNotification::new(self, &channel).await) {
+                crate::task_queue::task_web_push::queue(target_ids, payload).await;
+            }
+        }
 
         Ok(())
     }
@@ -332,49 +270,18 @@ impl Message {
             data,
         }
         .publish(channel);
-        self.process_embed();
 
+        self.process_embed().await;
         Ok(())
     }
 
-    pub fn process_embed(&self) {
+    pub async fn process_embed(&self) {
         if !*USE_JANUARY {
             return;
         }
 
         if let Content::Text(text) = &self.content {
-            // ! FIXME: re-write this at some point,
-            // ! or just before we allow user generated embeds
-            let id = self.id.clone();
-            let content = text.clone();
-            let channel = self.channel.clone();
-            async_std::task::spawn(async move {
-                if let Ok(embeds) = Embed::generate(content).await {
-                    if let Ok(bson) = to_bson(&embeds) {
-                        if let Ok(_) = get_collection("messages")
-                            .update_one(
-                                doc! {
-                                    "_id": &id
-                                },
-                                doc! {
-                                    "$set": {
-                                        "embeds": bson
-                                    }
-                                },
-                                None,
-                            )
-                            .await
-                        {
-                            ClientboundNotification::MessageUpdate {
-                                id,
-                                channel: channel.clone(),
-                                data: json!({ "embeds": embeds }),
-                            }
-                            .publish(channel);
-                        }
-                    }
-                }
-            });
+            crate::task_queue::task_process_embeds::queue(self.channel.clone(), self.id.clone(), text.clone()).await;
         }
     }
 
@@ -431,16 +338,4 @@ impl Message {
 
         Ok(())
     }
-}
-
-async fn update_channels_last_message(channels: &Collection, channel_id: &String, set: &Document) {
-    channels
-        .update_one(
-            doc! { "_id": channel_id },
-            doc! { "$set": set },
-            None,
-        )
-        .await
-        .expect("Server should not run with no, or a corrupted db");
-
 }

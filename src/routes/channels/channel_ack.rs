@@ -2,9 +2,6 @@ use crate::database::*;
 use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result, EmptyResponse};
 
-use mongodb::bson::doc;
-use mongodb::options::UpdateOptions;
-
 #[put("/<target>/ack/<message>")]
 pub async fn req(user: User, target: Ref, message: Ref) -> Result<EmptyResponse> {
     if user.bot.is_some() {
@@ -22,31 +19,16 @@ pub async fn req(user: User, target: Ref, message: Ref) -> Result<EmptyResponse>
         Err(Error::MissingPermission)?
     }
 
-    let id = target.id();
-    get_collection("channel_unreads")
-        .update_one(
-            doc! {
-                "_id.channel": id,
-                "_id.user": &user.id
-            },
-            doc! {
-                "$unset": {
-                    "mentions": 1
-                },
-                "$set": {
-                    "last_id": &message.id
-                }
-            },
-            UpdateOptions::builder().upsert(true).build(),
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "update_one",
-            with: "channel_unreads",
-        })?;
+    crate::task_queue::task_ack::queue(
+        target.id().into(),
+        user.id.clone(),
+        crate::task_queue::task_ack::AckEvent::AckMessage {
+            id: message.id.clone()
+        }
+    ).await;
 
     ClientboundNotification::ChannelAck {
-        id: id.to_string(),
+        id: target.id().into(),
         user: user.id.clone(),
         message_id: message.id,
     }

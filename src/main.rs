@@ -17,8 +17,10 @@ extern crate ctrlc;
 pub mod database;
 pub mod notifications;
 pub mod routes;
+pub mod redis;
 pub mod util;
 pub mod version;
+pub mod task_queue;
 
 use async_std::task;
 use futures::join;
@@ -47,7 +49,9 @@ async fn main() {
 
     util::variables::preflight_checks();
     database::connect().await;
+    redis::connect().await;
     notifications::hive::init_hive().await;
+    task_queue::start_queues().await;
 
     ctrlc::set_handler(move || {
         // Force ungraceful exit to avoid hang.
@@ -56,7 +60,7 @@ async fn main() {
     .expect("Error setting Ctrl-C handler");
 
     let web_task = task::spawn(launch_web());
-    let hive_task = task::spawn(notifications::hive::listen());
+    let hive_task = task::spawn_local(notifications::hive::listen());
 
     join!(
         web_task,

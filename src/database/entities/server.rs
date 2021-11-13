@@ -85,8 +85,6 @@ pub enum RemoveMember {
 pub struct Server {
     #[serde(rename = "_id")]
     pub id: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub nonce: Option<String>,
     pub owner: String,
 
     pub name: String,
