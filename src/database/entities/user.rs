@@ -68,8 +68,12 @@ pub enum Badges {
     Translator = 2,
     Supporter = 4,
     ResponsibleDisclosure = 8,
-    RevoltTeam = 16,
+    Founder = 16,
+    PlatformModeration = 32,
+    ActiveSupporter = 64,
+    Paw = 128,
     EarlyAdopter = 256,
+    ReservedRelevantJokeBadge1 = 512
 }
 
 impl_op_ex_commutative!(+ |a: &i32, b: &Badges| -> i32 { *a | *b as i32 });
