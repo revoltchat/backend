@@ -137,7 +137,7 @@ pub async fn req(user: User, target: Ref, options: Json<Options>) -> Result<Valu
     if options.include_users.unwrap_or_else(|| false) {
         let mut ids = HashSet::new();
         for message in &messages {
-            ids.insert(message.author.clone());
+            message.add_associated_user_ids(&mut ids);
         }
 
         ids.remove(&user.id);

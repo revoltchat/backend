@@ -10,6 +10,7 @@ use rocket::serde::json::Value;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use validator::Validate;
+use std::collections::HashSet;
 use std::time::SystemTime;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -339,5 +340,24 @@ impl Message {
         }
 
         Ok(())
+    }
+
+    pub fn add_associated_user_ids(&self, ids: &mut HashSet<String>) {
+        ids.insert(self.author.clone());
+
+        if let Content::SystemMessage(sys) = &self.content {
+            match sys {
+                SystemMessage::Text { .. } => {},
+                SystemMessage::UserAdded { id, by } => { ids.insert(id.clone()); ids.insert(by.clone()); },
+                SystemMessage::UserRemove { id, by } => { ids.insert(id.clone()); ids.insert(by.clone()); },
+                SystemMessage::UserJoined { id } => { ids.insert(id.clone()); },
+                SystemMessage::UserLeft { id } => { ids.insert(id.clone()); },
+                SystemMessage::UserKicked { id } => { ids.insert(id.clone()); },
+                SystemMessage::UserBanned { id } => { ids.insert(id.clone()); },
+                SystemMessage::ChannelRenamed { by, .. } => { ids.insert(by.clone()); },
+                SystemMessage::ChannelDescriptionChanged { by } => { ids.insert(by.clone()); },
+                SystemMessage::ChannelIconChanged { by } => { ids.insert(by.clone()); }
+            }
+        }
     }
 }
