@@ -30,7 +30,7 @@ pub async fn run() {
         if let Ok(mut cursor) = Session::find(
             &get_db(),
             doc! {
-                "_id": {
+                "user_id": {
                     "$in": recipients
                 },
                 "subscription": {
