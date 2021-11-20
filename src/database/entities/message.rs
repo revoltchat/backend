@@ -1,4 +1,4 @@
-use crate::util::variables::{USE_JANUARY, PUBLIC_URL};
+use crate::util::variables::{USE_JANUARY, PUBLIC_URL, APP_URL};
 use crate::{
     database::*,
     notifications::{events::ClientboundNotification, websocket::is_online},
@@ -21,6 +21,7 @@ pub struct PushNotification {
     pub body: String,
     pub tag: String,
     pub timestamp: u64,
+    pub url: String,
 }
 
 impl PushNotification {
@@ -64,6 +65,7 @@ impl PushNotification {
             body,
             tag: channel.id().to_string(),
             timestamp,
+            url: format!("{}/channel/{}/{}", *APP_URL, channel.id(), msg.id),
         }
     }
 }
