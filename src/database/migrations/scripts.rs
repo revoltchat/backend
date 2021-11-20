@@ -11,7 +11,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 11;
+pub const LATEST_REVISION: i32 = 12;
 
 pub async fn migrate_database() {
     let migrations = get_collection("migrations");
@@ -370,6 +370,78 @@ pub async fn run_migrations(revision: i32) -> i32 {
             )
             .await
             .unwrap();
+    }
+
+    if revision <= 11 {
+        info!("Running migration [revision 11 / 2021-11-14]: Add indexes to database.");
+
+        get_db()
+        .run_command(
+            doc! {
+                "createIndexes": "messages",
+                "indexes": [
+                    {
+                        "key": {
+                            "channel": 1
+                        },
+                        "name": "channel"
+                    }
+                ]
+            },
+            None,
+        )
+        .await
+        .expect("Failed to create message index.");
+
+        get_db()
+        .run_command(
+            doc! {
+                "createIndexes": "messages",
+                "indexes": [
+                    {
+                        "key": {
+                            "_id.channel": 1,
+                            "_id.user": 1,
+                        },
+                        "name": "compound_id"
+                    },
+                    {
+                        "key": {
+                            "_id.user": 1,
+                        },
+                        "name": "user_id"
+                    }
+                ]
+            },
+            None,
+        )
+        .await
+        .expect("Failed to create channel_unreads index.");
+
+        get_db()
+        .run_command(
+            doc! {
+                "createIndexes": "messages",
+                "indexes": [
+                    {
+                        "key": {
+                            "_id.server": 1,
+                            "_id.user": 1,
+                        },
+                        "name": "compound_id"
+                    },
+                    {
+                        "key": {
+                            "_id.user": 1,
+                        },
+                        "name": "user_id"
+                    }
+                ]
+            },
+            None,
+        )
+        .await
+        .expect("Failed to create server_members index.");
     }
 
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.

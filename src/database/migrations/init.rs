@@ -102,6 +102,12 @@ pub async fn create_database() {
                         "content": "text"
                     },
                     "name": "content"
+                },
+                {
+                    "key": {
+                        "channel": 1
+                    },
+                    "name": "channel"
                 }
             ]
         },
@@ -109,6 +115,56 @@ pub async fn create_database() {
     )
     .await
     .expect("Failed to create message index.");
+
+    get_db()
+    .run_command(
+        doc! {
+            "createIndexes": "messages",
+            "indexes": [
+                {
+                    "key": {
+                        "_id.channel": 1,
+                        "_id.user": 1,
+                    },
+                    "name": "compound_id"
+                },
+                {
+                    "key": {
+                        "_id.user": 1,
+                    },
+                    "name": "user_id"
+                }
+            ]
+        },
+        None,
+    )
+    .await
+    .expect("Failed to create channel_unreads index.");
+
+    get_db()
+    .run_command(
+        doc! {
+            "createIndexes": "messages",
+            "indexes": [
+                {
+                    "key": {
+                        "_id.server": 1,
+                        "_id.user": 1,
+                    },
+                    "name": "compound_id"
+                },
+                {
+                    "key": {
+                        "_id.user": 1,
+                    },
+                    "name": "user_id"
+                }
+            ]
+        },
+        None,
+    )
+    .await
+    .expect("Failed to create server_members index.");
 
     db.collection("migrations")
         .insert_one(
