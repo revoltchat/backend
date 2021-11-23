@@ -108,6 +108,13 @@ pub async fn create_database() {
                         "channel": 1
                     },
                     "name": "channel"
+                },
+                {
+                    "key": {
+                        "channel": 1,
+                        "_id": 1
+                    },
+                    "name": "channel_id_compound"
                 }
             ]
         },
@@ -119,7 +126,7 @@ pub async fn create_database() {
     get_db()
     .run_command(
         doc! {
-            "createIndexes": "messages",
+            "createIndexes": "channel_unreads",
             "indexes": [
                 {
                     "key": {
@@ -144,7 +151,7 @@ pub async fn create_database() {
     get_db()
     .run_command(
         doc! {
-            "createIndexes": "messages",
+            "createIndexes": "server_members",
             "indexes": [
                 {
                     "key": {

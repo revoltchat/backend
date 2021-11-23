@@ -11,7 +11,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 12;
+pub const LATEST_REVISION: i32 = 13;
 
 pub async fn migrate_database() {
     let migrations = get_collection("migrations");
@@ -396,7 +396,7 @@ pub async fn run_migrations(revision: i32) -> i32 {
         get_db()
         .run_command(
             doc! {
-                "createIndexes": "messages",
+                "createIndexes": "channel_unreads",
                 "indexes": [
                     {
                         "key": {
@@ -421,7 +421,7 @@ pub async fn run_migrations(revision: i32) -> i32 {
         get_db()
         .run_command(
             doc! {
-                "createIndexes": "messages",
+                "createIndexes": "server_members",
                 "indexes": [
                     {
                         "key": {
@@ -442,6 +442,29 @@ pub async fn run_migrations(revision: i32) -> i32 {
         )
         .await
         .expect("Failed to create server_members index.");
+    }
+
+    if revision <= 12 {
+        info!("Running migration [revision 12 / 2021-11-21]: Add indexes to database.");
+
+        get_db()
+        .run_command(
+            doc! {
+                "createIndexes": "messages",
+                "indexes": [
+                    {
+                        "key": {
+                            "channel": 1,
+                            "_id": 1
+                        },
+                        "name": "channel_id_compound"
+                    }
+                ]
+            },
+            None,
+        )
+        .await
+        .expect("Failed to create message index.");
     }
 
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.
