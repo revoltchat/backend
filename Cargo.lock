@@ -2577,7 +2577,7 @@ dependencies = [
 [[package]]
 name = "rauth"
 version = "1.0.0"
-source = "git+https://github.com/insertish/rauth?rev=775a6f3ffb9ffc0e382af32fac2924e9a707e890#775a6f3ffb9ffc0e382af32fac2924e9a707e890"
+source = "git+https://github.com/insertish/rauth?rev=157263ffcbd6cb1073e288b215db227634c4c29a#157263ffcbd6cb1073e288b215db227634c4c29a"
 dependencies = [
  "async-std",
  "base32",
