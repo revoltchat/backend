@@ -22,6 +22,7 @@ pub enum InviteResponse {
         #[serde(skip_serializing_if = "Option::is_none")]
         user_avatar: Option<File>,
         member_count: i64,
+        owner_id: String
     },
 }
 
@@ -43,6 +44,7 @@ pub async fn req(target: Ref) -> Result<Value> {
     
                     Ok(json!(InviteResponse::Server {
                         member_count: Server::get_member_count(&server.id).await?,
+                        owner_id: server.owner,
                         server_id: server.id,
                         server_name: server.name,
                         server_icon: server.icon,
