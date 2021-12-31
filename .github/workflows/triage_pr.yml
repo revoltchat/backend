@@ -2,7 +2,7 @@ name: Add PR to Board
 
 on:
   pull_request_target:
-    types: [opened]
+    types: [opened, synchronize, ready_for_review, review_requested]
 
 jobs:
   track_pr:
