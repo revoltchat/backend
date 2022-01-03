@@ -218,7 +218,7 @@ impl User {
 
     /// Utility function for fetching multiple users from the perspective of one.
     /// Assumes user has a mutual connection with others.
-    pub async fn fetch_multiple_users(&self, user_ids: Vec<String>) -> Result<Vec<User>> {
+    pub async fn fetch_multiple_users(&self, user_ids: &Vec<String>) -> Result<Vec<User>> {
         let mut users = vec![];
         let mut cursor = get_collection("users")
             .find(

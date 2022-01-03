@@ -166,13 +166,13 @@ pub async fn req(user: User, target: Ref, options: Options) -> Result<Value> {
 
         ids.remove(&user.id);
         let user_ids = ids.into_iter().collect();
-        let users = user.fetch_multiple_users(user_ids).await?;
+        let users = user.fetch_multiple_users(&user_ids).await?;
 
         if let Channel::TextChannel { server, .. } = target {
             Ok(json!({
                 "messages": messages,
                 "users": users,
-                "members": Server::fetch_members(&server).await?
+                "members": Server::fetch_members_with_ids(&server, &user_ids).await?
             }))
         } else {
             Ok(json!({

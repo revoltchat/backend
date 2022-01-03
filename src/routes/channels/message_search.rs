@@ -108,10 +108,10 @@ pub async fn req(user: User, target: Ref, options: Json<Options>) -> Result<Valu
                             }
                         },
                         Sort::Latest => doc! {
-                            "_id": -1
+                            "_id": -1 as i32
                         },
                         Sort::Oldest => doc! {
-                            "_id": 1
+                            "_id": 1 as i32
                         }
                     }
                 )
@@ -142,13 +142,13 @@ pub async fn req(user: User, target: Ref, options: Json<Options>) -> Result<Valu
 
         ids.remove(&user.id);
         let user_ids = ids.into_iter().collect();
-        let users = user.fetch_multiple_users(user_ids).await?;
+        let users = user.fetch_multiple_users(&user_ids).await?;
 
         if let Channel::TextChannel { server, .. } = target {
             Ok(json!({
                 "messages": messages,
                 "users": users,
-                "members": Server::fetch_members(&server).await?
+                "members": Server::fetch_members_with_ids(&server, &user_ids).await?
             }))
         } else {
             Ok(json!({

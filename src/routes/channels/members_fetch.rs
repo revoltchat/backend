@@ -16,7 +16,7 @@ pub async fn req(user: User, target: Ref) -> Result<Value> {
     }
 
     if let Channel::Group { recipients, .. } = target {
-        Ok(json!(user.fetch_multiple_users(recipients).await?))
+        Ok(json!(user.fetch_multiple_users(&recipients).await?))
     } else {
         Err(Error::InvalidOperation)
     }

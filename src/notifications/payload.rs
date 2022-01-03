@@ -104,7 +104,7 @@ pub async fn generate_ready(mut user: User) -> Result<ClientboundNotification> {
 
     user_ids.remove(&user.id);
     let mut users = if user_ids.len() > 0 {
-        user.fetch_multiple_users(user_ids.into_iter().collect::<Vec<String>>())
+        user.fetch_multiple_users(&user_ids.into_iter().collect::<Vec<String>>())
             .await?
     } else {
         vec![]
