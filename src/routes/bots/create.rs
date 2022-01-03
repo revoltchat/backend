@@ -48,6 +48,8 @@ pub async fn create_bot(user: User, info: Json<Data>) -> Result<Value> {
         owner: user.id.clone(),
         token,
         public: false,
+        analytics: false,
+        discoverable: false,
         interactions_url: None
     };
 
