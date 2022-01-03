@@ -58,7 +58,25 @@ impl Ref {
     }
 
     pub async fn fetch_invite(&self) -> Result<Invite> {
-        self.fetch("channel_invites").await
+        match self.fetch("channel_invites").await {
+            Ok(invite) => Ok(invite),
+            Err(err) => {
+                if let Ok(server) = self.fetch::<Server>("servers").await {
+                    if server.discoverable {
+                        return Ok(
+                            Invite::Server {
+                                code: server.id.clone(),
+                                server: server.id,
+                                creator: server.owner,
+                                channel: server.channels[0].clone(),
+                            }
+                        )
+                    }
+                }
+
+                Err(err)
+            }
+        }
     }
 
     pub async fn fetch_bot(&self) -> Result<Bot> {
