@@ -236,6 +236,30 @@ impl Server {
             .collect::<Vec<Member>>())
     }
 
+    pub async fn fetch_members_with_ids(id: &str, ids: &Vec<String>) -> Result<Vec<Member>> {
+        Ok(get_collection("server_members")
+            .find(
+                doc! {
+                    "_id.server": id,
+                    "_id.user": {
+                        "$in": ids
+                    }
+                },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "find",
+                with: "server_members",
+            })?
+            .filter_map(async move |s| s.ok())
+            .collect::<Vec<Document>>()
+            .await
+            .into_iter()
+            .filter_map(|x| from_document(x).ok())
+            .collect::<Vec<Member>>())
+    }
+
     pub async fn fetch_member_ids(id: &str) -> Result<Vec<String>> {
         Ok(get_collection("server_members")
             .find(

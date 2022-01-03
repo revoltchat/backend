@@ -46,6 +46,6 @@ pub async fn req(user: User, target: Ref) -> Result<Value> {
 
     Ok(json!({
         "members": members,
-        "users": user.fetch_multiple_users(member_ids).await?
+        "users": user.fetch_multiple_users(&member_ids).await?
     }))
 }
