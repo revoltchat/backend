@@ -18,8 +18,8 @@ pub struct Data {
     categories: Option<Vec<Category>>,
     system_messages: Option<SystemMessageChannels>,
     remove: Option<RemoveServerField>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    nsfw: Option<bool>
+    nsfw: Option<bool>,
+    analytics: Option<bool>,
 }
 
 #[patch("/<target>", data = "<data>")]
@@ -28,7 +28,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyRespo
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if data.name.is_none() && data.description.is_none() && data.icon.is_none() && data.banner.is_none() && data.remove.is_none() && data.categories.is_none() && data.system_messages.is_none()
+    if data.name.is_none() && data.description.is_none() && data.icon.is_none() && data.banner.is_none() && data.remove.is_none() && data.categories.is_none() && data.system_messages.is_none() && data.nsfw.is_none() && data.analytics.is_none()
     {
         return Ok(EmptyResponse {});
     }
@@ -109,6 +109,10 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyRespo
 
     if let Some(nsfw) = &data.nsfw {
         set.insert("nsfw", nsfw);
+    }
+
+    if let Some(analytics) = &data.analytics {
+        set.insert("analytics", analytics);
     }
 
     let mut operations = doc! {};

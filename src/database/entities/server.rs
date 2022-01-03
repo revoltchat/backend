@@ -110,7 +110,11 @@ pub struct Server {
     pub flags: Option<i32>,
 
     #[serde(skip_serializing_if = "if_false", default)]
-    pub nsfw: bool
+    pub nsfw: bool,
+    #[serde(skip_serializing_if = "if_false", default)]
+    pub analytics: bool,
+    #[serde(skip_serializing_if = "if_false", default)]
+    pub discoverable: bool
 }
 
 impl Server {

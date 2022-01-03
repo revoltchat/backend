@@ -66,7 +66,9 @@ pub async fn req(_idempotency: IdempotencyKey, user: User, info: Json<Data>) -> 
         banner: None,
 
         flags: None,
-        nsfw: info.nsfw.unwrap_or_default()
+        nsfw: info.nsfw.unwrap_or_default(),
+        analytics: false,
+        discoverable: false,
     };
 
     Channel::TextChannel {

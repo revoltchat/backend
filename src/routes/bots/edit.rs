@@ -14,6 +14,7 @@ pub struct Data {
     #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
     public: Option<bool>,
+    analytics: Option<bool>,
     interactions_url: Option<String>,
     remove: Option<RemoveBotField>,
 }
@@ -30,6 +31,7 @@ pub async fn edit_bot(user: User, target: Ref, data: Json<Data>) -> Result<Empty
 
     if data.name.is_none()
         && data.public.is_none()
+        && data.analytics.is_none()
         && data.interactions_url.is_none()
         && data.remove.is_none()
     {
@@ -85,6 +87,10 @@ pub async fn edit_bot(user: User, target: Ref, data: Json<Data>) -> Result<Empty
 
     if let Some(public) = &data.public {
         set.insert("public", public);
+    }
+
+    if let Some(analytics) = &data.analytics {
+        set.insert("analytics", analytics);
     }
 
     if let Some(interactions_url) = &data.interactions_url {
