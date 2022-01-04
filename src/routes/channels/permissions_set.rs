@@ -4,9 +4,8 @@ use serde::{Serialize, Deserialize};
 use validator::Contains;
 
 use crate::database::*;
-use crate::database::permissions::channel::ChannelPermission;
-use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result, EmptyResponse};
+use crate::notifications::events::ClientboundNotification;
 
 #[derive(Serialize, Deserialize)]
 pub struct Data {
@@ -34,7 +33,7 @@ pub async fn req(user: User, target: Ref, role: String, data: Json<Data>) -> Res
                 return Err(Error::NotFound);
             }
 
-            let permissions: u32 = ChannelPermission::View as u32 | data.permissions;
+            let permissions: u32 = data.permissions;
 
             get_collection("channels")
             .update_one(

@@ -63,7 +63,7 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyRespo
                 return Err(Error::MissingPermission);
             }
 
-            let permissions: u32 = ChannelPermission::View as u32 | data.permissions;
+            let permissions: u32 = data.permissions;
 
             get_collection("channels")
                 .update_one(

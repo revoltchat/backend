@@ -3,8 +3,6 @@ use rocket::serde::json::Json;
 use serde::{Serialize, Deserialize};
 
 use crate::database::*;
-use crate::database::permissions::channel::ChannelPermission;
-use crate::database::permissions::server::ServerPermission;
 use crate::notifications::events::ClientboundNotification;
 use crate::util::result::{Error, Result, EmptyResponse};
 
@@ -32,8 +30,8 @@ pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyRespo
         return Err(Error::MissingPermission);
     }
 
-    let server_permissions: u32 = ServerPermission::View as u32 | data.permissions.server;
-    let channel_permissions: u32 = ChannelPermission::View as u32 | data.permissions.channel;
+    let server_permissions: u32 = data.permissions.server;
+    let channel_permissions: u32 = data.permissions.channel;
 
     get_collection("servers")
         .update_one(
