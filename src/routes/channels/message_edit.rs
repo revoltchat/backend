@@ -79,7 +79,7 @@ pub async fn req(user: User, target: Ref, msg: Ref, edit: Json<Data>) -> Result<
         set.insert("embeds", embed_docs);
         message.embeds = Some(new_embeds)
     } else if edit.embeds.is_some() {
-        unset.insert("embeds", "");
+        unset.insert("embeds", 1 as u32);
     }
 
     get_collection("messages")
