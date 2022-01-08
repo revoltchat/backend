@@ -53,8 +53,8 @@ pub async fn req(user: User, target: Ref, msg: Ref, edit: Json<Data>) -> Result<
     if let Some(embeds) = &message.embeds {
         for embed in embeds {
             match embed {
-                Embed::Website(_) | Embed::Image(_) | Embed::None => {},
-                Embed::Text(embed) => new_embeds.push(Embed::Text(embed.clone()))
+                Embed::Text(embed) => new_embeds.push(Embed::Text(embed.clone())),
+                _ => {}
             }
         }
     }
