@@ -31,8 +31,10 @@ pub async fn run() {
                             "_id": &id
                         },
                         doc! {
-                            "$set": {
-                                "embeds": bson
+                            "$push": {
+                                "embeds": {
+                                    "$each": bson
+                                }
                             }
                         },
                         None,

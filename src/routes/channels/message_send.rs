@@ -18,6 +18,35 @@ pub struct Reply {
     mention: bool
 }
 
+#[derive(Validate, Serialize, Deserialize, Clone, Debug)]
+pub struct SendableEmbed {
+    icon_url: Option<String>,
+    url: Option<String>,
+    #[validate(length(min = 1, max = 100))]
+    title: Option<String>,
+    #[validate(length(min = 1, max = 2000))]
+    description: Option<String>,
+    media: Option<String>,
+	colour: Option<String>,
+}
+
+impl SendableEmbed {
+    pub async fn into_embed(self, message_id: String) -> Result<Embed> {
+        let media = if let Some(id) = self.media {
+            Some(File::find_and_use(&id, "attachments", "message", &message_id).await?)
+        } else { None };
+
+        Ok(Embed::Text(Text {
+            icon_url: self.icon_url,
+            url: self.url,
+            title: self.title,
+            description: self.description,
+            media,
+            colour: self.colour
+        }))
+    }
+}
+
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
     #[validate(length(min = 0, max = 2000))]
@@ -27,7 +56,9 @@ pub struct Data {
     nonce: Option<String>,
     replies: Option<Vec<Reply>>,
     #[validate]
-    masquerade: Option<Masquerade>
+    masquerade: Option<Masquerade>,
+    #[validate(length(min = 1, max = 10))]
+    embeds: Option<Vec<SendableEmbed>>
 }
 
 lazy_static! {
@@ -114,6 +145,14 @@ pub async fn message_send(user: User, _r: Ratelimiter, mut idempotency: Idempote
         }
     }
 
+    let mut embeds = vec![];
+
+    if let Some(sendable_embeds) = message.embeds {
+        for sendable_embed in sendable_embeds {
+            embeds.push(sendable_embed.into_embed(id.clone()).await?)
+        }
+    }
+
     let msg = Message {
         id,
         channel: target.id().to_string(),
@@ -122,8 +161,7 @@ pub async fn message_send(user: User, _r: Ratelimiter, mut idempotency: Idempote
         content: Content::Text(message.content.clone()),
         nonce: Some(idempotency.key),
         edited: None,
-        embeds: None,
-
+        embeds: if embeds.len() > 0 { Some(embeds) } else { None },
         attachments: if attachments.len() > 0 { Some(attachments) } else { None },
         mentions: if mentions.len() > 0 {
             Some(mentions.into_iter().collect::<Vec<String>>())
