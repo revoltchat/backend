@@ -71,7 +71,6 @@ pub async fn req(user: User, target: Ref, msg: Ref, edit: Json<Data>) -> Result<
     );
 
     if edit.embeds.as_ref().map(|v| v.is_empty()).unwrap_or_default() {
-        println!("unsetting");
         set.remove("embeds");
         unset.insert("embeds", 1u32);
     };
