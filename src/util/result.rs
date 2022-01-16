@@ -6,6 +6,8 @@ use serde::Serialize;
 use std::io::Cursor;
 use validator::ValidationErrors;
 
+use super::ratelimit::Ratelimiter;
+
 #[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum Error {
@@ -146,5 +148,18 @@ impl<'r> Responder<'r, 'static> for Error {
             .header(ContentType::new("application", "json"))
             .status(status)
             .ok()
+    }
+}
+
+#[catch(429)]
+pub fn catch_too_many_requests(req: &Request) -> String {
+    let res: &Result<Ratelimiter, Error> = req.local_cache(|| unreachable!());
+    let error = res.clone().unwrap_err();
+
+    match error {
+        Error::TooManyRequests { retry_after } => {
+            return format!("{{\"retry_after\": {}}}", retry_after)
+        }
+        _ => unreachable!()
     }
 }
