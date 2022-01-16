@@ -30,7 +30,7 @@ impl Ratelimit {
     }
 
     fn get_tokens(&self, current: Option<f64>) -> u8 {
-        let current = current.unwrap_or(now());
+        let current = current.unwrap_or_else(now);
         if current > (self.window + self.per as f64) {
             self.rate
         } else {
@@ -93,7 +93,7 @@ impl RatelimitMapping {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Ratelimiter {
     bucket: u64,
     limit: u8,
@@ -118,40 +118,34 @@ impl<'r> FromRequest<'r> for Ratelimiter {
 
     async fn from_request(request: &'r rocket::Request<'_>) -> Outcome<Self, Self::Error> {
         let res = request.local_cache_async(async {
-            if let Some(route) = request.route() {
-                if let Some(route_name) = &route.name {
-                    let user = request.guard::<User>().await.unwrap();
+            let route = request.route().unwrap();
+            let route_name = route.name.as_ref().unwrap();
+            let user = request.guard::<User>().await.unwrap();
 
-                    let state = request.guard::<&rocket::State<RatelimitState>>().await.unwrap().inner();
-                    let arc = Arc::clone(&state.0);
-                    let mut mutex = arc.lock().unwrap();
-                    let mapping = mutex.get_mut(route_name.as_ref()).unwrap();
+            let state = request.guard::<&rocket::State<RatelimitState>>().await.unwrap().inner();
+            let arc = Arc::clone(&state.0);
+            let mut mutex = arc.lock().unwrap();
+            let mapping = mutex.get_mut(route_name.as_ref()).unwrap();
 
-                    // create a unique key tied to the user id and route they use
-                    let key = format!("{}:{}:{}", user.id, route.method.as_str(), route.uri.as_str());
-                    let mut hasher = DefaultHasher::new();
+            // create a unique key tied to the user id and route they use
+            let key = format!("{}:{}:{}", user.id, route.method.as_str(), route.uri.as_str());
+            let mut hasher = DefaultHasher::new();
 
-                    key.hash(&mut hasher);
-                    let hashed = hasher.finish();
+            key.hash(&mut hasher);
+            let hashed = hasher.finish();
 
-                    let bucket = mapping.get_bucket(hashed);
-                    let ret = bucket.update_ratelimit();
+            let bucket = mapping.get_bucket(hashed);
+            let ret = bucket.update_ratelimit();
 
-                    if let Some(retry_after) = ret {
-                        Err(Error::TooManyRequests { retry_after })
-                    } else {
-                        Ok(Ratelimiter {
-                            bucket: hashed,
-                            limit: bucket.rate,
-                            remaining: bucket.get_tokens(None),
-                            reset: bucket.window + (bucket.per as f64)
-                        })
-                    }
-                } else {
-                    unreachable!()
-                }
+            if let Some(retry_after) = ret {
+                Err(Error::TooManyRequests { retry_after })
             } else {
-                unreachable!()
+                Ok(Ratelimiter {
+                    bucket: hashed,
+                    limit: bucket.rate,
+                    remaining: bucket.get_tokens(None),
+                    reset: bucket.window + (bucket.per as f64)
+                })
             }
         }).await;
 
