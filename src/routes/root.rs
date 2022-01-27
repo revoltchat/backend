@@ -1,14 +1,15 @@
-use crate::util::{ratelimit::Ratelimiter, variables::{
+/*use crate::util::{ratelimit::Ratelimiter, variables::{
     APP_URL, AUTUMN_URL, EXTERNAL_WS_URL, HCAPTCHA_SITEKEY, INVITE_ONLY, JANUARY_URL, USE_AUTUMN,
     USE_EMAIL, USE_HCAPTCHA, USE_JANUARY, USE_VOSO, VAPID_PUBLIC_KEY, VOSO_URL, VOSO_WS_HOST,
-}};
+}};*/
 
 use mongodb::bson::doc;
 use rocket::{http::Status, serde::json::Value};
 
 #[get("/")]
 pub async fn root() -> Value {
-    json!({
+    todo!();
+    /*json!({
         "revolt": crate::version::VERSION,
         "features": {
             "captcha": {
@@ -34,10 +35,10 @@ pub async fn root() -> Value {
         "ws": *EXTERNAL_WS_URL,
         "app": *APP_URL,
         "vapid": *VAPID_PUBLIC_KEY
-    })
+    })*/
 }
 
 #[get("/ping")]
-pub async fn ping(_limitguard: Ratelimiter) -> Status {
+pub async fn ping(/*_limitguard: Ratelimiter*/) -> Status {
     Status::Ok
 }

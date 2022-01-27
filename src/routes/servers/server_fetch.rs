@@ -1,20 +1,8 @@
-use crate::database::*;
-use crate::util::result::{Error, Result};
+use revolt_quark::{Error, Result};
 
 use rocket::serde::json::Value;
 
 #[get("/<target>")]
-pub async fn req(user: User, target: Ref) -> Result<Value> {
-    let target = target.fetch_server().await?;
-
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_server(&target)
-        .for_server()
-        .await?;
-
-    if !perm.get_view() {
-        Err(Error::MissingPermission)?
-    }
-
-    Ok(json!(target))
+pub async fn req(/*user: UserRef, target: Ref*/ target: String) -> Result<Value> {
+    todo!()
 }

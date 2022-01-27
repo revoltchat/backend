@@ -1,8 +1,6 @@
-use crate::database::*;
-use crate::util::result::{Error, Result};
+use revolt_quark::Result;
 
 use mongodb::bson::doc;
-use nanoid::nanoid;
 use rocket::serde::json::Value;
 
 lazy_static! {
@@ -14,35 +12,6 @@ lazy_static! {
 }
 
 #[post("/<target>/invites")]
-pub async fn req(user: User, target: Ref) -> Result<Value> {
-    let target = target.fetch_channel().await?;
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_channel(&target)
-        .for_channel()
-        .await?;
-
-    if !perm.get_invite_others() {
-        return Err(Error::MissingPermission);
-    }
-
-    let code = nanoid!(8, &*ALPHABET);
-    match &target {
-        Channel::Group { .. } => {
-            unimplemented!()
-        }
-        Channel::TextChannel { id, server, .. }
-        | Channel::VoiceChannel { id, server, .. } => {
-            Invite::Server {
-                code: code.clone(),
-                creator: user.id,
-                server: server.clone(),
-                channel: id.clone(),
-            }
-            .save()
-            .await?;
-
-            Ok(json!({ "code": code }))
-        }
-        _ => Err(Error::InvalidOperation),
-    }
+pub async fn req(/*user: UserRef, target: Ref*/ target: String) -> Result<Value> {
+    todo!()
 }

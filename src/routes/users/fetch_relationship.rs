@@ -1,13 +1,8 @@
-use crate::database::*;
-use crate::util::result::{Error, Result};
+use revolt_quark::{Error, Result};
 
 use rocket::serde::json::Value;
 
 #[get("/<target>/relationship")]
-pub async fn req(user: User, target: Ref) -> Result<Value> {
-    if user.bot.is_some() {
-        return Err(Error::IsBot)
-    }
-    
-    Ok(json!({ "status": get_relationship(&user, &target.id) }))
+pub async fn req(/*user: UserRef, target: Ref*/ target: String) -> Result<Value> {
+    todo!()
 }

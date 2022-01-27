@@ -1,5 +1,5 @@
-use crate::database::*;
-use crate::util::result::Result;
+use revolt_quark::Result;
+use revolt_quark::models::File;
 
 use rocket::serde::json::Value;
 use serde::Serialize;
@@ -26,37 +26,6 @@ pub enum InviteResponse {
 }
 
 #[get("/<target>")]
-pub async fn req(target: Ref) -> Result<Value> {
-    let target = target.fetch_invite().await?;
-
-    match target {
-        Invite::Server {
-            channel, creator, ..
-        } => {
-            let channel = Ref::from_unchecked(channel).fetch_channel().await?;
-            let creator = Ref::from_unchecked(creator).fetch_user().await?;
-
-            match channel {
-                Channel::TextChannel { id, server, name, description, .. }
-                | Channel::VoiceChannel { id, server, name, description, .. } => {
-                    let server = Ref::from_unchecked(server).fetch_server().await?;
-    
-                    Ok(json!(InviteResponse::Server {
-                        member_count: Server::get_member_count(&server.id).await?,
-                        server_id: server.id,
-                        server_name: server.name,
-                        server_icon: server.icon,
-                        server_banner: server.banner,
-                        channel_id: id,
-                        channel_name: name,
-                        channel_description: description,
-                        user_name: creator.username,
-                        user_avatar: creator.avatar
-                    }))
-                }
-                _ => unreachable!()
-            }
-        }
-        _ => unreachable!(),
-    }
+pub async fn req(/*target: Ref*/ target: String) -> Result<Value> {
+    todo!()
 }

@@ -1,14 +1,9 @@
-use crate::database::*;
-use crate::util::result::{Error, Result};
+use revolt_quark::{Error, Result};
 
 use mongodb::bson::doc;
 use rocket::serde::json::Value;
 
 #[get("/unreads")]
-pub async fn req(user: User) -> Result<Value> {
-    if user.bot.is_some() {
-        return Err(Error::IsBot);
-    }
-
-    Ok(json!(User::fetch_unreads(&user.id).await?))
+pub async fn req(/*user: UserRef*/) -> Result<Value> {
+    todo!()
 }

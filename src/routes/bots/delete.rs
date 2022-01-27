@@ -1,67 +1,7 @@
-use crate::database::*;
-use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, EmptyResponse, Result};
-
-use mongodb::bson::doc;
+use revolt_quark::Result;
+use rauth::util::EmptyResponse;
 
 #[delete("/<target>")]
-pub async fn delete_bot(user: User, target: Ref) -> Result<EmptyResponse> {
-    if user.bot.is_some() {
-        return Err(Error::IsBot)
-    }
-    
-    let bot = target.fetch_bot().await?;
-    if bot.owner != user.id {
-        return Err(Error::MissingPermission);
-    }
-
-    let username = format!("Deleted User {}", &bot.id);
-    get_collection("users")
-        .update_one(
-            doc! {
-                "_id": &bot.id
-            },
-            doc! {
-                "$set": {
-                    "username": &username,
-                    "flags": 2
-                },
-                "$unset": {
-                    "avatar": 1,
-                    "status": 1,
-                    "profile": 1
-                }
-            },
-            None
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            with: "user",
-            operation: "update_one"
-        })?;
-
-    ClientboundNotification::UserUpdate {
-        id: target.id.clone(),
-        data: json!({
-            "username": username,
-            "flags": 2
-        }),
-        clear: None,
-    }
-    .publish_as_user(target.id.clone());
-
-    get_collection("bots")
-        .delete_one(
-            doc! {
-                "_id": &bot.id
-            },
-            None
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            with: "bot",
-            operation: "delete_one"
-        })?;
-
-    Ok(EmptyResponse {})
+pub async fn delete_bot(/*user: UserRef, target: Ref*/ target: String) -> Result<EmptyResponse> {
+    todo!()
 }

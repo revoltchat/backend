@@ -14,13 +14,13 @@ extern crate impl_ops;
 extern crate bitfield;
 extern crate ctrlc;
 
-pub mod database;
-pub mod notifications;
+//pub mod database;
+//pub mod notifications;
 pub mod routes;
-pub mod redis;
+//pub mod redis;
 pub mod util;
 pub mod version;
-pub mod task_queue;
+//pub mod task_queue;
 
 use async_std::task;
 use futures::join;
@@ -31,11 +31,11 @@ use rauth::{
 };
 use std::str::FromStr;
 use rocket_cors::AllowedOrigins;
-use util::variables::{
+/*use util::variables::{
     APP_URL, HCAPTCHA_KEY, INVITE_ONLY, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD, SMTP_USERNAME,
     USE_EMAIL, USE_HCAPTCHA,
 };
-use crate::util::ratelimit::RatelimitState;
+use crate::util::ratelimit::RatelimitState;*/
 
 #[async_std::main]
 async fn main() {
@@ -47,11 +47,11 @@ async fn main() {
         crate::version::VERSION
     );
 
-    util::variables::preflight_checks();
+    /*util::variables::preflight_checks();
     database::connect().await;
     redis::connect().await;
     notifications::hive::init_hive().await;
-    task_queue::start_queues().await;
+    task_queue::start_queues().await;*/
 
     ctrlc::set_handler(move || {
         // Force ungraceful exit to avoid hang.
@@ -60,12 +60,12 @@ async fn main() {
     .expect("Error setting Ctrl-C handler");
 
     let web_task = task::spawn(launch_web());
-    let hive_task = task::spawn_local(notifications::hive::listen());
+    //let hive_task = task::spawn_local(notifications::hive::listen());
 
     join!(
         web_task,
-        hive_task,
-        notifications::websocket::launch_server()
+        //hive_task,
+        //notifications::websocket::launch_server()
     );
 }
 
@@ -84,7 +84,7 @@ async fn launch_web() {
     .expect("Failed to create CORS.");
 
     let mut config = Config {
-        email_verification: if *USE_EMAIL {
+        email_verification: /*if *USE_EMAIL {
             EmailVerification::Enabled {
                 smtp: SMTPSettings {
                     from: (*SMTP_FROM).to_string(),
@@ -114,11 +114,11 @@ async fn launch_web() {
             }
         } else {
             EmailVerification::Disabled
-        },
+        },*/ EmailVerification::Disabled,
         ..Default::default()
     };
 
-    if *INVITE_ONLY {
+    /*if *INVITE_ONLY {
         config.invite_only = true;
     }
 
@@ -126,17 +126,17 @@ async fn launch_web() {
         config.captcha = Captcha::HCaptcha {
             secret: HCAPTCHA_KEY.clone(),
         };
-    }
+    }*/
 
-    let auth = Auth::new(database::get_db(), config);
+    //let auth = Auth::new(database::get_db(), config);
     let rocket = rocket::build();
     routes::mount(rocket)
         .mount("/", rocket_cors::catch_all_options_routes())
-        .mount("/auth/account", rauth::web::account::routes())
-        .mount("/auth/session", rauth::web::session::routes())
-        .manage(auth)
+        //.mount("/auth/account", rauth::web::account::routes())
+        //.mount("/auth/session", rauth::web::session::routes())
+        //.manage(auth)
         .manage(cors.clone())
-        .manage(RatelimitState::new())
+        //.manage(RatelimitState::new())
         .attach(cors)
         .launch()
         .await

@@ -1,9 +1,8 @@
-use crate::database::*;
-use crate::util::result::{Result};
+use revolt_quark::Result;
 
 use rocket::serde::json::Value;
 
 #[get("/@me")]
-pub async fn req(user: User) -> Result<Value> {
-    Ok(json!(user))
+pub async fn req(/*user: UserRef*/) -> Result<Value> {
+    todo!()
 }

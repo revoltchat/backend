@@ -63,3 +63,6 @@ async-tungstenite = { version = "0.10.0", features = ["async-std-runtime"] }
 rocket = { version = "0.5.0-rc.1", default-features = false, features = ["json"] }
 mongodb = { version = "1.2.2", features = ["tokio-runtime"], default-features = false }
 rocket_cors = { git = "https://github.com/lawliet89/rocket_cors", rev = "5843861a88958c16bfaa0b40f0d8910772bcd2f6" }
+
+# quark
+revolt-quark = { path = "/run/media/mink/2b4927e2-fad4-4b12-b6ea-cdf7e0ab0339/revolt/quark/" }

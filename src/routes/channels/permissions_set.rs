@@ -3,9 +3,7 @@ use rocket::serde::json::Json;
 use serde::{Serialize, Deserialize};
 use validator::Contains;
 
-use crate::database::*;
-use crate::util::result::{Error, Result, EmptyResponse};
-use crate::notifications::events::ClientboundNotification;
+use revolt_quark::{EmptyResponse, Result};
 
 #[derive(Serialize, Deserialize)]
 pub struct Data {
@@ -13,56 +11,6 @@ pub struct Data {
 }
 
 #[put("/<target>/permissions/<role>", data = "<data>", rank = 2)]
-pub async fn req(user: User, target: Ref, role: String, data: Json<Data>) -> Result<EmptyResponse> {
-    let target = target.fetch_channel().await?;
-
-    match target {
-        Channel::TextChannel { id, server, mut role_permissions, .. }
-        | Channel::VoiceChannel { id, server, mut role_permissions, .. } => {
-            let target = Ref::from_unchecked(server).fetch_server().await?;
-            let perm = permissions::PermissionCalculator::new(&user)
-                .with_server(&target)
-                .for_server()
-                .await?;
-
-            if !perm.get_manage_roles() {
-                return Err(Error::MissingPermission);
-            }
-
-            if !target.roles.has_element(&role) {
-                return Err(Error::NotFound);
-            }
-
-            let permissions: u32 = data.permissions;
-
-            get_collection("channels")
-            .update_one(
-                doc! { "_id": &id },
-                doc! {
-                    "$set": {
-                        "role_permissions.".to_owned() + &role: permissions as i32
-                    }
-                },
-                None
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "update_one",
-                with: "channel"
-            })?;
-
-            role_permissions.insert(role, permissions as i32);
-            ClientboundNotification::ChannelUpdate {
-                id: id.clone(),
-                data: json!({
-                    "role_permissions": role_permissions
-                }),
-                clear: None
-            }
-            .publish(id);
-
-            Ok(EmptyResponse {})
-        }
-        _ => Err(Error::InvalidOperation)
-    }
+pub async fn req(/*user: UserRef, target: Ref,*/ target: String, role: String, data: Json<Data>) -> Result<EmptyResponse> {
+    todo!()
 }
