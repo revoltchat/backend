@@ -1,8 +1,9 @@
 use revolt_quark::Result;
+use revolt_quark::models::User;
 
-use rocket::serde::json::Value;
+use rocket::serde::json::{Json, Value};
 
 #[get("/@me")]
-pub async fn req(/*user: UserRef*/) -> Result<Value> {
-    todo!()
+pub async fn req(user: User) -> Result<Json<User>> {
+    Ok(Json(user))
 }
