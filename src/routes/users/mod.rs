@@ -6,8 +6,6 @@ mod change_username;
 mod edit_user;
 mod fetch_dms;
 mod fetch_profile;
-mod fetch_relationship;
-mod fetch_relationships;
 mod fetch_user;
 mod find_mutual;
 mod get_default_avatar;
@@ -30,8 +28,6 @@ pub fn routes() -> Vec<Route> {
         open_dm::req,
         // Relationships
         find_mutual::req,
-        fetch_relationships::req,
-        fetch_relationship::req,
         add_friend::req,
         remove_friend::req,
         block_user::req,
