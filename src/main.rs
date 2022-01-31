@@ -29,6 +29,7 @@ use rauth::{
     config::{Captcha, Config, EmailVerification, SMTPSettings, Template, Templates},
     logic::Auth,
 };
+use revolt_quark::DatabaseInfo;
 use std::str::FromStr;
 use rocket_cors::AllowedOrigins;
 /*use util::variables::{
@@ -128,13 +129,20 @@ async fn launch_web() {
         };
     }*/
 
-    //let auth = Auth::new(database::get_db(), config);
+    let db = DatabaseInfo::Dummy.connect().await.unwrap();
+
+    let mongo_db = mongodb::Client::with_uri_str("mongodb://localhost")
+        .await
+        .expect("Failed to init db connection.");
+
+    let auth = Auth::new(mongo_db.database("revolt"), config);
     let rocket = rocket::build();
     routes::mount(rocket)
         .mount("/", rocket_cors::catch_all_options_routes())
-        //.mount("/auth/account", rauth::web::account::routes())
-        //.mount("/auth/session", rauth::web::session::routes())
-        //.manage(auth)
+        .mount("/auth/account", rauth::web::account::routes())
+        .mount("/auth/session", rauth::web::session::routes())
+        .manage(auth)
+        .manage(db)
         .manage(cors.clone())
         //.manage(RatelimitState::new())
         .attach(cors)

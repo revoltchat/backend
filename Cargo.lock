@@ -3017,6 +3017,7 @@ version = "0.1.0"
 dependencies = [
  "async-std",
  "async-trait",
+ "bitfield",
  "impl_ops",
  "lazy_static",
  "log",
@@ -3024,6 +3025,7 @@ dependencies = [
  "num_enum",
  "ops",
  "optional_struct",
+ "rauth",
  "rocket",
  "serde",
  "validator 0.14.0",
