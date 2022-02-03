@@ -18,9 +18,10 @@ pub struct Data {
 pub async fn req(
     db: &State<Database>,
     account: Account,
-    user: User,
+    mut user: User,
     data: Json<Data>,
 ) -> Result<EmptyResponse> {
+    let data = data.into_inner();
     account.verify_password(&data.password).map_err(|_| Error::InvalidCredentials)?;
-    user.update_username(db, &data.username).await
+    user.update_username(db, data.username).await.map(|_| EmptyResponse)
 }

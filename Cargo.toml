@@ -36,7 +36,7 @@ base64 = "0.13.0"
 # serde
 serde_json = "1.0.57"
 serde = { version = "1.0.115", features = ["derive"] }
-validator = { version = "0.11", features = ["derive"] }
+validator = { version = "0.14", features = ["derive"] }
 rmp-serde = { git = "https://github.com/insertish/msgpack-rust", rev = "5bf2c24203ad422233cf35b7b7bfad9f7e811814" }
 
 # async
@@ -50,7 +50,7 @@ async-std = { version = "1.8.0", features = ["tokio1", "tokio02", "attributes"] 
 web-push = "0.7.2"
 many-to-many = "0.1.2"
 lettre = "0.10.0-alpha.4"
-rauth = { git = "https://github.com/insertish/rauth", rev = "157263ffcbd6cb1073e288b215db227634c4c29a" }
+rauth = { git = "https://github.com/insertish/rauth", rev = "501d445e7b42a1c229bfa88c01fa6415f4cb7992" }
 hive_pubsub = { git = "https://gitlab.insrt.uk/insert/hive", rev = "b0f3db9d33990530d7640d4bbb309c8d9eb5c0cf", features = ["redis-backend"] }
 
 # redis
@@ -61,7 +61,7 @@ mobc-redis = { version = "0.7.0", default-features = false, features = ["async-s
 # web
 async-tungstenite = { version = "0.10.0", features = ["async-std-runtime"] }
 rocket = { version = "0.5.0-rc.1", default-features = false, features = ["json"] }
-mongodb = { version = "1.2.2", features = ["tokio-runtime"], default-features = false }
+mongodb = { version = "1.2.2", features = ["async-std-runtime"], default-features = false }
 rocket_cors = { git = "https://github.com/lawliet89/rocket_cors", rev = "5843861a88958c16bfaa0b40f0d8910772bcd2f6" }
 
 # quark
