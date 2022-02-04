@@ -15,10 +15,10 @@ pub struct Data {
     #[validate(length(min = 0, max = 1024))]
     description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    nsfw: Option<bool>
+    nsfw: Option<bool>,
 }
 
 #[post("/create", data = "<info>")]
-pub async fn req(/*_idempotency: IdempotencyKey, user: User,*/ info: Json<Data>) -> Result<Value> {
+pub async fn req(/*_idempotency: IdempotencyKey, user: User,*/ info: Json<Data>,) -> Result<Value> {
     todo!()
 }

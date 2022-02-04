@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use revolt_quark::{Error, Result};
 
-use futures::{StreamExt, try_join};
+use futures::{try_join, StreamExt};
 use mongodb::{
     bson::{doc, from_document},
     options::FindOptions,
@@ -35,6 +35,9 @@ pub struct Options {
 }
 
 #[get("/<target>/messages?<options..>")]
-pub async fn req(/*user: UserRef, target: Ref,*/ target: String, options: Options) -> Result<Value> {
+pub async fn req(
+    /*user: UserRef, target: Ref,*/ target: String,
+    options: Options,
+) -> Result<Value> {
     todo!()
 }

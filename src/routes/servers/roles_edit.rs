@@ -17,6 +17,10 @@ pub struct Data {
 }
 
 #[patch("/<target>/roles/<role_id>", data = "<data>")]
-pub async fn req(/*user: UserRef, target: Ref,*/ target: String, role_id: String, data: Json<Data>) -> Result<EmptyResponse> {
+pub async fn req(
+    /*user: UserRef, target: Ref,*/ target: String,
+    role_id: String,
+    data: Json<Data>,
+) -> Result<EmptyResponse> {
     todo!()
 }

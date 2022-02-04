@@ -1,4 +1,4 @@
-use revolt_quark::{Result, models::message::Masquerade};
+use revolt_quark::{models::message::Masquerade, Result};
 
 use mongodb::bson::doc;
 use regex::Regex;
@@ -9,7 +9,7 @@ use validator::Validate;
 #[derive(Serialize, Deserialize)]
 pub struct Reply {
     id: String,
-    mention: bool
+    mention: bool,
 }
 
 #[derive(Validate, Serialize, Deserialize, Clone, Debug)]
@@ -21,7 +21,7 @@ pub struct SendableEmbed {
     #[validate(length(min = 1, max = 2000))]
     description: Option<String>,
     media: Option<String>,
-	colour: Option<String>,
+    colour: Option<String>,
 }
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
@@ -34,7 +34,7 @@ pub struct Data {
     //#[validate]
     masquerade: Option<Masquerade>,
     #[validate(length(min = 1, max = 10))]
-    embeds: Option<Vec<SendableEmbed>>
+    embeds: Option<Vec<SendableEmbed>>,
 }
 
 lazy_static! {
@@ -43,6 +43,10 @@ lazy_static! {
 }
 
 #[post("/<target>/messages", data = "<message>")]
-pub async fn message_send(/*user: UserRef, _r: Ratelimiter, mut idempotency: IdempotencyKey, target: Ref,*/ target: String, message: Json<Data>) -> /*Result<RatelimitResponse<Value>>*/ Result<Value> {
+pub async fn message_send(
+    /*user: UserRef, _r: Ratelimiter, mut idempotency: IdempotencyKey, target: Ref,*/
+    target: String,
+    message: Json<Data>,
+) -> Result<Value> {
     todo!()
 }

@@ -30,8 +30,8 @@ use rauth::{
     logic::Auth,
 };
 use revolt_quark::DatabaseInfo;
-use std::str::FromStr;
 use rocket_cors::AllowedOrigins;
+use std::str::FromStr;
 /*use util::variables::{
     APP_URL, HCAPTCHA_KEY, INVITE_ONLY, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD, SMTP_USERNAME,
     USE_EMAIL, USE_HCAPTCHA,

@@ -1,6 +1,6 @@
 use crate::util::regex::RE_USERNAME;
 
-use revolt_quark::{Result, models::bot::FieldsBot, EmptyResponse};
+use revolt_quark::{models::bot::FieldsBot, EmptyResponse, Result};
 
 use mongodb::bson::doc;
 use rocket::serde::json::Json;
@@ -19,6 +19,9 @@ pub struct Data {
 }
 
 #[patch("/<target>", data = "<data>")]
-pub async fn edit_bot(/*user: UserRef, target: Ref,*/ target: String, data: Json<Data>) -> Result<EmptyResponse> {
+pub async fn edit_bot(
+    /*user: UserRef, target: Ref,*/ target: String,
+    data: Json<Data>,
+) -> Result<EmptyResponse> {
     todo!()
 }

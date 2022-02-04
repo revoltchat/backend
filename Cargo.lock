@@ -2948,6 +2948,7 @@ dependencies = [
  "lazy_static",
  "log",
  "mongodb 2.1.0",
+ "nanoid",
  "num_enum",
  "ops",
  "optional_struct",

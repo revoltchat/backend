@@ -1,4 +1,7 @@
-use revolt_quark::{Error, EmptyResponse, Result, models::{User, Channel, channel::PartialChannel}, Ref, Db, perms, ChannelPermission};
+use revolt_quark::{
+    models::{channel::PartialChannel, Channel, User},
+    perms, ChannelPermission, Db, EmptyResponse, Error, Ref, Result,
+};
 
 use mongodb::bson::doc;
 
@@ -8,16 +11,21 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
     let perm = perms(&user).channel(&channel).calc_channel(db).await;
 
     if !perm.get_view() {
-        return Err(Error::NotFound)
+        return Err(Error::NotFound);
     }
 
     match channel {
         Channel::SavedMessages { .. } => Err(Error::NoEffect),
         Channel::DirectMessage { id, .. } => {
-            db.update_channel(&id, &PartialChannel {
-                active: Some(false),
-                ..Default::default()
-            }, vec![]).await?;
+            db.update_channel(
+                &id,
+                &PartialChannel {
+                    active: Some(false),
+                    ..Default::default()
+                },
+                vec![],
+            )
+            .await?;
 
             Ok(EmptyResponse)
         }
@@ -29,10 +37,15 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
         } => {
             if user.id == owner {
                 if let Some(new_owner) = recipients.iter().find(|x| *x != &user.id) {
-                    db.update_channel(&id, &PartialChannel {
-                        owner: Some(new_owner.into()),
-                        ..Default::default()
-                    }, vec![]).await?;
+                    db.update_channel(
+                        &id,
+                        &PartialChannel {
+                            owner: Some(new_owner.into()),
+                            ..Default::default()
+                        },
+                        vec![],
+                    )
+                    .await?;
                 } else {
                     db.delete_channel(&id).await?;
                     return Ok(EmptyResponse);
@@ -54,13 +67,14 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
 
             Ok(EmptyResponse)
         }
-        Channel::TextChannel { id, .. } |
-        Channel::VoiceChannel { id, .. } => {
+        Channel::TextChannel { id, .. } | Channel::VoiceChannel { id, .. } => {
             if perm.get_manage_channel() {
                 db.delete_channel(&id).await?;
                 Ok(EmptyResponse)
             } else {
-                Err(Error::MissingPermission { permission: ChannelPermission::ManageChannel as i32 })
+                Err(Error::MissingPermission {
+                    permission: ChannelPermission::ManageChannel as i32,
+                })
             }
         }
     }

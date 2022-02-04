@@ -39,6 +39,9 @@ pub struct Options {
 }
 
 #[post("/<target>/search", data = "<options>")]
-pub async fn req(/*user: UserRef, target: Ref,*/ target: String, options: Json<Options>) -> Result<Value> {
+pub async fn req(
+    /*user: UserRef, target: Ref,*/ target: String,
+    options: Json<Options>,
+) -> Result<Value> {
     todo!()
 }

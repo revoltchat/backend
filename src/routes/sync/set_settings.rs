@@ -16,6 +16,9 @@ pub struct Options {
 }
 
 #[post("/settings/set?<options..>", data = "<data>")]
-pub async fn req(/*user: UserRef,*/ data: Json<Data>, options: Options) -> Result<EmptyResponse> {
+pub async fn req(
+    /*user: UserRef,*/ data: Json<Data>,
+    options: Options,
+) -> Result<EmptyResponse> {
     todo!()
 }

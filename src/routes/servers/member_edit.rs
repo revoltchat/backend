@@ -1,4 +1,4 @@
-use revolt_quark::{EmptyResponse, Result, models::server_member::FieldsMember};
+use revolt_quark::{models::server_member::FieldsMember, EmptyResponse, Result};
 
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
@@ -14,6 +14,10 @@ pub struct Data {
 }
 
 #[patch("/<server>/members/<target>", data = "<data>")]
-pub async fn req(/*user: UserRef, server: Ref,*/ server: String, target: String, data: Json<Data>) -> Result<EmptyResponse> {
+pub async fn req(
+    /*user: UserRef, server: Ref,*/ server: String,
+    target: String,
+    data: Json<Data>,
+) -> Result<EmptyResponse> {
     todo!()
 }

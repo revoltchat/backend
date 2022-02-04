@@ -1,13 +1,13 @@
 //! Edit currently authenticated user.
 
+use revolt_quark::models::user::{FieldsUser, PartialUser, User};
 use revolt_quark::models::File;
-use revolt_quark::{Error, Result, Database};
-use revolt_quark::models::user::{FieldsUser, User, PartialUser};
+use revolt_quark::{Database, Error, Result};
 
 use mongodb::bson::doc;
 use revolt_quark::models::user::UserStatus;
-use rocket::State;
 use rocket::serde::json::Json;
+use rocket::State;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -36,10 +36,15 @@ pub struct Data {
 #[patch("/@me", data = "<data>")]
 pub async fn req(db: &State<Database>, mut user: User, data: Json<Data>) -> Result<Json<User>> {
     let data = data.into_inner();
-    data.validate().map_err(|error| Error::FailedValidation { error })?;
+    data.validate()
+        .map_err(|error| Error::FailedValidation { error })?;
 
-    if data.status.is_none() && data.profile.is_none() && data.avatar.is_none() && data.remove.is_none() {
-        return Ok(Json(user))
+    if data.status.is_none()
+        && data.profile.is_none()
+        && data.avatar.is_none()
+        && data.remove.is_none()
+    {
+        return Ok(Json(user));
     }
 
     if let Some(fields) = &data.remove {
@@ -97,6 +102,7 @@ pub async fn req(db: &State<Database>, mut user: User, data: Json<Data>) -> Resu
         user.profile = partial.profile.clone();
     }
 
-    db.update_user(&user.id, &partial, data.remove.unwrap_or_default()).await?;
+    db.update_user(&user.id, &partial, data.remove.unwrap_or_default())
+        .await?;
     Ok(Json(user.foreign()))
 }

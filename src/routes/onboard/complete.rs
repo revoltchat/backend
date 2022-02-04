@@ -1,5 +1,5 @@
-use revolt_quark::{EmptyResponse, Error, Result, models::User, Database};
 use crate::util::regex::RE_USERNAME;
+use revolt_quark::{models::User, Database, EmptyResponse, Error, Result};
 
 use mongodb::bson::doc;
 use rauth::entities::Session;
@@ -14,9 +14,14 @@ pub struct Data {
 }
 
 #[post("/complete", data = "<data>")]
-pub async fn req(db: &State<Database>, session: Session, user: Option<User>, data: Json<Data>) -> Result<EmptyResponse> {
+pub async fn req(
+    db: &State<Database>,
+    session: Session,
+    user: Option<User>,
+    data: Json<Data>,
+) -> Result<EmptyResponse> {
     if user.is_some() {
-        return Err(Error::AlreadyOnboarded)
+        return Err(Error::AlreadyOnboarded);
     }
 
     let data = data.into_inner();
@@ -33,7 +38,5 @@ pub async fn req(db: &State<Database>, session: Session, user: Option<User>, dat
         ..Default::default()
     };
 
-    db.insert_user(&user)
-        .await
-        .map(|_| EmptyResponse)
+    db.insert_user(&user).await.map(|_| EmptyResponse)
 }

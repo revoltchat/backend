@@ -1,10 +1,10 @@
 use rocket::Route;
 
+mod server_ack;
 mod server_create;
 mod server_delete;
 mod server_edit;
 mod server_fetch;
-mod server_ack;
 
 mod channel_create;
 
@@ -19,11 +19,11 @@ mod ban_remove;
 
 mod invites_fetch;
 
-mod roles_create;
-mod roles_edit;
-mod roles_delete;
 mod permissions_set;
 mod permissions_set_default;
+mod roles_create;
+mod roles_delete;
+mod roles_edit;
 
 pub fn routes() -> Vec<Route> {
     routes![

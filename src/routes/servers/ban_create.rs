@@ -12,6 +12,10 @@ pub struct Data {
 }
 
 #[put("/<server>/bans/<target>", data = "<data>")]
-pub async fn req(/*user: UserRef, server: Ref, target: Ref,*/ server: String, target: String, data: Json<Data>) -> Result<EmptyResponse> {
+pub async fn req(
+    /*user: UserRef, server: Ref, target: Ref,*/ server: String,
+    target: String,
+    data: Json<Data>,
+) -> Result<EmptyResponse> {
     todo!()
 }

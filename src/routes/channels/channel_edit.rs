@@ -1,4 +1,10 @@
-use revolt_quark::{Error, Result, models::{channel::{FieldsChannel, PartialChannel, Channel}, User, File}, Ref, Database, perms, ChannelPermission};
+use revolt_quark::{
+    models::{
+        channel::{Channel, FieldsChannel, PartialChannel},
+        File, User,
+    },
+    perms, ChannelPermission, Database, Error, Ref, Result,
+};
 
 use mongodb::bson::doc;
 use rocket::{serde::json::Json, State};
@@ -22,24 +28,63 @@ pub struct Data {
 }
 
 #[patch("/<target>", data = "<data>")]
-pub async fn req(db: &State<Database>, user: User, target: Ref, data: Json<Data>) -> Result<Json<Channel>> {
+pub async fn req(
+    db: &State<Database>,
+    user: User,
+    target: Ref,
+    data: Json<Data>,
+) -> Result<Json<Channel>> {
     let data = data.into_inner();
-    data.validate().map_err(|error| Error::FailedValidation { error })?;
+    data.validate()
+        .map_err(|error| Error::FailedValidation { error })?;
 
     let mut channel = target.as_channel(db).await?;
-    if !perms(&user).channel(&channel).calc_channel(db).await.get_manage_channel() {
-        return Err(Error::MissingPermission { permission: ChannelPermission::ManageChannel as i32 })
+    if !perms(&user)
+        .channel(&channel)
+        .calc_channel(db)
+        .await
+        .get_manage_channel()
+    {
+        return Err(Error::MissingPermission {
+            permission: ChannelPermission::ManageChannel as i32,
+        });
     }
 
-    if data.name.is_none() && data.description.is_none() && data.icon.is_none() && data.nsfw.is_none() && data.remove.is_none() {
-        return Ok(Json(channel))
+    if data.name.is_none()
+        && data.description.is_none()
+        && data.icon.is_none()
+        && data.nsfw.is_none()
+        && data.remove.is_none()
+    {
+        return Ok(Json(channel));
     }
 
     let mut partial: PartialChannel = Default::default();
     match &mut channel {
-        Channel::Group { id, name, description, icon, nsfw, .. }
-        | Channel::TextChannel { id, name, description, icon, nsfw, .. }
-        | Channel::VoiceChannel { id, name, description, icon, nsfw, .. } => {
+        Channel::Group {
+            id,
+            name,
+            description,
+            icon,
+            nsfw,
+            ..
+        }
+        | Channel::TextChannel {
+            id,
+            name,
+            description,
+            icon,
+            nsfw,
+            ..
+        }
+        | Channel::VoiceChannel {
+            id,
+            name,
+            description,
+            icon,
+            nsfw,
+            ..
+        } => {
             if let Some(fields) = &data.remove {
                 if fields.contains(&FieldsChannel::Icon) {
                     if let Some(icon) = &icon {
@@ -51,10 +96,10 @@ pub async fn req(db: &State<Database>, user: User, target: Ref, data: Json<Data>
                     match field {
                         FieldsChannel::Description => {
                             description.take();
-                        },
+                        }
                         FieldsChannel::Icon => {
                             icon.take();
-                        },
+                        }
                         _ => {}
                     }
                 }
@@ -80,9 +125,10 @@ pub async fn req(db: &State<Database>, user: User, target: Ref, data: Json<Data>
                 partial.nsfw = Some(new_nsfw);
             }
 
-            db.update_channel(id, &partial, data.remove.unwrap_or_default()).await?;
-        },
-        _ => return Err(Error::InvalidOperation)
+            db.update_channel(id, &partial, data.remove.unwrap_or_default())
+                .await?;
+        }
+        _ => return Err(Error::InvalidOperation),
     };
 
     Ok(Json(channel))

@@ -11,6 +11,9 @@ pub struct Options {
 }
 
 #[post("/<target>/messages/stale", data = "<data>")]
-pub async fn req(/*user: UserRef, target: Ref,*/ target: String, data: Json<Options>) -> Result<Value> {
+pub async fn req(
+    /*user: UserRef, target: Ref,*/ target: String,
+    data: Json<Options>,
+) -> Result<Value> {
     todo!()
 }

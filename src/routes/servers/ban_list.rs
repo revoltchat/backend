@@ -1,17 +1,17 @@
-use revolt_quark::{Error, Result};
 use revolt_quark::models::File;
+use revolt_quark::{Error, Result};
 
 use futures::StreamExt;
-use mongodb::options::FindOptions;
-use serde::{Serialize, Deserialize};
-use rocket::serde::json::Value;
 use mongodb::bson::{doc, from_document};
+use mongodb::options::FindOptions;
+use rocket::serde::json::Value;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 struct BannedUser {
     _id: String,
     username: String,
-    avatar: Option<File>
+    avatar: Option<File>,
 }
 
 #[get("/<target>/bans")]

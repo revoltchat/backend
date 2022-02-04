@@ -6,13 +6,13 @@ mod change_username;
 mod edit_user;
 mod fetch_dms;
 mod fetch_profile;
+mod fetch_self;
 mod fetch_user;
 mod find_mutual;
 mod get_default_avatar;
 mod open_dm;
 mod remove_friend;
 mod unblock_user;
-mod fetch_self;
 
 pub fn routes() -> Vec<Route> {
     routes![

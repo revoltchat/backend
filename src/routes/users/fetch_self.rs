@@ -1,7 +1,7 @@
 //! Fetch the currently authenticated session's user account
 
-use revolt_quark::Result;
 use revolt_quark::models::User;
+use revolt_quark::Result;
 
 use rocket::serde::json::Json;
 

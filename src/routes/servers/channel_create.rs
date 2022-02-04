@@ -11,7 +11,7 @@ use validator::Validate;
 #[derive(Serialize, Deserialize)]
 enum ChannelType {
     Text,
-    Voice
+    Voice,
 }
 
 impl Default for ChannelType {
@@ -33,6 +33,9 @@ pub struct Data {
 }
 
 #[post("/<target>/channels", data = "<info>")]
-pub async fn req(/*_idempotency: IdempotencyKey, user: User, target: Ref,*/ target: String, info: Json<Data>) -> Result<Value> {
+pub async fn req(
+    /*_idempotency: IdempotencyKey, user: User, target: Ref,*/ target: String,
+    info: Json<Data>,
+) -> Result<Value> {
     todo!()
 }

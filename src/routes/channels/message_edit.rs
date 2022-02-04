@@ -1,7 +1,7 @@
 use revolt_quark::{EmptyResponse, Result};
 
 use chrono::Utc;
-use mongodb::bson::{Bson, Document, doc, to_document};
+use mongodb::bson::{doc, to_document, Bson, Document};
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -15,6 +15,10 @@ pub struct Data {
 }
 
 #[patch("/<target>/messages/<msg>", data = "<edit>")]
-pub async fn req(/*user: UserRef, target: Ref, msg: Ref,*/ target: String, msg: String, edit: Json<Data>) -> Result<EmptyResponse> {
+pub async fn req(
+    /*user: UserRef, target: Ref, msg: Ref,*/ target: String,
+    msg: String,
+    edit: Json<Data>,
+) -> Result<EmptyResponse> {
     todo!()
 }

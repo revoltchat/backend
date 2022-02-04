@@ -1,12 +1,12 @@
 use rocket::Route;
 
 mod create;
-mod invite;
-mod fetch_public;
+mod delete;
+mod edit;
 mod fetch;
 mod fetch_owned;
-mod edit;
-mod delete;
+mod fetch_public;
+mod invite;
 
 pub fn routes() -> Vec<Route> {
     routes![

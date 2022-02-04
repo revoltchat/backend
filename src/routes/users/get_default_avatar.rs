@@ -1,6 +1,6 @@
-use rocket::{Request, Response};
-use rocket::response::{self, Responder};
 use rocket::fs::NamedFile;
+use rocket::response::{self, Responder};
+use rocket::{Request, Response};
 use std::path::Path;
 
 pub struct CachedFile(NamedFile);
@@ -19,22 +19,28 @@ impl<'r> Responder<'r, 'static> for CachedFile {
 pub async fn req(target: String) -> Option<CachedFile> {
     match target.chars().nth(25).unwrap() {
         '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' => {
-            NamedFile::open(Path::new("assets/user_red.png")).await.ok().map(CachedFile)
+            NamedFile::open(Path::new("assets/user_red.png"))
+                .await
+                .ok()
+                .map(CachedFile)
         }
         '8' | '9' | 'A' | 'C' | 'B' | 'D' | 'E' | 'F' => {
             NamedFile::open(Path::new("assets/user_green.png"))
                 .await
-                .ok().map(CachedFile)
+                .ok()
+                .map(CachedFile)
         }
         'G' | 'H' | 'J' | 'K' | 'M' | 'N' | 'P' | 'Q' => {
             NamedFile::open(Path::new("assets/user_blue.png"))
                 .await
-                .ok().map(CachedFile)
+                .ok()
+                .map(CachedFile)
         }
         'R' | 'S' | 'T' | 'V' | 'W' | 'X' | 'Y' | 'Z' => {
             NamedFile::open(Path::new("assets/user_yellow.png"))
                 .await
-                .ok().map(CachedFile)
+                .ok()
+                .map(CachedFile)
         }
         _ => unreachable!(),
     }

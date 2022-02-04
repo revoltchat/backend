@@ -1,9 +1,9 @@
 use revolt_quark::models::User;
-use revolt_quark::{Result, Database};
+use revolt_quark::{Database, Result};
 
 use mongodb::bson::doc;
-use rocket::State;
 use rocket::serde::json::Json;
+use rocket::State;
 
 #[delete("/<username>/block")]
 pub async fn req(db: &State<Database>, user: User, username: String) -> Result<Json<User>> {
