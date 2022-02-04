@@ -44,15 +44,15 @@ pub async fn req(db: &State<Database>, mut user: User, data: Json<Data>) -> Resu
 
     if let Some(fields) = &data.remove {
         if fields.contains(&FieldsUser::Avatar) {
-            if let Some(_avatar) = &user.avatar {
-                // TODO: delete the avatar
+            if let Some(avatar) = &user.avatar {
+                db.mark_attachment_as_deleted(&avatar.id).await?;
             }
         }
 
         if fields.contains(&FieldsUser::ProfileBackground) {
             if let Some(profile) = &user.profile {
-                if let Some(_background) = &profile.background {
-                    // TODO: delete the background
+                if let Some(background) = &profile.background {
+                    db.mark_attachment_as_deleted(&background.id).await?;
                 }
             }
         }
