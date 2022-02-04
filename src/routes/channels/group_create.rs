@@ -12,6 +12,8 @@ use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use validator::Validate;
 
+use crate::util::variables::MAX_GROUP_SIZE;
+
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
     #[validate(length(min = 1, max = 32))]
@@ -32,9 +34,8 @@ pub async fn req(db: &Db, user: User, info: Json<Data>) -> Result<Json<Channel>>
     let mut set: HashSet<String> = HashSet::from_iter(info.users.into_iter());
     set.insert(user.id.clone());
 
-    // ! FIXME: un hard code this
-    if set.len() > 50 {
-        return Err(Error::GroupTooLarge { max: 50 });
+    if set.len() > *MAX_GROUP_SIZE {
+        return Err(Error::GroupTooLarge { max: *MAX_GROUP_SIZE });
     }
 
     for target in &set {
