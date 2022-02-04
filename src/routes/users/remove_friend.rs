@@ -1,10 +1,13 @@
-use revolt_quark::{Error, Result};
+use revolt_quark::models::User;
+use revolt_quark::{Result, Database};
 
-use futures::try_join;
 use mongodb::bson::doc;
-use rocket::serde::json::Value;
+use rocket::State;
+use rocket::serde::json::Json;
 
-#[delete("/<target>/friend")]
-pub async fn req(/*user: UserRef, target: Ref*/ target: String) -> Result<Value> {
-    todo!()
+#[delete("/<username>/friend")]
+pub async fn req(db: &State<Database>, user: User, username: String) -> Result<Json<User>> {
+    let mut target = db.fetch_user_by_username(&username).await?;
+    user.remove_friend(db, &mut target).await?;
+    Ok(Json(target.with_auto_perspective(db, &user).await))
 }

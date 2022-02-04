@@ -10,9 +10,10 @@ use rocket::{serde::json::Json, State};
 #[get("/<target>")]
 pub async fn req(db: &State<Database>, user: User, target: Ref) -> Result<Json<User>> {
     let target = target.as_user(db).await?;
-
-    if perms(&user).user(&target).calc_user(db).await.get_access() {
-        Ok(Json(target))
+    
+    let permissions = perms(&user).user(&target).calc_user(db).await;
+    if permissions.get_access() {
+        Ok(Json(target.with_perspective(&user, &permissions)))
     } else {
         Err(Error::NotFound)
     }

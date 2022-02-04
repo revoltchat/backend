@@ -1,3 +1,5 @@
+//! Edit currently authenticated user.
+
 use revolt_quark::models::File;
 use revolt_quark::{Error, Result, Database};
 use revolt_quark::models::user::{FieldsUser, User, PartialUser};
@@ -96,5 +98,5 @@ pub async fn req(db: &State<Database>, mut user: User, data: Json<Data>) -> Resu
     }
 
     db.update_user(&user.id, &partial, data.remove.unwrap_or_default()).await?;
-    Ok(Json(user))
+    Ok(Json(user.foreign()))
 }
