@@ -1,4 +1,4 @@
-use revolt_quark::{Error, Result};
+use revolt_quark::{Result, models::User, Ref};
 
 use rocket::serde::json::Value;
 use serde::{Deserialize, Serialize};
@@ -8,7 +8,7 @@ struct CreateUserResponse {
     token: String,
 }
 
-#[post("/<target>/join_call")]
-pub async fn req(/*user: UserRef, target: Ref,*/ target: String) -> Result<Value> {
+#[post("/<_target>/join_call")]
+pub async fn req(_user: User, _target: Ref) -> Result<Value> {
     todo!()
 }
