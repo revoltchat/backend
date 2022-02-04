@@ -35,7 +35,9 @@ pub async fn req(db: &Db, user: User, info: Json<Data>) -> Result<Json<Channel>>
     set.insert(user.id.clone());
 
     if set.len() > *MAX_GROUP_SIZE {
-        return Err(Error::GroupTooLarge { max: *MAX_GROUP_SIZE });
+        return Err(Error::GroupTooLarge {
+            max: *MAX_GROUP_SIZE,
+        });
     }
 
     for target in &set {

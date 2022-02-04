@@ -1,18 +1,23 @@
-use revolt_quark::{Error, EmptyResponse, Result, Ref, Db, models::{Channel, User}};
+use revolt_quark::{
+    models::{Channel, User},
+    Db, EmptyResponse, Error, Ref, Result,
+};
 
 use mongodb::bson::doc;
 
 #[delete("/<target>/recipients/<member>")]
-pub async fn req(
-    db: &Db,
-    user: User, target: Ref, member: Ref
-) -> Result<EmptyResponse> {
+pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyResponse> {
     let channel = target.as_channel(db).await?;
 
     match channel {
-        Channel::Group { id, owner, recipients, .. } => {
+        Channel::Group {
+            id,
+            owner,
+            recipients,
+            ..
+        } => {
             if user.id != owner {
-                return Err(Error::MissingPermission { permission: 0 })
+                return Err(Error::MissingPermission { permission: 0 });
             }
 
             let member = member.as_user(db).await?;
@@ -27,6 +32,6 @@ pub async fn req(
             db.remove_user_from_group(&id, &member.id).await?;
             Ok(EmptyResponse)
         }
-        _ => Err(Error::InvalidOperation)
+        _ => Err(Error::InvalidOperation),
     }
 }

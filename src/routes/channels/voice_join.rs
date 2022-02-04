@@ -1,4 +1,4 @@
-use revolt_quark::{Result, models::User, Ref};
+use revolt_quark::{models::User, Ref, Result};
 
 use rocket::serde::json::Value;
 use serde::{Deserialize, Serialize};

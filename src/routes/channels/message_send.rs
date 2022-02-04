@@ -1,4 +1,7 @@
-use revolt_quark::{models::message::Masquerade, Result};
+use revolt_quark::{
+    models::{message::Masquerade, User},
+    Ref, Result,
+};
 
 use mongodb::bson::doc;
 use regex::Regex;
@@ -43,10 +46,6 @@ lazy_static! {
 }
 
 #[post("/<target>/messages", data = "<message>")]
-pub async fn message_send(
-    /*user: UserRef, _r: Ratelimiter, mut idempotency: IdempotencyKey, target: Ref,*/
-    target: String,
-    message: Json<Data>,
-) -> Result<Value> {
+pub async fn message_send(user: User, target: Ref, message: Json<Data>) -> Result<Value> {
     todo!()
 }
