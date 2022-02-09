@@ -26,7 +26,7 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
           matrix:
-            architecture: [linux/amd64]
+            architecture: [linux/amd64,linux/arm64,linux/arm/v7]
         steps:
             - name: Checkout
               uses: actions/checkout@v2
@@ -53,10 +53,13 @@ jobs:
                 rm -rf /tmp/.buildx-cache/${{ matrix.architecture }}
                 mv /tmp/.buildx-cache-new/${{ matrix.architecture }} /tmp/.buildx-cache/${{ matrix.architecture }}
 
-    publish_amd64:
+    publish:
         needs: [test]
         runs-on: ubuntu-latest
         if: github.event_name != 'pull_request'
+        strategy:
+            matrix:
+                architecture: [linux/amd64,linux/arm64,linux/arm/v7]
         steps:
             - name: Checkout
               uses: actions/checkout@v2
@@ -69,18 +72,19 @@ jobs:
             - name: Cache amd64 Docker layers
               uses: actions/cache@v2
               with:
-                path: /tmp/.buildx-cache/linux/amd64
-                key: ${{ runner.os }}-buildx-linux/amd64-${{ github.sha }}
+                path: /tmp/.buildx-cache/${{ matrix.architecture }}
+                key: ${{ runner.os }}-buildx-${{ matrix.architecture }}-${{ github.sha }}
             - name: Docker meta
               id: meta
               uses: docker/metadata-action@v3
               with:
-                  images: revoltchat/server, ghcr.io/revoltchat/server
-            - name: Login to DockerHub
-              uses: docker/login-action@v1
-              with:
-                  username: ${{ secrets.DOCKERHUB_USERNAME }}
-                  password: ${{ secrets.DOCKERHUB_TOKEN }}
+#                  images: revoltchat/server, ghcr.io/revoltchat/server
+                    images: ghcr.io/redstonewizard08/delta
+#            - name: Login to DockerHub
+#              uses: docker/login-action@v1
+#              with:
+#                  username: ${{ secrets.DOCKERHUB_USERNAME }}
+#                  password: ${{ secrets.DOCKERHUB_TOKEN }}
             - name: Login to Github Container Registry
               uses: docker/login-action@v1
               with:
@@ -92,10 +96,10 @@ jobs:
               with:
                   context: .
                   push: true
-                  platforms: linux/amd64,linux/arm64,linux/arm/v7
+                  platforms: ${{ matrix.architecture }}
                   tags: ${{ steps.meta.outputs.tags }}
                   labels: ${{ steps.meta.outputs.labels }}
-                  cache-from: type=local,src=/tmp/.buildx-cache/linux/amd64
+                  cache-from: type=local,src=/tmp/.buildx-cache/${{ matrix.architecture }}
                   cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
             - name: Move cache
               run: |
