@@ -1,9 +1,9 @@
-use revolt_quark::{Error, Result};
+use revolt_quark::{Result, models::{ChannelUnread, User}, Db};
 
 use mongodb::bson::doc;
-use rocket::serde::json::Value;
+use rocket::serde::json::Json;
 
 #[get("/unreads")]
-pub async fn req(/*user: UserRef*/) -> Result<Value> {
-    todo!()
+pub async fn req(db: &Db, user: User) -> Result<Json<Vec<ChannelUnread>>> {
+    db.fetch_unreads(&user.id).await.map(Json)
 }
