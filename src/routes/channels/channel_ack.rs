@@ -1,9 +1,14 @@
-use revolt_quark::{EmptyResponse, Result};
+use revolt_quark::{EmptyResponse, Error, Result, Ref, models::User, Db, perms};
 
 #[put("/<target>/ack/<message>")]
 pub async fn req(
-    /*user: UserRef, target: Ref, message: Ref*/ target: String,
-    message: String,
+    db: &Db,
+    user: User, target: Ref, message: Ref
 ) -> Result<EmptyResponse> {
-    todo!()
+    let channel = target.as_channel(db).await?;
+    if !perms(&user).channel(&channel).calc_channel(db).await.get_view() {
+        return Err(Error::NotFound)
+    }
+
+    db.acknowledge_message(channel.id(), &user.id, &message.id).await.map(|_| EmptyResponse)
 }
