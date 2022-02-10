@@ -2943,6 +2943,7 @@ dependencies = [
  "async-std",
  "async-trait",
  "bitfield",
+ "bson 2.1.0",
  "futures",
  "impl_ops",
  "lazy_static",

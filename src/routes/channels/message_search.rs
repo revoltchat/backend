@@ -1,4 +1,10 @@
-use revolt_quark::{models::{User, message::{MessageSort, BulkMessageResponse}}, Ref, Error, Result, Db, perms};
+use revolt_quark::{
+    models::{
+        message::{BulkMessageResponse, MessageSort},
+        User,
+    },
+    perms, Db, Error, Ref, Result,
+};
 
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
@@ -21,7 +27,12 @@ pub struct Options {
 }
 
 #[post("/<target>/search", data = "<options>")]
-pub async fn req(db: &Db, user: User, target: Ref, options: Json<Options>) -> Result<Json<BulkMessageResponse>> {
+pub async fn req(
+    db: &Db,
+    user: User,
+    target: Ref,
+    options: Json<Options>,
+) -> Result<Json<BulkMessageResponse>> {
     let options = options.into_inner();
     options
         .validate()
@@ -43,12 +54,14 @@ pub async fn req(db: &Db, user: User, target: Ref, options: Json<Options>) -> Re
         before,
         after,
         sort,
-        include_users
+        include_users,
     } = options;
 
     let messages = db
         .search_messages(channel.id(), &query, limit, before, after, sort)
         .await?;
-    
-    BulkMessageResponse::transform(db, &channel, messages, include_users).await.map(Json)
+
+    BulkMessageResponse::transform(db, &channel, messages, include_users)
+        .await
+        .map(Json)
 }

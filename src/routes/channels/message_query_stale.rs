@@ -1,7 +1,5 @@
-use revolt_quark::{Error, Result};
+use revolt_quark::{models::User, Ref, Result};
 
-use futures::StreamExt;
-use mongodb::bson::{doc, from_document};
 use rocket::serde::json::{Json, Value};
 use serde::{Deserialize, Serialize};
 
@@ -10,10 +8,7 @@ pub struct Options {
     ids: Vec<String>,
 }
 
-#[post("/<target>/messages/stale", data = "<data>")]
-pub async fn req(
-    /*user: UserRef, target: Ref,*/ target: String,
-    data: Json<Options>,
-) -> Result<Value> {
-    todo!()
+#[post("/<_target>/messages/stale", data = "<_data>")]
+pub async fn req(_user: User, _target: Ref, _data: Json<Options>) -> Result<Value> {
+    unimplemented!()
 }

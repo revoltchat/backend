@@ -3,8 +3,7 @@ use revolt_quark::{
         message::{BulkMessageResponse, MessageSort},
         User,
     },
-    perms,
-    Db, Error, Ref, Result,
+    perms, Db, Error, Ref, Result,
 };
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
@@ -65,6 +64,8 @@ pub async fn req(
     let messages = db
         .fetch_messages(channel.id(), limit, before, after, sort, nearby)
         .await?;
-    
-    BulkMessageResponse::transform(db, &channel, messages, include_users).await.map(Json)
+
+    BulkMessageResponse::transform(db, &channel, messages, include_users)
+        .await
+        .map(Json)
 }
