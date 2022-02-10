@@ -1,10 +1,7 @@
-use revolt_quark::models::File;
-use revolt_quark::{Error, Result};
+use revolt_quark::models::{File, User, ServerBan};
+use revolt_quark::{perms, Db, Error, Ref, Result, ServerPermission};
 
-use futures::StreamExt;
-use mongodb::bson::{doc, from_document};
-use mongodb::options::FindOptions;
-use rocket::serde::json::Value;
+use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -15,6 +12,18 @@ struct BannedUser {
 }
 
 #[get("/<target>/bans")]
-pub async fn req(/*user: UserRef, target: Ref*/ target: String) -> Result<Value> {
-    todo!()
+pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<Vec<ServerBan>>> {
+    let server = target.as_server(db).await?;
+    if !perms(&user)
+        .server(&server)
+        .calc_server(db)
+        .await
+        .get_ban_members()
+    {
+        return Err(Error::MissingPermission {
+            permission: ServerPermission::BanMembers as i32,
+        });
+    }
+
+    db.fetch_bans(&server.id).await.map(Json)
 }

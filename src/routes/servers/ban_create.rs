@@ -1,6 +1,8 @@
-use revolt_quark::{EmptyResponse, Result};
+use revolt_quark::{
+    models::{ServerBan, User},
+    perms, Db, Error, Ref, Result, ServerPermission,
+};
 
-use mongodb::bson::doc;
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -13,9 +15,36 @@ pub struct Data {
 
 #[put("/<server>/bans/<target>", data = "<data>")]
 pub async fn req(
-    /*user: UserRef, server: Ref, target: Ref,*/ server: String,
-    target: String,
+    db: &Db,
+    user: User,
+    server: Ref,
+    target: Ref,
     data: Json<Data>,
-) -> Result<EmptyResponse> {
-    todo!()
+) -> Result<Json<ServerBan>> {
+    let data = data.into_inner();
+    data.validate()
+        .map_err(|error| Error::FailedValidation { error })?;
+
+    let server = server.as_server(db).await?;
+    if !perms(&user)
+        .server(&server)
+        .calc_server(db)
+        .await
+        .get_ban_members()
+    {
+        return Err(Error::MissingPermission {
+            permission: ServerPermission::BanMembers as i32,
+        });
+    }
+
+    let member = target.as_member(db, &server.id).await?;
+    // ! FIXME: calculate permission against member
+
+    let ban = ServerBan {
+        id: member.id,
+        reason: data.reason,
+    };
+
+    db.insert_ban(&ban).await?;
+    Ok(Json(ban))
 }
