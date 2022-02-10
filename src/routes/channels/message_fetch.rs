@@ -1,4 +1,7 @@
-use revolt_quark::{models::{User, Message}, perms, Db, Error, Ref, Result};
+use revolt_quark::{
+    models::{Message, User},
+    perms, Db, Error, Ref, Result,
+};
 
 use rocket::serde::json::Json;
 

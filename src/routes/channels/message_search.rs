@@ -1,26 +1,8 @@
-use revolt_quark::Result;
+use revolt_quark::{models::{User, message::{MessageSort, BulkMessageResponse}}, Ref, Error, Result, Db, perms};
 
-use futures::StreamExt;
-use mongodb::{
-    bson::{doc, from_document},
-    options::FindOptions,
-};
-use rocket::serde::json::{Json, Value};
+use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
-
-#[derive(Serialize, Deserialize, FromFormField)]
-pub enum Sort {
-    Relevance,
-    Latest,
-    Oldest,
-}
-
-impl Default for Sort {
-    fn default() -> Sort {
-        Sort::Relevance
-    }
-}
 
 #[derive(Validate, Serialize, Deserialize, FromForm)]
 pub struct Options {
@@ -33,15 +15,40 @@ pub struct Options {
     before: Option<String>,
     #[validate(length(min = 26, max = 26))]
     after: Option<String>,
-    #[serde(default = "Sort::default")]
-    sort: Sort,
+    #[serde(default = "MessageSort::default")]
+    sort: MessageSort,
     include_users: Option<bool>,
 }
 
 #[post("/<target>/search", data = "<options>")]
-pub async fn req(
-    /*user: UserRef, target: Ref,*/ target: String,
-    options: Json<Options>,
-) -> Result<Value> {
-    todo!()
+pub async fn req(db: &Db, user: User, target: Ref, options: Json<Options>) -> Result<Json<BulkMessageResponse>> {
+    let options = options.into_inner();
+    options
+        .validate()
+        .map_err(|error| Error::FailedValidation { error })?;
+
+    let channel = target.as_channel(db).await?;
+    if !perms(&user)
+        .channel(&channel)
+        .calc_channel(db)
+        .await
+        .get_view()
+    {
+        return Err(Error::NotFound);
+    }
+
+    let Options {
+        query,
+        limit,
+        before,
+        after,
+        sort,
+        include_users
+    } = options;
+
+    let messages = db
+        .search_messages(channel.id(), &query, limit, before, after, sort)
+        .await?;
+    
+    BulkMessageResponse::transform(db, &channel, messages, include_users).await.map(Json)
 }

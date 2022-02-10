@@ -1,17 +1,9 @@
-#![feature(proc_macro_hygiene, decl_macro)]
-#![feature(async_closure)]
-#![feature(const_option)]
-
 #[macro_use]
 extern crate rocket;
 #[macro_use]
 extern crate serde_json;
 #[macro_use]
 extern crate lazy_static;
-#[macro_use]
-extern crate impl_ops;
-#[macro_use]
-extern crate bitfield;
 extern crate ctrlc;
 
 //pub mod database;
@@ -84,7 +76,7 @@ async fn launch_web() {
     .to_cors()
     .expect("Failed to create CORS.");
 
-    let mut config = Config {
+    let config = Config {
         email_verification: /*if *USE_EMAIL {
             EmailVerification::Enabled {
                 smtp: SMTPSettings {
