@@ -1,6 +1,8 @@
-use revolt_quark::{Error, Result};
+use revolt_quark::{
+    models::{server::Role, User},
+    perms, Db, Error, Ref, Result, DEFAULT_PERMISSION_CHANNEL_SERVER, DEFAULT_SERVER_PERMISSION,
+};
 
-use mongodb::bson::doc;
 use rocket::serde::json::{Json, Value};
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
@@ -13,9 +15,35 @@ pub struct Data {
 }
 
 #[post("/<target>/roles", data = "<data>")]
-pub async fn req(
-    /*user: UserRef, target: Ref,*/ target: String,
-    data: Json<Data>,
-) -> Result<Value> {
-    todo!()
+pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<Value> {
+    let data = data.into_inner();
+    data.validate()
+        .map_err(|error| Error::FailedValidation { error })?;
+
+    let server = target.as_server(db).await?;
+    if !perms(&user)
+        .server(&server)
+        .calc_server(db)
+        .await
+        .get_manage_roles()
+    {
+        return Err(Error::NotFound);
+    }
+
+    let role_id = Ulid::new().to_string();
+    db.insert_role(
+        &server.id,
+        &role_id,
+        &Role {
+            name: data.name,
+            permissions: (
+                *DEFAULT_SERVER_PERMISSION as i32,
+                *DEFAULT_PERMISSION_CHANNEL_SERVER as i32,
+            ),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    Ok(json!({ "id": role_id }))
 }

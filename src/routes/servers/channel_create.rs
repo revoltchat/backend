@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
-use revolt_quark::{Error, Result};
+use revolt_quark::{
+    models::{server::PartialServer, Channel, User},
+    perms, Db, Error, Ref, Result, ServerPermission,
+};
 
-use mongodb::bson::doc;
-use rocket::serde::json::{Json, Value};
+use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use validator::Validate;
@@ -33,9 +35,74 @@ pub struct Data {
 }
 
 #[post("/<target>/channels", data = "<info>")]
-pub async fn req(
-    /*_idempotency: IdempotencyKey, user: User, target: Ref,*/ target: String,
-    info: Json<Data>,
-) -> Result<Value> {
-    todo!()
+pub async fn req(db: &Db, user: User, target: Ref, info: Json<Data>) -> Result<Json<Channel>> {
+    let info = info.into_inner();
+    info.validate()
+        .map_err(|error| Error::FailedValidation { error })?;
+
+    let server = target.as_server(db).await?;
+    if !perms(&user)
+        .server(&server)
+        .calc_server(db)
+        .await
+        .get_manage_channels()
+    {
+        return Err(Error::MissingPermission {
+            permission: ServerPermission::ManageChannels as i32,
+        });
+    }
+
+    let id = Ulid::new().to_string();
+    let mut channels = server.channels;
+    channels.push(id.clone());
+
+    let Data {
+        name,
+        description,
+        nsfw,
+        channel_type,
+    } = info;
+    let channel = match channel_type {
+        ChannelType::Text => Channel::TextChannel {
+            id,
+            server: server.id.clone(),
+
+            name,
+            description,
+
+            icon: None,
+            last_message_id: None,
+
+            default_permissions: None,
+            role_permissions: HashMap::new(),
+
+            nsfw: nsfw.unwrap_or(false),
+        },
+        ChannelType::Voice => Channel::VoiceChannel {
+            id,
+            server: server.id.clone(),
+
+            name,
+            description,
+            icon: None,
+
+            default_permissions: None,
+            role_permissions: HashMap::new(),
+
+            nsfw: nsfw.unwrap_or(false),
+        },
+    };
+
+    db.insert_channel(&channel).await?;
+    db.update_server(
+        &server.id,
+        &PartialServer {
+            channels: Some(channels),
+            ..Default::default()
+        },
+        vec![],
+    )
+    .await?;
+
+    Ok(Json(channel))
 }

@@ -1,9 +1,10 @@
+use std::collections::HashMap;
+
 use revolt_quark::{
-    models::{Server, User},
+    models::{Channel, Server, User},
     Db, Error, Result, DEFAULT_PERMISSION_CHANNEL_SERVER, DEFAULT_SERVER_PERMISSION,
 };
 
-use mongodb::bson::doc;
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
@@ -38,11 +39,32 @@ pub async fn req(db: &Db, user: User, info: Json<Data>) -> Result<Json<Server>> 
         description,
         nsfw,
     } = info;
-    
+
+    let channel_id = Ulid::new().to_string();
+    let server_id = Ulid::new().to_string();
+
+    let channel = Channel::TextChannel {
+        id: channel_id.clone(),
+        server: server_id.clone(),
+
+        name: "General".into(),
+        description: None,
+
+        icon: None,
+        last_message_id: None,
+
+        default_permissions: None,
+        role_permissions: HashMap::new(),
+
+        nsfw: nsfw.unwrap_or(false),
+    };
+
     let server = Server {
-        id: Ulid::new().to_string(),
+        id: server_id,
+        owner: user.id,
         name,
         description,
+        channels: vec![channel_id],
         nsfw: nsfw.unwrap_or(false),
         default_permissions: (
             *DEFAULT_SERVER_PERMISSION as i32,
@@ -51,6 +73,7 @@ pub async fn req(db: &Db, user: User, info: Json<Data>) -> Result<Json<Server>> 
         ..Default::default()
     };
 
+    db.insert_channel(&channel).await?;
     db.insert_server(&server).await?;
     Ok(Json(server))
 }
