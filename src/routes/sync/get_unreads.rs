@@ -1,4 +1,7 @@
-use revolt_quark::{Result, models::{ChannelUnread, User}, Db};
+use revolt_quark::{
+    models::{ChannelUnread, User},
+    Db, Result,
+};
 
 use mongodb::bson::doc;
 use rocket::serde::json::Json;

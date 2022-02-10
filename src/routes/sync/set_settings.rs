@@ -1,5 +1,5 @@
 use revolt_quark::models::User;
-use revolt_quark::{EmptyResponse, Result, Db};
+use revolt_quark::{Db, EmptyResponse, Result};
 
 use chrono::prelude::*;
 use rocket::serde::json::Json;
@@ -29,11 +29,10 @@ pub async fn req(db: &Db, user: User, data: Json<Data>, options: Options) -> Res
 
     let mut settings = HashMap::new();
     for (key, data) in data {
-        settings.insert(key, (
-            timestamp,
-            data
-        ));
+        settings.insert(key, (timestamp, data));
     }
 
-    db.set_user_settings(&user.id, &settings).await.map(|_| EmptyResponse)
+    db.set_user_settings(&user.id, &settings)
+        .await
+        .map(|_| EmptyResponse)
 }

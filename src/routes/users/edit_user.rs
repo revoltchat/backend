@@ -47,6 +47,7 @@ pub async fn req(db: &State<Database>, mut user: User, data: Json<Data>) -> Resu
         return Ok(Json(user));
     }
 
+    // 1. Remove fields from object
     if let Some(fields) = &data.remove {
         if fields.contains(&FieldsUser::Avatar) {
             if let Some(avatar) = &user.avatar {
@@ -69,11 +70,13 @@ pub async fn req(db: &State<Database>, mut user: User, data: Json<Data>) -> Resu
 
     let mut partial: PartialUser = Default::default();
 
+    // 2. Apply new avatar
     if let Some(avatar) = data.avatar {
         partial.avatar = Some(File::use_avatar(db, &avatar, &user.id).await?);
         user.avatar = partial.avatar.clone();
     }
 
+    // 3. Apply new status
     if let Some(status) = data.status {
         let mut new_status = user.status.take().unwrap_or_default();
         if let Some(text) = status.text {
@@ -88,6 +91,7 @@ pub async fn req(db: &State<Database>, mut user: User, data: Json<Data>) -> Resu
         user.status = partial.status.clone();
     }
 
+    // 4. Apply new profile
     if let Some(profile) = data.profile {
         let mut new_profile = user.profile.take().unwrap_or_default();
         if let Some(content) = profile.content {
@@ -104,5 +108,6 @@ pub async fn req(db: &State<Database>, mut user: User, data: Json<Data>) -> Resu
 
     db.update_user(&user.id, &partial, data.remove.unwrap_or_default())
         .await?;
+
     Ok(Json(user.foreign()))
 }
