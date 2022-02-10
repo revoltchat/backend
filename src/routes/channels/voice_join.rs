@@ -10,5 +10,5 @@ struct CreateUserResponse {
 
 #[post("/<_target>/join_call")]
 pub async fn req(_user: User, _target: Ref) -> Result<Value> {
-    todo!()
+    unimplemented!()
 }

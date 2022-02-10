@@ -10,7 +10,8 @@ pub struct Data {
     nickname: Option<String>,
     avatar: Option<String>,
     roles: Option<Vec<String>>,
-    remove: Option<FieldsMember>,
+    #[validate(length(min = 1))]
+    remove: Option<Vec<FieldsMember>>,
 }
 
 #[patch("/<server>/members/<target>", data = "<data>")]

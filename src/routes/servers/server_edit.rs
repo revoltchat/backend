@@ -17,9 +17,11 @@ pub struct Data {
     banner: Option<String>,
     categories: Option<Vec<Category>>,
     system_messages: Option<SystemMessageChannels>,
-    remove: Option<FieldsServer>,
     nsfw: Option<bool>,
     analytics: Option<bool>,
+
+    #[validate(length(min = 1))]
+    remove: Option<Vec<FieldsServer>>,
 }
 
 #[patch("/<target>", data = "<data>")]

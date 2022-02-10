@@ -13,7 +13,8 @@ pub struct Data {
     colour: Option<String>,
     hoist: Option<bool>,
     rank: Option<i64>,
-    // remove: Option<FieldsRole>,
+    // #[validate(length(min = 1))]
+    // remove: Option<Vec<FieldsRole>>,
 }
 
 #[patch("/<target>/roles/<role_id>", data = "<data>")]
