@@ -121,7 +121,10 @@ async fn launch_web() {
         };
     }
 
-    let db = DatabaseInfo::MongoDb("mongodb://localhost").connect().await.unwrap();
+    let db = DatabaseInfo::MongoDb("mongodb://localhost")
+        .connect()
+        .await
+        .unwrap();
     db.migrate_database().await.unwrap();
 
     let mongo_db = mongodb::Client::with_uri_str("mongodb://localhost")

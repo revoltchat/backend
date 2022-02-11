@@ -3,7 +3,6 @@ use revolt_quark::{
     Db, EmptyResponse, Error, Ref, Result,
 };
 
-
 #[delete("/<target>/recipients/<member>")]
 pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyResponse> {
     let channel = target.as_channel(db).await?;

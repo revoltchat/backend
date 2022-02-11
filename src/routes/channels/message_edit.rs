@@ -74,6 +74,6 @@ pub async fn req(
     message.embeds = Some(new_embeds);
     partial.embeds = message.embeds.clone();
 
-    db.update_message(&message.id, &partial, vec![]).await?;
+    db.update_message(&message.id, &partial).await?;
     Ok(Json(message))
 }

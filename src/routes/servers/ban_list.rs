@@ -1,4 +1,4 @@
-use revolt_quark::models::{File, User, ServerBan};
+use revolt_quark::models::{File, ServerBan, User};
 use revolt_quark::{perms, Db, Error, Ref, Result, ServerPermission};
 
 use rocket::serde::json::Json;
