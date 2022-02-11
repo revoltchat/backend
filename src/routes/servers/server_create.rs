@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use revolt_quark::{
-    models::{Channel, Server, User},
+    models::{Channel, Server, User, server_member::MemberCompositeKey, Member},
     Db, Error, Result, DEFAULT_PERMISSION_CHANNEL_SERVER, DEFAULT_SERVER_PERMISSION,
 };
 
@@ -73,7 +73,16 @@ pub async fn req(db: &Db, user: User, info: Json<Data>) -> Result<Json<Server>> 
         ..Default::default()
     };
 
+    let member = Member {
+        id: MemberCompositeKey {
+            server: server.id.clone(),
+            user: server.owner.clone(),
+        },
+        ..Default::default()
+    };
+
     db.insert_channel(&channel).await?;
     db.insert_server(&server).await?;
+    db.insert_member(&member).await?;
     Ok(Json(server))
 }
