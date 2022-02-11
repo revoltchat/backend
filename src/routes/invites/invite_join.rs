@@ -19,11 +19,14 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<Value> {
     let invite = target.as_invite(db).await?;
     match &invite {
         Invite::Server { channel, server, .. } => {
-            let channel = db.fetch_channel(channel).await?;
             let server = db.fetch_server(server).await?;
+            if db.fetch_ban(&server.id, &user.id).await.is_ok() {
+                return Err(Error::Banned)
+            }
 
+            let channel = db.fetch_channel(channel).await?;
             db.insert_member(&server.id, &user.id).await?;
-
+            
             Ok(json!({
                 "type": "Server",
                 "channel": channel,
