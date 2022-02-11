@@ -1,5 +1,5 @@
 use revolt_quark::{
-    models::{Invite, User, server_member::MemberCompositeKey, Member},
+    models::{server_member::MemberCompositeKey, Invite, Member, User},
     Db, Error, Ref, Result,
 };
 
@@ -33,7 +33,7 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<Value> {
             let member = Member {
                 id: MemberCompositeKey {
                     server: server.id.clone(),
-                    user: user.id.clone()
+                    user: user.id.clone(),
                 },
                 ..Default::default()
             };

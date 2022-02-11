@@ -54,6 +54,7 @@ pub async fn req(
     };
 
     // ! FIXME: calculate permission against member
+    // ! FIXME: also check roles exist lol
 
     // 1. Remove fields from object
     if let Some(fields) = &remove {

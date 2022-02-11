@@ -32,6 +32,12 @@ pub async fn req(
         return Err(Error::NotFound);
     }
 
+    // ! FIXME: calculate permission against role
+
+    if !server.roles.contains_key(&role_id) {
+        return Err(Error::NotFound);
+    }
+
     db.update_role_permission(
         &server.id,
         &role_id,

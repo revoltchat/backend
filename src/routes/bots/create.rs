@@ -2,7 +2,7 @@ use crate::util::{regex::RE_USERNAME, variables::MAX_BOT_COUNT};
 
 use nanoid::nanoid;
 use revolt_quark::{
-    models::{Bot, User},
+    models::{Bot, User, user::BotInformation},
     Db, Error, Result,
 };
 
@@ -31,13 +31,28 @@ pub async fn create_bot(db: &Db, user: User, info: Json<Data>) -> Result<Json<Bo
         return Err(Error::ReachedMaximumBots);
     }
 
+    if db.is_username_taken(&info.name).await? {
+        return Err(Error::UsernameTaken);
+    }
+
+    let id = Ulid::new().to_string();
+    let bot_user = User {
+        id: id.clone(),
+        username: info.name,
+        bot: Some(BotInformation {
+            owner: user.id.clone()
+        }),
+        ..Default::default()
+    };
+
     let bot = Bot {
-        id: Ulid::new().to_string(),
+        id,
         owner: user.id,
         token: nanoid!(64),
         ..Default::default()
     };
 
+    db.insert_user(&bot_user).await?;
     db.insert_bot(&bot).await?;
     Ok(Json(bot))
 }

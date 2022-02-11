@@ -12,6 +12,8 @@ pub async fn req(db: &Db, user: User, target: Ref, role_id: String) -> Result<Em
         return Err(Error::NotFound);
     }
 
+    // ! FIXME: check perms against role
+
     db.delete_role(&server.id, &role_id)
         .await
         .map(|_| EmptyResponse)

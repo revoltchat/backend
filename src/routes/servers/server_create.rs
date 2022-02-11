@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use revolt_quark::{
-    models::{Channel, Server, User, server_member::MemberCompositeKey, Member},
+    models::{server_member::MemberCompositeKey, Channel, Member, Server, User},
     Db, Error, Result, DEFAULT_PERMISSION_CHANNEL_SERVER, DEFAULT_SERVER_PERMISSION,
 };
 

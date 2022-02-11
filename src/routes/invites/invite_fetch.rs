@@ -77,25 +77,25 @@ pub async fn req(db: &Db, target: Ref) -> Result<Json<InviteResponse>> {
                 _ => unreachable!(),
             }
         }
-        Invite::Group { channel, creator, .. } => {
+        Invite::Group {
+            channel, creator, ..
+        } => {
             let channel = db.fetch_channel(&channel).await?;
             let user = db.fetch_user(&creator).await?;
 
             match channel {
-                | Channel::Group {
+                Channel::Group {
                     id,
                     name,
                     description,
                     ..
-                } => {
-                    InviteResponse::Group {
-                        channel_id: id,
-                        channel_name: name,
-                        channel_description: description,
-                        user_name: user.username,
-                        user_avatar: user.avatar,
-                    }
-                }
+                } => InviteResponse::Group {
+                    channel_id: id,
+                    channel_name: name,
+                    channel_description: description,
+                    user_name: user.username,
+                    user_avatar: user.avatar,
+                },
                 _ => unreachable!(),
             }
         }

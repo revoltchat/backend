@@ -49,9 +49,9 @@ pub async fn edit_bot(db: &Db, user: User, target: Ref, data: Json<Data>) -> Res
     }
 
     if data.public.is_none()
-        || data.analytics.is_none()
-        || data.interactions_url.is_none()
-        || data.remove.is_none()
+        && data.analytics.is_none()
+        && data.interactions_url.is_none()
+        && data.remove.is_none()
     {
         return Ok(Json(bot));
     }
