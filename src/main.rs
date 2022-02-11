@@ -24,11 +24,11 @@ use rauth::{
 use revolt_quark::DatabaseInfo;
 use rocket_cors::AllowedOrigins;
 use std::str::FromStr;
-/*use util::variables::{
+use util::variables::{
     APP_URL, HCAPTCHA_KEY, INVITE_ONLY, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD, SMTP_USERNAME,
     USE_EMAIL, USE_HCAPTCHA,
 };
-use crate::util::ratelimit::RatelimitState;*/
+// use crate::util::ratelimit::RatelimitState;
 
 #[async_std::main]
 async fn main() {
@@ -76,8 +76,8 @@ async fn launch_web() {
     .to_cors()
     .expect("Failed to create CORS.");
 
-    let config = Config {
-        email_verification: /*if *USE_EMAIL {
+    let mut config = Config {
+        email_verification: if *USE_EMAIL {
             EmailVerification::Enabled {
                 smtp: SMTPSettings {
                     from: (*SMTP_FROM).to_string(),
@@ -107,11 +107,11 @@ async fn launch_web() {
             }
         } else {
             EmailVerification::Disabled
-        },*/ EmailVerification::Disabled,
+        },
         ..Default::default()
     };
 
-    /*if *INVITE_ONLY {
+    if *INVITE_ONLY {
         config.invite_only = true;
     }
 
@@ -119,7 +119,7 @@ async fn launch_web() {
         config.captcha = Captcha::HCaptcha {
             secret: HCAPTCHA_KEY.clone(),
         };
-    }*/
+    }
 
     let db = DatabaseInfo::Dummy.connect().await.unwrap();
 
