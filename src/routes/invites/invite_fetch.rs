@@ -4,6 +4,7 @@ use revolt_quark::{Db, Ref, Result};
 use rocket::serde::json::Json;
 use serde::Serialize;
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum InviteResponse {
@@ -22,6 +23,15 @@ pub enum InviteResponse {
         #[serde(skip_serializing_if = "Option::is_none")]
         user_avatar: Option<File>,
         member_count: i64,
+    },
+    Group {
+        channel_id: String,
+        channel_name: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        channel_description: Option<String>,
+        user_name: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        user_avatar: Option<File>,
     },
 }
 
@@ -67,6 +77,27 @@ pub async fn req(db: &Db, target: Ref) -> Result<Json<InviteResponse>> {
                 _ => unreachable!(),
             }
         }
-        _ => unimplemented!(),
+        Invite::Group { channel, creator, .. } => {
+            let channel = db.fetch_channel(&channel).await?;
+            let user = db.fetch_user(&creator).await?;
+
+            match channel {
+                | Channel::Group {
+                    id,
+                    name,
+                    description,
+                    ..
+                } => {
+                    InviteResponse::Group {
+                        channel_id: id,
+                        channel_name: name,
+                        channel_description: description,
+                        user_name: user.username,
+                        user_avatar: user.avatar,
+                    }
+                }
+                _ => unreachable!(),
+            }
+        }
     }))
 }
