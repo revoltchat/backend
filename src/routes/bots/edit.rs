@@ -63,6 +63,7 @@ pub async fn edit_bot(db: &Db, user: User, target: Ref, data: Json<Data>) -> Res
         remove,
         ..
     } = data;
+
     let mut partial = PartialBot {
         public,
         analytics,
@@ -82,5 +83,7 @@ pub async fn edit_bot(db: &Db, user: User, target: Ref, data: Json<Data>) -> Res
 
     db.update_bot(&bot.id, &partial, remove.unwrap_or_else(Vec::new))
         .await?;
+    
+    bot.apply_options(partial);
     Ok(Json(bot))
 }
