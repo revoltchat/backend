@@ -197,16 +197,16 @@ dependencies = [
 
 [[package]]
 name = "async-std-resolver"
-version = "0.20.3"
+version = "0.20.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed4e2c3da14d8ad45acb1e3191db7a918e9505b6f155b218e70a7c9a1a48c638"
+checksum = "dbf3e776afdf3a2477ef4854b85ba0dff3bd85792f685fb3c68948b4d304e4f0"
 dependencies = [
  "async-std",
  "async-trait",
  "futures-io",
  "futures-util",
  "pin-utils",
- "trust-dns-resolver 0.20.3",
+ "trust-dns-resolver 0.20.4",
 ]
 
 [[package]]
@@ -1900,8 +1900,8 @@ dependencies = [
  "tokio 1.11.0",
  "tokio-rustls 0.22.0",
  "tokio-util 0.6.8",
- "trust-dns-proto 0.20.3",
- "trust-dns-resolver 0.20.3",
+ "trust-dns-proto 0.20.4",
+ "trust-dns-resolver 0.20.4",
  "typed-builder 0.9.1",
  "uuid",
  "version_check",
@@ -3930,9 +3930,9 @@ dependencies = [
 
 [[package]]
 name = "trust-dns-proto"
-version = "0.20.3"
+version = "0.20.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad0d7f5db438199a6e2609debe3f69f808d074e0a2888ee0bccb45fe234d03f4"
+checksum = "ca94d4e9feb6a181c690c4040d7a24ef34018d8313ac5044a61d21222ae24e31"
 dependencies = [
  "async-trait",
  "cfg-if 1.0.0",
@@ -3974,9 +3974,9 @@ dependencies = [
 
 [[package]]
 name = "trust-dns-resolver"
-version = "0.20.3"
+version = "0.20.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6ad17b608a64bd0735e67bde16b0636f8aa8591f831a25d18443ed00a699770"
+checksum = "ecae383baad9995efaa34ce8e57d12c3f305e545887472a492b838f4b5cfb77a"
 dependencies = [
  "cfg-if 1.0.0",
  "futures-util",
@@ -3989,7 +3989,7 @@ dependencies = [
  "smallvec",
  "thiserror",
  "tokio 1.11.0",
- "trust-dns-proto 0.20.3",
+ "trust-dns-proto 0.20.4",
 ]
 
 [[package]]

@@ -121,11 +121,14 @@ async fn launch_web() {
         };
     }
 
-    let db = DatabaseInfo::Dummy.connect().await.unwrap();
+    let db = DatabaseInfo::MongoDb("mongodb://localhost").connect().await.unwrap();
+    db.migrate_database().await.unwrap();
 
     let mongo_db = mongodb::Client::with_uri_str("mongodb://localhost")
         .await
         .expect("Failed to init db connection.");
+
+    rauth::entities::sync_models(&mongo_db.database("revolt")).await;
 
     let auth = Auth::new(mongo_db.database("revolt"), config);
     let rocket = rocket::build();
