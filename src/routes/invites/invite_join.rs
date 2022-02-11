@@ -1,5 +1,5 @@
 use revolt_quark::{
-    models::{Invite, User},
+    models::{Invite, User, server_member::MemberCompositeKey, Member},
     Db, Error, Ref, Result,
 };
 
@@ -30,7 +30,15 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<Value> {
             }
 
             let channel = db.fetch_channel(channel).await?;
-            db.insert_member(&server.id, &user.id).await?;
+            let member = Member {
+                id: MemberCompositeKey {
+                    server: server.id.clone(),
+                    user: user.id.clone()
+                },
+                ..Default::default()
+            };
+
+            db.insert_member(&member).await?;
 
             Ok(json!({
                 "type": "Server",
