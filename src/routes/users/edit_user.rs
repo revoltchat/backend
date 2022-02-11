@@ -4,7 +4,6 @@ use revolt_quark::models::user::{FieldsUser, PartialUser, User};
 use revolt_quark::models::File;
 use revolt_quark::{Database, Error, Result};
 
-use mongodb::bson::doc;
 use revolt_quark::models::user::UserStatus;
 use rocket::serde::json::Json;
 use rocket::State;

@@ -8,7 +8,6 @@ use revolt_quark::{
     Db, Error, Ref, Result,
 };
 
-use mongodb::bson::doc;
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;

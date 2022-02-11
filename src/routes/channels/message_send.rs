@@ -8,7 +8,6 @@ use revolt_quark::{
     perms, ChannelPermission, Db, Error, Ref, Result,
 };
 
-use mongodb::bson::doc;
 use regex::Regex;
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};

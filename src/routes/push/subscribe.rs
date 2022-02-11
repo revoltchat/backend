@@ -1,6 +1,5 @@
 use revolt_quark::{EmptyResponse, Error, Result};
 
-use mongodb::bson::doc;
 use rauth::{
     entities::{Model, Session, WebPushSubscription},
     logic::Auth,

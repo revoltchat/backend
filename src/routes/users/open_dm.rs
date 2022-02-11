@@ -5,7 +5,6 @@ use revolt_quark::{
     perms, Database, Error, Ref, Result, UserPermission,
 };
 
-use mongodb::bson::doc;
 use rocket::{serde::json::Json, State};
 use ulid::Ulid;
 

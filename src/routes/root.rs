@@ -3,7 +3,6 @@ use crate::util::variables::{
     USE_EMAIL, USE_HCAPTCHA, USE_JANUARY, USE_VOSO, VAPID_PUBLIC_KEY, VOSO_URL, VOSO_WS_HOST,
 };
 
-use mongodb::bson::doc;
 use rocket::{http::Status, serde::json::Value};
 
 #[get("/")]

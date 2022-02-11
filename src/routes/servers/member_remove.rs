@@ -1,6 +1,5 @@
 use revolt_quark::{models::User, perms, Db, EmptyResponse, Error, Ref, Result, ServerPermission};
 
-use mongodb::bson::doc;
 
 #[delete("/<target>/members/<member>")]
 pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyResponse> {

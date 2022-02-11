@@ -1,5 +1,4 @@
 use crate::util::regex::RE_USERNAME;
-use mongodb::bson::doc;
 use rauth::entities::Account;
 use revolt_quark::{models::User, Database, EmptyResponse, Error, Result};
 use rocket::{serde::json::Json, State};

@@ -3,7 +3,6 @@ use revolt_quark::{
     Db, Result,
 };
 
-use mongodb::bson::doc;
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 

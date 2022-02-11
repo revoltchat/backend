@@ -6,7 +6,6 @@ use revolt_quark::{
     perms, ChannelPermission, Database, Error, Ref, Result,
 };
 
-use mongodb::bson::doc;
 use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 use validator::Validate;

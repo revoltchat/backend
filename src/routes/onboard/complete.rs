@@ -1,7 +1,6 @@
 use crate::util::regex::RE_USERNAME;
 use revolt_quark::{models::User, Database, EmptyResponse, Error, Result};
 
-use mongodb::bson::doc;
 use rauth::entities::Session;
 use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};

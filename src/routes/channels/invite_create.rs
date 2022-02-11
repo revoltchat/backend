@@ -3,7 +3,6 @@ use revolt_quark::{
     perms, ChannelPermission, Db, Error, Ref, Result,
 };
 
-use mongodb::bson::doc;
 use rocket::serde::json::Json;
 
 #[post("/<target>/invites")]

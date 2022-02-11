@@ -7,7 +7,6 @@ use revolt_quark::{
     Database, Result,
 };
 
-use mongodb::bson::doc;
 use rocket::{serde::json::Json, State};
 
 #[get("/dms")]

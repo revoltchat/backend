@@ -3,7 +3,6 @@ use revolt_quark::{
     perms, ChannelPermission, Db, EmptyResponse, Error, Ref, Result,
 };
 
-use mongodb::bson::doc;
 
 #[delete("/<target>")]
 pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
