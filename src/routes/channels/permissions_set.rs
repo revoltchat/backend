@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use revolt_quark::{
     models::{Channel, User},
-    perms, ChannelPermission, Db, EmptyResponse, Error, Ref, Result,
+    perms, ChannelPermission, Db, Error, Ref, Result,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -18,8 +18,8 @@ pub async fn req(
     target: Ref,
     role: String,
     data: Json<Data>,
-) -> Result<EmptyResponse> {
-    let channel = target.as_channel(db).await?;
+) -> Result<Json<Channel>> {
+    let mut channel = target.as_channel(db).await?;
     if !perms(&user)
         .channel(&channel)
         .calc_channel(db)
@@ -31,13 +31,9 @@ pub async fn req(
         });
     }
 
-    match channel {
-        Channel::TextChannel { id, .. } | Channel::VoiceChannel { id, .. } => {
-            db.set_channel_role_permission(&id, &role, data.permissions)
-                .await?;
-        }
-        _ => return Err(Error::InvalidOperation),
-    }
+    channel
+        .set_role_permission(db, &role, data.permissions)
+        .await?;
 
-    Ok(EmptyResponse)
+    Ok(Json(channel))
 }

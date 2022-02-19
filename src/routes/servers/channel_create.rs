@@ -40,7 +40,7 @@ pub async fn req(db: &Db, user: User, target: Ref, info: Json<Data>) -> Result<J
     info.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    let server = target.as_server(db).await?;
+    let mut server = target.as_server(db).await?;
     if !perms(&user)
         .server(&server)
         .calc_server(db)
@@ -53,7 +53,7 @@ pub async fn req(db: &Db, user: User, target: Ref, info: Json<Data>) -> Result<J
     }
 
     let id = Ulid::new().to_string();
-    let mut channels = server.channels;
+    let mut channels = server.channels.clone();
     channels.push(id.clone());
 
     let Data {
@@ -93,16 +93,17 @@ pub async fn req(db: &Db, user: User, target: Ref, info: Json<Data>) -> Result<J
         },
     };
 
-    db.insert_channel(&channel).await?;
-    db.update_server(
-        &server.id,
-        &PartialServer {
-            channels: Some(channels),
-            ..Default::default()
-        },
-        vec![],
-    )
-    .await?;
+    channel.create(db).await?;
+    server
+        .update(
+            db,
+            PartialServer {
+                channels: Some(channels),
+                ..Default::default()
+            },
+            vec![],
+        )
+        .await?;
 
     Ok(Json(channel))
 }

@@ -1,7 +1,10 @@
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 
-use revolt_quark::{models::User, perms, Db, EmptyResponse, Error, Ref, Result};
+use revolt_quark::{
+    models::{Server, User},
+    perms, Db, Error, Ref, Result,
+};
 
 #[derive(Serialize, Deserialize)]
 pub struct Values {
@@ -21,8 +24,8 @@ pub async fn req(
     target: Ref,
     role_id: String,
     data: Json<Data>,
-) -> Result<EmptyResponse> {
-    let server = target.as_server(db).await?;
+) -> Result<Json<Server>> {
+    let mut server = target.as_server(db).await?;
     if !perms(&user)
         .server(&server)
         .calc_server(db)
@@ -34,18 +37,16 @@ pub async fn req(
 
     // ! FIXME: calculate permission against role
 
-    if !server.roles.contains_key(&role_id) {
-        return Err(Error::NotFound);
-    }
+    server
+        .set_role_permission(
+            db,
+            &role_id,
+            &(
+                data.permissions.server as i32,
+                data.permissions.channel as i32,
+            ),
+        )
+        .await?;
 
-    db.update_role_permission(
-        &server.id,
-        &role_id,
-        &(
-            data.permissions.server as i32,
-            data.permissions.channel as i32,
-        ),
-    )
-    .await
-    .map(|_| EmptyResponse)
+    Ok(Json(server))
 }

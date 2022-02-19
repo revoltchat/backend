@@ -63,28 +63,15 @@ pub async fn req(
                 db.mark_attachment_as_deleted(&avatar.id).await?;
             }
         }
-
-        for field in fields {
-            member.remove(field);
-        }
     }
 
     // 2. Apply new avatar
     if let Some(avatar) = avatar {
         partial.avatar = Some(File::use_avatar(db, &avatar, &user.id).await?);
-        member.avatar = partial.avatar.clone();
     }
 
-    // 3. Copy over other fields
-    if let Some(nickname) = &partial.nickname {
-        member.nickname.replace(nickname.clone());
-    }
-
-    if let Some(roles) = &partial.roles {
-        member.roles.replace(roles.clone());
-    }
-
-    db.update_member(&member.id, &partial, remove.unwrap_or_else(Vec::new))
+    member
+        .update(db, partial, remove.unwrap_or_default())
         .await?;
 
     Ok(Json(member))

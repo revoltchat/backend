@@ -48,8 +48,7 @@ pub async fn req(
 
     // 1. Handle content update
     if let Some(content) = edit.content {
-        message.content = Content::Text(content);
-        partial.content = Some(message.content.clone());
+        partial.content = Some(Content::Text(content));
     }
 
     // 2. Clear any auto generated embeds
@@ -71,9 +70,8 @@ pub async fn req(
         }
     }
 
-    message.embeds = Some(new_embeds);
     partial.embeds = message.embeds.clone();
 
-    db.update_message(&message.id, &partial).await?;
+    message.update(db, partial).await?;
     Ok(Json(message))
 }

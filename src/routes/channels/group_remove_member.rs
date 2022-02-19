@@ -7,14 +7,11 @@ use revolt_quark::{
 pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyResponse> {
     let channel = target.as_channel(db).await?;
 
-    match channel {
+    match &channel {
         Channel::Group {
-            id,
-            owner,
-            recipients,
-            ..
+            owner, recipients, ..
         } => {
-            if user.id != owner {
+            if &user.id != owner {
                 return Err(Error::MissingPermission { permission: 0 });
             }
 
@@ -27,8 +24,10 @@ pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyR
                 return Err(Error::NotInGroup);
             }
 
-            db.remove_user_from_group(&id, &member.id).await?;
-            Ok(EmptyResponse)
+            channel
+                .remove_user_from_group(db, &member.id)
+                .await
+                .map(|_| EmptyResponse)
         }
         _ => Err(Error::InvalidOperation),
     }

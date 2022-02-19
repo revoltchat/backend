@@ -5,7 +5,6 @@ use revolt_quark::{
 
 use rocket::serde::json::{Json, Value};
 use serde::{Deserialize, Serialize};
-use ulid::Ulid;
 use validator::Validate;
 
 #[derive(Validate, Serialize, Deserialize)]
@@ -30,20 +29,16 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<V
         return Err(Error::NotFound);
     }
 
-    let role_id = Ulid::new().to_string();
-    db.insert_role(
-        &server.id,
-        &role_id,
-        &Role {
-            name: data.name,
-            permissions: (
-                *DEFAULT_SERVER_PERMISSION as i32,
-                *DEFAULT_PERMISSION_CHANNEL_SERVER as i32,
-            ),
-            ..Default::default()
-        },
-    )
-    .await?;
+    let role = Role {
+        name: data.name,
+        permissions: (
+            *DEFAULT_SERVER_PERMISSION as i32,
+            *DEFAULT_PERMISSION_CHANNEL_SERVER as i32,
+        ),
+        ..Default::default()
+    };
 
-    Ok(json!({ "id": role_id }))
+    Ok(json!({
+        "id": role.create(db, &server.id).await?
+    }))
 }

@@ -17,5 +17,5 @@ pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyR
     let member = member.as_member(db, &server.id).await?;
     // ! FIXME: calculate permission against member
 
-    db.delete_member(&member.id).await.map(|_| EmptyResponse)
+    member.delete(db).await.map(|_| EmptyResponse)
 }

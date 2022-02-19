@@ -152,6 +152,6 @@ pub async fn message_send(
     // 6. Set content
     message.content = Content::Text(data.content);
 
-    db.insert_message(&message).await?;
+    message.create(db).await?;
     Ok(Json(message))
 }

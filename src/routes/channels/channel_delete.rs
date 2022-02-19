@@ -12,63 +12,26 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
         return Err(Error::NotFound);
     }
 
-    match channel {
+    match &channel {
         Channel::SavedMessages { .. } => Err(Error::NoEffect),
-        Channel::DirectMessage { id, .. } => {
-            db.update_channel(
-                &id,
+        Channel::DirectMessage { id, .. } => db
+            .update_channel(
+                id,
                 &PartialChannel {
                     active: Some(false),
                     ..Default::default()
                 },
                 vec![],
             )
-            .await?;
-
-            Ok(EmptyResponse)
-        }
-        Channel::Group {
-            id,
-            owner,
-            recipients,
-            ..
-        } => {
-            if user.id == owner {
-                if let Some(new_owner) = recipients.iter().find(|x| *x != &user.id) {
-                    db.update_channel(
-                        &id,
-                        &PartialChannel {
-                            owner: Some(new_owner.into()),
-                            ..Default::default()
-                        },
-                        vec![],
-                    )
-                    .await?;
-                } else {
-                    db.delete_channel(&id).await?;
-                    return Ok(EmptyResponse);
-                }
-            }
-
-            db.remove_user_from_group(&id, &user.id).await?;
-
-            /*ClientboundNotification::ChannelGroupLeave {
-                id: id.clone(),
-                user: user.id.clone(),
-            }
-            .publish(id.clone());
-
-            Content::SystemMessage(SystemMessage::UserLeft { id: user.id })
-                .send_as_system(&target)
-                .await
-                .ok();*/
-
-            Ok(EmptyResponse)
-        }
-        Channel::TextChannel { id, .. } | Channel::VoiceChannel { id, .. } => {
+            .await
+            .map(|_| EmptyResponse),
+        Channel::Group { .. } => channel
+            .remove_user_from_group(db, &user.id)
+            .await
+            .map(|_| EmptyResponse),
+        Channel::TextChannel { .. } | Channel::VoiceChannel { .. } => {
             if perm.get_manage_channel() {
-                db.delete_channel(&id).await?;
-                Ok(EmptyResponse)
+                channel.delete(db).await.map(|_| EmptyResponse)
             } else {
                 Err(Error::MissingPermission {
                     permission: ChannelPermission::ManageChannel as i32,

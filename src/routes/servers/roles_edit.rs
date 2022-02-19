@@ -61,21 +61,15 @@ pub async fn req(
             ..Default::default()
         };
 
-        if let Some(remove) = &remove {
-            for field in remove {
-                role.remove(field);
-            }
-        }
-
-        db.update_role(
+        role.update(
+            db,
             &server.id,
             &role_id,
-            &partial,
-            remove.unwrap_or_else(Vec::new),
+            partial,
+            remove.unwrap_or_default(),
         )
         .await?;
 
-        role.apply_options(partial.clone());
         Ok(Json(role))
     } else {
         Err(Error::NotFound)

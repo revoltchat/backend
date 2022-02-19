@@ -1,4 +1,5 @@
 use revolt_quark::models::User;
+use revolt_quark::r#impl::generic::users::user_settings::UserSettingsImpl;
 use revolt_quark::{Db, EmptyResponse, Result};
 
 use chrono::prelude::*;
@@ -32,7 +33,5 @@ pub async fn req(db: &Db, user: User, data: Json<Data>, options: Options) -> Res
         settings.insert(key, (timestamp, data));
     }
 
-    db.set_user_settings(&user.id, &settings)
-        .await
-        .map(|_| EmptyResponse)
+    settings.set(db, &user.id).await.map(|_| EmptyResponse)
 }

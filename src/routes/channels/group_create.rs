@@ -64,6 +64,6 @@ pub async fn req(db: &Db, user: User, info: Json<Data>) -> Result<Json<Channel>>
         nsfw: info.nsfw.unwrap_or(false),
     };
 
-    db.insert_channel(&group).await?;
+    group.create(db).await?;
     Ok(Json(group))
 }

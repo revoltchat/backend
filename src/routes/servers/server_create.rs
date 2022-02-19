@@ -82,7 +82,9 @@ pub async fn req(db: &Db, user: User, info: Json<Data>) -> Result<Json<Server>> 
     };
 
     db.insert_channel(&channel).await?;
-    db.insert_server(&server).await?;
-    db.insert_member(&member).await?;
+
+    server.create(db).await?;
+    member.create(db).await?;
+
     Ok(Json(server))
 }

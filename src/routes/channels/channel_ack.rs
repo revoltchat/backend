@@ -12,7 +12,8 @@ pub async fn req(db: &Db, user: User, target: Ref, message: Ref) -> Result<Empty
         return Err(Error::NotFound);
     }
 
-    db.acknowledge_message(channel.id(), &user.id, &message.id)
+    channel
+        .ack(db, &user.id, &message.id)
         .await
         .map(|_| EmptyResponse)
 }

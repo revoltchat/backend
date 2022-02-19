@@ -6,10 +6,9 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
     let member = db.fetch_member(&target.id, &user.id).await?;
 
     if server.owner == user.id {
-        db.delete_server(&server.id).await?;
+        server.delete(db).await
     } else {
-        db.delete_member(&member.id).await?;
+        member.delete(db).await
     }
-
-    Ok(EmptyResponse)
+    .map(|_| EmptyResponse)
 }

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use revolt_quark::{
     models::{channel::PartialChannel, Channel, User},
-    perms, ChannelPermission, Db, EmptyResponse, Error, Ref, Result,
+    perms, ChannelPermission, Db, Error, Ref, Result,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -12,8 +12,8 @@ pub struct Data {
 }
 
 #[put("/<target>/permissions/default", data = "<data>", rank = 1)]
-pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<EmptyResponse> {
-    let channel = target.as_channel(db).await?;
+pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<Json<Channel>> {
+    let mut channel = target.as_channel(db).await?;
     if !perms(&user)
         .channel(&channel)
         .calc_channel(db)
@@ -25,31 +25,33 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<E
         });
     }
 
-    match channel {
-        Channel::Group { id, .. } => {
-            db.update_channel(
-                &id,
-                &PartialChannel {
-                    permissions: Some(data.permissions as i32),
-                    ..Default::default()
-                },
-                vec![],
-            )
-            .await?;
+    match &channel {
+        Channel::Group { .. } => {
+            channel
+                .update(
+                    db,
+                    PartialChannel {
+                        permissions: Some(data.permissions as i32),
+                        ..Default::default()
+                    },
+                    vec![],
+                )
+                .await?;
         }
-        Channel::TextChannel { id, .. } | Channel::VoiceChannel { id, .. } => {
-            db.update_channel(
-                &id,
-                &PartialChannel {
-                    default_permissions: Some(data.permissions as i32),
-                    ..Default::default()
-                },
-                vec![],
-            )
-            .await?;
+        Channel::TextChannel { .. } | Channel::VoiceChannel { .. } => {
+            channel
+                .update(
+                    db,
+                    PartialChannel {
+                        default_permissions: Some(data.permissions as i32),
+                        ..Default::default()
+                    },
+                    vec![],
+                )
+                .await?;
         }
         _ => return Err(Error::InvalidOperation),
     }
 
-    Ok(EmptyResponse)
+    Ok(Json(channel))
 }

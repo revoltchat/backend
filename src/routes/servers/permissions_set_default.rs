@@ -2,8 +2,8 @@ use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 
 use revolt_quark::{
-    models::{server::PartialServer, User},
-    perms, Db, EmptyResponse, Error, Ref, Result,
+    models::{server::PartialServer, Server, User},
+    perms, Db, Error, Ref, Result,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -18,10 +18,10 @@ pub struct Data {
 }
 
 #[put("/<target>/permissions/default", data = "<data>", rank = 1)]
-pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<EmptyResponse> {
+pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<Json<Server>> {
     let data = data.into_inner();
 
-    let server = target.as_server(db).await?;
+    let mut server = target.as_server(db).await?;
     if !perms(&user)
         .server(&server)
         .calc_server(db)
@@ -31,17 +31,19 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<E
         return Err(Error::NotFound);
     }
 
-    db.update_server(
-        &server.id,
-        &PartialServer {
-            default_permissions: Some((
-                data.permissions.server as i32,
-                data.permissions.channel as i32,
-            )),
-            ..Default::default()
-        },
-        vec![],
-    )
-    .await
-    .map(|_| EmptyResponse)
+    server
+        .update(
+            db,
+            PartialServer {
+                default_permissions: Some((
+                    data.permissions.server as i32,
+                    data.permissions.channel as i32,
+                )),
+                ..Default::default()
+            },
+            vec![],
+        )
+        .await?;
+
+    Ok(Json(server))
 }

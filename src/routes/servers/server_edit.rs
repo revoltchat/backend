@@ -109,10 +109,6 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<J
                 db.mark_attachment_as_deleted(&icon.id).await?;
             }
         }
-
-        for field in fields {
-            server.remove(field);
-        }
     }
 
     // 2. Apply new icon
@@ -127,19 +123,7 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<J
         server.banner = partial.banner.clone();
     }
 
-    // 4. Pass-through and validate changes
-    if let Some(name) = &partial.name {
-        server.name = name.clone();
-    }
-
-    if let Some(description) = &partial.description {
-        server.description.replace(description.clone());
-    }
-
-    if let Some(categories) = &partial.categories {
-        server.categories.replace(categories.clone());
-    }
-
+    // 4. Validate changes
     if let Some(system_messages) = &partial.system_messages {
         let channels = system_messages.clone().into_channel_ids();
         if !db
@@ -148,19 +132,11 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<J
         {
             return Err(Error::NotFound);
         }
-
-        server.system_messages.replace(system_messages.clone());
     }
 
-    if let Some(analytics) = &partial.analytics {
-        server.analytics = *analytics;
-    }
-
-    if let Some(nsfw) = &partial.nsfw {
-        server.nsfw = *nsfw;
-    }
-
-    db.update_server(&server.id, &partial, remove.unwrap_or_else(Vec::new))
+    server
+        .update(db, partial, remove.unwrap_or_default())
         .await?;
+
     Ok(Json(server))
 }

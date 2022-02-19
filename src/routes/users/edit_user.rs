@@ -72,7 +72,6 @@ pub async fn req(db: &State<Database>, mut user: User, data: Json<Data>) -> Resu
     // 2. Apply new avatar
     if let Some(avatar) = data.avatar {
         partial.avatar = Some(File::use_avatar(db, &avatar, &user.id).await?);
-        user.avatar = partial.avatar.clone();
     }
 
     // 3. Apply new status
@@ -87,7 +86,6 @@ pub async fn req(db: &State<Database>, mut user: User, data: Json<Data>) -> Resu
         }
 
         partial.status = Some(new_status);
-        user.status = partial.status.clone();
     }
 
     // 4. Apply new profile
@@ -102,10 +100,9 @@ pub async fn req(db: &State<Database>, mut user: User, data: Json<Data>) -> Resu
         }
 
         partial.profile = Some(new_profile);
-        user.profile = partial.profile.clone();
     }
 
-    db.update_user(&user.id, &partial, data.remove.unwrap_or_default())
+    user.update(db, partial, data.remove.unwrap_or_default())
         .await?;
 
     Ok(Json(user.foreign()))

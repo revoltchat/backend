@@ -17,11 +17,13 @@ pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyR
         });
     }
 
-    match channel {
-        Channel::Group { id, .. } => {
-            let user = member.as_user(db).await?;
-            db.add_user_to_group(&id, &user.id).await?;
-            Ok(EmptyResponse)
+    match &channel {
+        Channel::Group { .. } => {
+            let member = member.as_user(db).await?;
+            channel
+                .add_user_to_group(db, &member.id, &user.id)
+                .await
+                .map(|_| EmptyResponse)
         }
         _ => Err(Error::InvalidOperation),
     }

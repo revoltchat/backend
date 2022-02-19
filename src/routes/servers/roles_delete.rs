@@ -2,7 +2,7 @@ use revolt_quark::{models::User, perms, Db, EmptyResponse, Error, Ref, Result};
 
 #[delete("/<target>/roles/<role_id>")]
 pub async fn req(db: &Db, user: User, target: Ref, role_id: String) -> Result<EmptyResponse> {
-    let server = target.as_server(db).await?;
+    let mut server = target.as_server(db).await?;
     if !perms(&user)
         .server(&server)
         .calc_server(db)
@@ -14,7 +14,11 @@ pub async fn req(db: &Db, user: User, target: Ref, role_id: String) -> Result<Em
 
     // ! FIXME: check perms against role
 
-    db.delete_role(&server.id, &role_id)
-        .await
-        .map(|_| EmptyResponse)
+    if let Some(role) = server.roles.remove(&role_id) {
+        role.delete(db, &server.id, &role_id)
+            .await
+            .map(|_| EmptyResponse)
+    } else {
+        Err(Error::NotFound)
+    }
 }

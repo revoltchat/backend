@@ -124,7 +124,8 @@ pub async fn req(
                 partial.nsfw = Some(new_nsfw);
             }
 
-            db.update_channel(id, &partial, data.remove.unwrap_or_default())
+            channel
+                .update(db, partial, data.remove.unwrap_or_default())
                 .await?;
         }
         _ => return Err(Error::InvalidOperation),

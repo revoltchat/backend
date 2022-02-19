@@ -21,5 +21,5 @@ pub async fn req(db: &Db, user: User, target: Ref, msg: Ref) -> Result<EmptyResp
         });
     }
 
-    db.delete_message(&message.id).await.map(|_| EmptyResponse)
+    message.delete(db).await.map(|_| EmptyResponse)
 }
