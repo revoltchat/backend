@@ -14,8 +14,12 @@ use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use validator::Validate;
 
+use crate::util::idempotency::IdempotencyKey;
+
 #[derive(Validate, Serialize, Deserialize)]
 pub struct Data {
+    nonce: Option<String>,
+
     #[validate(length(min = 0, max = 2000))]
     content: String,
     #[validate(length(min = 1, max = 128))]
@@ -38,10 +42,13 @@ pub async fn message_send(
     user: User,
     target: Ref,
     data: Json<Data>,
+    mut idempotency: IdempotencyKey,
 ) -> Result<Json<Message>> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
+
+    idempotency.consume_nonce(data.nonce).await?;
 
     let channel = target.as_channel(db).await?;
     let permissions = perms(&user).channel(&channel).calc_channel(db).await;
@@ -151,6 +158,9 @@ pub async fn message_send(
 
     // 6. Set content
     message.content = Content::Text(data.content);
+
+    // 7. Pass-through nonce value for clients
+    message.nonce = Some(idempotency.into_key());
 
     message.create(db).await?;
     Ok(Json(message))
