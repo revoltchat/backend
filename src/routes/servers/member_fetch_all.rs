@@ -1,4 +1,4 @@
-use revolt_quark::{models::User, perms, Db, Error, Ref, Result};
+use revolt_quark::{models::User, perms, presence::presence_filter_online, Db, Error, Ref, Result};
 
 use rocket::serde::json::Value;
 
@@ -21,7 +21,16 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<Value> {
         user_ids.push(member.id.user.clone());
     }
 
-    let users = db.fetch_users(&user_ids).await?;
+    let online_ids = presence_filter_online(&user_ids).await;
+    let users = db
+        .fetch_users(&user_ids)
+        .await?
+        .into_iter()
+        .map(|mut user| {
+            user.online = Some(online_ids.contains(&user.id));
+            user.foreign()
+        })
+        .collect::<Vec<User>>();
 
     Ok(json!({
         "members": members,

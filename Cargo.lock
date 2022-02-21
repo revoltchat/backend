@@ -2818,9 +2818,9 @@ dependencies = [
 
 [[package]]
 name = "redis-kiss"
-version = "0.1.1"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14427aa42349c94ed30548390a0946773dbfd757a66cf76394fb02e5406f18f6"
+checksum = "0d4f2f48fb776a308331c4a1ecb3a7b7b99f4d46c6beb2fc03db2da0f63fcad6"
 dependencies = [
  "bincode",
  "lazy_static",
@@ -2983,6 +2983,7 @@ version = "0.1.0"
 dependencies = [
  "async-std",
  "async-trait",
+ "bincode",
  "bitfield",
  "bson 2.1.0",
  "dotenv",
