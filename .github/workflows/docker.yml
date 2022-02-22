@@ -55,12 +55,12 @@ jobs:
                 mv /tmp/.buildx-cache-new/${{ matrix.architecture }} /tmp/.buildx-cache/${{ matrix.architecture }}
 
     publish:
-        needs: [test]
+        #needs: [test]
         runs-on: ubuntu-latest
         if: github.event_name != 'pull_request'
         strategy:
             matrix:
-                architecture: [linux/amd64,linux/arm64]
+                architecture: [amd64,arm64]
         steps:
             - name: Checkout
               uses: actions/checkout@v2
@@ -74,13 +74,13 @@ jobs:
               uses: actions/cache@v2
               with:
                 path: /tmp/.buildx-cache/${{ matrix.architecture }}
-                key: ${{ runner.os }}-buildx-${{ matrix.architecture }}-${{ github.sha }}
+                key: ${{ runner.os }}-buildx-linux/${{ matrix.architecture }}-${{ github.sha }}
             - name: Docker meta
               id: meta
               uses: docker/metadata-action@v3
               with:
 #                  images: revoltchat/server, ghcr.io/revoltchat/server
-                    images: ghcr.io/redstonewizard08/delta/delta-${{ matrix.architecture }}
+                    images: ghcr.io/redstonewizard08/delta/delta:${{ matrix.architecture }}
 #            - name: Login to DockerHub
 #              uses: docker/login-action@v1
 #              with:
