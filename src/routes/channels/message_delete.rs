@@ -1,4 +1,4 @@
-use revolt_quark::{models::User, perms, ChannelPermission, Db, EmptyResponse, Error, Ref, Result};
+use revolt_quark::{models::User, perms, Db, EmptyResponse, Error, Permission, Ref, Result};
 
 #[delete("/<target>/messages/<msg>")]
 pub async fn req(db: &Db, user: User, target: Ref, msg: Ref) -> Result<EmptyResponse> {
@@ -11,14 +11,12 @@ pub async fn req(db: &Db, user: User, target: Ref, msg: Ref) -> Result<EmptyResp
         || !{
             perms(&user)
                 .channel(&target.as_channel(db).await?)
-                .calc_channel(db)
+                .calc(db)
                 .await
-                .get_manage_messages()
+                .can_manage_messages()
         }
     {
-        return Err(Error::MissingPermission {
-            permission: ChannelPermission::ManageMessages as i32,
-        });
+        return Error::from_permission(Permission::ManageMessages);
     }
 
     message.delete(db).await.map(|_| EmptyResponse)

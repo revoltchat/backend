@@ -37,9 +37,9 @@ pub async fn req(
     let mut server = target.as_server(db).await?;
     if !perms(&user)
         .server(&server)
-        .calc_server(db)
+        .calc(db)
         .await
-        .get_manage_roles()
+        .can_manage_roles()
     {
         return Err(Error::NotFound);
     }

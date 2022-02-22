@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use revolt_quark::{
     models::{server::PartialServer, Channel, User},
-    perms, Db, Error, Ref, Result, ServerPermission,
+    perms, Db, Error, Permission, Ref, Result,
 };
 
 use rocket::serde::json::Json;
@@ -43,13 +43,11 @@ pub async fn req(db: &Db, user: User, target: Ref, info: Json<Data>) -> Result<J
     let mut server = target.as_server(db).await?;
     if !perms(&user)
         .server(&server)
-        .calc_server(db)
+        .calc(db)
         .await
-        .get_manage_channels()
+        .can_manage_channel()
     {
-        return Err(Error::MissingPermission {
-            permission: ServerPermission::ManageChannels as i32,
-        });
+        return Error::from_permission(Permission::ManageChannel);
     }
 
     let id = Ulid::new().to_string();

@@ -1,6 +1,6 @@
 use revolt_quark::{
     models::{Channel, User},
-    perms, ChannelPermission, Db, EmptyResponse, Error, Ref, Result,
+    perms, Db, EmptyResponse, Error, Permission, Ref, Result,
 };
 
 #[put("/<target>/recipients/<member>")]
@@ -8,13 +8,11 @@ pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyR
     let channel = target.as_channel(db).await?;
     if !perms(&user)
         .channel(&channel)
-        .calc_channel(db)
+        .calc(db)
         .await
-        .get_invite_others()
+        .can_invite_others()
     {
-        return Err(Error::MissingPermission {
-            permission: ChannelPermission::InviteOthers as i32,
-        });
+        return Error::from_permission(Permission::InviteOthers);
     }
 
     match &channel {

@@ -3,7 +3,7 @@ use revolt_quark::{
         channel::{Channel, FieldsChannel, PartialChannel},
         File, User,
     },
-    perms, ChannelPermission, Database, Error, Ref, Result,
+    perms, Database, Error, Permission, Ref, Result,
 };
 
 use rocket::{serde::json::Json, State};
@@ -40,13 +40,11 @@ pub async fn req(
     let mut channel = target.as_channel(db).await?;
     if !perms(&user)
         .channel(&channel)
-        .calc_channel(db)
+        .calc(db)
         .await
-        .get_manage_channel()
+        .can_manage_channel()
     {
-        return Err(Error::MissingPermission {
-            permission: ChannelPermission::ManageChannel as i32,
-        });
+        return Error::from_permission(Permission::ManageChannel);
     }
 
     if data.name.is_none()

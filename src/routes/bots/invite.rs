@@ -1,6 +1,6 @@
 use revolt_quark::{
     models::{server_member::MemberCompositeKey, Channel, Member, User},
-    perms, ChannelPermission, Db, EmptyResponse, Error, Ref, Result, ServerPermission,
+    perms, Db, EmptyResponse, Error, Permission, Ref, Result,
 };
 
 use rocket::serde::json::Json;
@@ -34,13 +34,11 @@ pub async fn invite_bot(
             let server = db.fetch_server(&server).await?;
             if !perms(&user)
                 .server(&server)
-                .calc_server(db)
+                .calc(db)
                 .await
-                .get_manage_server()
+                .can_manage_server()
             {
-                return Err(Error::MissingPermission {
-                    permission: ServerPermission::ManageServer as i32,
-                });
+                return Error::from_permission(Permission::ManageServer);
             }
 
             let member = Member {
@@ -57,13 +55,11 @@ pub async fn invite_bot(
             let channel = db.fetch_channel(&group).await?;
             if !perms(&user)
                 .channel(&channel)
-                .calc_channel(db)
+                .calc(db)
                 .await
-                .get_invite_others()
+                .can_invite_others()
             {
-                return Err(Error::MissingPermission {
-                    permission: ChannelPermission::InviteOthers as i32,
-                });
+                return Error::from_permission(Permission::InviteOthers);
             }
 
             if let Channel::Group { id, .. } = channel {

@@ -30,6 +30,6 @@ pub async fn req(db: &State<Database>, user: User, target: Ref) -> Result<Json<C
         new_channel.create(db).await?;
         Ok(Json(new_channel))
     } else {
-        Error::from_permission(UserPermission::SendMessage)
+        Error::from_user_permission(UserPermission::SendMessage)
     }
 }

@@ -2163,7 +2163,7 @@ dependencies = [
 [[package]]
 name = "optional_struct"
 version = "0.2.0"
-source = "git+https://github.com/insertish/OptionalStruct?rev=2011de17db6ecb210fddabe3d79ade865efaf4ee#2011de17db6ecb210fddabe3d79ade865efaf4ee"
+source = "git+https://github.com/insertish/OptionalStruct?rev=b57e8e8e77db6e1a7f68c715d0d1760cb64feb0c#b57e8e8e77db6e1a7f68c715d0d1760cb64feb0c"
 dependencies = [
  "quote 0.3.15",
  "syn 0.11.11",

@@ -41,9 +41,9 @@ pub async fn req(
     let channel = target.as_channel(db).await?;
     if !perms(&user)
         .channel(&channel)
-        .calc_channel(db)
+        .calc(db)
         .await
-        .get_view()
+        .can_view_channel()
     {
         return Err(Error::NotFound);
     }

@@ -1,6 +1,6 @@
 use revolt_quark::{
     models::{ServerBan, User},
-    perms, Db, Error, Ref, Result, ServerPermission,
+    perms, Db, Error, Permission, Ref, Result,
 };
 
 use rocket::serde::json::Json;
@@ -28,17 +28,15 @@ pub async fn req(
     let server = server.as_server(db).await?;
     if !perms(&user)
         .server(&server)
-        .calc_server(db)
+        .calc(db)
         .await
-        .get_ban_members()
+        .can_ban_members()
     {
-        return Err(Error::MissingPermission {
-            permission: ServerPermission::BanMembers as i32,
-        });
+        return Error::from_permission(Permission::BanMembers);
     }
 
     let member = target.as_member(db, &server.id).await?;
-    // ! FIXME: calculate permission against member
+    // ! FIXME_PERMISSIONS
 
     let ban = ServerBan {
         id: member.id,

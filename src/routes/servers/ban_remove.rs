@@ -1,17 +1,15 @@
-use revolt_quark::{models::User, perms, Db, EmptyResponse, Error, Ref, Result, ServerPermission};
+use revolt_quark::{models::User, perms, Db, EmptyResponse, Error, Permission, Ref, Result};
 
 #[delete("/<server>/bans/<target>")]
 pub async fn req(db: &Db, user: User, server: Ref, target: Ref) -> Result<EmptyResponse> {
     let server = server.as_server(db).await?;
     if !perms(&user)
         .server(&server)
-        .calc_server(db)
+        .calc(db)
         .await
-        .get_ban_members()
+        .can_ban_members()
     {
-        return Err(Error::MissingPermission {
-            permission: ServerPermission::BanMembers as i32,
-        });
+        return Error::from_permission(Permission::BanMembers);
     }
 
     let ban = target.as_ban(db, &server.id).await?;

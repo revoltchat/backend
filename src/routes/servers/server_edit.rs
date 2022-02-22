@@ -3,7 +3,7 @@ use revolt_quark::{
         server::{Category, FieldsServer, PartialServer, SystemMessageChannels},
         File, Server, User,
     },
-    perms, Db, Error, Ref, Result, ServerPermission,
+    perms, Db, Error, Permission, Ref, Result,
 };
 
 use rocket::serde::json::Json;
@@ -38,8 +38,8 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<J
         .map_err(|error| Error::FailedValidation { error })?;
 
     let mut server = target.as_server(db).await?;
-    let permissions = perms(&user).server(&server).calc_server(db).await;
-    if !permissions.get_view() {
+    let permissions = perms(&user).server(&server).calc(db).await;
+    if !permissions.can_view_channel() {
         return Err(Error::NotFound);
     }
 
@@ -63,15 +63,11 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<J
         || data.nsfw.is_some()
         || data.analytics.is_some()
         || data.remove.is_some())
-        && !permissions.get_manage_server()
+        && !permissions.can_manage_server()
     {
-        return Err(Error::MissingPermission {
-            permission: ServerPermission::ManageServer as i32,
-        });
-    } else if (data.categories.is_some()) && !permissions.get_manage_channels() {
-        return Err(Error::MissingPermission {
-            permission: ServerPermission::ManageChannels as i32,
-        });
+        return Error::from_permission(Permission::ManageServer);
+    } else if (data.categories.is_some()) && !permissions.can_manage_channel() {
+        return Error::from_permission(Permission::ManageChannel);
     }
 
     let Data {

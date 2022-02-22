@@ -5,7 +5,7 @@ use revolt_quark::{
         message::{Content, Masquerade, Reply, SendableEmbed},
         Message, User,
     },
-    perms, ChannelPermission, Db, Error, Ref, Result,
+    perms, Db, Error, Permission, Ref, Result,
 };
 
 use regex::Regex;
@@ -51,12 +51,10 @@ pub async fn message_send(
     idempotency.consume_nonce(data.nonce).await?;
 
     let channel = target.as_channel(db).await?;
-    let permissions = perms(&user).channel(&channel).calc_channel(db).await;
+    let permissions = perms(&user).channel(&channel).calc(db).await;
 
-    if !permissions.get_send_message() {
-        return Err(Error::MissingPermission {
-            permission: ChannelPermission::SendMessage as i32,
-        });
+    if !permissions.can_send_message() {
+        return Error::from_permission(Permission::SendMessage);
     }
 
     if data.content.is_empty()
@@ -82,10 +80,8 @@ pub async fn message_send(
     }
 
     // 2. Verify permissions for masquerade.
-    if data.masquerade.is_some() && !permissions.get_masquerade() {
-        return Err(Error::MissingPermission {
-            permission: ChannelPermission::Masquerade as i32,
-        });
+    if data.masquerade.is_some() && !permissions.can_masquerade() {
+        return Error::from_permission(Permission::Masquerade);
     }
 
     // 3. Verify replies are valid.
@@ -121,10 +117,8 @@ pub async fn message_send(
     // 4. Add attachments to message.
     let mut attachments = vec![];
     if let Some(ids) = &data.attachments {
-        if !ids.is_empty() && !permissions.get_upload_files() {
-            return Err(Error::MissingPermission {
-                permission: ChannelPermission::UploadFiles as i32,
-            });
+        if !ids.is_empty() && !permissions.can_upload_files() {
+            return Error::from_permission(Permission::UploadFiles);
         }
 
         // ! FIXME: move this to app config

@@ -1,6 +1,6 @@
 use revolt_quark::{
     models::{Channel, User},
-    perms, ChannelPermission, Database, Error, Ref, Result,
+    perms, Database, Error, Permission, Ref, Result,
 };
 
 use rocket::{serde::json::Json, State};
@@ -11,14 +11,12 @@ pub async fn req(db: &State<Database>, user: User, target: Ref) -> Result<Json<C
 
     if perms(&user)
         .channel(&target)
-        .calc_channel(db)
+        .calc(db)
         .await
-        .get_view()
+        .can_view_channel()
     {
         Ok(Json(target))
     } else {
-        Err(Error::MissingPermission {
-            permission: ChannelPermission::View as i32,
-        })
+        Error::from_permission(Permission::ViewChannel)
     }
 }

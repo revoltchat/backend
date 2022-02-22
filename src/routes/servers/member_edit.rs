@@ -33,8 +33,8 @@ pub async fn req(
         .map_err(|error| Error::FailedValidation { error })?;
 
     let server = server.as_server(db).await?;
-    let permissions = perms(&user).server(&server).calc_server(db).await;
-    if !permissions.get_view() {
+    let permissions = perms(&user).server(&server).calc(db).await;
+    if !permissions.can_view_channel() {
         return Err(Error::NotFound);
     }
 

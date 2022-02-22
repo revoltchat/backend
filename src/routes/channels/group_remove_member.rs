@@ -1,6 +1,6 @@
 use revolt_quark::{
     models::{Channel, User},
-    Db, EmptyResponse, Error, Ref, Result,
+    Db, EmptyResponse, Error, Permission, Ref, Result,
 };
 
 #[delete("/<target>/recipients/<member>")]
@@ -12,7 +12,7 @@ pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyR
             owner, recipients, ..
         } => {
             if &user.id != owner {
-                return Err(Error::MissingPermission { permission: 0 });
+                return Error::from_permission(Permission::ManageChannel);
             }
 
             let member = member.as_user(db).await?;

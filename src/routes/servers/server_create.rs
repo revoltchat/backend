@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use revolt_quark::{
     models::{server_member::MemberCompositeKey, Channel, Member, Server, User},
-    Db, Error, Result, DEFAULT_PERMISSION_CHANNEL_SERVER, DEFAULT_SERVER_PERMISSION,
+    Db, Error, Result,
 };
 
 use rocket::serde::json::Json;
@@ -66,10 +66,7 @@ pub async fn req(db: &Db, user: User, info: Json<Data>) -> Result<Json<Server>> 
         description,
         channels: vec![channel_id],
         nsfw: nsfw.unwrap_or(false),
-        default_permissions: (
-            *DEFAULT_SERVER_PERMISSION as i32,
-            *DEFAULT_PERMISSION_CHANNEL_SERVER as i32,
-        ),
+        default_permissions: (0_i32, 0_i32),
         ..Default::default()
     };
 

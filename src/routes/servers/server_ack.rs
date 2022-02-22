@@ -5,9 +5,9 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
     let server = target.as_server(db).await?;
     if !perms(&user)
         .server(&server)
-        .calc_server(db)
+        .calc(db)
         .await
-        .get_view()
+        .can_view_channel()
     {
         return Err(Error::NotFound);
     }

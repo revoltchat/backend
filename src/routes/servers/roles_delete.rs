@@ -5,14 +5,14 @@ pub async fn req(db: &Db, user: User, target: Ref, role_id: String) -> Result<Em
     let mut server = target.as_server(db).await?;
     if !perms(&user)
         .server(&server)
-        .calc_server(db)
+        .calc(db)
         .await
-        .get_manage_roles()
+        .can_manage_roles()
     {
         return Err(Error::NotFound);
     }
 
-    // ! FIXME: check perms against role
+    // ! FIXME_PERMISSIONS
 
     if let Some(role) = server.roles.remove(&role_id) {
         role.delete(db, &server.id, &role_id)
