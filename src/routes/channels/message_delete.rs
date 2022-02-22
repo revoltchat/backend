@@ -7,15 +7,11 @@ pub async fn req(db: &Db, user: User, target: Ref, msg: Ref) -> Result<EmptyResp
         return Err(Error::NotFound);
     }
 
-    if message.author != user.id
-        || !{
-            perms(&user)
-                .channel(&target.as_channel(db).await?)
-                .has_permission(db, Permission::ManageMessages)
-                .await?
-        }
-    {
-        return Error::from_permission(Permission::ManageMessages);
+    if message.author != user.id {
+        perms(&user)
+            .channel(&target.as_channel(db).await?)
+            .throw_permission(db, Permission::ManageMessages)
+            .await?;
     }
 
     message.delete(db).await.map(|_| EmptyResponse)
