@@ -34,11 +34,5 @@ pub async fn req(
     let member = target.as_member(db, &server.id).await?;
     // ! FIXME_PERMISSIONS
 
-    let ban = ServerBan {
-        id: member.id,
-        reason: data.reason,
-    };
-
-    db.insert_ban(&ban).await?;
-    Ok(Json(ban))
+    member.ban(db, data.reason).await.map(Json)
 }
