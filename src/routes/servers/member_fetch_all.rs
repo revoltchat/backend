@@ -1,18 +1,11 @@
-use revolt_quark::{models::User, perms, presence::presence_filter_online, Db, Error, Ref, Result};
+use revolt_quark::{models::User, perms, presence::presence_filter_online, Db, Ref, Result};
 
 use rocket::serde::json::Value;
 
 #[get("/<target>/members")]
 pub async fn req(db: &Db, user: User, target: Ref) -> Result<Value> {
     let server = target.as_server(db).await?;
-    if !perms(&user)
-        .server(&server)
-        .calc(db)
-        .await
-        .can_view_channel()
-    {
-        return Err(Error::NotFound);
-    }
+    perms(&user).server(&server).calc(db).await?;
 
     let members = db.fetch_all_members(&server.id).await?;
 

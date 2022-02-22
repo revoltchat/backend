@@ -6,14 +6,10 @@ use revolt_quark::{
 #[put("/<target>/recipients/<member>")]
 pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyResponse> {
     let channel = target.as_channel(db).await?;
-    if !perms(&user)
+    perms(&user)
         .channel(&channel)
-        .calc(db)
-        .await
-        .can_invite_others()
-    {
-        return Error::from_permission(Permission::InviteOthers);
-    }
+        .throw_permission_and_view_channel(db, Permission::InviteOthers)
+        .await?;
 
     match &channel {
         Channel::Group { .. } => {

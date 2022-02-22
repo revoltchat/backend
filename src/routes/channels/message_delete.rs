@@ -11,9 +11,8 @@ pub async fn req(db: &Db, user: User, target: Ref, msg: Ref) -> Result<EmptyResp
         || !{
             perms(&user)
                 .channel(&target.as_channel(db).await?)
-                .calc(db)
-                .await
-                .can_manage_messages()
+                .has_permission(db, Permission::ManageMessages)
+                .await?
         }
     {
         return Error::from_permission(Permission::ManageMessages);

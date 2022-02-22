@@ -1,6 +1,6 @@
 use revolt_quark::{
     models::{Channel, User},
-    perms, Db, Error, Ref, Result,
+    perms, Db, Error, Permission, Ref, Result,
 };
 
 use rocket::serde::json::Json;
@@ -8,14 +8,10 @@ use rocket::serde::json::Json;
 #[get("/<target>/members")]
 pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<Vec<User>>> {
     let channel = target.as_channel(db).await?;
-    if !perms(&user)
+    perms(&user)
         .channel(&channel)
-        .calc(db)
-        .await
-        .can_view_channel()
-    {
-        return Err(Error::NotFound);
-    }
+        .throw_permission(db, Permission::ViewChannel)
+        .await?;
 
     if let Channel::Group { recipients, .. } = channel {
         Ok(Json(

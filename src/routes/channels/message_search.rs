@@ -3,7 +3,7 @@ use revolt_quark::{
         message::{BulkMessageResponse, MessageSort},
         User,
     },
-    perms, Db, Error, Ref, Result,
+    perms, Db, Error, Permission, Ref, Result,
 };
 
 use rocket::serde::json::Json;
@@ -39,14 +39,10 @@ pub async fn req(
         .map_err(|error| Error::FailedValidation { error })?;
 
     let channel = target.as_channel(db).await?;
-    if !perms(&user)
+    perms(&user)
         .channel(&channel)
-        .calc(db)
-        .await
-        .can_view_channel()
-    {
-        return Err(Error::NotFound);
-    }
+        .throw_permission_and_view_channel(db, Permission::ReadMessageHistory)
+        .await?;
 
     let Options {
         query,

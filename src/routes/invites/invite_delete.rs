@@ -1,6 +1,6 @@
 use revolt_quark::{
     models::{Invite, User},
-    perms, Db, EmptyResponse, Error, Permission, Ref, Result,
+    perms, Db, EmptyResponse, Permission, Ref, Result,
 };
 
 #[delete("/<target>")]
@@ -13,14 +13,10 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
         match invite {
             Invite::Server { code, server, .. } => {
                 let server = db.fetch_server(&server).await?;
-                if !perms(&user)
+                perms(&user)
                     .server(&server)
-                    .calc(db)
-                    .await
-                    .can_manage_server()
-                {
-                    return Error::from_permission(Permission::ManageServer);
-                }
+                    .throw_permission(db, Permission::ManageServer)
+                    .await?;
 
                 db.delete_invite(&code).await
             }

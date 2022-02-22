@@ -32,14 +32,11 @@ pub async fn invite_bot(
     match dest.into_inner() {
         Destination::Server { server } => {
             let server = db.fetch_server(&server).await?;
-            if !perms(&user)
+
+            perms(&user)
                 .server(&server)
-                .calc(db)
-                .await
-                .can_manage_server()
-            {
-                return Error::from_permission(Permission::ManageServer);
-            }
+                .throw_permission(db, Permission::ManageServer)
+                .await?;
 
             let member = Member {
                 id: MemberCompositeKey {
@@ -53,14 +50,11 @@ pub async fn invite_bot(
         }
         Destination::Group { group } => {
             let channel = db.fetch_channel(&group).await?;
-            if !perms(&user)
+
+            perms(&user)
                 .channel(&channel)
-                .calc(db)
-                .await
-                .can_invite_others()
-            {
-                return Error::from_permission(Permission::InviteOthers);
-            }
+                .throw_permission_and_view_channel(db, Permission::InviteOthers)
+                .await?;
 
             if let Channel::Group { id, .. } = channel {
                 db.add_user_to_group(&id, &bot.id)

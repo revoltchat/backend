@@ -3,7 +3,7 @@ use revolt_quark::{
         server::{FieldsRole, PartialRole, Role},
         User,
     },
-    perms, Db, Error, Ref, Result,
+    perms, Db, Error, Permission, Ref, Result,
 };
 
 use rocket::serde::json::Json;
@@ -35,14 +35,10 @@ pub async fn req(
         .map_err(|error| Error::FailedValidation { error })?;
 
     let mut server = target.as_server(db).await?;
-    if !perms(&user)
+    perms(&user)
         .server(&server)
-        .calc(db)
-        .await
-        .can_manage_roles()
-    {
-        return Err(Error::NotFound);
-    }
+        .throw_permission(db, Permission::ManageRole)
+        .await?;
 
     if let Some(mut role) = server.roles.remove(&role_id) {
         let Data {

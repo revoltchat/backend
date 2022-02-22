@@ -51,11 +51,10 @@ pub async fn message_send(
     idempotency.consume_nonce(data.nonce).await?;
 
     let channel = target.as_channel(db).await?;
-    let permissions = perms(&user).channel(&channel).calc(db).await;
-
-    if !permissions.can_send_message() {
-        return Error::from_permission(Permission::SendMessage);
-    }
+    let mut permissions = perms(&user).channel(&channel);
+    permissions
+        .throw_permission_and_view_channel(db, Permission::SendMessage)
+        .await?;
 
     if data.content.is_empty()
         && (data.attachments.is_none() || data.attachments.as_ref().unwrap().is_empty())
@@ -66,8 +65,8 @@ pub async fn message_send(
     let message_id = Ulid::new().to_string();
     let mut message = Message {
         id: message_id.clone(),
-        channel: channel.as_id(),
-        author: user.id,
+        channel: channel.id().to_string(),
+        author: user.id.clone(),
         ..Default::default()
     };
 
@@ -80,8 +79,10 @@ pub async fn message_send(
     }
 
     // 2. Verify permissions for masquerade.
-    if data.masquerade.is_some() && !permissions.can_masquerade() {
-        return Error::from_permission(Permission::Masquerade);
+    if data.masquerade.is_some() {
+        permissions
+            .throw_permission(db, Permission::Masquerade)
+            .await?;
     }
 
     // 3. Verify replies are valid.
@@ -117,8 +118,10 @@ pub async fn message_send(
     // 4. Add attachments to message.
     let mut attachments = vec![];
     if let Some(ids) = &data.attachments {
-        if !ids.is_empty() && !permissions.can_upload_files() {
-            return Error::from_permission(Permission::UploadFiles);
+        if !ids.is_empty() {
+            permissions
+                .throw_permission(db, Permission::UploadFiles)
+                .await?;
         }
 
         // ! FIXME: move this to app config

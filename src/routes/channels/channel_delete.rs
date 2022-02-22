@@ -6,11 +6,8 @@ use revolt_quark::{
 #[delete("/<target>")]
 pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
     let channel = target.as_channel(db).await?;
-    let perm = perms(&user).channel(&channel).calc(db).await;
-
-    if !perm.can_view_channel() {
-        return Err(Error::NotFound);
-    }
+    let mut perms = perms(&user).channel(&channel);
+    perms.throw_permission(db, Permission::ViewChannel).await?;
 
     match &channel {
         Channel::SavedMessages { .. } => Err(Error::NoEffect),
@@ -30,11 +27,11 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
             .await
             .map(|_| EmptyResponse),
         Channel::TextChannel { .. } | Channel::VoiceChannel { .. } => {
-            if perm.can_manage_channel() {
-                channel.delete(db).await.map(|_| EmptyResponse)
-            } else {
-                Error::from_permission(Permission::ManageChannel)
-            }
+            perms
+                .throw_permission(db, Permission::ManageChannel)
+                .await?;
+
+            channel.delete(db).await.map(|_| EmptyResponse)
         }
     }
 }

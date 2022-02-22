@@ -14,14 +14,10 @@ pub struct Data {
 #[put("/<target>/permissions/default", data = "<data>", rank = 1)]
 pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<Json<Channel>> {
     let mut channel = target.as_channel(db).await?;
-    if !perms(&user)
+    perms(&user)
         .channel(&channel)
-        .calc(db)
-        .await
-        .can_manage_permissions()
-    {
-        return Error::from_permission(Permission::ManagePermissions);
-    }
+        .throw_permission_and_view_channel(db, Permission::ManagePermissions)
+        .await?;
 
     match &channel {
         Channel::Group { .. } => {

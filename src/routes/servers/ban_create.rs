@@ -26,14 +26,10 @@ pub async fn req(
         .map_err(|error| Error::FailedValidation { error })?;
 
     let server = server.as_server(db).await?;
-    if !perms(&user)
+    perms(&user)
         .server(&server)
-        .calc(db)
-        .await
-        .can_ban_members()
-    {
-        return Error::from_permission(Permission::BanMembers);
-    }
+        .throw_permission(db, Permission::BanMembers)
+        .await?;
 
     let member = target.as_member(db, &server.id).await?;
     // ! FIXME_PERMISSIONS

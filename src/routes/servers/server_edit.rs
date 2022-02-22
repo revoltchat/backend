@@ -38,7 +38,7 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<J
         .map_err(|error| Error::FailedValidation { error })?;
 
     let mut server = target.as_server(db).await?;
-    let permissions = perms(&user).server(&server).calc(db).await;
+    let permissions = perms(&user).server(&server).calc(db).await?;
     if !permissions.can_view_channel() {
         return Err(Error::NotFound);
     }

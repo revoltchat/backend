@@ -38,14 +38,10 @@ pub async fn req(
         .map_err(|error| Error::FailedValidation { error })?;
 
     let mut channel = target.as_channel(db).await?;
-    if !perms(&user)
+    perms(&user)
         .channel(&channel)
-        .calc(db)
-        .await
-        .can_manage_channel()
-    {
-        return Error::from_permission(Permission::ManageChannel);
-    }
+        .throw_permission_and_view_channel(db, Permission::ManageChannel)
+        .await?;
 
     if data.name.is_none()
         && data.description.is_none()

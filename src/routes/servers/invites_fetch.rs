@@ -1,6 +1,6 @@
 use revolt_quark::{
     models::{Invite, User},
-    perms, Db, Error, Permission, Ref, Result,
+    perms, Db, Permission, Ref, Result,
 };
 
 use rocket::serde::json::Json;
@@ -17,14 +17,10 @@ pub struct ServerInvite {
 #[get("/<target>/invites")]
 pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<Vec<Invite>>> {
     let server = target.as_server(db).await?;
-    if !perms(&user)
+    perms(&user)
         .server(&server)
-        .calc(db)
-        .await
-        .can_manage_server()
-    {
-        return Error::from_permission(Permission::ManageServer);
-    }
+        .throw_permission(db, Permission::ManageServer)
+        .await?;
 
     db.fetch_invites_for_server(&server.id).await.map(Json)
 }

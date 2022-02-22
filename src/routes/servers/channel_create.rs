@@ -41,14 +41,10 @@ pub async fn req(db: &Db, user: User, target: Ref, info: Json<Data>) -> Result<J
         .map_err(|error| Error::FailedValidation { error })?;
 
     let mut server = target.as_server(db).await?;
-    if !perms(&user)
+    perms(&user)
         .server(&server)
-        .calc(db)
-        .await
-        .can_manage_channel()
-    {
-        return Error::from_permission(Permission::ManageChannel);
-    }
+        .throw_permission(db, Permission::ManageChannel)
+        .await?;
 
     let id = Ulid::new().to_string();
     let mut channels = server.channels.clone();

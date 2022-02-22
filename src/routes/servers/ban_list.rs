@@ -1,5 +1,5 @@
 use revolt_quark::models::{File, ServerBan, User};
-use revolt_quark::{perms, Db, Error, Permission, Ref, Result};
+use revolt_quark::{perms, Db, Permission, Ref, Result};
 
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
@@ -14,14 +14,10 @@ struct BannedUser {
 #[get("/<target>/bans")]
 pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<Vec<ServerBan>>> {
     let server = target.as_server(db).await?;
-    if !perms(&user)
+    perms(&user)
         .server(&server)
-        .calc(db)
-        .await
-        .can_ban_members()
-    {
-        return Error::from_permission(Permission::BanMembers);
-    }
+        .throw_permission(db, Permission::BanMembers)
+        .await?;
 
     db.fetch_bans(&server.id).await.map(Json)
 }
