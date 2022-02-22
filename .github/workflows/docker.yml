@@ -80,7 +80,7 @@ jobs:
               uses: docker/metadata-action@v3
               with:
 #                  images: revoltchat/server, ghcr.io/revoltchat/server
-                    images: ghcr.io/redstonewizard08/delta/delta:${{ matrix.architecture }}
+                    images: ghcr.io/redstonewizard08/delta
 #            - name: Login to DockerHub
 #              uses: docker/login-action@v1
 #              with:
