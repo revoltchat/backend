@@ -38,7 +38,7 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<Value> {
                 ..Default::default()
             };
 
-            db.insert_member(&member).await?;
+            member.create(db).await?;
 
             Ok(json!({
                 "type": "Server",
