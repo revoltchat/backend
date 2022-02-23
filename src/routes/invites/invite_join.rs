@@ -25,10 +25,6 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<Value> {
             channel, server, ..
         } => {
             let server = db.fetch_server(server).await?;
-            if db.fetch_ban(&server.id, &user.id).await.is_ok() {
-                return Err(Error::Banned);
-            }
-
             let channel = db.fetch_channel(channel).await?;
             let member = Member {
                 id: MemberCompositeKey {
