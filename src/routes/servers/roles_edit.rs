@@ -35,10 +35,13 @@ pub async fn req(
         .map_err(|error| Error::FailedValidation { error })?;
 
     let mut server = target.as_server(db).await?;
-    perms(&user)
-        .server(&server)
+    let mut permissions = perms(&user).server(&server);
+
+    permissions
         .throw_permission(db, Permission::ManageRole)
         .await?;
+
+    let member_rank = permissions.get_member_rank();
 
     if let Some(mut role) = server.roles.remove(&role_id) {
         let Data {
@@ -48,6 +51,12 @@ pub async fn req(
             rank,
             remove,
         } = data;
+
+        if let Some(rank) = &rank {
+            if rank <= &member_rank.unwrap_or(i64::MIN) {
+                return Err(Error::NotElevated);
+            }
+        }
 
         let partial = PartialRole {
             name,
