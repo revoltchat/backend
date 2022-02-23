@@ -22,12 +22,17 @@ pub async fn req(
     let data = data.into_inner();
 
     let mut server = target.as_server(db).await?;
-    if let Some(current_value) = server.roles.get(&role_id).map(|x| x.permissions) {
+    if let Some((current_value, rank)) = server.roles.get(&role_id).map(|x| (x.permissions, x.rank))
+    {
         let mut permissions = perms(&user).server(&server);
 
         permissions
             .throw_permission(db, Permission::ManagePermissions)
             .await?;
+
+        if rank <= permissions.get_member_rank().unwrap_or(i64::MIN) {
+            return Err(Error::NotElevated);
+        }
 
         if !permissions
             .has_permission_value(db, data.permissions.allows())
