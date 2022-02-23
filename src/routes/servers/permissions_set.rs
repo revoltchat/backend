@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use revolt_quark::{
     models::{Server, User},
-    perms, Db, Override, Permission, Ref, Result,
+    perms, Db, Error, Override, Permission, Ref, Result,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -22,16 +22,34 @@ pub async fn req(
     let data = data.into_inner();
 
     let mut server = target.as_server(db).await?;
-    perms(&user)
-        .server(&server)
-        .throw_permission(db, Permission::ManagePermissions)
-        .await?;
+    if let Some(current_value) = server.roles.get(&role_id).map(|x| x.permissions) {
+        let mut permissions = perms(&user).server(&server);
 
-    // ! FIXME_PERMISSIONS
+        permissions
+            .throw_permission(db, Permission::ManagePermissions)
+            .await?;
 
-    server
-        .set_role_permission(db, &role_id, data.permissions.into())
-        .await?;
+        if !permissions
+            .has_permission_value(db, data.permissions.allows())
+            .await?
+        {
+            return Err(Error::CannotGiveMissingPermissions);
+        }
 
-    Ok(Json(server))
+        let current_value: Override = current_value.into();
+        if !permissions
+            .has_permission_value(db, current_value.denies() & (!data.permissions.denies()))
+            .await?
+        {
+            return Err(Error::CannotGiveMissingPermissions);
+        }
+
+        server
+            .set_role_permission(db, &role_id, data.permissions.into())
+            .await?;
+
+        Ok(Json(server))
+    } else {
+        Err(Error::NotFound)
+    }
 }
