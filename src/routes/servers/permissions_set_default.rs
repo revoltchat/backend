@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use revolt_quark::{
     models::{server::PartialServer, Server, User},
-    perms, Db, Permission, Ref, Result,
+    perms, Db, Error, Permission, Ref, Result,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -16,12 +16,18 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<J
     let data = data.into_inner();
 
     let mut server = target.as_server(db).await?;
-    perms(&user)
-        .server(&server)
+    let mut permissions = perms(&user).server(&server);
+
+    permissions
         .throw_permission(db, Permission::ManagePermissions)
         .await?;
 
-    // ! FIXME_PERMISSIONS
+    if !permissions
+        .has_permission_value(db, data.permissions)
+        .await?
+    {
+        return Err(Error::CannotGiveMissingPermissions);
+    }
 
     server
         .update(
