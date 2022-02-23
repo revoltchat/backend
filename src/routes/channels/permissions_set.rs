@@ -3,12 +3,12 @@ use serde::{Deserialize, Serialize};
 
 use revolt_quark::{
     models::{Channel, User},
-    perms, Db, Permission, Ref, Result,
+    perms, Db, OverrideField, Permission, Ref, Result,
 };
 
 #[derive(Serialize, Deserialize)]
 pub struct Data {
-    permissions: u32,
+    permissions: OverrideField,
 }
 
 #[put("/<target>/permissions/<role>", data = "<data>", rank = 2)]

@@ -3,18 +3,12 @@ use serde::{Deserialize, Serialize};
 
 use revolt_quark::{
     models::{Server, User},
-    perms, Db, Permission, Ref, Result,
+    perms, Db, Override, Permission, Ref, Result,
 };
 
 #[derive(Serialize, Deserialize)]
-pub struct Values {
-    server: u32,
-    channel: u32,
-}
-
-#[derive(Serialize, Deserialize)]
 pub struct Data {
-    permissions: Values,
+    permissions: Override,
 }
 
 #[put("/<target>/permissions/<role_id>", data = "<data>", rank = 2)]
@@ -25,6 +19,8 @@ pub async fn req(
     role_id: String,
     data: Json<Data>,
 ) -> Result<Json<Server>> {
+    let data = data.into_inner();
+
     let mut server = target.as_server(db).await?;
     perms(&user)
         .server(&server)
@@ -34,14 +30,7 @@ pub async fn req(
     // ! FIXME_PERMISSIONS
 
     server
-        .set_role_permission(
-            db,
-            &role_id,
-            &(
-                data.permissions.server as i32,
-                data.permissions.channel as i32,
-            ),
-        )
+        .set_role_permission(db, &role_id, data.permissions.into())
         .await?;
 
     Ok(Json(server))

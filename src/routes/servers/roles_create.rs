@@ -27,7 +27,6 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<V
 
     let role = Role {
         name: data.name,
-        permissions: (0_i32, 0_i32),
         ..Default::default()
     };
 

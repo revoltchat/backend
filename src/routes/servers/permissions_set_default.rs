@@ -7,14 +7,8 @@ use revolt_quark::{
 };
 
 #[derive(Serialize, Deserialize)]
-pub struct Values {
-    server: u32,
-    channel: u32,
-}
-
-#[derive(Serialize, Deserialize)]
 pub struct Data {
-    permissions: Values,
+    permissions: u64,
 }
 
 #[put("/<target>/permissions/default", data = "<data>", rank = 1)]
@@ -33,10 +27,7 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<J
         .update(
             db,
             PartialServer {
-                default_permissions: Some((
-                    data.permissions.server as i32,
-                    data.permissions.channel as i32,
-                )),
+                default_permissions: Some(data.permissions as i64),
                 ..Default::default()
             },
             vec![],
