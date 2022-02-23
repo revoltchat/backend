@@ -26,13 +26,28 @@ pub async fn req(
         .map_err(|error| Error::FailedValidation { error })?;
 
     let server = server.as_server(db).await?;
-    perms(&user)
-        .server(&server)
+
+    if target.id == user.id {
+        return Err(Error::CannotRemoveYourself);
+    }
+
+    if target.id == server.owner {
+        return Err(Error::InvalidOperation);
+    }
+
+    let mut permissions = perms(&user).server(&server);
+
+    permissions
         .throw_permission(db, Permission::BanMembers)
         .await?;
 
     let member = target.as_member(db, &server.id).await?;
-    // ! FIXME_PERMISSIONS
+
+    if member.get_ranking(permissions.server.get().unwrap())
+        <= permissions.get_member_rank().unwrap_or(i64::MIN)
+    {
+        return Err(Error::NotElevated);
+    }
 
     member.ban(db, data.reason).await.map(Json)
 }
