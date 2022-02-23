@@ -1,12 +1,12 @@
 use rocket::serde::json::Json;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use revolt_quark::{
     models::{channel::PartialChannel, Channel, User},
     perms, Db, Error, Override, Permission, Ref, Result,
 };
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 #[serde(untagged)]
 pub enum Data {
     Value { permissions: u64 },
@@ -18,9 +18,9 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<J
     let data = data.into_inner();
 
     let mut channel = target.as_channel(db).await?;
-    perms(&user)
-        .channel(&channel)
-        .throw_permission_and_view_channel(db, Permission::ManagePermissions)
+    let mut perm = perms(&user).channel(&channel);
+
+    perm.throw_permission_and_view_channel(db, Permission::ManagePermissions)
         .await?;
 
     match &channel {
@@ -40,10 +40,22 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<J
                 return Err(Error::InvalidOperation);
             }
         }
-        Channel::TextChannel { .. } | Channel::VoiceChannel { .. } => {
-            // ! FIXME_PERMISSIONS
-
+        Channel::TextChannel {
+            default_permissions,
+            ..
+        }
+        | Channel::VoiceChannel {
+            default_permissions,
+            ..
+        } => {
             if let Data::Field { permissions } = data {
+                perm.throw_permission_override(
+                    db,
+                    default_permissions.map(|x| x.into()),
+                    permissions,
+                )
+                .await?;
+
                 channel
                     .update(
                         db,

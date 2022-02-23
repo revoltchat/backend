@@ -1,12 +1,12 @@
 use rocket::serde::json::Json;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use revolt_quark::{
     models::{server::PartialServer, Server, User},
-    perms, Db, Error, Permission, Ref, Result,
+    perms, Db, Permission, Ref, Result,
 };
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 pub struct Data {
     permissions: u64,
 }
@@ -22,12 +22,9 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<J
         .throw_permission(db, Permission::ManagePermissions)
         .await?;
 
-    if !permissions
-        .has_permission_value(db, data.permissions)
-        .await?
-    {
-        return Err(Error::CannotGiveMissingPermissions);
-    }
+    permissions
+        .throw_permission_value(db, data.permissions)
+        .await?;
 
     server
         .update(

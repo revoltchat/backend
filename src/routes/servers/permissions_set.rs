@@ -1,12 +1,12 @@
 use rocket::serde::json::Json;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use revolt_quark::{
     models::{Server, User},
     perms, Db, Error, Override, Permission, Ref, Result,
 };
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 pub struct Data {
     permissions: Override,
 }
@@ -34,20 +34,10 @@ pub async fn req(
             return Err(Error::NotElevated);
         }
 
-        if !permissions
-            .has_permission_value(db, data.permissions.allows())
-            .await?
-        {
-            return Err(Error::CannotGiveMissingPermissions);
-        }
-
         let current_value: Override = current_value.into();
-        if !permissions
-            .has_permission_value(db, current_value.denies() & (!data.permissions.denies()))
-            .await?
-        {
-            return Err(Error::CannotGiveMissingPermissions);
-        }
+        permissions
+            .throw_permission_override(db, current_value, data.permissions)
+            .await?;
 
         server
             .set_role_permission(db, &role_id, data.permissions.into())
