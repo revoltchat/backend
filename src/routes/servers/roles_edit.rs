@@ -41,7 +41,7 @@ pub async fn req(
         .throw_permission(db, Permission::ManageRole)
         .await?;
 
-    let member_rank = permissions.get_member_rank();
+    let member_rank = permissions.get_member_rank().unwrap_or(i64::MIN);
 
     if let Some(mut role) = server.roles.remove(&role_id) {
         let Data {
@@ -53,7 +53,7 @@ pub async fn req(
         } = data;
 
         if let Some(rank) = &rank {
-            if rank <= &member_rank.unwrap_or(i64::MIN) {
+            if rank <= &member_rank {
                 return Err(Error::NotElevated);
             }
         }
