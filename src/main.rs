@@ -65,6 +65,15 @@ async fn main() {
 async fn launch_web() {
     let cors = rocket_cors::CorsOptions {
         allowed_origins: AllowedOrigins::All,
+        expose_headers: [
+            "x-ratelimit-bucket",
+            "x-ratelimit-limit",
+            "x-ratelimit-remaining",
+            "x-ratelimit-reset",
+        ]
+        .iter()
+        .map(|s| FromStr::from_str(s).unwrap())
+        .collect(),
         allowed_methods: [
             "Get", "Put", "Post", "Delete", "Options", "Head", "Trace", "Connect", "Patch",
         ]
