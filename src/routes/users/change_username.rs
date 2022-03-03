@@ -1,6 +1,6 @@
 use crate::util::regex::RE_USERNAME;
 use rauth::entities::Account;
-use revolt_quark::{models::User, Database, EmptyResponse, Error, Result};
+use revolt_quark::{models::User, Database, Error, Result};
 use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -19,12 +19,12 @@ pub async fn req(
     account: Account,
     mut user: User,
     data: Json<Data>,
-) -> Result<EmptyResponse> {
+) -> Result<Json<User>> {
     let data = data.into_inner();
     account
         .verify_password(&data.password)
         .map_err(|_| Error::InvalidCredentials)?;
-    user.update_username(db, data.username)
-        .await
-        .map(|_| EmptyResponse)
+
+    user.update_username(db, data.username).await?;
+    Ok(Json(user))
 }
