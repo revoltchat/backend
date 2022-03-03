@@ -26,5 +26,5 @@ pub async fn req(
         .map_err(|_| Error::InvalidCredentials)?;
 
     user.update_username(db, data.username).await?;
-    Ok(Json(user))
+    Ok(Json(user.foreign()))
 }
