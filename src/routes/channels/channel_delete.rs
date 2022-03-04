@@ -5,16 +5,16 @@ use revolt_quark::{
 
 #[delete("/<target>")]
 pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
-    let channel = target.as_channel(db).await?;
+    let mut channel = target.as_channel(db).await?;
     let mut perms = perms(&user).channel(&channel);
     perms.throw_permission(db, Permission::ViewChannel).await?;
 
     match &channel {
         Channel::SavedMessages { .. } => Err(Error::NoEffect),
-        Channel::DirectMessage { id, .. } => db
-            .update_channel(
-                id,
-                &PartialChannel {
+        Channel::DirectMessage { .. } => channel
+            .update(
+                db,
+                PartialChannel {
                     active: Some(false),
                     ..Default::default()
                 },
