@@ -1,3 +1,5 @@
+use crate::util::variables::{MONGO_DATABASE};
+
 use super::get_connection;
 
 pub mod init;
@@ -11,7 +13,7 @@ pub async fn run_migrations() {
         .await
         .expect("Failed to fetch database names.");
     
-    if list.iter().position(|x| x == "revolt").is_none() {
+    if list.iter().position(|x| x == &MONGO_DATABASE.to_string()).is_none() {
         init::create_database().await;
     } else {
         scripts::migrate_database().await;

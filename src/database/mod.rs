@@ -1,4 +1,4 @@
-use crate::util::variables::MONGO_URI;
+use crate::util::variables::{MONGO_URI, MONGO_DATABASE};
 
 use mongodb::{Client, Collection, Database};
 use once_cell::sync::OnceCell;
@@ -19,7 +19,7 @@ pub fn get_connection() -> &'static Client {
 }
 
 pub fn get_db() -> Database {
-    get_connection().database("revolt")
+    get_connection().database(&MONGO_DATABASE)
 }
 
 pub fn get_collection(collection: &str) -> Collection {
