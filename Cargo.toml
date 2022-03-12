@@ -65,4 +65,5 @@ mongodb = { version = "1.2.2", features = ["async-std-runtime"], default-feature
 rocket_cors = { git = "https://github.com/lawliet89/rocket_cors", rev = "5843861a88958c16bfaa0b40f0d8910772bcd2f6" }
 
 # quark
-revolt-quark = { path = "/run/media/mink/oldssd/revolt/quark/" }
+revolt-quark = { git = "https://github.com/revoltchat/quark", rev = "7585b7944f1a654a28f9902f2cf0f6778f7abd5a" }
+# revolt-quark = { path = "/run/media/mink/oldssd/revolt/quark/" }

@@ -5,10 +5,9 @@ WORKDIR /home/rust/src
 
 RUN USER=root cargo new --bin revolt
 WORKDIR /home/rust/src/revolt
-COPY Cargo.toml Cargo.lock ./
-COPY src/bin/dummy.rs ./src/bin/dummy.rs
-RUN apt-get update && apt-get install -y libssl-dev pkg-config && cargo build --release --bin dummy
+RUN apt-get update && apt-get install -y libssl-dev pkg-config
 
+COPY Cargo.toml Cargo.lock ./
 COPY assets/templates ./assets/templates
 COPY src ./src
 RUN cargo install --locked --path .
