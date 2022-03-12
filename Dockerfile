@@ -8,7 +8,7 @@ WORKDIR /home/rust/src/revolt
 RUN apt-get update && apt-get install -y libssl-dev pkg-config
 
 COPY Cargo.toml Cargo.lock ./
-COPY assets/templates ./assets/templates
+COPY assets ./assets
 COPY src ./src
 RUN cargo install --locked --path .
 
@@ -16,9 +16,7 @@ RUN cargo install --locked --path .
 FROM debian:buster-slim
 RUN apt-get update && apt-get install -y ca-certificates
 COPY --from=builder /usr/local/cargo/bin/revolt ./
-COPY assets ./assets
 EXPOSE 8000
-EXPOSE 9000
 ENV ROCKET_ADDRESS 0.0.0.0
 ENV ROCKET_PORT 8000
 CMD ["./revolt"]
