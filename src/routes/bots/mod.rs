@@ -1,4 +1,5 @@
 use rocket::Route;
+use rocket_okapi::okapi::openapi3::OpenApi;
 
 mod create;
 mod delete;
@@ -8,8 +9,8 @@ mod fetch_owned;
 mod fetch_public;
 mod invite;
 
-pub fn routes() -> Vec<Route> {
-    routes![
+pub fn routes() -> (Vec<Route>, OpenApi) {
+    openapi_get_routes_spec![
         create::create_bot,
         invite::invite_bot,
         fetch_public::fetch_public_bot,

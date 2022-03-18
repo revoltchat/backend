@@ -3,7 +3,7 @@ use revolt_quark::{
     models::message::{PartialMessage, SendableEmbed},
     models::{message::Content, Message, User},
     types::january::Embed,
-    Db, Error, Ref, Result,
+    DateTimeContainer, Db, Error, Ref, Result,
 };
 
 use chrono::Utc;
@@ -40,7 +40,7 @@ pub async fn req(
         return Err(Error::CannotEditMessage);
     }
 
-    message.edited = Some(DateTime::from_chrono(Utc::now()));
+    message.edited = Some(DateTimeContainer(DateTime::from_chrono(Utc::now())));
     let mut partial = PartialMessage {
         edited: message.edited,
         ..Default::default()

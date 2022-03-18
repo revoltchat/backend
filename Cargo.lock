@@ -851,6 +851,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56899898ce76aaf4a0f24d914c97ea6ed976d42fec6ad33fcbb0a1103e07b2b0"
 
 [[package]]
+name = "dyn-clone"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee2626afccd7561a06cf1367e2950c4718ea04565e20fb5029b6c7d8ad09abcf"
+
+[[package]]
 name = "either"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2087,6 +2093,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "okapi"
+version = "0.7.0-rc.1"
+source = "git+https://github.com/insertish/okapi?rev=dcf0df115596ee07a587a7a543cddf3d7944645b#dcf0df115596ee07a587a7a543cddf3d7944645b"
+dependencies = [
+ "log",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2163,7 +2180,7 @@ dependencies = [
 [[package]]
 name = "optional_struct"
 version = "0.2.0"
-source = "git+https://github.com/insertish/OptionalStruct?rev=b57e8e8e77db6e1a7f68c715d0d1760cb64feb0c#b57e8e8e77db6e1a7f68c715d0d1760cb64feb0c"
+source = "git+https://github.com/insertish/OptionalStruct?rev=e275d2726595474632485934aa0887fa52281f70#e275d2726595474632485934aa0887fa52281f70"
 dependencies = [
  "quote 0.3.15",
  "syn 0.11.11",
@@ -2980,6 +2997,8 @@ dependencies = [
  "rmp-serde 0.15.5",
  "rocket",
  "rocket_cors",
+ "rocket_okapi",
+ "schemars",
  "serde",
  "serde_json",
  "ulid 0.4.1",
@@ -2991,7 +3010,6 @@ dependencies = [
 [[package]]
 name = "revolt-quark"
 version = "0.1.0"
-source = "git+https://github.com/revoltchat/quark?rev=7585b7944f1a654a28f9902f2cf0f6778f7abd5a#7585b7944f1a654a28f9902f2cf0f6778f7abd5a"
 dependencies = [
  "async-recursion",
  "async-std",
@@ -3007,12 +3025,15 @@ dependencies = [
  "mongodb 2.1.0",
  "nanoid",
  "num_enum",
+ "okapi",
  "ops",
  "optional_struct",
  "pretty_env_logger",
  "rauth",
  "redis-kiss",
  "rocket",
+ "rocket_okapi",
+ "schemars",
  "serde",
  "serde_json",
  "ulid 0.5.0",
@@ -3173,6 +3194,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "rocket_okapi"
+version = "0.8.0-rc.1"
+source = "git+https://github.com/insertish/okapi?rev=dcf0df115596ee07a587a7a543cddf3d7944645b#dcf0df115596ee07a587a7a543cddf3d7944645b"
+dependencies = [
+ "either",
+ "log",
+ "okapi",
+ "rocket",
+ "rocket_okapi_codegen",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "rocket_okapi_codegen"
+version = "0.8.0-rc.1"
+source = "git+https://github.com/insertish/okapi?rev=dcf0df115596ee07a587a7a543cddf3d7944645b#dcf0df115596ee07a587a7a543cddf3d7944645b"
+dependencies = [
+ "darling 0.13.0",
+ "proc-macro2",
+ "quote 1.0.9",
+ "rocket_http",
+ "syn 1.0.76",
+]
+
+[[package]]
 name = "rust-argon2"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3272,6 +3320,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "schemars"
+version = "0.8.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6b5a3c80cea1ab61f4260238409510e814e38b4b563c06044edf91e7dc070e3"
+dependencies = [
+ "dyn-clone",
+ "indexmap",
+ "schemars_derive",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "schemars_derive"
+version = "0.8.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "41ae4dce13e8614c46ac3c38ef1c0d668b101df6ac39817aebdaa26642ddae9b"
+dependencies = [
+ "proc-macro2",
+ "quote 1.0.9",
+ "serde_derive_internals",
+ "syn 1.0.76",
+]
+
+[[package]]
 name = "scoped-tls"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3354,6 +3427,17 @@ name = "serde_derive"
 version = "1.0.136"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08597e7152fcd306f41838ed3e37be9eaeed2b61c42e2117266a554fab4662f9"
+dependencies = [
+ "proc-macro2",
+ "quote 1.0.9",
+ "syn 1.0.76",
+]
+
+[[package]]
+name = "serde_derive_internals"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1dbab34ca63057a1f15280bdf3c39f2b1eb1b54c17e98360e511637aef7418c6"
 dependencies = [
  "proc-macro2",
  "quote 1.0.9",

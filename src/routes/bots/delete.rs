@@ -1,6 +1,9 @@
-use rauth::util::EmptyResponse;
-use revolt_quark::{models::User, Db, Error, Ref, Result};
+use revolt_quark::{models::User, Db, EmptyResponse, Error, Ref, Result};
 
+/// # Delete Bot
+///
+/// Delete a bot by its id.
+#[openapi(tag = "Bots")]
 #[delete("/<target>")]
 pub async fn delete_bot(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
     if user.bot.is_some() {

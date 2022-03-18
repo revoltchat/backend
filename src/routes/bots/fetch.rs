@@ -4,6 +4,10 @@ use revolt_quark::{
 };
 use rocket::serde::json::Json;
 
+/// # Fetch Bot
+///
+/// Fetch details of a bot you own by its id.
+#[openapi(tag = "Bots")]
 #[get("/<target>")]
 pub async fn fetch_bot(db: &Db, user: User, target: Ref) -> Result<Json<Bot>> {
     if user.bot.is_some() {

@@ -12,20 +12,31 @@ use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # Bot Details
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataEditBot {
+    /// Bot username
     #[validate(length(min = 2, max = 32), regex = "RE_USERNAME")]
     #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
+    /// Whether the bot can be added by anyone
     public: Option<bool>,
+    /// Whether analytics should be gathered for this bot
     analytics: Option<bool>,
+    /// Interactions URL
+    #[validate(length(min = 1, max = 2048))]
     interactions_url: Option<String>,
+    /// Fields to remove from bot object
     #[validate(length(min = 1))]
     remove: Option<Vec<FieldsBot>>,
 }
 
+/// # Edit Bot
+///
+/// Edit bot details by its id.
+#[openapi(tag = "Bots")]
 #[patch("/<target>", data = "<data>")]
-pub async fn edit_bot(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<Json<Bot>> {
+pub async fn edit_bot(db: &Db, user: User, target: Ref, data: Json<DataEditBot>) -> Result<Json<Bot>> {
     if user.bot.is_some() {
         return Err(Error::IsBot);
     }
@@ -56,7 +67,7 @@ pub async fn edit_bot(db: &Db, user: User, target: Ref, data: Json<Data>) -> Res
         return Ok(Json(bot));
     }
 
-    let Data {
+    let DataEditBot {
         public,
         analytics,
         interactions_url,

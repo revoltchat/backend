@@ -4,6 +4,10 @@ use revolt_quark::{
 };
 use rocket::serde::json::Json;
 
+/// # Fetch Owned Bots
+///
+/// Fetch all of the bots that you have control over.
+#[openapi(tag = "Bots")]
 #[get("/@me")]
 pub async fn fetch_owned_bots(db: &Db, user: User) -> Result<Json<Vec<Bot>>> {
     if user.bot.is_some() {

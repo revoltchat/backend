@@ -2,23 +2,29 @@ use crate::util::{regex::RE_USERNAME, variables::MAX_BOT_COUNT};
 
 use nanoid::nanoid;
 use revolt_quark::{
-    models::{Bot, User, user::BotInformation},
+    models::{user::BotInformation, Bot, User},
     Db, Error, Result,
 };
 
 use rocket::serde::json::Json;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use ulid::Ulid;
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # Bot Details
+#[derive(Validate, Deserialize, JsonSchema)]
+pub struct DataCreateBot {
+    /// Bot username
     #[validate(length(min = 2, max = 32), regex = "RE_USERNAME")]
     name: String,
 }
 
+/// # Create Bot
+///
+/// Create a new Revolt bot.
+#[openapi(tag = "Bots")]
 #[post("/create", data = "<info>")]
-pub async fn create_bot(db: &Db, user: User, info: Json<Data>) -> Result<Json<Bot>> {
+pub async fn create_bot(db: &Db, user: User, info: Json<DataCreateBot>) -> Result<Json<Bot>> {
     if user.bot.is_some() {
         return Err(Error::IsBot);
     }
@@ -40,7 +46,7 @@ pub async fn create_bot(db: &Db, user: User, info: Json<Data>) -> Result<Json<Bo
         id: id.clone(),
         username: info.name,
         bot: Some(BotInformation {
-            owner: user.id.clone()
+            owner: user.id.clone(),
         }),
         ..Default::default()
     };

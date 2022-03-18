@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate rocket;
 #[macro_use]
+extern crate rocket_okapi;
+#[macro_use]
 extern crate serde_json;
 #[macro_use]
 extern crate lazy_static;
@@ -134,8 +136,13 @@ async fn launch_web() {
     let rocket = rocket::build();
     routes::mount(rocket)
         .mount("/", rocket_cors::catch_all_options_routes())
-        .mount("/auth/account", rauth::web::account::routes())
-        .mount("/auth/session", rauth::web::session::routes())
+        .mount(
+            "/swagger/",
+            rocket_okapi::swagger_ui::make_swagger_ui(&rocket_okapi::swagger_ui::SwaggerUIConfig {
+                url: "../openapi.json".to_owned(),
+                ..Default::default()
+            }),
+        )
         .manage(auth)
         .manage(db)
         .manage(cors.clone())

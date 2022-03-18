@@ -6,19 +6,32 @@ use revolt_quark::{
 use rocket::serde::json::Json;
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+/// # Invite Destination
+#[derive(Deserialize, JsonSchema)]
 #[serde(untagged)]
-pub enum Destination {
-    Server { server: String },
-    Group { group: String },
+pub enum InviteBotDestination {
+    /// Invite to a server
+    Server {
+        /// Server Id
+        server: String,
+    },
+    /// Invite to a group
+    Group {
+        /// Group Id
+        group: String,
+    },
 }
 
+/// # Invite Bot
+///
+/// Invite a bot to a server or group by its id.`
+#[openapi(tag = "Bots")]
 #[post("/<target>/invite", data = "<dest>")]
 pub async fn invite_bot(
     db: &Db,
     user: User,
     target: Ref,
-    dest: Json<Destination>,
+    dest: Json<InviteBotDestination>,
 ) -> Result<EmptyResponse> {
     if user.bot.is_some() {
         return Err(Error::IsBot);
@@ -30,7 +43,7 @@ pub async fn invite_bot(
     }
 
     match dest.into_inner() {
-        Destination::Server { server } => {
+        InviteBotDestination::Server { server } => {
             let server = db.fetch_server(&server).await?;
 
             perms(&user)
@@ -48,7 +61,7 @@ pub async fn invite_bot(
 
             db.insert_member(&member).await.map(|_| EmptyResponse)
         }
-        Destination::Group { group } => {
+        InviteBotDestination::Group { group } => {
             let channel = db.fetch_channel(&group).await?;
 
             perms(&user)

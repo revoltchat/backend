@@ -64,6 +64,11 @@ rocket = { version = "0.5.0-rc.1", default-features = false, features = ["json"]
 mongodb = { version = "1.2.2", features = ["async-std-runtime"], default-features = false }
 rocket_cors = { git = "https://github.com/lawliet89/rocket_cors", rev = "5843861a88958c16bfaa0b40f0d8910772bcd2f6" }
 
+# spec generation
+schemars = "0.8.8"
+# rocket_okapi = "0.8.0-rc.1"
+rocket_okapi = { git = "https://github.com/insertish/okapi", rev = "dcf0df115596ee07a587a7a543cddf3d7944645b", features = [ "swagger" ] }
+
 # quark
-revolt-quark = { git = "https://github.com/revoltchat/quark", rev = "7585b7944f1a654a28f9902f2cf0f6778f7abd5a" }
-# revolt-quark = { path = "/run/media/mink/oldssd/revolt/quark/" }
+# revolt-quark = { git = "https://github.com/revoltchat/quark", rev = "7585b7944f1a654a28f9902f2cf0f6778f7abd5a" }
+revolt-quark = { path = "/run/media/mink/oldssd/revolt/quark/" }
