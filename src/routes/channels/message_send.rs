@@ -16,19 +16,27 @@ use validator::Validate;
 
 use crate::util::idempotency::IdempotencyKey;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataMessageSend {
+    /// Unique token to prevent duplicate message sending
+    ///
+    /// **This is deprecated and replaced by Idempotency-Token!**
     nonce: Option<String>,
 
+    /// Message content to send
     #[validate(length(min = 0, max = 2000))]
     content: String,
+    /// Attachments to include in message
     #[validate(length(min = 1, max = 128))]
     attachments: Option<Vec<String>>,
+    /// Messages to reply to
     replies: Option<Vec<Reply>>,
-    #[validate]
-    masquerade: Option<Masquerade>,
+    /// Embeds to include in message
     #[validate(length(min = 1, max = 10))]
     embeds: Option<Vec<SendableEmbed>>,
+    /// Masquerade to apply to this message
+    #[validate]
+    masquerade: Option<Masquerade>,
 }
 
 lazy_static! {
@@ -36,12 +44,16 @@ lazy_static! {
     static ref RE_MENTION: Regex = Regex::new(r"<@([0-9A-HJKMNP-TV-Z]{26})>").unwrap();
 }
 
+/// # Send Message
+///
+/// Sends a message to the given channel.
+#[openapi(tag = "Messaging")]
 #[post("/<target>/messages", data = "<data>")]
 pub async fn message_send(
     db: &Db,
     user: User,
     target: Ref,
-    data: Json<Data>,
+    data: Json<DataMessageSend>,
     mut idempotency: IdempotencyKey,
 ) -> Result<Json<Message>> {
     let data = data.into_inner();

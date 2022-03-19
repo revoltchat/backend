@@ -9,29 +9,43 @@ use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize, FromForm)]
-pub struct Options {
+/// # Query Parameters
+#[derive(Validate, Serialize, Deserialize, JsonSchema, FromForm)]
+pub struct OptionsQueryMessages {
+    /// Maximum number of messages to fetch
+    ///
+    /// For fetching nearby messages, this is \`(limit + 1)\`.
     #[validate(range(min = 1, max = 100))]
     limit: Option<i64>,
+    /// Message id before which messages should be fetched
     #[validate(length(min = 26, max = 26))]
     before: Option<String>,
+    /// Message id after which messages should be fetched
     #[validate(length(min = 26, max = 26))]
     after: Option<String>,
+    /// Message sort direction
     sort: Option<MessageSort>,
-    // Specifying 'nearby' ignores 'before', 'after' and 'sort'.
-    // It will also take half of limit rounded as the limits to each side.
-    // It also fetches the message ID specified.
+    /// Message id to search around
+    ///
+    /// Specifying 'nearby' ignores 'before', 'after' and 'sort'.
+    /// It will also take half of limit rounded as the limits to each side.
+    /// It also fetches the message ID specified.
     #[validate(length(min = 26, max = 26))]
     nearby: Option<String>,
+    /// Whether to include user (and member, if server channel) objects
     include_users: Option<bool>,
 }
 
+/// # Fetch Messages
+///
+/// Fetch multiple messages.
+#[openapi(tag = "Messaging")]
 #[get("/<target>/messages?<options..>")]
 pub async fn req(
     db: &Db,
     user: User,
     target: Ref,
-    options: Options,
+    options: OptionsQueryMessages,
 ) -> Result<Json<BulkMessageResponse>> {
     options
         .validate()
@@ -47,7 +61,7 @@ pub async fn req(
         .throw_permission_and_view_channel(db, Permission::ReadMessageHistory)
         .await?;
 
-    let Options {
+    let OptionsQueryMessages {
         limit,
         before,
         after,

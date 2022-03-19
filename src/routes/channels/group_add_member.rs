@@ -3,6 +3,10 @@ use revolt_quark::{
     perms, Db, EmptyResponse, Error, Permission, Ref, Result,
 };
 
+/// # Add Member to Group
+///
+/// Adds another user to the group.
+#[openapi(tag = "Groups")]
 #[put("/<target>/recipients/<member>")]
 pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyResponse> {
     let channel = target.as_channel(db).await?;

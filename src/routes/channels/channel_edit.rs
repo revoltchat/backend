@@ -10,28 +10,39 @@ use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # Channel Details
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataEditChannel {
+    /// Channel name
     #[validate(length(min = 1, max = 32))]
     #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
+    /// Channel description
     #[validate(length(min = 0, max = 1024))]
     #[serde(skip_serializing_if = "Option::is_none")]
     description: Option<String>,
+    /// Icon
+    ///
+    /// Provide an Autumn attachment Id.
     #[validate(length(min = 1, max = 128))]
     icon: Option<String>,
+    /// Whether this channel is age-restricted
     #[serde(skip_serializing_if = "Option::is_none")]
     nsfw: Option<bool>,
     #[validate(length(min = 1))]
     remove: Option<Vec<FieldsChannel>>,
 }
 
+/// # Edit Channel
+///
+/// Edit a channel object by its id.
+#[openapi(tag = "Channel Information")]
 #[patch("/<target>", data = "<data>")]
 pub async fn req(
     db: &State<Database>,
     user: User,
     target: Ref,
-    data: Json<Data>,
+    data: Json<DataEditChannel>,
 ) -> Result<Json<Channel>> {
     let data = data.into_inner();
     data.validate()

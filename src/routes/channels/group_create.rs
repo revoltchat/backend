@@ -13,19 +13,31 @@ use validator::Validate;
 
 use crate::util::variables::MAX_GROUP_SIZE;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # Group Data
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataCreateGroup {
+    /// Group name
     #[validate(length(min = 1, max = 32))]
     name: String,
+    /// Group description
     #[validate(length(min = 0, max = 1024))]
     description: Option<String>,
+    /// Array of user IDs to add to the group
+    ///
+    /// Must be friends with these users.
+    #[validate(length(min = 0, max = 49))]
     users: Vec<String>,
+    /// Whether this group is age-restricted
     #[serde(skip_serializing_if = "Option::is_none")]
     nsfw: Option<bool>,
 }
 
+/// # Create Group
+///
+/// Create a new group channel.
+#[openapi(tag = "Groups")]
 #[post("/create", data = "<info>")]
-pub async fn req(db: &Db, user: User, info: Json<Data>) -> Result<Json<Channel>> {
+pub async fn req(db: &Db, user: User, info: Json<DataCreateGroup>) -> Result<Json<Channel>> {
     let info = info.into_inner();
     info.validate()
         .map_err(|error| Error::FailedValidation { error })?;

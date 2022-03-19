@@ -5,6 +5,10 @@ use revolt_quark::{
 
 use rocket::serde::json::Json;
 
+/// # Fetch Group Members
+///
+/// Retrieves all users who are part of this group.
+#[openapi(tag = "Groups")]
 #[get("/<target>/members")]
 pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<Vec<User>>> {
     let channel = target.as_channel(db).await?;

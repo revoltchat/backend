@@ -1,4 +1,5 @@
 use rocket::Route;
+use rocket_okapi::okapi::openapi3::OpenApi;
 
 mod channel_ack;
 mod channel_delete;
@@ -20,8 +21,8 @@ mod permissions_set;
 mod permissions_set_default;
 mod voice_join;
 
-pub fn routes() -> Vec<Route> {
-    routes![
+pub fn routes() -> (Vec<Route>, OpenApi) {
+    openapi_get_routes_spec![
         channel_ack::req,
         channel_fetch::req,
         members_fetch::req,

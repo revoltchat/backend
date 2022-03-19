@@ -20,6 +20,7 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
         rocket, "/".to_owned(), settings,
         "" => openapi_get_routes_spec![root::root, root::ping],
         "/bots" => bots::routes(),
+        "/channels" => channels::routes(),
     };
 
     rocket
@@ -27,7 +28,6 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
         .mount("/auth/session", rauth::web::session::routes())
         .mount("/onboard", onboard::routes())
         .mount("/users", users::routes())
-        .mount("/channels", channels::routes())
         .mount("/servers", servers::routes())
         .mount("/invites", invites::routes())
         .mount("/push", push::routes())

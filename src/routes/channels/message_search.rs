@@ -10,28 +10,43 @@ use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize, FromForm)]
-pub struct Options {
+/// # Search Parameters
+#[derive(Validate, Serialize, Deserialize, JsonSchema, FromForm)]
+pub struct OptionsMessageSearch {
+    /// Full-text search query
+    ///
+    /// See [MongoDB documentation](https://docs.mongodb.com/manual/text-search/#-text-operator) for more information.
     #[validate(length(min = 1, max = 64))]
     query: String,
 
+    /// Maximum number of messages to fetch
     #[validate(range(min = 1, max = 100))]
     limit: Option<i64>,
+    /// Message id before which messages should be fetched
     #[validate(length(min = 26, max = 26))]
     before: Option<String>,
+    /// Message id after which messages should be fetched
     #[validate(length(min = 26, max = 26))]
     after: Option<String>,
+    /// Message sort direction
+    ///
+    /// By default, it will be sorted by relevance.
     #[serde(default = "MessageSort::default")]
     sort: MessageSort,
+    /// Whether to include user (and member, if server channel) objects
     include_users: Option<bool>,
 }
 
+/// # Search for Messages
+///
+/// This route searches for messages within the given parameters.
+#[openapi(tag = "Messaging")]
 #[post("/<target>/search", data = "<options>")]
 pub async fn req(
     db: &Db,
     user: User,
     target: Ref,
-    options: Json<Options>,
+    options: Json<OptionsMessageSearch>,
 ) -> Result<Json<BulkMessageResponse>> {
     let options = options.into_inner();
     options
@@ -44,7 +59,7 @@ pub async fn req(
         .throw_permission_and_view_channel(db, Permission::ReadMessageHistory)
         .await?;
 
-    let Options {
+    let OptionsMessageSearch {
         query,
         limit,
         before,

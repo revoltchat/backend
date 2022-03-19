@@ -3,6 +3,10 @@ use revolt_quark::{
     perms, Db, EmptyResponse, Error, Permission, Ref, Result,
 };
 
+/// # Close Channel
+///
+/// Deletes a server channel, leaves a group or closes a group.
+#[openapi(tag = "Channel Information")]
 #[delete("/<target>")]
 pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
     let mut channel = target.as_channel(db).await?;

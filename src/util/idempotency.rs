@@ -3,6 +3,10 @@ use mongodb::bson::doc;
 use revolt_quark::{Error, Result};
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
+use rocket_okapi::gen::OpenApiGenerator;
+use rocket_okapi::okapi::openapi3::{Parameter, ParameterValue};
+use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
+use schemars::schema::{InstanceType, SchemaObject, SingleOrVec};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -35,6 +39,35 @@ impl IdempotencyKey {
 
     pub fn into_key(self) -> String {
         self.key
+    }
+}
+
+impl<'r> OpenApiFromRequest<'r> for IdempotencyKey {
+    fn from_request_input(
+        _gen: &mut OpenApiGenerator,
+        _name: String,
+        _required: bool,
+    ) -> rocket_okapi::Result<RequestHeaderInput> {
+        Ok(RequestHeaderInput::Parameter(Parameter {
+            name: "Idempotency-Key".to_string(),
+            description: Some("Unique key to prevent duplicate requests".to_string()),
+            allow_empty_value: false,
+            required: false,
+            deprecated: false,
+            extensions: schemars::Map::new(),
+            location: "sus".to_string(),
+            value: ParameterValue::Schema {
+                allow_reserved: false,
+                example: None,
+                examples: None,
+                explode: None,
+                style: None,
+                schema: SchemaObject {
+                    instance_type: Some(SingleOrVec::Single(Box::new(InstanceType::String))),
+                    ..Default::default()
+                },
+            },
+        }))
     }
 }
 

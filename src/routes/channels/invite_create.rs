@@ -5,6 +5,12 @@ use revolt_quark::{
 
 use rocket::serde::json::Json;
 
+/// # Create Invite
+///
+/// Creates an invite to this channel.
+///
+/// Channel must be a `TextChannel`.
+#[openapi(tag = "Channel Invites")]
 #[post("/<target>/invites")]
 pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<Invite>> {
     let channel = target.as_channel(db).await?;

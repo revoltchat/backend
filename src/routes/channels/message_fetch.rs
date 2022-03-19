@@ -5,6 +5,10 @@ use revolt_quark::{
 
 use rocket::serde::json::Json;
 
+/// # Fetch Message
+///
+/// Retrieves a message by its id.
+#[openapi(tag = "Messaging")]
 #[get("/<target>/messages/<msg>")]
 pub async fn req(db: &Db, user: User, target: Ref, msg: Ref) -> Result<Json<Message>> {
     let channel = target.as_channel(db).await?;

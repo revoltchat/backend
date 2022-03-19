@@ -3,6 +3,10 @@ use revolt_quark::{
     Db, EmptyResponse, Error, Permission, Ref, Result,
 };
 
+/// # Remove Member from Group
+///
+/// Removes a user from the group.
+#[openapi(tag = "Groups")]
 #[delete("/<target>/recipients/<member>")]
 pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyResponse> {
     let channel = target.as_channel(db).await?;

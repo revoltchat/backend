@@ -6,15 +6,33 @@ use revolt_quark::{
     perms, Db, Error, Override, Permission, Ref, Result,
 };
 
-#[derive(Deserialize)]
+/// # Permission Value
+#[derive(Deserialize, JsonSchema)]
 #[serde(untagged)]
-pub enum Data {
-    Value { permissions: u64 },
-    Field { permissions: Override },
+pub enum DataDefaultChannelPermissions {
+    Value {
+        /// Permission values to set for members in a `Group`
+        permissions: u64,
+    },
+    Field {
+        /// Allow / deny values to set for members in this `TextChannel` or `VoiceChannel`
+        permissions: Override,
+    },
 }
 
+/// # Set Default Permission
+///
+/// Sets permissions for the default role in this channel.
+///
+/// Channel must be a `Group`, `TextChannel` or `VoiceChannel`.
+#[openapi(tag = "Channel Permissions")]
 #[put("/<target>/permissions/default", data = "<data>", rank = 1)]
-pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<Json<Channel>> {
+pub async fn req(
+    db: &Db,
+    user: User,
+    target: Ref,
+    data: Json<DataDefaultChannelPermissions>,
+) -> Result<Json<Channel>> {
     let data = data.into_inner();
 
     let mut channel = target.as_channel(db).await?;
@@ -25,7 +43,7 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<J
 
     match &channel {
         Channel::Group { .. } => {
-            if let Data::Value { permissions } = data {
+            if let DataDefaultChannelPermissions::Value { permissions } = data {
                 channel
                     .update(
                         db,
@@ -48,7 +66,7 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<J
             default_permissions,
             ..
         } => {
-            if let Data::Field { permissions } = data {
+            if let DataDefaultChannelPermissions::Field { permissions } = data {
                 perm.throw_permission_override(
                     db,
                     default_permissions.map(|x| x.into()),

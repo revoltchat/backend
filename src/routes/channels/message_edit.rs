@@ -11,21 +11,28 @@ use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # Message Details
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataEditMessage {
+    /// New message content
     #[validate(length(min = 1, max = 2000))]
     content: Option<String>,
+    /// Embeds to include in the message
     #[validate(length(min = 0, max = 10))]
     embeds: Option<Vec<SendableEmbed>>,
 }
 
+/// # Edit Message
+///
+/// Edits a message that you've previously sent.
+#[openapi(tag = "Messaging")]
 #[patch("/<target>/messages/<msg>", data = "<edit>")]
 pub async fn req(
     db: &Db,
     user: User,
     target: String,
     msg: Ref,
-    edit: Json<Data>,
+    edit: Json<DataEditMessage>,
 ) -> Result<Json<Message>> {
     let edit = edit.into_inner();
     edit.validate()

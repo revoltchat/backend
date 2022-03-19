@@ -6,11 +6,19 @@ use revolt_quark::{
     perms, Db, Error, Override, Permission, Ref, Result,
 };
 
-#[derive(Deserialize)]
+/// # Permission Value
+#[derive(Deserialize, JsonSchema)]
 pub struct Data {
+    /// Allow / deny values to set for this role
     permissions: Override,
 }
 
+/// # Set Role Permission
+///
+/// Sets permissions for the specified role in this channel.
+///
+/// Channel must be a `TextChannel` or `VoiceChannel`.
+#[openapi(tag = "Channel Permissions")]
 #[put("/<target>/permissions/<role_id>", data = "<data>", rank = 2)]
 pub async fn req(
     db: &Db,
