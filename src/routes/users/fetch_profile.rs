@@ -1,8 +1,3 @@
-//! Fetch another user's profile
-//!
-//! Will fail if the authenticated user does not
-//! have permission to access the other user's profile.
-
 use revolt_quark::{
     models::{user::UserProfile, User},
     perms, Database, Error, Ref, Result,
@@ -10,6 +5,12 @@ use revolt_quark::{
 
 use rocket::{serde::json::Json, State};
 
+/// # Fetch User Profile
+///
+/// Retrieve a user's profile data.
+///
+/// Will fail if you do not have permission to access the other user's profile.
+#[openapi(tag = "User Information")]
 #[get("/<target>/profile")]
 pub async fn req(db: &State<Database>, user: User, target: Ref) -> Result<Json<UserProfile>> {
     let target = target.as_user(db).await?;

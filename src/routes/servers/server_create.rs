@@ -12,18 +12,26 @@ use validator::Validate;
 
 use crate::util::variables::MAX_SERVER_COUNT;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # Server Data
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataCreateServer {
+    /// Server name
     #[validate(length(min = 1, max = 32))]
     name: String,
+    /// Server description
     #[validate(length(min = 0, max = 1024))]
     description: Option<String>,
+    /// Whether this server is age-restricted
     #[serde(skip_serializing_if = "Option::is_none")]
     nsfw: Option<bool>,
 }
 
+/// # Create Server
+///
+/// Create a new server.
+#[openapi(tag = "Server Information")]
 #[post("/create", data = "<info>")]
-pub async fn req(db: &Db, user: User, info: Json<Data>) -> Result<Json<Server>> {
+pub async fn req(db: &Db, user: User, info: Json<DataCreateServer>) -> Result<Json<Server>> {
     let info = info.into_inner();
     info.validate()
         .map_err(|error| Error::FailedValidation { error })?;
@@ -34,7 +42,7 @@ pub async fn req(db: &Db, user: User, info: Json<Data>) -> Result<Json<Server>> 
         });
     }
 
-    let Data {
+    let DataCreateServer {
         name,
         description,
         nsfw,

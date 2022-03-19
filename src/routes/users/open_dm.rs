@@ -1,5 +1,3 @@
-//! Open a direct message with another user
-
 use revolt_quark::{
     models::{Channel, User},
     perms, Database, Error, Ref, Result, UserPermission,
@@ -8,6 +6,10 @@ use revolt_quark::{
 use rocket::{serde::json::Json, State};
 use ulid::Ulid;
 
+/// # Open Direct Message
+///
+/// Open a DM with another user.
+#[openapi(tag = "Direct Messaging")]
 #[get("/<target>/dm")]
 pub async fn req(db: &State<Database>, user: User, target: Ref) -> Result<Json<Channel>> {
     let target = target.as_user(db).await?;

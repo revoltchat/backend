@@ -6,6 +6,10 @@ use rauth::{
 };
 use rocket::State;
 
+/// # Unsubscribe
+///
+/// Remove the Web Push subscription associated with the current session.
+#[openapi(tag = "Web Push")]
 #[post("/unsubscribe")]
 pub async fn req(auth: &State<Auth>, mut session: Session) -> Result<EmptyResponse> {
     session.subscription = None;

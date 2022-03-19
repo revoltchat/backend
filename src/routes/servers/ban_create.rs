@@ -7,19 +7,25 @@ use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # Ban Information
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataBanCreate {
+    /// Ban reason
     #[validate(length(min = 1, max = 1024))]
     reason: Option<String>,
 }
 
+/// # Ban User
+///
+/// Ban a user by their id.
+#[openapi(tag = "Server Members")]
 #[put("/<server>/bans/<target>", data = "<data>")]
 pub async fn req(
     db: &Db,
     user: User,
     server: Ref,
     target: Ref,
-    data: Json<Data>,
+    data: Json<DataBanCreate>,
 ) -> Result<Json<ServerBan>> {
     let data = data.into_inner();
     data.validate()

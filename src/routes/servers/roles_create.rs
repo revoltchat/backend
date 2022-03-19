@@ -7,15 +7,24 @@ use rocket::serde::json::{Json, Value};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # Role Data
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataCreateRole {
+    /// Role name
     #[validate(length(min = 1, max = 32))]
     name: String,
+    /// Ranking position
+    ///
+    /// Smaller values take priority.
     rank: Option<i64>,
 }
 
+/// # Create Role
+///
+/// Creates a new server role.
+#[openapi(tag = "Server Permissions")]
 #[post("/<target>/roles", data = "<data>")]
-pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<Value> {
+pub async fn req(db: &Db, user: User, target: Ref, data: Json<DataCreateRole>) -> Result<Value> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;

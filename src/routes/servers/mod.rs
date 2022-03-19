@@ -1,4 +1,5 @@
 use rocket::Route;
+use rocket_okapi::okapi::openapi3::OpenApi;
 
 mod server_ack;
 mod server_create;
@@ -25,8 +26,8 @@ mod roles_create;
 mod roles_delete;
 mod roles_edit;
 
-pub fn routes() -> Vec<Route> {
-    routes![
+pub fn routes() -> (Vec<Route>, OpenApi) {
+    openapi_get_routes_spec![
         server_create::req,
         server_delete::req,
         server_fetch::req,

@@ -1,5 +1,9 @@
 use revolt_quark::{models::User, perms, Db, EmptyResponse, Error, Permission, Ref, Result};
 
+/// # Delete Role
+///
+/// Delete a server role by its id.
+#[openapi(tag = "Server Permissions")]
 #[delete("/<target>/roles/<role_id>")]
 pub async fn req(db: &Db, user: User, target: Ref, role_id: String) -> Result<EmptyResponse> {
     let mut server = target.as_server(db).await?;

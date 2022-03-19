@@ -22,6 +22,8 @@ pub struct DataEditBot {
     /// Whether the bot can be added by anyone
     public: Option<bool>,
     /// Whether analytics should be gathered for this bot
+    ///
+    /// Must be enabled in order to show up on [Revolt Discover](https://rvlt.gg).
     analytics: Option<bool>,
     /// Interactions URL
     #[validate(length(min = 1, max = 2048))]
@@ -36,7 +38,12 @@ pub struct DataEditBot {
 /// Edit bot details by its id.
 #[openapi(tag = "Bots")]
 #[patch("/<target>", data = "<data>")]
-pub async fn edit_bot(db: &Db, user: User, target: Ref, data: Json<DataEditBot>) -> Result<Json<Bot>> {
+pub async fn edit_bot(
+    db: &Db,
+    user: User,
+    target: Ref,
+    data: Json<DataEditBot>,
+) -> Result<Json<Bot>> {
     if user.bot.is_some() {
         return Err(Error::IsBot);
     }

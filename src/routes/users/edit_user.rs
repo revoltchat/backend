@@ -1,5 +1,3 @@
-//! Edit currently authenticated user.
-
 use revolt_quark::models::user::{FieldsUser, PartialUser, User};
 use revolt_quark::models::File;
 use revolt_quark::{Database, Error, Result};
@@ -10,30 +8,48 @@ use rocket::State;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize, Debug)]
+/// # Profile Data
+#[derive(Validate, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct UserProfileData {
+    /// Text to set as user profile description
     #[validate(length(min = 0, max = 2000))]
     #[serde(skip_serializing_if = "Option::is_none")]
     content: Option<String>,
+    /// Attachment Id for background
     #[serde(skip_serializing_if = "Option::is_none")]
     #[validate(length(min = 1, max = 128))]
     background: Option<String>,
 }
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # User Data
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataEditUser {
+    /// New user status
     #[validate]
     status: Option<UserStatus>,
+    /// New user profile data
+    ///
+    /// This is applied as a partial.
     #[validate]
     profile: Option<UserProfileData>,
+    /// Attachment Id for avatar
     #[validate(length(min = 1, max = 128))]
     avatar: Option<String>,
+    /// Fields to remove from user object
     #[validate(length(min = 1))]
     remove: Option<Vec<FieldsUser>>,
 }
 
+/// # Edit User
+///
+/// Edit currently authenticated user.
+#[openapi(tag = "User Information")]
 #[patch("/@me", data = "<data>")]
-pub async fn req(db: &State<Database>, mut user: User, data: Json<Data>) -> Result<Json<User>> {
+pub async fn req(
+    db: &State<Database>,
+    mut user: User,
+    data: Json<DataEditUser>,
+) -> Result<Json<User>> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;

@@ -6,18 +6,24 @@ use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # New User Data
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataOnboard {
+    /// New username which will be used to identify the user on the platform
     #[validate(length(min = 2, max = 32), regex = "RE_USERNAME")]
     username: String,
 }
 
+/// # Complete Onboarding
+///
+/// This sets a new username, completes onboarding and allows a user to start using Revolt.
+#[openapi(tag = "Onboarding")]
 #[post("/complete", data = "<data>")]
 pub async fn req(
     db: &State<Database>,
     session: Session,
     user: Option<User>,
-    data: Json<Data>,
+    data: Json<DataOnboard>,
 ) -> Result<EmptyResponse> {
     if user.is_some() {
         return Err(Error::AlreadyOnboarded);

@@ -55,7 +55,7 @@ impl<'r> OpenApiFromRequest<'r> for IdempotencyKey {
             required: false,
             deprecated: false,
             extensions: schemars::Map::new(),
-            location: "sus".to_string(),
+            location: "header".to_string(),
             value: ParameterValue::Schema {
                 allow_reserved: false,
                 example: None,

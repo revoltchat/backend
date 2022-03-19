@@ -7,6 +7,10 @@ use rocket::serde::json::Value;
 
 use crate::util::variables::MAX_SERVER_COUNT;
 
+/// # Join Invite
+///
+/// Join an invite by its ID.
+#[openapi(tag = "Invites")]
 #[post("/<target>")]
 pub async fn req(db: &Db, user: User, target: Ref) -> Result<Value> {
     if user.bot.is_some() {

@@ -1,12 +1,11 @@
-//! Fetch another user
-//!
-//! Will fail if the authenticated user does not
-//! have permission to access the other user.
-
 use revolt_quark::{models::User, perms, Database, Error, Ref, Result};
 
 use rocket::{serde::json::Json, State};
 
+/// # Fetch User
+///
+/// Retrieve a user's information.
+#[openapi(tag = "User Information")]
 #[get("/<target>")]
 pub async fn req(db: &State<Database>, user: User, target: Ref) -> Result<Json<User>> {
     let target = target.as_user(db).await?;

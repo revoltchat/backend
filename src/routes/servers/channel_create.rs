@@ -10,9 +10,12 @@ use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use validator::Validate;
 
-#[derive(Serialize, Deserialize)]
+/// # Channel Type
+#[derive(Serialize, Deserialize, JsonSchema)]
 enum ChannelType {
+    /// Text Channel
     Text,
+    /// Voice Channel
     Voice,
 }
 
@@ -22,20 +25,34 @@ impl Default for ChannelType {
     }
 }
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # Channel Data
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataCreateChannel {
+    /// Channel type
     #[serde(rename = "type", default = "ChannelType::default")]
     channel_type: ChannelType,
+    /// Channel name
     #[validate(length(min = 1, max = 32))]
     name: String,
+    /// Channel description
     #[validate(length(min = 0, max = 1024))]
     description: Option<String>,
+    /// Whether this channel is age restricted
     #[serde(skip_serializing_if = "Option::is_none")]
     nsfw: Option<bool>,
 }
 
+/// # Create Channel
+///
+/// Create a new Text or Voice channel.
+#[openapi(tag = "Server Information")]
 #[post("/<target>/channels", data = "<info>")]
-pub async fn req(db: &Db, user: User, target: Ref, info: Json<Data>) -> Result<Json<Channel>> {
+pub async fn req(
+    db: &Db,
+    user: User,
+    target: Ref,
+    info: Json<DataCreateChannel>,
+) -> Result<Json<Channel>> {
     let info = info.into_inner();
     info.validate()
         .map_err(|error| Error::FailedValidation { error })?;
@@ -50,7 +67,7 @@ pub async fn req(db: &Db, user: User, target: Ref, info: Json<Data>) -> Result<J
     let mut channels = server.channels.clone();
     channels.push(id.clone());
 
-    let Data {
+    let DataCreateChannel {
         name,
         description,
         nsfw,

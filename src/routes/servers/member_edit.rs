@@ -10,23 +10,32 @@ use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # Member Data
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataMemberEdit {
+    /// Member nickname
     #[validate(length(min = 1, max = 32))]
     nickname: Option<String>,
+    /// Attachment Id to set for avatar
     avatar: Option<String>,
+    /// Array of role ids
     roles: Option<Vec<String>>,
+    /// Fields to remove from channel object
     #[validate(length(min = 1))]
     remove: Option<Vec<FieldsMember>>,
 }
 
+/// # Edit Member
+///
+/// Edit a member by their id.
+#[openapi(tag = "Server Members")]
 #[patch("/<server>/members/<target>", data = "<data>")]
 pub async fn req(
     db: &Db,
     user: User,
     server: Ref,
     target: Ref,
-    data: Json<Data>,
+    data: Json<DataMemberEdit>,
 ) -> Result<Json<Member>> {
     let data = data.into_inner();
     data.validate()
@@ -37,7 +46,7 @@ pub async fn req(
 
     let mut member = target.as_member(db, &server.id).await?;
 
-    let Data {
+    let DataMemberEdit {
         nickname,
         avatar,
         roles,

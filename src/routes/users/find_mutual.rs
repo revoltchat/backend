@@ -1,12 +1,13 @@
-//! Fetch IDs of servers and friends that are mutually shared between the
-//! authenticated user and the target user
-
 use revolt_quark::models::User;
 use revolt_quark::{perms, Database, Error, Ref, Result};
 
 use rocket::serde::json::Value;
 use rocket::State;
 
+/// # Fetch Mutual Friends And Servers
+///
+/// Retrieve a list of mutual friends and servers with another user.
+#[openapi(tag = "Relationships")]
 #[get("/<target>/mutual")]
 pub async fn req(db: &State<Database>, user: User, target: Ref) -> Result<Value> {
     let target = target.as_user(db).await?;

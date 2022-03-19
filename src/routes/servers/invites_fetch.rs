@@ -4,16 +4,11 @@ use revolt_quark::{
 };
 
 use rocket::serde::json::Json;
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ServerInvite {
-    #[serde(rename = "_id")]
-    code: String,
-    creator: String,
-    channel: String,
-}
-
+/// # Fetch Invites
+///
+/// Fetch all server invites.
+#[openapi(tag = "Server Members")]
 #[get("/<target>/invites")]
 pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<Vec<Invite>>> {
     let server = target.as_server(db).await?;

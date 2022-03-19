@@ -10,29 +10,50 @@ use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # Server Data
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataEditServer {
+    /// Server name
     #[validate(length(min = 1, max = 32))]
     name: Option<String>,
+    /// Server description
     #[validate(length(min = 0, max = 1024))]
     description: Option<String>,
 
+    /// Attachment Id for icon
     icon: Option<String>,
+    /// Attachment Id for banner
     banner: Option<String>,
 
+    /// Category structure for server
     #[validate]
     categories: Option<Vec<Category>>,
+    /// System message configuration
     system_messages: Option<SystemMessageChannels>,
 
-    nsfw: Option<bool>,
+    // Whether this server is age-restricted
+    // nsfw: Option<bool>,
+    /// Whether analytics should be collected for this server
+    ///
+    /// Must be enabled in order to show up on [Revolt Discover](https://rvlt.gg).
     analytics: Option<bool>,
 
+    /// Fields to remove from server object
     #[validate(length(min = 1))]
     remove: Option<Vec<FieldsServer>>,
 }
 
+/// # Edit Server
+///
+/// Edit a server by its id.
+#[openapi(tag = "Server Information")]
 #[patch("/<target>", data = "<data>")]
-pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<Json<Server>> {
+pub async fn req(
+    db: &Db,
+    user: User,
+    target: Ref,
+    data: Json<DataEditServer>,
+) -> Result<Json<Server>> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
@@ -48,7 +69,7 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<J
         && data.banner.is_none()
         && data.system_messages.is_none()
         && data.categories.is_none()
-        && data.nsfw.is_none()
+        // && data.nsfw.is_none()
         && data.analytics.is_none()
         && data.remove.is_none()
     {
@@ -58,7 +79,7 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<J
         || data.icon.is_some()
         || data.banner.is_some()
         || data.system_messages.is_some()
-        || data.nsfw.is_some()
+        // || data.nsfw.is_some()
         || data.analytics.is_some()
         || data.remove.is_some()
     {
@@ -73,14 +94,14 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<J
             .await?;
     }
 
-    let Data {
+    let DataEditServer {
         name,
         description,
         icon,
         banner,
         categories,
         system_messages,
-        nsfw,
+        // nsfw,
         analytics,
         remove,
     } = data;
@@ -90,7 +111,7 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<J
         description,
         categories,
         system_messages,
-        nsfw,
+        // nsfw,
         analytics,
         ..Default::default()
     };

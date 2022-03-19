@@ -20,19 +20,19 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
         rocket, "/".to_owned(), settings,
         "/" => (vec![], custom_openapi_spec()),
         "" => openapi_get_routes_spec![root::root, root::ping],
+        "/users" => users::routes(),
         "/bots" => bots::routes(),
         "/channels" => channels::routes(),
+        "/servers" => servers::routes(),
+        "/invites" => invites::routes(),
+        "/auth/account" => rauth::web::account::routes(),
+        "/auth/session" => rauth::web::session::routes(),
+        "/onboard" => onboard::routes(),
+        "/push" => push::routes(),
+        "/sync" => sync::routes(),
     };
 
     rocket
-        .mount("/auth/account", rauth::web::account::routes())
-        .mount("/auth/session", rauth::web::session::routes())
-        .mount("/onboard", onboard::routes())
-        .mount("/users", users::routes())
-        .mount("/servers", servers::routes())
-        .mount("/invites", invites::routes())
-        .mount("/push", push::routes())
-        .mount("/sync", sync::routes())
 }
 
 fn custom_openapi_spec() -> OpenApi {
@@ -51,7 +51,9 @@ fn custom_openapi_spec() -> OpenApi {
         openapi: OpenApi::default_version(),
         info: Info {
             title: "Revolt API".to_owned(),
-            description: Some("User-first privacy focused chat platform.".to_owned()),
+            description: Some(
+                "User-first privacy focused chat platform.\n\n<!-- ReDoc-Inject: <security-definitions> -->".to_owned(),
+            ),
             terms_of_service: Some("https://revolt.chat/terms".to_owned()),
             contact: Some(Contact {
                 name: Some("Revolt Support".to_owned()),
@@ -71,8 +73,24 @@ fn custom_openapi_spec() -> OpenApi {
             url: "https://api.revolt.chat".to_owned(),
             description: Some("Revolt API".to_owned()),
             ..Default::default()
+        }, Server {
+            url: "http://local.revolt.chat:8000".to_owned(),
+            description: Some("Local Revolt Environment".to_owned()),
+            ..Default::default()
         }],
+        external_docs: Some(ExternalDocs {
+            url: "https://developers.revolt.chat".to_owned(),
+            description: Some("Revolt Developer Documentation".to_owned()),
+            ..Default::default()
+        }),
         extensions,
+        /*tags: vec![
+            Tag {
+                name: "aaa".to_owned(),
+                description: Some("aaa".to_owned()),
+                ..Default::default()
+            }
+        ],*/
         ..Default::default()
     }
 }

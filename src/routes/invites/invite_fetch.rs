@@ -4,37 +4,59 @@ use revolt_quark::{Db, Ref, Result};
 use rocket::serde::json::Json;
 use serde::Serialize;
 
+/// # Invite
 #[allow(clippy::large_enum_variant)]
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone, JsonSchema)]
 #[serde(tag = "type")]
 pub enum InviteResponse {
+    /// Server channel invite
     Server {
+        /// Id of the server
         server_id: String,
+        /// Name of the server
         server_name: String,
+        /// Attachment for server icon
         #[serde(skip_serializing_if = "Option::is_none")]
         server_icon: Option<File>,
+        /// Attachment for server banner
         #[serde(skip_serializing_if = "Option::is_none")]
         server_banner: Option<File>,
+        /// Id of server channel
         channel_id: String,
+        /// Name of server channel
         channel_name: String,
+        /// Description of server channel
         #[serde(skip_serializing_if = "Option::is_none")]
         channel_description: Option<String>,
+        /// Name of user who created the invite
         user_name: String,
+        /// Avatar of the user who created the invite
         #[serde(skip_serializing_if = "Option::is_none")]
         user_avatar: Option<File>,
+        /// Number of members in this server
         member_count: i64,
     },
+    /// Group channel invite
     Group {
+        /// Id of group channel
         channel_id: String,
+        /// Name of group channel
         channel_name: String,
+        /// Description of group channel
         #[serde(skip_serializing_if = "Option::is_none")]
         channel_description: Option<String>,
+        /// Name of user who created the invite
         user_name: String,
+        /// Avatar of the user who created the invite
         #[serde(skip_serializing_if = "Option::is_none")]
         user_avatar: Option<File>,
     },
 }
 
+/// # Fetch Invite
+///
+/// Fetch an invite by its id.
+#[openapi(tag = "Invites")]
 #[get("/<target>")]
 pub async fn req(db: &Db, target: Ref) -> Result<Json<InviteResponse>> {
     Ok(Json(match target.as_invite(db).await? {

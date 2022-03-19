@@ -50,7 +50,7 @@ async-std = { version = "1.8.0", features = ["tokio1", "tokio02", "attributes"] 
 web-push = "0.7.2"
 many-to-many = "0.1.2"
 lettre = "0.10.0-alpha.4"
-rauth = { git = "https://github.com/insertish/rauth", rev = "501d445e7b42a1c229bfa88c01fa6415f4cb7992" }
+rauth = { git = "https://github.com/insertish/rauth", rev = "611b11baa9e199bcefd0ca5bd3302f9d6904a2c6" }
 hive_pubsub = { git = "https://gitlab.insrt.uk/insert/hive", rev = "b0f3db9d33990530d7640d4bbb309c8d9eb5c0cf", features = ["redis-backend"] }
 
 # redis

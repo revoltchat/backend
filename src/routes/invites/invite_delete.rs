@@ -3,6 +3,10 @@ use revolt_quark::{
     perms, Db, EmptyResponse, Permission, Ref, Result,
 };
 
+/// # Delete Invite
+///
+/// Delete an invite by its id.
+#[openapi(tag = "Invites")]
 #[delete("/<target>")]
 pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
     let invite = target.as_invite(db).await?;

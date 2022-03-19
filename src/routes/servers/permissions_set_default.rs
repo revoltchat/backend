@@ -6,13 +6,24 @@ use revolt_quark::{
     perms, Db, Permission, Ref, Result,
 };
 
-#[derive(Deserialize)]
-pub struct Data {
+/// # Permission Value
+#[derive(Deserialize, JsonSchema)]
+pub struct DataSetServerDefaultPermission {
+    /// Default member permission value
     permissions: u64,
 }
 
+/// # Set Default Permission
+///
+/// Sets permissions for the default role in this server.
+#[openapi(tag = "Server Permissions")]
 #[put("/<target>/permissions/default", data = "<data>", rank = 1)]
-pub async fn req(db: &Db, user: User, target: Ref, data: Json<Data>) -> Result<Json<Server>> {
+pub async fn req(
+    db: &Db,
+    user: User,
+    target: Ref,
+    data: Json<DataSetServerDefaultPermission>,
+) -> Result<Json<Server>> {
     let data = data.into_inner();
 
     let mut server = target.as_server(db).await?;

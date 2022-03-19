@@ -1,4 +1,5 @@
 use rocket::Route;
+use rocket_okapi::okapi::openapi3::OpenApi;
 
 mod add_friend;
 mod block_user;
@@ -14,8 +15,8 @@ mod open_dm;
 mod remove_friend;
 mod unblock_user;
 
-pub fn routes() -> Vec<Route> {
-    routes![
+pub fn routes() -> (Vec<Route>, OpenApi) {
+    openapi_get_routes_spec![
         // User Information
         fetch_self::req,
         fetch_user::req,

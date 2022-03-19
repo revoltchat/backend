@@ -20,7 +20,7 @@ use crate::util::idempotency::IdempotencyKey;
 pub struct DataMessageSend {
     /// Unique token to prevent duplicate message sending
     ///
-    /// **This is deprecated and replaced by Idempotency-Token!**
+    /// **This is deprecated and replaced by `Idempotency-Key`!**
     nonce: Option<String>,
 
     /// Message content to send

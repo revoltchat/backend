@@ -6,18 +6,24 @@ use revolt_quark::{
     perms, Db, Error, Override, Permission, Ref, Result,
 };
 
-#[derive(Deserialize)]
-pub struct Data {
+/// # Permission Value
+#[derive(Deserialize, JsonSchema)]
+pub struct DataSetServerRolePermission {
+    /// Allow / deny values for the role in this server.
     permissions: Override,
 }
 
+/// # Set Role Permission
+///
+/// Sets permissions for the specified role in the server.
+#[openapi(tag = "Server Permissions")]
 #[put("/<target>/permissions/<role_id>", data = "<data>", rank = 2)]
 pub async fn req(
     db: &Db,
     user: User,
     target: Ref,
     role_id: String,
-    data: Json<Data>,
+    data: Json<DataSetServerRolePermission>,
 ) -> Result<Json<Server>> {
     let data = data.into_inner();
 
