@@ -1,13 +1,30 @@
-use revolt_quark::{models::User, perms, presence::presence_filter_online, Db, Ref, Result};
+use revolt_quark::{
+    models::{Member, User},
+    perms,
+    presence::presence_filter_online,
+    Db, Ref, Result,
+};
 
-use rocket::serde::json::Value;
+use rocket::serde::json::Json;
+use serde::Serialize;
+
+/// # Member List
+///
+/// Both lists are sorted by ID.
+#[derive(Serialize, JsonSchema)]
+pub struct AllMemberResponse {
+    /// List of members
+    members: Vec<Member>,
+    /// List of users
+    users: Vec<User>,
+}
 
 /// # Fetch Members
 ///
 /// Fetch all server members.
 #[openapi(tag = "Server Members")]
 #[get("/<target>/members")]
-pub async fn req(db: &Db, user: User, target: Ref) -> Result<Value> {
+pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<AllMemberResponse>> {
     let server = target.as_server(db).await?;
     perms(&user).server(&server).calc(db).await?;
 
@@ -33,8 +50,5 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<Value> {
     members.sort_by(|a, b| a.id.user.cmp(&b.id.user));
     users.sort_by(|a, b| a.id.cmp(&b.id));
 
-    Ok(json!({
-        "members": members,
-        "users": users
-    }))
+    Ok(Json(AllMemberResponse { members, users }))
 }
