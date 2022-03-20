@@ -1,18 +1,31 @@
 use revolt_quark::{
-    models::{server_member::MemberCompositeKey, Invite, Member, User},
+    models::{server_member::MemberCompositeKey, Channel, Invite, Member, Server, User},
     Db, Error, Ref, Result,
 };
 
-use rocket::serde::json::Value;
+use rocket::serde::json::Json;
+use serde::Serialize;
 
 use crate::util::variables::MAX_SERVER_COUNT;
+
+/// # Join Response
+#[derive(Serialize, JsonSchema)]
+#[serde(tag = "type")]
+pub enum InviteJoinResponse {
+    Server {
+        /// Channel we are joining
+        channel: Channel,
+        /// Server we are joining
+        server: Server,
+    },
+}
 
 /// # Join Invite
 ///
 /// Join an invite by its ID.
 #[openapi(tag = "Invites")]
 #[post("/<target>")]
-pub async fn req(db: &Db, user: User, target: Ref) -> Result<Value> {
+pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<InviteJoinResponse>> {
     if user.bot.is_some() {
         return Err(Error::IsBot);
     }
@@ -40,11 +53,7 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<Value> {
 
             member.create(db).await?;
 
-            Ok(json!({
-                "type": "Server",
-                "channel": channel,
-                "server": server
-            }))
+            Ok(Json(InviteJoinResponse::Server { channel, server }))
         }
         _ => unreachable!(),
     }

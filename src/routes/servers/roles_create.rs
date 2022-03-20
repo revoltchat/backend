@@ -3,12 +3,12 @@ use revolt_quark::{
     perms, Db, Error, Permission, Ref, Result,
 };
 
-use rocket::serde::json::{Json, Value};
+use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 /// # Role Data
-#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+#[derive(Validate, Deserialize, JsonSchema)]
 pub struct DataCreateRole {
     /// Role name
     #[validate(length(min = 1, max = 32))]
@@ -19,12 +19,26 @@ pub struct DataCreateRole {
     rank: Option<i64>,
 }
 
+/// # New Role Response
+#[derive(Serialize, JsonSchema)]
+pub struct NewRoleResponse {
+    /// Id of the role
+    id: String,
+    /// New role
+    role: Role,
+}
+
 /// # Create Role
 ///
 /// Creates a new server role.
 #[openapi(tag = "Server Permissions")]
 #[post("/<target>/roles", data = "<data>")]
-pub async fn req(db: &Db, user: User, target: Ref, data: Json<DataCreateRole>) -> Result<Value> {
+pub async fn req(
+    db: &Db,
+    user: User,
+    target: Ref,
+    data: Json<DataCreateRole>,
+) -> Result<Json<NewRoleResponse>> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
@@ -53,8 +67,8 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<DataCreateRole>) -
         ..Default::default()
     };
 
-    Ok(json!({
-        "id": role.create(db, &server.id).await?,
-        "role": role
+    Ok(Json(NewRoleResponse {
+        id: role.create(db, &server.id).await?,
+        role: role,
     }))
 }
