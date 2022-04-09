@@ -69,6 +69,6 @@ pub async fn req(
 
     Ok(Json(NewRoleResponse {
         id: role.create(db, &server.id).await?,
-        role: role,
+        role,
     }))
 }

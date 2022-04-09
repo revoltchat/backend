@@ -1,5 +1,5 @@
 use revolt_quark::{
-    models::{server_member::MemberCompositeKey, Channel, Member, User},
+    models::{Channel, User},
     perms, Db, EmptyResponse, Error, Permission, Ref, Result,
 };
 
@@ -51,15 +51,11 @@ pub async fn invite_bot(
                 .throw_permission(db, Permission::ManageServer)
                 .await?;
 
-            let member = Member {
-                id: MemberCompositeKey {
-                    server: server.id,
-                    user: bot.id,
-                },
-                ..Default::default()
-            };
-
-            db.insert_member(&member).await.map(|_| EmptyResponse)
+            let user = db.fetch_user(&bot.id).await?;
+            server
+                .create_member(db, user, None)
+                .await
+                .map(|_| EmptyResponse)
         }
         InviteBotDestination::Group { group } => {
             let channel = db.fetch_channel(&group).await?;

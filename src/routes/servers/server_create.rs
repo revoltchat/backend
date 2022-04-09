@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use revolt_quark::{
-    models::{server_member::MemberCompositeKey, Channel, Member, Server, User},
+    models::{Channel, Server, User},
     Db, Error, Result, DEFAULT_PERMISSION_SERVER,
 };
 
@@ -13,7 +13,7 @@ use validator::Validate;
 use crate::util::variables::MAX_SERVER_COUNT;
 
 /// # Server Data
-#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+#[derive(Validate, Deserialize, JsonSchema)]
 pub struct DataCreateServer {
     /// Server name
     #[validate(length(min = 1, max = 32))]
@@ -26,12 +26,25 @@ pub struct DataCreateServer {
     nsfw: Option<bool>,
 }
 
+/// # Create Server Response
+#[derive(Validate, Serialize, JsonSchema)]
+pub struct CreateServerResponse {
+    /// Server object
+    server: Server,
+    /// Default channels
+    channels: Vec<Channel>,
+}
+
 /// # Create Server
 ///
 /// Create a new server.
 #[openapi(tag = "Server Information")]
 #[post("/create", data = "<info>")]
-pub async fn req(db: &Db, user: User, info: Json<DataCreateServer>) -> Result<Json<Server>> {
+pub async fn req(
+    db: &Db,
+    user: User,
+    info: Json<DataCreateServer>,
+) -> Result<Json<CreateServerResponse>> {
     let info = info.into_inner();
     info.validate()
         .map_err(|error| Error::FailedValidation { error })?;
@@ -67,9 +80,11 @@ pub async fn req(db: &Db, user: User, info: Json<DataCreateServer>) -> Result<Js
         nsfw: nsfw.unwrap_or(false),
     };
 
+    db.insert_channel(&channel).await?;
+
     let server = Server {
-        id: server_id,
-        owner: user.id,
+        id: server_id.clone(),
+        owner: user.id.clone(),
         name,
         description,
         channels: vec![channel_id],
@@ -78,18 +93,6 @@ pub async fn req(db: &Db, user: User, info: Json<DataCreateServer>) -> Result<Js
         ..Default::default()
     };
 
-    let member = Member {
-        id: MemberCompositeKey {
-            server: server.id.clone(),
-            user: server.owner.clone(),
-        },
-        ..Default::default()
-    };
-
-    db.insert_channel(&channel).await?;
-
-    server.create(db).await?;
-    member.create(db).await?;
-
-    Ok(Json(server))
+    let channels = server.create_member(db, user, Some(vec![channel])).await?;
+    Ok(Json(CreateServerResponse { server, channels }))
 }
