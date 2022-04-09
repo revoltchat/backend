@@ -71,4 +71,4 @@ rocket_okapi = { git = "https://github.com/insertish/okapi", rev = "dcf0df115596
 
 # quark
 # revolt-quark = { git = "https://github.com/revoltchat/quark", rev = "7585b7944f1a654a28f9902f2cf0f6778f7abd5a" }
-revolt-quark = { path = "/run/media/mink/oldssd/revolt/quark/" }
+revolt-quark = { path = "../quark" }

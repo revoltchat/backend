@@ -2768,34 +2768,6 @@ dependencies = [
 [[package]]
 name = "rauth"
 version = "1.0.0"
-source = "git+https://github.com/insertish/rauth?rev=501d445e7b42a1c229bfa88c01fa6415f4cb7992#501d445e7b42a1c229bfa88c01fa6415f4cb7992"
-dependencies = [
- "async-std",
- "base32",
- "chrono",
- "futures",
- "handlebars",
- "json",
- "lazy_static",
- "lettre",
- "mongodb 1.2.3",
- "nanoid",
- "rand 0.8.4",
- "regex",
- "reqwest",
- "rocket",
- "rust-argon2",
- "serde",
- "serde_json",
- "totp-lite",
- "ulid 0.4.1",
- "validator",
- "wither",
-]
-
-[[package]]
-name = "rauth"
-version = "1.0.0"
 source = "git+https://github.com/insertish/rauth?rev=611b11baa9e199bcefd0ca5bd3302f9d6904a2c6#611b11baa9e199bcefd0ca5bd3302f9d6904a2c6"
 dependencies = [
  "async-std",
@@ -3020,7 +2992,7 @@ dependencies = [
  "num_enum",
  "once_cell",
  "phf",
- "rauth 1.0.0 (git+https://github.com/insertish/rauth?rev=611b11baa9e199bcefd0ca5bd3302f9d6904a2c6)",
+ "rauth",
  "redis 0.21.2",
  "regex",
  "reqwest",
@@ -3060,7 +3032,7 @@ dependencies = [
  "ops",
  "optional_struct",
  "pretty_env_logger",
- "rauth 1.0.0 (git+https://github.com/insertish/rauth?rev=501d445e7b42a1c229bfa88c01fa6415f4cb7992)",
+ "rauth",
  "redis-kiss",
  "rocket",
  "rocket_okapi",
