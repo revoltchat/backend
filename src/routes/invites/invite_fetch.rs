@@ -11,6 +11,8 @@ use serde::Serialize;
 pub enum InviteResponse {
     /// Server channel invite
     Server {
+        /// Invite code
+        code: String,
         /// Id of the server
         server_id: String,
         /// Name of the server
@@ -38,6 +40,8 @@ pub enum InviteResponse {
     },
     /// Group channel invite
     Group {
+        /// Invite code
+        code: String,
         /// Id of group channel
         channel_id: String,
         /// Name of group channel
@@ -84,6 +88,7 @@ pub async fn req(db: &Db, target: Ref) -> Result<Json<InviteResponse>> {
                     let server = db.fetch_server(&server).await?;
 
                     InviteResponse::Server {
+                        code: target.id,
                         member_count: db.fetch_member_count(&server.id).await? as i64,
                         server_id: server.id,
                         server_name: server.name,
@@ -112,6 +117,7 @@ pub async fn req(db: &Db, target: Ref) -> Result<Json<InviteResponse>> {
                     description,
                     ..
                 } => InviteResponse::Group {
+                    code: target.id,
                     channel_id: id,
                     channel_name: name,
                     channel_description: description,

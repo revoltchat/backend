@@ -1,5 +1,5 @@
 use revolt_quark::{
-    models::{server_member::MemberCompositeKey, Channel, Invite, Member, Server, User},
+    models::{Channel, Invite, Server, User},
     Db, Error, Ref, Result,
 };
 
@@ -13,8 +13,8 @@ use crate::util::variables::MAX_SERVER_COUNT;
 #[serde(tag = "type")]
 pub enum InviteJoinResponse {
     Server {
-        /// Channel we are joining
-        channel: Channel,
+        /// Channels in the server
+        channels: Vec<Channel>,
         /// Server we are joining
         server: Server,
     },
@@ -38,22 +38,10 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<InviteJoinResp
 
     let invite = target.as_invite(db).await?;
     match &invite {
-        Invite::Server {
-            channel, server, ..
-        } => {
+        Invite::Server { server, .. } => {
             let server = db.fetch_server(server).await?;
-            let channel = db.fetch_channel(channel).await?;
-            let member = Member {
-                id: MemberCompositeKey {
-                    server: server.id.clone(),
-                    user: user.id.clone(),
-                },
-                ..Default::default()
-            };
-
-            member.create(db).await?;
-
-            Ok(Json(InviteJoinResponse::Server { channel, server }))
+            let channels = server.create_member(db, user, None).await?;
+            Ok(Json(InviteJoinResponse::Server { channels, server }))
         }
         _ => unreachable!(),
     }
