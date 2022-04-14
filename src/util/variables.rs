@@ -5,8 +5,6 @@ use log::warn;
 
 lazy_static! {
     // Application Settings
-    pub static ref MONGO_URI: String =
-        env::var("REVOLT_MONGO_URI").expect("Missing REVOLT_MONGO_URI environment variable.");
     pub static ref REDIS_URI: String =
         env::var("REVOLT_REDIS_URI").expect("Missing REVOLT_REDIS_URI environment variable.");
     pub static ref WS_HOST: String =
@@ -76,7 +74,6 @@ lazy_static! {
 
 pub fn preflight_checks() {
     format!("url = {}", *APP_URL);
-    format!("mongo = {}", *MONGO_URI);
     format!("public = {}", *PUBLIC_URL);
     format!("external = {}", *EXTERNAL_WS_URL);
 

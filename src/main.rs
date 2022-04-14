@@ -8,16 +8,11 @@ extern crate serde_json;
 extern crate lazy_static;
 extern crate ctrlc;
 
-//pub mod database;
-//pub mod notifications;
 pub mod routes;
-//pub mod redis;
 pub mod util;
 pub mod version;
 //pub mod task_queue;
 
-use async_std::task;
-use futures::join;
 use log::info;
 use rauth::{
     config::{Captcha, Config, EmailVerification, SMTPSettings, Template, Templates},
@@ -30,7 +25,6 @@ use util::variables::{
     APP_URL, HCAPTCHA_KEY, INVITE_ONLY, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD, SMTP_USERNAME,
     USE_EMAIL, USE_HCAPTCHA,
 };
-// use crate::util::ratelimit::RatelimitState;
 
 #[async_std::main]
 async fn main() {
@@ -38,33 +32,19 @@ async fn main() {
     env_logger::init_from_env(env_logger::Env::default().filter_or("RUST_LOG", "info"));
 
     info!(
-        "Starting REVOLT server [version {}].",
+        "Starting Revolt server [version {}].",
         crate::version::VERSION
     );
 
-    /*util::variables::preflight_checks();
-    database::connect().await;
-    redis::connect().await;
-    notifications::hive::init_hive().await;
-    task_queue::start_queues().await;*/
+    util::variables::preflight_checks();
 
+    #[cfg(debug_assertions)]
     ctrlc::set_handler(move || {
         // Force ungraceful exit to avoid hang.
         std::process::exit(0);
     })
     .expect("Error setting Ctrl-C handler");
 
-    let web_task = task::spawn(launch_web());
-    //let hive_task = task::spawn_local(notifications::hive::listen());
-
-    join!(
-        web_task,
-        //hive_task,
-        //notifications::websocket::launch_server()
-    );
-}
-
-async fn launch_web() {
     let cors = rocket_cors::CorsOptions {
         allowed_origins: AllowedOrigins::All,
         allowed_methods: [
@@ -136,6 +116,7 @@ async fn launch_web() {
     let rocket = rocket::build();
     routes::mount(rocket)
         .mount("/", rocket_cors::catch_all_options_routes())
+        .mount("/", util::ratelimiter::routes())
         .mount(
             "/swagger/",
             rocket_okapi::swagger_ui::make_swagger_ui(&rocket_okapi::swagger_ui::SwaggerUIConfig {
@@ -147,6 +128,7 @@ async fn launch_web() {
         .manage(db)
         .manage(cors.clone())
         //.manage(RatelimitState::new())
+        .attach(util::ratelimiter::RatelimitFairing)
         .attach(cors)
         .launch()
         .await
