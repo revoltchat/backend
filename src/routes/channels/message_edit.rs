@@ -54,8 +54,8 @@ pub async fn req(
     };
 
     // 1. Handle content update
-    if let Some(content) = edit.content {
-        partial.content = Some(Content::Text(content));
+    if let Some(content) = &edit.content {
+        partial.content = Some(Content::Text(content.clone()));
     }
 
     // 2. Clear any auto generated embeds
@@ -77,8 +77,19 @@ pub async fn req(
         }
     }
 
-    partial.embeds = message.embeds.clone();
+    partial.embeds = Some(new_embeds);
 
     message.update(db, partial).await?;
+
+    // Queue up a task for processing embeds
+    if let Some(content) = edit.content {
+        crate::tasks::process_embeds::queue(
+            message.channel.to_string(),
+            message.id.to_string(),
+            content,
+        )
+        .await;
+    }
+
     Ok(Json(message))
 }

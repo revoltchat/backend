@@ -43,6 +43,7 @@ rmp-serde = { git = "https://github.com/insertish/msgpack-rust", rev = "5bf2c242
 # async
 futures = "0.3.8"
 chrono = "0.4.15"
+deadqueue = "0.2.1"
 async-channel = "1.6.1"
 reqwest = { version = "0.11.4", features = ["json"] }
 async-std = { version = "1.8.0", features = ["tokio1", "tokio02", "attributes"] }
@@ -71,5 +72,5 @@ schemars = "0.8.8"
 rocket_okapi = { git = "https://github.com/insertish/okapi", rev = "dcf0df115596ee07a587a7a543cddf3d7944645b", features = [ "swagger" ] }
 
 # quark
-revolt-quark = { git = "https://github.com/revoltchat/quark", rev = "d65f49168c186b15a8465f16cbeccebac9b2bb7b" }
+revolt-quark = { git = "https://github.com/revoltchat/quark", rev = "6e9713186e8cfef0b067aa87af1e71a66bb44fd0" }
 # revolt-quark = { path = "../quark" }

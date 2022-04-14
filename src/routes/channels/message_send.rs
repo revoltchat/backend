@@ -166,11 +166,20 @@ pub async fn message_send(
     }
 
     // 6. Set content
-    message.content = Content::Text(data.content);
+    message.content = Content::Text(data.content.clone());
 
     // 7. Pass-through nonce value for clients
     message.nonce = Some(idempotency.into_key());
 
     message.create(db).await?;
+
+    // Queue up a task for processing embeds
+    crate::tasks::process_embeds::queue(
+        channel.id().to_string(),
+        message.id.to_string(),
+        data.content,
+    )
+    .await;
+
     Ok(Json(message))
 }

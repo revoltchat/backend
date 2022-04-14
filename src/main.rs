@@ -9,9 +9,9 @@ extern crate lazy_static;
 extern crate ctrlc;
 
 pub mod routes;
+pub mod tasks;
 pub mod util;
 pub mod version;
-//pub mod task_queue;
 
 use log::info;
 use rauth::{
@@ -112,6 +112,9 @@ async fn main() {
 
     rauth::entities::sync_models(&mongo_db.database("revolt")).await;
 
+    // Launch background task workers.
+    async_std::task::spawn(tasks::start_workers(db.clone()));
+
     let auth = Auth::new(mongo_db.database("revolt"), config);
     let rocket = rocket::build();
     routes::mount(rocket)
@@ -127,7 +130,6 @@ async fn main() {
         .manage(auth)
         .manage(db)
         .manage(cors.clone())
-        //.manage(RatelimitState::new())
         .attach(util::ratelimiter::RatelimitFairing)
         .attach(cors)
         .launch()
