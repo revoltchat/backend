@@ -7,6 +7,7 @@ use revolt_quark::Database;
 
 const WORKER_COUNT: usize = 5;
 
+mod ack;
 pub mod last_message_id;
 pub mod process_embeds;
 pub mod web_push;
@@ -14,9 +15,10 @@ pub mod web_push;
 /// Spawn background workers
 pub async fn start_workers(db: Database) {
     for _ in 0..WORKER_COUNT {
+        task::spawn(ack::worker(db.clone()));
+        task::spawn(last_message_id::worker(db.clone()));
         task::spawn(process_embeds::worker(db.clone()));
         task::spawn(web_push::worker(db.clone()));
-        task::spawn(last_message_id::worker(db.clone()));
     }
 }
 
