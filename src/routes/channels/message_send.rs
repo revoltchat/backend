@@ -220,5 +220,13 @@ pub async fn message_send(
     )
     .await;
 
+    // ! ANOTHER ONE
+    crate::tasks::last_message_id::queue(
+        channel.id().to_string(),
+        message.id.to_string(),
+        channel.is_direct_dm(),
+    )
+    .await;
+
     Ok(Json(message))
 }
