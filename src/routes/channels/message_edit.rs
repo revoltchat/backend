@@ -1,12 +1,10 @@
 use revolt_quark::{
-    bson::DateTime,
     models::message::{PartialMessage, SendableEmbed},
     models::{message::Content, Message, User},
     types::january::Embed,
-    DateTimeContainer, Db, Error, Ref, Result,
+    Db, Error, Ref, Result, Timestamp,
 };
 
-use chrono::Utc;
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -47,7 +45,7 @@ pub async fn req(
         return Err(Error::CannotEditMessage);
     }
 
-    message.edited = Some(DateTimeContainer(DateTime::from_chrono(Utc::now())));
+    message.edited = Some(Timestamp::now_utc());
     let mut partial = PartialMessage {
         edited: message.edited,
         ..Default::default()
