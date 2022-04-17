@@ -114,7 +114,13 @@ fn resolve_bucket<'r>(request: &'r rocket::Request<'_>) -> (&'r str, Option<&'r 
                 ("channels", Some(id))
             }
             ("servers", Some(id)) => ("servers", Some(id)),
-            ("auth", _) => ("auth", None),
+            ("auth", _) => {
+                if request.method() == Method::Delete {
+                    ("auth_delete", None)
+                } else {
+                    ("auth", None)
+                }
+            }
             ("swagger", _) => ("swagger", None),
             _ => ("any", None),
         }
@@ -132,6 +138,7 @@ fn resolve_bucket_limit(bucket: &str) -> u8 {
         "channels" => 15,
         "servers" => 5,
         "auth" => 3,
+        "auth_delete" => 255,
         "swagger" => 100,
         _ => 20,
     }
