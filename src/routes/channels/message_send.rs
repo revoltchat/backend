@@ -3,9 +3,12 @@ use std::collections::HashSet;
 use revolt_quark::{
     models::{
         message::{Content, Masquerade, Reply, SendableEmbed},
-        Message, User,
+        Channel, Message, User,
     },
-    perms, Db, Error, Permission, Ref, Result,
+    perms,
+    presence::presence_filter_online,
+    types::push::PushNotification,
+    Db, Error, Permission, Ref, Result,
 };
 
 use regex::Regex;
@@ -15,6 +18,7 @@ use ulid::Ulid;
 use validator::Validate;
 
 use crate::util::idempotency::IdempotencyKey;
+use crate::util::variables::{APP_URL, AUTUMN_URL, PUBLIC_URL};
 
 #[derive(Validate, Serialize, Deserialize, JsonSchema)]
 pub struct DataMessageSend {
@@ -178,6 +182,41 @@ pub async fn message_send(
         channel.id().to_string(),
         message.id.to_string(),
         data.content,
+    )
+    .await;
+
+    // ! FIXME: this should be part of quark.
+    // ! Actually, so should be the thing above
+    // ! probably the entire task queue system
+    // ! should be moved
+    crate::tasks::web_push::queue(
+        {
+            let mut target_ids = vec![];
+            match &channel {
+                Channel::DirectMessage { recipients, .. } | Channel::Group { recipients, .. } => {
+                    target_ids = (&recipients.iter().cloned().collect::<HashSet<String>>()
+                        - &presence_filter_online(recipients).await)
+                        .into_iter()
+                        .collect::<Vec<String>>();
+                }
+                Channel::TextChannel { .. } => {
+                    if let Some(mentions) = &message.mentions {
+                        target_ids.append(&mut mentions.clone());
+                    }
+                }
+                _ => {}
+            };
+            target_ids
+        },
+        json!(PushNotification::new(
+            message.clone(),
+            user,
+            channel.id(),
+            &*AUTUMN_URL,
+            &*PUBLIC_URL,
+            &*APP_URL,
+        ))
+        .to_string(),
     )
     .await;
 
