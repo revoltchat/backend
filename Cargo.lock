@@ -929,9 +929,9 @@ dependencies = [
 
 [[package]]
 name = "erased-serde"
-version = "0.3.16"
+version = "0.3.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3de9ad4541d99dc22b59134e7ff8dc3d6c988c89ecd7324bf10a8362b07a2afa"
+checksum = "ad132dd8d0d0b546348d7d86cb3191aad14b34e5f979781fc005c80d4ac67ffd"
 dependencies = [
  "serde",
 ]
@@ -1592,6 +1592,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68f2d64f2edebec4ce84ad108148e67e1064789bee435edc5b60ad398714a3a9"
 
 [[package]]
+name = "iso8601-timestamp"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "acc02e0ca75f26cafde38a8483b47b3f2474bc214e4f51e33d32896ef210c918"
+dependencies = [
+ "generic-array 0.14.4",
+ "schemars",
+ "serde",
+ "time 0.3.9",
+]
+
+[[package]]
 name = "itoa"
 version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1665,9 +1677,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.102"
+version = "0.2.123"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2a5ac8f984bfcf3a823267e5fde638acc3325f6496633a5da6bb6eb2171e103"
+checksum = "cb691a747a7ab48abc15c5b42066eaafde10dc427e3b6ee2a1cf43db04c763bd"
 
 [[package]]
 name = "linked-hash-map"
@@ -2122,6 +2134,15 @@ dependencies = [
  "proc-macro2",
  "quote 1.0.9",
  "syn 1.0.76",
+]
+
+[[package]]
+name = "num_threads"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aba1801fb138d8e85e11d0fc70baf4fe1cdfffda7c6cd34a854905df588e5ed0"
+dependencies = [
+ "libc",
 ]
 
 [[package]]
@@ -3035,12 +3056,10 @@ dependencies = [
  "async-channel",
  "async-std",
  "async-tungstenite",
- "base64 0.13.0",
  "bitfield",
  "chrono",
  "ctrlc",
  "dashmap",
- "deadqueue",
  "dotenv",
  "env_logger",
  "futures",
@@ -3074,23 +3093,24 @@ dependencies = [
  "ulid 0.4.1",
  "url",
  "validator",
- "web-push",
 ]
 
 [[package]]
 name = "revolt-quark"
 version = "0.1.0"
-source = "git+https://github.com/revoltchat/quark?rev=6e9713186e8cfef0b067aa87af1e71a66bb44fd0#6e9713186e8cfef0b067aa87af1e71a66bb44fd0"
 dependencies = [
  "async-recursion",
  "async-std",
  "async-trait",
+ "base64 0.13.0",
  "bincode",
  "bitfield",
  "bson 2.1.0",
+ "deadqueue",
  "dotenv",
  "futures",
  "impl_ops",
+ "iso8601-timestamp",
  "lazy_static",
  "linkify 0.8.1",
  "log",
@@ -3112,6 +3132,7 @@ dependencies = [
  "serde_json",
  "ulid 0.5.0",
  "validator",
+ "web-push",
 ]
 
 [[package]]
@@ -3902,9 +3923,20 @@ dependencies = [
  "libc",
  "standback",
  "stdweb",
- "time-macros",
+ "time-macros 0.1.1",
  "version_check",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "time"
+version = "0.3.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c2702e08a7a860f005826c6815dcac101b19b5eb330c27fe4a5928fec1d20ddd"
+dependencies = [
+ "libc",
+ "num_threads",
+ "time-macros 0.2.4",
 ]
 
 [[package]]
@@ -3916,6 +3948,12 @@ dependencies = [
  "proc-macro-hack",
  "time-macros-impl",
 ]
+
+[[package]]
+name = "time-macros"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42657b1a6f4d817cda8e7a0ace261fe0cc946cf3a80314390b22cc61ae080792"
 
 [[package]]
 name = "time-macros-impl"

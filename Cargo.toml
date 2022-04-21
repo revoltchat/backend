@@ -32,7 +32,6 @@ phf = { version = "0.9.0", features = ["macros"] }
 # ID / key generation
 ulid = "0.4.1"
 nanoid = "0.4.0"
-base64 = "0.13.0"
 
 # serde
 serde_json = "1.0.57"
@@ -43,13 +42,11 @@ rmp-serde = { git = "https://github.com/insertish/msgpack-rust", rev = "5bf2c242
 # async
 futures = "0.3.8"
 chrono = "0.4.15"
-deadqueue = "0.2.1"
 async-channel = "1.6.1"
 reqwest = { version = "0.11.4", features = ["json"] }
 async-std = { version = "1.8.0", features = ["tokio1", "tokio02", "attributes"] }
 
 # internal util
-web-push = "0.7.2"
 many-to-many = "0.1.2"
 lettre = "0.10.0-alpha.4"
 rauth = { git = "https://github.com/insertish/rauth", rev = "611b11baa9e199bcefd0ca5bd3302f9d6904a2c6" }
@@ -72,5 +69,5 @@ schemars = "0.8.8"
 rocket_okapi = { git = "https://github.com/insertish/okapi", rev = "dcf0df115596ee07a587a7a543cddf3d7944645b", features = [ "swagger" ] }
 
 # quark
-revolt-quark = { git = "https://github.com/revoltchat/quark", rev = "6e9713186e8cfef0b067aa87af1e71a66bb44fd0" }
+revolt-quark = { git = "https://github.com/revoltchat/quark", rev = "b1bc7eb0bab9f3cb3458fb4c8da4cb985177d2b2" }
 # revolt-quark = { path = "../quark" }
