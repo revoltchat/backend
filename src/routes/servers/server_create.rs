@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use revolt_quark::{
     models::{Channel, Server, User},
+    variables::delta::MAX_SERVER_COUNT,
     Db, Error, Result, DEFAULT_PERMISSION_SERVER,
 };
 
@@ -9,8 +10,6 @@ use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use validator::Validate;
-
-use crate::util::variables::MAX_SERVER_COUNT;
 
 /// # Server Data
 #[derive(Validate, Deserialize, JsonSchema)]

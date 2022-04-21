@@ -9,7 +9,6 @@ extern crate lazy_static;
 extern crate ctrlc;
 
 pub mod routes;
-pub mod tasks;
 pub mod util;
 pub mod version;
 
@@ -18,13 +17,13 @@ use rauth::{
     config::{Captcha, Config, EmailVerification, SMTPSettings, Template, Templates},
     logic::Auth,
 };
-use revolt_quark::DatabaseInfo;
-use rocket_cors::AllowedOrigins;
-use std::str::FromStr;
-use util::variables::{
+use revolt_quark::variables::delta::{
     APP_URL, HCAPTCHA_KEY, INVITE_ONLY, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD, SMTP_USERNAME,
     USE_EMAIL, USE_HCAPTCHA,
 };
+use revolt_quark::DatabaseInfo;
+use rocket_cors::AllowedOrigins;
+use std::str::FromStr;
 
 #[async_std::main]
 async fn main() {
@@ -36,7 +35,7 @@ async fn main() {
         crate::version::VERSION
     );
 
-    util::variables::preflight_checks();
+    revolt_quark::variables::delta::preflight_checks();
 
     #[cfg(debug_assertions)]
     ctrlc::set_handler(move || {
@@ -113,7 +112,7 @@ async fn main() {
     rauth::entities::sync_models(&mongo_db.database("revolt")).await;
 
     // Launch background task workers.
-    async_std::task::spawn(tasks::start_workers(db.clone()));
+    async_std::task::spawn(revolt_quark::tasks::start_workers(db.clone()));
 
     let auth = Auth::new(mongo_db.database("revolt"), config);
     let rocket = rocket::build();

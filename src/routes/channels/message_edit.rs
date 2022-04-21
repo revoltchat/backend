@@ -81,7 +81,7 @@ pub async fn req(
 
     // Queue up a task for processing embeds
     if let Some(content) = edit.content {
-        crate::tasks::process_embeds::queue(
+        revolt_quark::tasks::process_embeds::queue(
             message.channel.to_string(),
             message.id.to_string(),
             content,

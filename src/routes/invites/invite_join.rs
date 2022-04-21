@@ -1,12 +1,11 @@
 use revolt_quark::{
     models::{Channel, Invite, Server, User},
+    variables::delta::MAX_SERVER_COUNT,
     Db, Error, Ref, Result,
 };
 
 use rocket::serde::json::Json;
 use serde::Serialize;
-
-use crate::util::variables::MAX_SERVER_COUNT;
 
 /// # Join Response
 #[derive(Serialize, JsonSchema)]

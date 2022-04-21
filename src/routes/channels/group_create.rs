@@ -3,6 +3,7 @@ use std::{collections::HashSet, iter::FromIterator};
 use revolt_quark::{
     get_relationship,
     models::{user::RelationshipStatus, Channel, User},
+    variables::delta::MAX_GROUP_SIZE,
     Db, Error, Result,
 };
 
@@ -10,8 +11,6 @@ use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use validator::Validate;
-
-use crate::util::variables::MAX_GROUP_SIZE;
 
 /// # Group Data
 #[derive(Validate, Serialize, Deserialize, JsonSchema)]

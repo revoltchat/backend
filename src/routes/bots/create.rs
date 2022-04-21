@@ -1,8 +1,9 @@
-use crate::util::{regex::RE_USERNAME, variables::MAX_BOT_COUNT};
+use crate::util::regex::RE_USERNAME;
 
 use nanoid::nanoid;
 use revolt_quark::{
     models::{user::BotInformation, Bot, User},
+    variables::delta::MAX_BOT_COUNT,
     Db, Error, Result,
 };
 
