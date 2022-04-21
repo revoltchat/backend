@@ -86,7 +86,7 @@ pub async fn message_send(
     // 1. Parse mentions in message.
     let mut mentions = HashSet::new();
     if let Some(content) = &data.content {
-        for capture in RE_MENTION.captures_iter(&content) {
+        for capture in RE_MENTION.captures_iter(content) {
             if let Some(mention) = capture.get(1) {
                 mentions.insert(mention.as_str().to_string());
             }
