@@ -99,7 +99,7 @@ pub async fn edit_bot(
         }
     }
 
-    db.update_bot(&bot.id, &partial, remove.unwrap_or_else(Vec::new))
+    db.update_bot(&bot.id, &partial, remove.unwrap_or_default())
         .await?;
 
     bot.apply_options(partial);

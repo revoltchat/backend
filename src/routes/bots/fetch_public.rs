@@ -36,6 +36,6 @@ pub async fn fetch_public_bot(db: &Db, target: Ref) -> Result<Json<PublicBot>> {
         id: bot.id,
         username: user.username,
         avatar: user.avatar,
-        description: user.profile.map(|p| p.content).flatten(),
+        description: user.profile.and_then(|p| p.content),
     }))
 }
