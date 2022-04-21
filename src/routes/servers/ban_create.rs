@@ -55,5 +55,5 @@ pub async fn req(
         return Err(Error::NotElevated);
     }
 
-    member.ban(db, data.reason).await.map(Json)
+    server.ban_member(db, member, data.reason).await.map(Json)
 }

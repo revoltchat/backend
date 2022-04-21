@@ -1,4 +1,7 @@
-use revolt_quark::{models::User, Db, EmptyResponse, Ref, Result};
+use revolt_quark::{
+    models::{server_member::RemovalIntention, User},
+    Db, EmptyResponse, Ref, Result,
+};
 
 /// # Delete / Leave Server
 ///
@@ -12,7 +15,9 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
     if server.owner == user.id {
         server.delete(db).await
     } else {
-        member.delete(db).await
+        server
+            .remove_member(db, member, RemovalIntention::Leave)
+            .await
     }
     .map(|_| EmptyResponse)
 }

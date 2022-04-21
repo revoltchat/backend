@@ -1,6 +1,7 @@
 use revolt_quark::{
     models::{
         channel::{Channel, FieldsChannel, PartialChannel},
+        message::SystemMessage,
         File, User,
     },
     perms, Database, Error, Permission, Ref, Result,
@@ -127,6 +128,38 @@ pub async fn req(
             if let Some(new_nsfw) = data.nsfw {
                 *nsfw = new_nsfw;
                 partial.nsfw = Some(new_nsfw);
+            }
+
+            // Send out mutation system messages.
+            if let Channel::Group { .. } = &channel {
+                if let Some(name) = &partial.name {
+                    SystemMessage::ChannelRenamed {
+                        name: name.to_string(),
+                        by: user.id.clone(),
+                    }
+                    .into_message(channel.id().to_string())
+                    .create(db, &channel, None)
+                    .await
+                    .ok();
+                }
+
+                if partial.description.is_some() {
+                    SystemMessage::ChannelDescriptionChanged {
+                        by: user.id.clone(),
+                    }
+                    .into_message(channel.id().to_string())
+                    .create(db, &channel, None)
+                    .await
+                    .ok();
+                }
+
+                if partial.icon.is_some() {
+                    SystemMessage::ChannelIconChanged { by: user.id }
+                        .into_message(channel.id().to_string())
+                        .create(db, &channel, None)
+                        .await
+                        .ok();
+                }
             }
 
             channel

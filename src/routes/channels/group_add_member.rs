@@ -9,7 +9,7 @@ use revolt_quark::{
 #[openapi(tag = "Groups")]
 #[put("/<target>/recipients/<member>")]
 pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyResponse> {
-    let channel = target.as_channel(db).await?;
+    let mut channel = target.as_channel(db).await?;
     perms(&user)
         .channel(&channel)
         .throw_permission_and_view_channel(db, Permission::InviteOthers)

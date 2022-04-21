@@ -1,4 +1,7 @@
-use revolt_quark::{models::User, perms, Db, EmptyResponse, Error, Permission, Ref, Result};
+use revolt_quark::{
+    models::{server_member::RemovalIntention, User},
+    perms, Db, EmptyResponse, Error, Permission, Ref, Result,
+};
 
 /// # Kick Member
 ///
@@ -30,5 +33,8 @@ pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyR
         return Err(Error::NotElevated);
     }
 
-    member.delete(db).await.map(|_| EmptyResponse)
+    server
+        .remove_member(db, member, RemovalIntention::Kick)
+        .await
+        .map(|_| EmptyResponse)
 }
