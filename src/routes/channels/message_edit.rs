@@ -1,6 +1,6 @@
 use revolt_quark::{
     models::message::{PartialMessage, SendableEmbed},
-    models::{message::Content, Message, User},
+    models::{Message, User},
     types::january::Embed,
     Db, Error, Ref, Result, Timestamp,
 };
@@ -53,7 +53,7 @@ pub async fn req(
 
     // 1. Handle content update
     if let Some(content) = &edit.content {
-        partial.content = Some(Content::Text(content.clone()));
+        partial.content = Some(content.clone());
     }
 
     // 2. Clear any auto generated embeds

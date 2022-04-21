@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use revolt_quark::{
     models::{
-        message::{Content, Masquerade, Reply, SendableEmbed},
+        message::{Masquerade, Reply, SendableEmbed},
         Message, User,
     },
     perms, Db, Error, Permission, Ref, Result,
@@ -169,7 +169,7 @@ pub async fn message_send(
     }
 
     // 6. Set content
-    message.content = Content::Text(data.content.clone());
+    message.content = Some(data.content.clone());
 
     // 7. Pass-through nonce value for clients
     message.nonce = Some(idempotency.into_key());
