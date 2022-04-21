@@ -116,9 +116,12 @@ pub async fn message_send(
     }
 
     if !mentions.is_empty() {
-        message
-            .mentions
-            .replace(mentions.into_iter().collect::<Vec<String>>());
+        message.mentions.replace(
+            mentions
+                .into_iter()
+                .filter(|id| !user.has_blocked(id))
+                .collect::<Vec<String>>(),
+        );
     }
 
     if !replies.is_empty() {
