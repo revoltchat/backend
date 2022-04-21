@@ -25,7 +25,7 @@ pub struct DataMessageSend {
 
     /// Message content to send
     #[validate(length(min = 0, max = 2000))]
-    content: String,
+    content: Option<String>,
     /// Attachments to include in message
     #[validate(length(min = 1, max = 128))]
     attachments: Option<Vec<String>>,
@@ -68,8 +68,9 @@ pub async fn message_send(
         .throw_permission_and_view_channel(db, Permission::SendMessage)
         .await?;
 
-    if data.content.is_empty()
-        && (data.attachments.is_none() || data.attachments.as_ref().unwrap().is_empty())
+    if (data.content.as_ref().map_or(true, |v| v.is_empty()))
+        && (data.attachments.as_ref().map_or(true, |v| v.is_empty()))
+        && (data.embeds.as_ref().map_or(true, |v| v.is_empty()))
     {
         return Err(Error::EmptyMessage);
     }
@@ -84,9 +85,11 @@ pub async fn message_send(
 
     // 1. Parse mentions in message.
     let mut mentions = HashSet::new();
-    for capture in RE_MENTION.captures_iter(&data.content) {
-        if let Some(mention) = capture.get(1) {
-            mentions.insert(mention.as_str().to_string());
+    if let Some(content) = &data.content {
+        for capture in RE_MENTION.captures_iter(&content) {
+            if let Some(mention) = capture.get(1) {
+                mentions.insert(mention.as_str().to_string());
+            }
         }
     }
 
@@ -169,7 +172,7 @@ pub async fn message_send(
     }
 
     // 6. Set content
-    message.content = Some(data.content.clone());
+    message.content = data.content;
 
     // 7. Pass-through nonce value for clients
     message.nonce = Some(idempotency.into_key());
@@ -177,12 +180,14 @@ pub async fn message_send(
     message.create(db, &channel, Some(&user)).await?;
 
     // Queue up a task for processing embeds
-    revolt_quark::tasks::process_embeds::queue(
-        channel.id().to_string(),
-        message.id.to_string(),
-        data.content,
-    )
-    .await;
+    if let Some(content) = &message.content {
+        revolt_quark::tasks::process_embeds::queue(
+            channel.id().to_string(),
+            message.id.to_string(),
+            content.clone(),
+        )
+        .await;
+    }
 
     Ok(Json(message))
 }
