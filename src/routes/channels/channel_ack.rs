@@ -13,7 +13,7 @@ pub async fn req(db: &Db, user: User, target: Ref, message: Ref) -> Result<Empty
         .await?;
 
     channel
-        .ack(db, &user.id, &message.id)
+        .ack(&user.id, &message.id)
         .await
         .map(|_| EmptyResponse)
 }
