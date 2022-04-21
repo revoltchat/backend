@@ -239,6 +239,7 @@ impl Fairing for RatelimitFairing {
                 request.remote().map(|x| x.ip())
             );
 
+            request.set_method(Method::Get);
             request.set_uri(Origin::parse("/ratelimit").unwrap())
         }
     }
@@ -259,7 +260,7 @@ impl Fairing for RatelimitFairing {
                 response.set_raw_header("X-RateLimit-Remaining", remaining.to_string());
                 response.set_raw_header("X-RateLimit-Reset-After", reset.to_string());
             }
-            Outcome::Failure(_) => {}
+            Outcome::Failure(_) => response.set_status(Status::TooManyRequests),
             Outcome::Forward(_) => unreachable!(),
         }
     }
