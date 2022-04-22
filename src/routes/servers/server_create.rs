@@ -92,6 +92,7 @@ pub async fn req(
         ..Default::default()
     };
 
+    server.create(db).await?;
     let channels = server.create_member(db, user, Some(vec![channel])).await?;
     Ok(Json(CreateServerResponse { server, channels }))
 }
