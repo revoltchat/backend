@@ -1,7 +1,4 @@
-use revolt_quark::{
-    models::{Channel, User},
-    perms, Db, EmptyResponse, Error, Permission, Ref, Result,
-};
+use revolt_quark::{models::User, perms, Db, EmptyResponse, Error, Permission, Ref, Result};
 
 use rocket::serde::json::Json;
 use serde::Deserialize;
@@ -58,20 +55,17 @@ pub async fn invite_bot(
                 .map(|_| EmptyResponse)
         }
         InviteBotDestination::Group { group } => {
-            let channel = db.fetch_channel(&group).await?;
+            let mut channel = db.fetch_channel(&group).await?;
 
             perms(&user)
                 .channel(&channel)
                 .throw_permission_and_view_channel(db, Permission::InviteOthers)
                 .await?;
 
-            if let Channel::Group { id, .. } = channel {
-                db.add_user_to_group(&id, &bot.id)
-                    .await
-                    .map(|_| EmptyResponse)
-            } else {
-                Err(Error::InvalidOperation)
-            }
+            channel
+                .add_user_to_group(db, &bot.id, &user.id)
+                .await
+                .map(|_| EmptyResponse)
         }
     }
 }

@@ -27,7 +27,7 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
             .await
             .map(|_| EmptyResponse),
         Channel::Group { .. } => channel
-            .remove_user_from_group(db, &user.id)
+            .remove_user_from_group(db, &user.id, None)
             .await
             .map(|_| EmptyResponse),
         Channel::TextChannel { .. } | Channel::VoiceChannel { .. } => {
