@@ -1,4 +1,7 @@
-use revolt_quark::{models::File, Db, Error, Ref, Result};
+use revolt_quark::{
+    models::{File, User},
+    Db, Error, Ref, Result,
+};
 
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
@@ -24,9 +27,9 @@ pub struct PublicBot {
 /// Fetch details of a public (or owned) bot by its id.
 #[openapi(tag = "Bots")]
 #[get("/<target>/invite")]
-pub async fn fetch_public_bot(db: &Db, target: Ref) -> Result<Json<PublicBot>> {
+pub async fn fetch_public_bot(db: &Db, user: Option<User>, target: Ref) -> Result<Json<PublicBot>> {
     let bot = target.as_bot(db).await?;
-    if !bot.public {
+    if !bot.public && user.map_or(true, |x| x.id != bot.owner) {
         return Err(Error::NotFound);
     }
 

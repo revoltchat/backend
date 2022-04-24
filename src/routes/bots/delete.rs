@@ -15,5 +15,5 @@ pub async fn delete_bot(db: &Db, user: User, target: Ref) -> Result<EmptyRespons
         return Err(Error::NotFound);
     }
 
-    db.delete_bot(&bot.id).await.map(|_| EmptyResponse)
+    bot.delete(db).await.map(|_| EmptyResponse)
 }
