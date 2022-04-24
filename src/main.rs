@@ -105,9 +105,13 @@ async fn main() {
     let db = DatabaseInfo::Auto.connect().await.unwrap();
     db.migrate_database().await.unwrap();
 
-    let mongo_db = mongodb::Client::with_uri_str("mongodb://localhost")
-        .await
-        .expect("Failed to init db connection.");
+    // This is entirely temporary code until rauth is migrated to quark.
+    // (and / or otherwise gets updated to MongoDB v2 driver)
+    let mongo_db = mongodb::Client::with_uri_str(
+        &std::env::var("MONGODB").unwrap_or_else(|_| "mongodb://localhost".to_string()),
+    )
+    .await
+    .expect("Failed to init db connection.");
 
     rauth::entities::sync_models(&mongo_db.database("revolt")).await;
 
