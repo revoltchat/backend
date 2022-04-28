@@ -259,20 +259,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-tungstenite"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39eca8dd578b18e557361e50ca767df55c5e62f690a5e53868c3c7a8123145b7"
-dependencies = [
- "async-std",
- "futures-io",
- "futures-util",
- "log",
- "pin-project",
- "tungstenite",
-]
-
-[[package]]
 name = "atomic"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -352,12 +338,6 @@ name = "base64"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b41b7ea54a0c9d92199de89e20e58d49f02f8e699814ef3fdf266f6f748d15c7"
-
-[[package]]
-name = "base64"
-version = "0.12.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3441f0f7b02788e948e47f457ca01f1d7e6d92c693bc132c22b087d3141c03ff"
 
 [[package]]
 name = "base64"
@@ -643,15 +623,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95059428f66df56b63431fdb4e1947ed2190586af5c5a8a8b71122bdf5a7f469"
 dependencies = [
  "libc",
-]
-
-[[package]]
-name = "crc32fast"
-version = "1.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2209c310e29876f7f0b2721e7e26b84aff178aa3da5d091f9bfbf47669e60e3"
-dependencies = [
- "cfg-if 1.0.0",
 ]
 
 [[package]]
@@ -983,18 +954,6 @@ dependencies = [
  "toml",
  "uncased",
  "version_check",
-]
-
-[[package]]
-name = "flate2"
-version = "1.0.22"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e6988e897c1c9c485f43b47a529cef42fde0547f9d8d41a7062518f1d8fc53f"
-dependencies = [
- "cfg-if 1.0.0",
- "crc32fast",
- "libc",
- "miniz_oxide",
 ]
 
 [[package]]
@@ -1332,21 +1291,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
-name = "hive_pubsub"
-version = "0.5.0"
-source = "git+https://gitlab.insrt.uk/insert/hive?rev=b0f3db9d33990530d7640d4bbb309c8d9eb5c0cf#b0f3db9d33990530d7640d4bbb309c8d9eb5c0cf"
-dependencies = [
- "futures",
- "many-to-many",
- "mobc",
- "mobc-redis",
- "redis 0.21.2",
- "serde",
- "serde_json",
- "ulid 0.4.1",
-]
-
-[[package]]
 name = "hmac"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1545,15 +1489,6 @@ name = "inlinable_string"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3094308123a0e9fd59659ce45e22de9f53fc1d2ac6e1feb9fef988e4f76cad77"
-
-[[package]]
-name = "input_buffer"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19a8a95243d5a0398cae618ec29477c6e3cb631152be5c19481f80bc71559754"
-dependencies = [
- "bytes 0.5.6",
-]
 
 [[package]]
 name = "instant"
@@ -1755,12 +1690,6 @@ checksum = "31e24f1ad8321ca0e8a1e0ac13f23cb668e6f5466c2c57319f6a5cf1cc8e3b1c"
 dependencies = [
  "linked-hash-map",
 ]
-
-[[package]]
-name = "many-to-many"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff2806c88ab7215e5077fbaaf21a9baaab9caa2abd7adf6c0f63b535ad747547"
 
 [[package]]
 name = "maplit"
@@ -2217,29 +2146,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ops"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84d3c0b53fdad4ac53b19afbf296402d4ba0c9e99ddc28cbb5201f37ecce217a"
-dependencies = [
- "futures-util",
- "hyper 0.14.12",
- "once_cell",
- "ops-core",
- "prometheus",
- "serde_json",
-]
-
-[[package]]
-name = "ops-core"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d57465be38a13e24528c3c821514029e9b6171b8e86cb04cfa481c78bc7af57"
-dependencies = [
- "async-trait",
-]
-
-[[package]]
 name = "optional_struct"
 version = "0.2.0"
 source = "git+https://github.com/insertish/OptionalStruct?rev=e275d2726595474632485934aa0887fa52281f70#e275d2726595474632485934aa0887fa52281f70"
@@ -2311,6 +2217,12 @@ dependencies = [
  "smallvec",
  "windows-sys",
 ]
+
+[[package]]
+name = "paste"
+version = "1.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c520e05135d6e763148b6426a837e239041653ba7becd2e538c076c738025fc"
 
 [[package]]
 name = "pbkdf2"
@@ -2391,50 +2303,6 @@ dependencies = [
  "maplit",
  "pest",
  "sha-1 0.8.2",
-]
-
-[[package]]
-name = "phf"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2ac8b67553a7ca9457ce0e526948cad581819238f4a9d1ea74545851fa24f37"
-dependencies = [
- "phf_macros",
- "phf_shared",
- "proc-macro-hack",
-]
-
-[[package]]
-name = "phf_generator"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d43f3220d96e0080cc9ea234978ccd80d904eafb17be31bb0f76daaea6493082"
-dependencies = [
- "phf_shared",
- "rand 0.8.4",
-]
-
-[[package]]
-name = "phf_macros"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b706f5936eb50ed880ae3009395b43ed19db5bff2ebd459c95e7bf013a89ab86"
-dependencies = [
- "phf_generator",
- "phf_shared",
- "proc-macro-hack",
- "proc-macro2",
- "quote 1.0.9",
- "syn 1.0.76",
-]
-
-[[package]]
-name = "phf_shared"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a68318426de33640f02be62b4ae8eb1261be2efbc337b60c54d845bf4484e0d9"
-dependencies = [
- "siphasher",
 ]
 
 [[package]]
@@ -2570,36 +2438,6 @@ dependencies = [
  "syn 1.0.76",
  "version_check",
  "yansi",
-]
-
-[[package]]
-name = "procfs"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab8809e0c18450a2db0f236d2a44ec0b4c1412d0eb936233579f0990faa5d5cd"
-dependencies = [
- "bitflags",
- "byteorder",
- "flate2",
- "hex",
- "lazy_static",
- "libc",
-]
-
-[[package]]
-name = "prometheus"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8425533e7122f0c3cc7a37e6244b16ad3a2cc32ae7ac6276e2a75da0d9c200d"
-dependencies = [
- "cfg-if 1.0.0",
- "fnv",
- "lazy_static",
- "libc",
- "parking_lot 0.11.2",
- "procfs",
- "regex",
- "thiserror",
 ]
 
 [[package]]
@@ -2943,7 +2781,7 @@ dependencies = [
  "mobc",
  "mobc-redis",
  "redis 0.21.2",
- "rmp-serde 1.0.0",
+ "rmp-serde",
  "serde",
  "serde_json",
 ]
@@ -3055,7 +2893,6 @@ version = "0.0.0"
 dependencies = [
  "async-channel",
  "async-std",
- "async-tungstenite",
  "bitfield",
  "chrono",
  "ctrlc",
@@ -3063,27 +2900,23 @@ dependencies = [
  "dotenv",
  "env_logger",
  "futures",
- "hive_pubsub",
  "impl_ops",
  "lazy_static",
  "lettre",
  "linkify 0.6.0",
  "log",
  "lru",
- "many-to-many",
  "mobc",
  "mobc-redis",
  "mongodb 1.2.3",
  "nanoid",
  "num_enum",
  "once_cell",
- "phf",
  "rauth",
  "redis 0.21.2",
  "regex",
  "reqwest",
  "revolt-quark",
- "rmp-serde 0.15.5",
  "rocket",
  "rocket_cors",
  "rocket_okapi",
@@ -3098,7 +2931,7 @@ dependencies = [
 [[package]]
 name = "revolt-quark"
 version = "0.1.0"
-source = "git+https://github.com/revoltchat/quark?rev=dd3c1283a0398a4ee575a0a4c6e81c1f4aebcb46#dd3c1283a0398a4ee575a0a4c6e81c1f4aebcb46"
+source = "git+https://github.com/revoltchat/quark?rev=d645b746ad90b8517b492ca1ec250ac480a975e8#d645b746ad90b8517b492ca1ec250ac480a975e8"
 dependencies = [
  "async-recursion",
  "async-std",
@@ -3119,7 +2952,6 @@ dependencies = [
  "nanoid",
  "num_enum",
  "okapi",
- "ops",
  "optional_struct",
  "pretty_env_logger",
  "rauth",
@@ -3153,41 +2985,23 @@ dependencies = [
 
 [[package]]
 name = "rmp"
-version = "0.8.10"
+version = "0.8.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f55e5fa1446c4d5dd1f5daeed2a4fe193071771a2636274d0d7a3b082aa7ad6"
+checksum = "44519172358fd6d58656c86ab8e7fbc9e1490c3e8f14d35ed78ca0dd07403c9f"
 dependencies = [
  "byteorder",
  "num-traits",
-]
-
-[[package]]
-name = "rmp"
-version = "0.8.10"
-source = "git+https://github.com/insertish/msgpack-rust?rev=5bf2c24203ad422233cf35b7b7bfad9f7e811814#5bf2c24203ad422233cf35b7b7bfad9f7e811814"
-dependencies = [
- "byteorder",
- "num-traits",
+ "paste",
 ]
 
 [[package]]
 name = "rmp-serde"
-version = "0.15.5"
-source = "git+https://github.com/insertish/msgpack-rust?rev=5bf2c24203ad422233cf35b7b7bfad9f7e811814#5bf2c24203ad422233cf35b7b7bfad9f7e811814"
-dependencies = [
- "byteorder",
- "rmp 0.8.10 (git+https://github.com/insertish/msgpack-rust?rev=5bf2c24203ad422233cf35b7b7bfad9f7e811814)",
- "serde",
-]
-
-[[package]]
-name = "rmp-serde"
-version = "1.0.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3eedffbfcc6a428f230c04baf8f59bd73c1781361e4286111fe900849aaddaf"
+checksum = "25786b0d276110195fa3d6f3f31299900cf71dfbd6c28450f3f58a0e7f7a347e"
 dependencies = [
  "byteorder",
- "rmp 0.8.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rmp",
  "serde",
 ]
 
@@ -3649,12 +3463,6 @@ checksum = "e51e73328dc4ac0c7ccbda3a494dfa03df1de2f46018127f60c693f2648455b0"
 dependencies = [
  "libc",
 ]
-
-[[package]]
-name = "siphasher"
-version = "0.3.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "533494a8f9b724d33625ab53c6c4800f7cc445895924a8ef649222dcb76e938b"
 
 [[package]]
 name = "slab"
@@ -4302,25 +4110,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59547bce71d9c38b83d9c0e92b6066c4253371f15005def0c30d9657f50c7642"
 
 [[package]]
-name = "tungstenite"
-version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0308d80d86700c5878b9ef6321f020f29b1bb9d5ff3cab25e75e23f3a492a23"
-dependencies = [
- "base64 0.12.3",
- "byteorder",
- "bytes 0.5.6",
- "http",
- "httparse",
- "input_buffer",
- "log",
- "rand 0.7.3",
- "sha-1 0.9.8",
- "url",
- "utf-8",
-]
-
-[[package]]
 name = "twoway"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4485,12 +4274,6 @@ dependencies = [
  "matches",
  "percent-encoding",
 ]
-
-[[package]]
-name = "utf-8"
-version = "0.7.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09cc8ee72d2a9becf2f2febe0205bbed8fc6615b7cb429ad062dc7b7ddd036a9"
 
 [[package]]
 name = "uuid"

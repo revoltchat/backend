@@ -27,7 +27,6 @@ regex = "1"
 num_enum = "0.5.1"
 impl_ops = "0.1.1"
 bitfield = "0.13.2"
-phf = { version = "0.9.0", features = ["macros"] }
 
 # ID / key generation
 ulid = "0.4.1"
@@ -37,7 +36,6 @@ nanoid = "0.4.0"
 serde_json = "1.0.57"
 serde = { version = "1.0.115", features = ["derive"] }
 validator = { version = "0.14", features = ["derive"] }
-rmp-serde = { git = "https://github.com/insertish/msgpack-rust", rev = "5bf2c24203ad422233cf35b7b7bfad9f7e811814" }
 
 # async
 futures = "0.3.8"
@@ -47,10 +45,8 @@ reqwest = { version = "0.11.4", features = ["json"] }
 async-std = { version = "1.8.0", features = ["tokio1", "tokio02", "attributes"] }
 
 # internal util
-many-to-many = "0.1.2"
 lettre = "0.10.0-alpha.4"
 rauth = { git = "https://github.com/insertish/rauth", rev = "611b11baa9e199bcefd0ca5bd3302f9d6904a2c6" }
-hive_pubsub = { git = "https://gitlab.insrt.uk/insert/hive", rev = "b0f3db9d33990530d7640d4bbb309c8d9eb5c0cf", features = ["redis-backend"] }
 
 # redis
 redis = { version = "0.21.2", features = ["async-std-comp"] }
@@ -58,7 +54,6 @@ mobc = { version = "0.7.3" }
 mobc-redis = { version = "0.7.0", default-features = false, features = ["async-std-comp"] }
 
 # web
-async-tungstenite = { version = "0.10.0", features = ["async-std-runtime"] }
 rocket = { version = "0.5.0-rc.1", default-features = false, features = ["json"] }
 mongodb = { version = "1.2.2", features = ["async-std-runtime"], default-features = false }
 rocket_cors = { git = "https://github.com/lawliet89/rocket_cors", rev = "5843861a88958c16bfaa0b40f0d8910772bcd2f6" }
@@ -69,5 +64,5 @@ schemars = "0.8.8"
 rocket_okapi = { git = "https://github.com/insertish/okapi", rev = "dcf0df115596ee07a587a7a543cddf3d7944645b", features = [ "swagger" ] }
 
 # quark
-revolt-quark = { git = "https://github.com/revoltchat/quark", rev = "dd3c1283a0398a4ee575a0a4c6e81c1f4aebcb46" }
+revolt-quark = { git = "https://github.com/revoltchat/quark", rev = "d645b746ad90b8517b492ca1ec250ac480a975e8" }
 # revolt-quark = { path = "../quark" }
