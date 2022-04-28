@@ -73,13 +73,13 @@ async fn main() {
                 templates: Templates {
                     verify: Template {
                         title: "Verify your Revolt account.".into(),
-                        text: include_str!("../assets/templates/verify.txt").into(),
+                        text: include_str!(crate::asset!("templates/verify.txt")).into(),
                         url: format!("{}/login/verify/", *APP_URL),
                         html: None,
                     },
                     reset: Template {
                         title: "Reset your Revolt password.".into(),
-                        text: include_str!("../assets/templates/reset.txt").into(),
+                        text: include_str!(crate::asset!("templates/reset.txt")).into(),
                         url: format!("{}/login/reset/", *APP_URL),
                         html: None,
                     },
@@ -139,3 +139,12 @@ async fn main() {
         .await
         .unwrap();
 }
+
+/// Resolve asset
+macro_rules! asset {
+    ($path:literal) => {
+        concat!(env!("CARGO_MANIFEST_DIR"), "/assets/", $path)
+    };
+}
+
+pub(crate) use asset;
