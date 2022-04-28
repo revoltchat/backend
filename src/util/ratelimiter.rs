@@ -5,7 +5,6 @@
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
-use std::net::SocketAddr;
 use std::ops::Add;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -144,6 +143,27 @@ fn resolve_bucket_limit(bucket: &str) -> u8 {
     }
 }
 
+/// Find the remote IP of the client
+fn to_ip(request: &'_ rocket::Request<'_>) -> String {
+    request
+        .remote()
+        .map(|x| x.ip().to_string())
+        .unwrap_or_default()
+}
+
+/// Find the actual IP of the client
+fn to_real_ip(request: &'_ rocket::Request<'_>) -> String {
+    if let Ok(true) = std::env::var("TRUST_CLOUDFLARE").map(|x| x == "1") {
+        request
+            .headers()
+            .get_one("CF-Connecting-IP")
+            .map(|x| x.to_string())
+            .unwrap_or_else(|| to_ip(request))
+    } else {
+        to_ip(request)
+    }
+}
+
 impl Ratelimiter {
     /// Generate guard from identifier and target bucket
     pub fn from(
@@ -191,10 +211,8 @@ impl<'r> FromRequest<'r> for Ratelimiter {
                     request.guard::<rauth::entities::Session>().await
                 {
                     session.id.expect("`id` on User")
-                } else if let Outcome::Success(addr) = request.guard::<SocketAddr>().await {
-                    addr.ip().to_string()
                 } else {
-                    panic!("No identifier!");
+                    to_real_ip(request)
                 };
 
                 Ratelimiter::from(&identifier, resolve_bucket(request))
@@ -236,7 +254,7 @@ impl Fairing for RatelimitFairing {
             info!(
                 "User rate-limited on route {}! (IP = {:?})",
                 request.uri(),
-                request.remote().map(|x| x.ip())
+                to_real_ip(request)
             );
 
             request.set_method(Method::Get);
