@@ -27,6 +27,16 @@ pub struct BanListResult {
     bans: Vec<ServerBan>,
 }
 
+impl From<User> for BannedUser {
+    fn from(user: User) -> Self {
+        BannedUser {
+            id: user.id,
+            username: user.username,
+            avatar: user.avatar,
+        }
+    }
+}
+
 /// # Fetch Bans
 ///
 /// Fetch all bans on a server.
@@ -50,11 +60,7 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<BanListResult>
         )
         .await?
         .into_iter()
-        .map(|x| BannedUser {
-            id: x.id,
-            username: x.username,
-            avatar: x.avatar,
-        })
+        .map(|x| x.into())
         .collect();
 
     Ok(Json(BanListResult { users, bans }))
