@@ -1,81 +1,29 @@
-use crate::database::*;
-use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result, EmptyResponse};
+use revolt_quark::{models::User, perms, Db, EmptyResponse, Error, Permission, Ref, Result};
 
-use mongodb::bson::doc;
-
+/// # Delete Role
+///
+/// Delete a server role by its id.
+#[openapi(tag = "Server Permissions")]
 #[delete("/<target>/roles/<role_id>")]
-pub async fn req(user: User, target: Ref, role_id: String) -> Result<EmptyResponse> {
-    let target = target.fetch_server().await?;
+pub async fn req(db: &Db, user: User, target: Ref, role_id: String) -> Result<EmptyResponse> {
+    let mut server = target.as_server(db).await?;
+    let mut permissions = perms(&user).server(&server);
 
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_server(&target)
-        .for_server()
+    permissions
+        .throw_permission(db, Permission::ManageRole)
         .await?;
 
-    if !perm.get_manage_roles() {
-        Err(Error::MissingPermission)?
+    let member_rank = permissions.get_member_rank().unwrap_or(0);
+
+    if let Some(role) = server.roles.remove(&role_id) {
+        if role.rank <= member_rank {
+            return Err(Error::NotElevated);
+        }
+
+        role.delete(db, &server.id, &role_id)
+            .await
+            .map(|_| EmptyResponse)
+    } else {
+        Err(Error::NotFound)
     }
-
-    get_collection("servers")
-        .update_one(
-            doc! {
-                "_id": &target.id
-            },
-            doc! {
-                "$unset": {
-                    "roles.".to_owned() + &role_id: 1
-                }
-            },
-            None
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "update_one",
-            with: "servers"
-        })?;
-
-    get_collection("channels")
-        .update_one(
-            doc! {
-                "server": &target.id
-            },
-            doc! {
-                "$unset": {
-                    "role_permissions.".to_owned() + &role_id: 1
-                }
-            },
-            None
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "update_one",
-            with: "channels"
-        })?;
-
-    get_collection("server_members")
-        .update_many(
-            doc! {
-                "_id.server": &target.id
-            },
-            doc! {
-                "$pull": {
-                    "roles": &role_id
-                }
-            },
-            None
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "update_many",
-            with: "server_members"
-        })?;
-
-    ClientboundNotification::ServerRoleDelete {
-        id: target.id.clone(),
-        role_id
-    }
-    .publish(target.id);
-
-    Ok(EmptyResponse {})
 }

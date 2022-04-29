@@ -1,73 +1,56 @@
-use mongodb::bson::doc;
 use rocket::serde::json::Json;
-use serde::{Serialize, Deserialize};
+use serde::Deserialize;
 
-use crate::database::*;
-use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result, EmptyResponse};
+use revolt_quark::{
+    models::{Server, User},
+    perms, Db, Error, Override, Permission, Ref, Result,
+};
 
-#[derive(Serialize, Deserialize)]
-pub struct Values {
-    server: u32,
-    channel: u32
+/// # Permission Value
+#[derive(Deserialize, JsonSchema)]
+pub struct DataSetServerRolePermission {
+    /// Allow / deny values for the role in this server.
+    permissions: Override,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct Data {
-    permissions: Values
-}
-
+/// # Set Role Permission
+///
+/// Sets permissions for the specified role in the server.
+#[openapi(tag = "Server Permissions")]
 #[put("/<target>/permissions/<role_id>", data = "<data>", rank = 2)]
-pub async fn req(user: User, target: Ref, role_id: String, data: Json<Data>) -> Result<EmptyResponse> {
-    let target = target.fetch_server().await?;
+pub async fn req(
+    db: &Db,
+    user: User,
+    target: Ref,
+    role_id: String,
+    data: Json<DataSetServerRolePermission>,
+) -> Result<Json<Server>> {
+    let data = data.into_inner();
 
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_server(&target)
-        .for_server()
-        .await?;
+    let mut server = target.as_server(db).await?;
+    if let Some((current_value, rank)) = server.roles.get(&role_id).map(|x| (x.permissions, x.rank))
+    {
+        let mut permissions = perms(&user).server(&server);
 
-    if !perm.get_manage_roles() {
-        return Err(Error::MissingPermission);
+        permissions
+            .throw_permission(db, Permission::ManagePermissions)
+            .await?;
+
+        if rank <= permissions.get_member_rank().unwrap_or(i64::MIN) {
+            return Err(Error::NotElevated);
+        }
+
+        let current_value: Override = current_value.into();
+        permissions
+            .throw_permission_override(db, current_value, data.permissions)
+            .await?;
+
+        server
+            .set_role_permission(db, &role_id, data.permissions.into())
+            .await?;
+
+        Ok(Json(server))
+    } else {
+        Err(Error::NotFound)
     }
-
-    if !target.roles.contains_key(&role_id) {
-        return Err(Error::NotFound);
-    }
-
-    let server_permissions: u32 = data.permissions.server;
-    let channel_permissions: u32 = data.permissions.channel;
-
-    get_collection("servers")
-        .update_one(
-            doc! { "_id": &target.id },
-            doc! {
-                "$set": {
-                    "roles.".to_owned() + &role_id + &".permissions": [
-                        server_permissions as i32,
-                        channel_permissions as i32
-                    ]
-                }
-            },
-            None
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "update_one",
-            with: "server"
-        })?;
-
-    ClientboundNotification::ServerRoleUpdate {
-        id: target.id.clone(),
-        role_id,
-        data: json!({
-            "permissions": [
-                server_permissions as i32,
-                channel_permissions as i32
-            ]
-        }),
-        clear: None
-    }
-    .publish(target.id);
-
-    Ok(EmptyResponse)
 }

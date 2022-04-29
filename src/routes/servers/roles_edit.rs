@@ -1,110 +1,94 @@
-use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result, EmptyResponse};
-use crate::{database::*, notifications::events::RemoveRoleField};
+use revolt_quark::{
+    models::{
+        server::{FieldsRole, PartialRole, Role},
+        User,
+    },
+    perms, Db, Error, Permission, Ref, Result,
+};
 
-use mongodb::bson::doc;
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # Role Data
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataEditRole {
+    /// Role name
     #[validate(length(min = 1, max = 32))]
     name: Option<String>,
+    /// Role colour
     #[validate(length(min = 1, max = 32))]
     colour: Option<String>,
+    /// Whether this role should be displayed separately
     hoist: Option<bool>,
+    /// Ranking position
+    ///
+    /// Smaller values take priority.
     rank: Option<i64>,
-    remove: Option<RemoveRoleField>,
+    /// Fields to remove from role object
+    #[validate(length(min = 1))]
+    remove: Option<Vec<FieldsRole>>,
 }
 
+/// # Edit Role
+///
+/// Edit a role by its id.
+#[openapi(tag = "Server Permissions")]
 #[patch("/<target>/roles/<role_id>", data = "<data>")]
-pub async fn req(user: User, target: Ref, role_id: String, data: Json<Data>) -> Result<EmptyResponse> {
+pub async fn req(
+    db: &Db,
+    user: User,
+    target: Ref,
+    role_id: String,
+    data: Json<DataEditRole>,
+) -> Result<Json<Role>> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if data.name.is_none() && data.colour.is_none() && data.hoist.is_none() && data.rank.is_none() && data.remove.is_none()
-    {
-        return Ok(EmptyResponse {});
-    }
+    let mut server = target.as_server(db).await?;
+    let mut permissions = perms(&user).server(&server);
 
-    let target = target.fetch_server().await?;
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_server(&target)
-        .for_server()
+    permissions
+        .throw_permission(db, Permission::ManageRole)
         .await?;
 
-    if !perm.get_manage_roles() {
-        return Err(Error::MissingPermission)
-    }
+    let member_rank = permissions.get_member_rank().unwrap_or(i64::MIN);
 
-    if !target.roles.contains_key(&role_id) {
-        return Err(Error::InvalidRole)
-    }
+    if let Some(mut role) = server.roles.remove(&role_id) {
+        let DataEditRole {
+            name,
+            colour,
+            hoist,
+            rank,
+            remove,
+        } = data;
 
-    let mut set = doc! {};
-    let mut unset = doc! {};
-
-    // ! FIXME: we should probably just require clients to support basic MQL incl. $set / $unset
-    let mut set_update = doc! {};
-
-    let role_key = "roles.".to_owned() + &role_id;
-
-    if let Some(remove) = &data.remove {
-        match remove {
-            RemoveRoleField::Colour => {
-                unset.insert(role_key.clone() + ".colour", 1);
+        if let Some(rank) = &rank {
+            if rank <= &member_rank {
+                return Err(Error::NotElevated);
             }
         }
-    }
 
-    if let Some(name) = &data.name {
-        set.insert(role_key.clone() + ".name", name);
-        set_update.insert("name", name);
-    }
+        let partial = PartialRole {
+            name,
+            colour,
+            hoist,
+            rank,
+            ..Default::default()
+        };
 
-    if let Some(colour) = &data.colour {
-        set.insert(role_key.clone() + ".colour", colour);
-        set_update.insert("colour", colour);
-    }
+        role.update(
+            db,
+            &server.id,
+            &role_id,
+            partial,
+            remove.unwrap_or_default(),
+        )
+        .await?;
 
-    if let Some(hoist) = &data.hoist {
-        set.insert(role_key.clone() + ".hoist", hoist);
-        set_update.insert("hoist", hoist);
+        Ok(Json(role))
+    } else {
+        Err(Error::NotFound)
     }
-
-    if let Some(rank) = &data.rank {
-        set.insert(role_key.clone() + ".rank", rank);
-        set_update.insert("rank", rank);
-    }
-
-    let mut operations = doc! {};
-    if set.len() > 0 {
-        operations.insert("$set", &set);
-    }
-
-    if unset.len() > 0 {
-        operations.insert("$unset", unset);
-    }
-
-    if operations.len() > 0 {
-        get_collection("servers")
-            .update_one(doc! { "_id": &target.id }, operations, None)
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "update_one",
-                with: "server",
-            })?;
-    }
-
-    ClientboundNotification::ServerRoleUpdate {
-        id: target.id.clone(),
-        role_id,
-        data: json!(set_update),
-        clear: data.remove,
-    }
-    .publish(target.id.clone());
-
-    Ok(EmptyResponse {})
 }

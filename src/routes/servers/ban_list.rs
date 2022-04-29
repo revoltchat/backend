@@ -1,87 +1,67 @@
-use crate::database::*;
-use crate::util::result::{Error, Result};
+use revolt_quark::models::{File, ServerBan, User};
+use revolt_quark::{perms, Db, Permission, Ref, Result};
 
-use futures::StreamExt;
-use mongodb::options::FindOptions;
-use serde::{Serialize, Deserialize};
-use rocket::serde::json::Value;
-use mongodb::bson::{doc, from_document};
+use rocket::serde::json::Json;
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+/// # Banned User
+///
+/// Just enoguh user information to list bans.
+#[derive(Serialize, Deserialize, JsonSchema)]
 struct BannedUser {
-    _id: String,
-    username: String,
-    avatar: Option<File>
+    /// Id of the banned user
+    #[serde(rename = "_id")]
+    pub id: String,
+    /// Username of the banned user
+    pub username: String,
+    /// Avatar of the banned user
+    pub avatar: Option<File>,
 }
 
-#[get("/<target>/bans")]
-pub async fn req(user: User, target: Ref) -> Result<Value> {
-    let target = target.fetch_server().await?;
+/// # Ban List Result
+#[derive(Serialize, Deserialize, JsonSchema)]
+pub struct BanListResult {
+    /// Users objects
+    users: Vec<BannedUser>,
+    /// Ban objects
+    bans: Vec<ServerBan>,
+}
 
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_server(&target)
-        .for_server()
+impl From<User> for BannedUser {
+    fn from(user: User) -> Self {
+        BannedUser {
+            id: user.id,
+            username: user.username,
+            avatar: user.avatar,
+        }
+    }
+}
+
+/// # Fetch Bans
+///
+/// Fetch all bans on a server.
+#[openapi(tag = "Server Members")]
+#[get("/<target>/bans")]
+pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<BanListResult>> {
+    let server = target.as_server(db).await?;
+    perms(&user)
+        .server(&server)
+        .throw_permission(db, Permission::BanMembers)
         .await?;
 
-    if !perm.get_ban_members() {
-        return Err(Error::MissingPermission);
-    }
-
-    let mut cursor = get_collection("server_bans")
-        .find(
-            doc! {
-                "_id.server": target.id
-            },
-            None,
+    let bans = db.fetch_bans(&server.id).await?;
+    let users = db
+        .fetch_users(
+            &bans
+                .iter()
+                .map(|x| &x.id.user)
+                .cloned()
+                .collect::<Vec<String>>(),
         )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "find",
-            with: "server_bans",
-        })?;
+        .await?
+        .into_iter()
+        .map(|x| x.into())
+        .collect();
 
-    let mut bans = vec![];
-    let mut user_ids = vec![];
-    while let Some(result) = cursor.next().await {
-        if let Ok(doc) = result {
-            if let Ok(ban) = from_document::<Ban>(doc) {
-                user_ids.push(ban.id.user.clone());
-                bans.push(ban);
-            }
-        }
-    }
-
-    let mut cursor = get_collection("users")
-        .find(
-            doc! {
-                "_id": {
-                    "$in": user_ids
-                }
-            },
-            FindOptions::builder()
-                .projection(doc! {
-                    "username": 1,
-                    "avatar": 1
-                })
-                .build(),
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "find",
-            with: "users",
-        })?;
-
-    let mut users = vec![];
-    while let Some(result) = cursor.next().await {
-        if let Ok(doc) = result {
-            if let Ok(user) = from_document::<BannedUser>(doc) {
-                users.push(user);
-            }
-        }
-    }
-
-    Ok(json!({
-        "users": users,
-        "bans": bans
-    }))
+    Ok(Json(BanListResult { users, bans }))
 }

@@ -1,20 +1,21 @@
-use crate::database::*;
-use crate::util::result::{Error, Result};
+use revolt_quark::{
+    models::{Channel, User},
+    perms, Database, Permission, Ref, Result,
+};
 
-use rocket::serde::json::Value;
+use rocket::{serde::json::Json, State};
 
+/// # Fetch Channel
+///
+/// Fetch channel by its id.
+#[openapi(tag = "Channel Information")]
 #[get("/<target>")]
-pub async fn req(user: User, target: Ref) -> Result<Value> {
-    let target = target.fetch_channel().await?;
-
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_channel(&target)
-        .for_channel()
+pub async fn req(db: &State<Database>, user: User, target: Ref) -> Result<Json<Channel>> {
+    let channel = target.as_channel(db).await?;
+    perms(&user)
+        .channel(&channel)
+        .throw_permission(db, Permission::ViewChannel)
         .await?;
 
-    if !perm.get_view() {
-        Err(Error::MissingPermission)?
-    }
-
-    Ok(json!(target))
+    Ok(Json(channel))
 }

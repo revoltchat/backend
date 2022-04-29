@@ -1,33 +1,40 @@
-use crate::database::*;
-use crate::util::result::{Error, Result, EmptyResponse};
+use revolt_quark::{
+    models::{server_member::RemovalIntention, User},
+    perms, Db, EmptyResponse, Error, Permission, Ref, Result,
+};
 
-use mongodb::bson::doc;
-
+/// # Kick Member
+///
+/// Removes a member from the server.
+#[openapi(tag = "Server Members")]
 #[delete("/<target>/members/<member>")]
-pub async fn req(user: User, target: Ref, member: String) -> Result<EmptyResponse> {
-    let target = target.fetch_server().await?;
+pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyResponse> {
+    let server = target.as_server(db).await?;
 
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_server(&target)
-        .for_server()
-        .await?;
-
-    if !perm.get_kick_members() {
-        return Err(Error::MissingPermission);
+    if member.id == user.id {
+        return Err(Error::CannotRemoveYourself);
     }
 
-    let member = Ref::from(member)?.fetch_member(&target.id).await?;
-    if member.id.user == user.id {
+    if member.id == server.owner {
         return Err(Error::InvalidOperation);
     }
 
-    if member.id.user == target.owner {
-        return Err(Error::MissingPermission);
-    }
+    let mut permissions = perms(&user).server(&server);
 
-    target
-        .remove_member(&member.id.user, RemoveMember::Kick)
+    permissions
+        .throw_permission(db, Permission::KickMembers)
         .await?;
 
-    Ok(EmptyResponse {})
+    let member = member.as_member(db, &server.id).await?;
+
+    if member.get_ranking(permissions.server.get().unwrap())
+        <= permissions.get_member_rank().unwrap_or(i64::MIN)
+    {
+        return Err(Error::NotElevated);
+    }
+
+    server
+        .remove_member(db, member, RemovalIntention::Kick)
+        .await
+        .map(|_| EmptyResponse)
 }

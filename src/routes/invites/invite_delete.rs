@@ -1,30 +1,31 @@
-use crate::database::*;
-use crate::util::result::{Error, Result, EmptyResponse};
+use revolt_quark::{
+    models::{Invite, User},
+    perms, Db, EmptyResponse, Permission, Ref, Result,
+};
 
+/// # Delete Invite
+///
+/// Delete an invite by its id.
+#[openapi(tag = "Invites")]
 #[delete("/<target>")]
-pub async fn req(user: User, target: Ref) -> Result<EmptyResponse> {
-    let target = target.fetch_invite().await?;
+pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
+    let invite = target.as_invite(db).await?;
 
-    if target.creator() == &user.id {
-        target.delete().await?;
+    if user.id == invite.creator() {
+        db.delete_invite(invite.code()).await
     } else {
-        match &target {
-            Invite::Server { server, .. } => {
-                let server = Ref::from_unchecked(server.clone()).fetch_server().await?;
-                let perm = permissions::PermissionCalculator::new(&user)
-                    .with_server(&server)
-                    .for_server()
+        match invite {
+            Invite::Server { code, server, .. } => {
+                let server = db.fetch_server(&server).await?;
+                perms(&user)
+                    .server(&server)
+                    .throw_permission(db, Permission::ManageServer)
                     .await?;
 
-                if !perm.get_manage_server() {
-                    return Err(Error::MissingPermission);
-                }
-
-                target.delete().await?;
+                db.delete_invite(&code).await
             }
             _ => unreachable!(),
         }
     }
-
-    Ok(EmptyResponse {})
+    .map(|_| EmptyResponse)
 }

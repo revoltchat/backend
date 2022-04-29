@@ -2,7 +2,7 @@
 
 ## Description
 
-Delta is a blazing fast API server built with Rust for Revolt.
+Delta is the API server for the Revolt platform.
 
 **Features:**
 

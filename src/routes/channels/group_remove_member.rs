@@ -1,66 +1,38 @@
-use crate::util::result::{Error, Result, EmptyResponse};
-use crate::{database::*, notifications::events::ClientboundNotification};
+use revolt_quark::{
+    models::{Channel, User},
+    Db, EmptyResponse, Error, Permission, Ref, Result,
+};
 
-use mongodb::bson::doc;
-
+/// # Remove Member from Group
+///
+/// Removes a user from the group.
+#[openapi(tag = "Groups")]
 #[delete("/<target>/recipients/<member>")]
-pub async fn req(user: User, target: Ref, member: Ref) -> Result<EmptyResponse> {
-    if &user.id == &member.id {
-        Err(Error::CannotRemoveYourself)?
-    }
+pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyResponse> {
+    let channel = target.as_channel(db).await?;
 
-    let channel = target.fetch_channel().await?;
+    match &channel {
+        Channel::Group {
+            owner, recipients, ..
+        } => {
+            if &user.id != owner {
+                return Error::from_permission(Permission::ManageChannel);
+            }
 
-    if let Channel::Group {
-        id,
-        owner,
-        recipients,
-        ..
-    } = &channel
-    {
-        if &user.id != owner {
-            // figure out if we want to use perm system here
-            Err(Error::MissingPermission)?
+            let member = member.as_user(db).await?;
+            if user.id == member.id {
+                return Err(Error::CannotRemoveYourself);
+            }
+
+            if !recipients.iter().any(|x| *x == member.id) {
+                return Err(Error::NotInGroup);
+            }
+
+            channel
+                .remove_user_from_group(db, &member.id, Some(&user.id))
+                .await
+                .map(|_| EmptyResponse)
         }
-
-        if recipients.iter().find(|x| *x == &member.id).is_none() {
-            Err(Error::NotInGroup)?
-        }
-
-        get_collection("channels")
-            .update_one(
-                doc! {
-                    "_id": &id
-                },
-                doc! {
-                    "$pull": {
-                        "recipients": &member.id
-                    }
-                },
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "update_one",
-                with: "channel",
-            })?;
-
-        ClientboundNotification::ChannelGroupLeave {
-            id: id.clone(),
-            user: member.id.clone(),
-        }
-        .publish(id.clone());
-
-        Content::SystemMessage(SystemMessage::UserRemove {
-            id: member.id,
-            by: user.id,
-        })
-        .send_as_system(&channel)
-        .await
-        .ok();
-
-        Ok(EmptyResponse {})
-    } else {
-        Err(Error::InvalidOperation)
+        _ => Err(Error::InvalidOperation),
     }
 }

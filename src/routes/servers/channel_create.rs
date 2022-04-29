@@ -1,19 +1,22 @@
 use std::collections::HashMap;
 
-use crate::database::*;
-use crate::util::idempotency::IdempotencyKey;
-use crate::util::result::{Error, Result};
+use revolt_quark::{
+    models::{server::PartialServer, Channel, User},
+    perms, Db, Error, Permission, Ref, Result,
+};
 
-use mongodb::bson::doc;
-use rocket::serde::json::{Json, Value};
+use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use validator::Validate;
 
-#[derive(Serialize, Deserialize)]
+/// # Channel Type
+#[derive(Serialize, Deserialize, JsonSchema)]
 enum ChannelType {
+    /// Text Channel
     Text,
-    Voice
+    /// Voice Channel
+    Voice,
 }
 
 impl Default for ChannelType {
@@ -22,83 +25,96 @@ impl Default for ChannelType {
     }
 }
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # Channel Data
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataCreateChannel {
+    /// Channel type
     #[serde(rename = "type", default = "ChannelType::default")]
     channel_type: ChannelType,
+    /// Channel name
     #[validate(length(min = 1, max = 32))]
     name: String,
+    /// Channel description
     #[validate(length(min = 0, max = 1024))]
     description: Option<String>,
+    /// Whether this channel is age restricted
     #[serde(skip_serializing_if = "Option::is_none")]
     nsfw: Option<bool>,
 }
 
+/// # Create Channel
+///
+/// Create a new Text or Voice channel.
+#[openapi(tag = "Server Information")]
 #[post("/<target>/channels", data = "<info>")]
-pub async fn req(_idempotency: IdempotencyKey, user: User, target: Ref, info: Json<Data>) -> Result<Value> {
+pub async fn req(
+    db: &Db,
+    user: User,
+    target: Ref,
+    info: Json<DataCreateChannel>,
+) -> Result<Json<Channel>> {
     let info = info.into_inner();
     info.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    let target = target.fetch_server().await?;
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_server(&target)
-        .for_server()
+    let mut server = target.as_server(db).await?;
+    perms(&user)
+        .server(&server)
+        .throw_permission(db, Permission::ManageChannel)
         .await?;
 
-    if !perm.get_manage_channels() {
-        Err(Error::MissingPermission)?
-    }
-
     let id = Ulid::new().to_string();
-    let channel = match info.channel_type {
-        ChannelType::Text => Channel::TextChannel {
-            id: id.clone(),
-            server: target.id.clone(),
+    let mut channels = server.channels.clone();
+    channels.push(id.clone());
 
-            name: info.name,
-            description: info.description,
+    let DataCreateChannel {
+        name,
+        description,
+        nsfw,
+        channel_type,
+    } = info;
+    let channel = match channel_type {
+        ChannelType::Text => Channel::TextChannel {
+            id,
+            server: server.id.clone(),
+
+            name,
+            description,
+
             icon: None,
             last_message_id: None,
 
             default_permissions: None,
             role_permissions: HashMap::new(),
-            
-            nsfw: info.nsfw.unwrap_or_default(),
+
+            nsfw: nsfw.unwrap_or(false),
         },
         ChannelType::Voice => Channel::VoiceChannel {
-            id: id.clone(),
-            server: target.id.clone(),
+            id,
+            server: server.id.clone(),
 
-            name: info.name,
-            description: info.description,
+            name,
+            description,
             icon: None,
 
             default_permissions: None,
             role_permissions: HashMap::new(),
 
-            nsfw: info.nsfw.unwrap_or_default()
-        }
+            nsfw: nsfw.unwrap_or(false),
+        },
     };
 
-    channel.clone().publish().await?;
-    get_collection("servers")
-        .update_one(
-            doc! {
-                "_id": target.id
+    channel.create(db).await?;
+    server
+        .update(
+            db,
+            PartialServer {
+                channels: Some(channels),
+                ..Default::default()
             },
-            doc! {
-                "$addToSet": {
-                    "channels": id
-                }
-            },
-            None,
+            vec![],
         )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "update_one",
-            with: "server",
-        })?;
+        .await?;
 
-    Ok(json!(channel))
+    Ok(Json(channel))
 }

@@ -1,162 +1,78 @@
-use std::collections::HashSet;
-
-use crate::database::*;
-use crate::util::result::{Error, Result};
-
-use futures::StreamExt;
-use mongodb::{
-    bson::{doc, from_document},
-    options::FindOptions,
+use revolt_quark::{
+    models::{
+        message::{BulkMessageResponse, MessageSort},
+        User,
+    },
+    perms, Db, Error, Permission, Ref, Result,
 };
-use rocket::serde::json::{Json, Value};
+
+use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Serialize, Deserialize, FromFormField)]
-pub enum Sort {
-    Relevance,
-    Latest,
-    Oldest,
-}
-
-impl Default for Sort {
-    fn default() -> Sort {
-        Sort::Relevance
-    }
-}
-
-#[derive(Validate, Serialize, Deserialize, FromForm)]
-pub struct Options {
+/// # Search Parameters
+#[derive(Validate, Serialize, Deserialize, JsonSchema, FromForm)]
+pub struct OptionsMessageSearch {
+    /// Full-text search query
+    ///
+    /// See [MongoDB documentation](https://docs.mongodb.com/manual/text-search/#-text-operator) for more information.
     #[validate(length(min = 1, max = 64))]
     query: String,
 
+    /// Maximum number of messages to fetch
     #[validate(range(min = 1, max = 100))]
     limit: Option<i64>,
+    /// Message id before which messages should be fetched
     #[validate(length(min = 26, max = 26))]
     before: Option<String>,
+    /// Message id after which messages should be fetched
     #[validate(length(min = 26, max = 26))]
     after: Option<String>,
-    #[serde(default = "Sort::default")]
-    sort: Sort,
+    /// Message sort direction
+    ///
+    /// By default, it will be sorted by relevance.
+    #[serde(default = "MessageSort::default")]
+    sort: MessageSort,
+    /// Whether to include user (and member, if server channel) objects
     include_users: Option<bool>,
 }
 
+/// # Search for Messages
+///
+/// This route searches for messages within the given parameters.
+#[openapi(tag = "Messaging")]
 #[post("/<target>/search", data = "<options>")]
-pub async fn req(user: User, target: Ref, options: Json<Options>) -> Result<Value> {
+pub async fn req(
+    db: &Db,
+    user: User,
+    target: Ref,
+    options: Json<OptionsMessageSearch>,
+) -> Result<Json<BulkMessageResponse>> {
+    let options = options.into_inner();
     options
         .validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    let target = target.fetch_channel().await?;
-    target.has_messaging()?;
-
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_channel(&target)
-        .for_channel()
+    let channel = target.as_channel(db).await?;
+    perms(&user)
+        .channel(&channel)
+        .throw_permission_and_view_channel(db, Permission::ReadMessageHistory)
         .await?;
-    if !perm.get_view() {
-        Err(Error::MissingPermission)?
-    }
 
-    let mut messages = vec![];
-    let limit = options.limit.unwrap_or(50);
+    let OptionsMessageSearch {
+        query,
+        limit,
+        before,
+        after,
+        sort,
+        include_users,
+    } = options;
 
-    let mut filter = doc! {
-        "channel": target.id(),
-        "$text": {
-            "$search": &options.query
-        }
-    };
+    let messages = db
+        .search_messages(channel.id(), &query, limit, before, after, sort)
+        .await?;
 
-    if let Some(doc) = match (&options.before, &options.after) {
-        (Some(before), Some(after)) => Some(doc! {
-            "lt": before,
-            "gt": after
-        }),
-        (Some(before), _) => Some(doc! {
-            "lt": before
-        }),
-        (_, Some(after)) => Some(doc! {
-            "gt": after
-        }),
-        _ => None
-    } {
-        filter.insert("_id", doc);
-    }
-
-    let mut cursor = get_collection("messages")
-        .find(
-            filter,
-            FindOptions::builder()
-                .projection(
-                    if let Sort::Relevance = &options.sort {
-                        doc! {
-                            "score": {
-                                "$meta": "textScore"
-                            }
-                        }
-                    } else {
-                        doc! {}
-                    }
-                )
-                .limit(limit)
-                .sort(
-                    match &options.sort {
-                        Sort::Relevance => doc! {
-                            "score": {
-                                "$meta": "textScore"
-                            }
-                        },
-                        Sort::Latest => doc! {
-                            "_id": -1 as i32
-                        },
-                        Sort::Oldest => doc! {
-                            "_id": 1 as i32
-                        }
-                    }
-                )
-                .build(),
-        )
+    BulkMessageResponse::transform(db, &channel, messages, include_users)
         .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "find",
-            with: "messages",
-        })?;
-    
-    while let Some(result) = cursor.next().await {
-        if let Ok(doc) = result {
-            messages.push(
-                from_document::<Message>(doc).map_err(|_| Error::DatabaseError {
-                    operation: "from_document",
-                    with: "message",
-                })?,
-            );
-        }
-    }
-
-    if options.include_users.unwrap_or_else(|| false) {
-        let mut ids = HashSet::new();
-        for message in &messages {
-            message.add_associated_user_ids(&mut ids);
-        }
-
-        ids.remove(&user.id);
-        let user_ids = ids.into_iter().collect();
-        let users = user.fetch_multiple_users(&user_ids).await?;
-
-        if let Channel::TextChannel { server, .. } = target {
-            Ok(json!({
-                "messages": messages,
-                "users": users,
-                "members": Server::fetch_members_with_ids(&server, &user_ids).await?
-            }))
-        } else {
-            Ok(json!({
-                "messages": messages,
-                "users": users,
-            }))
-        }
-    } else {
-        Ok(json!(messages))
-    }
+        .map(Json)
 }

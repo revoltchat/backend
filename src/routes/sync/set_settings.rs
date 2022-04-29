@@ -1,28 +1,34 @@
-use crate::database::*;
-use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{EmptyResponse, Error, Result};
+use revolt_quark::models::User;
+use revolt_quark::r#impl::generic::users::user_settings::UserSettingsImpl;
+use revolt_quark::{Db, EmptyResponse, Result};
 
 use chrono::prelude::*;
-use mongodb::bson::{doc, to_bson};
-use mongodb::options::UpdateOptions;
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use std::collections::HashMap;
 
 type Data = HashMap<String, String>;
 
-#[derive(FromForm, Serialize, Deserialize)]
-pub struct Options {
+/// # Set Options
+#[derive(FromForm, Serialize, Deserialize, JsonSchema)]
+pub struct OptionsSetSettings {
+    /// Timestamp of settings change.
+    ///
+    /// Used to avoid feedback loops.
     timestamp: Option<i64>,
 }
 
+/// # Set Settings
+///
+/// Upload data to save to settings.
+#[openapi(tag = "Sync")]
 #[post("/settings/set?<options..>", data = "<data>")]
-pub async fn req(user: User, data: Json<Data>, options: Options) -> Result<EmptyResponse> {
-    if user.bot.is_some() {
-        return Err(Error::IsBot);
-    }
-
+pub async fn req(
+    db: &Db,
+    user: User,
+    data: Json<Data>,
+    options: OptionsSetSettings,
+) -> Result<EmptyResponse> {
     let data = data.into_inner();
     let current_time = Utc::now().timestamp_millis();
     let timestamp = if let Some(timestamp) = options.timestamp {
@@ -35,40 +41,10 @@ pub async fn req(user: User, data: Json<Data>, options: Options) -> Result<Empty
         current_time
     };
 
-    let mut set = doc! {};
-    for (key, data) in &data {
-        set.insert(
-            key.clone(),
-            vec![
-                to_bson(&timestamp).unwrap(),
-                to_bson(&data.clone()).unwrap(),
-            ],
-        );
+    let mut settings = HashMap::new();
+    for (key, data) in data {
+        settings.insert(key, (timestamp, data));
     }
 
-    if set.len() > 0 {
-        get_collection("user_settings")
-            .update_one(
-                doc! {
-                    "_id": &user.id
-                },
-                doc! {
-                    "$set": &set
-                },
-                UpdateOptions::builder().upsert(true).build(),
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "update_one",
-                with: "user_settings",
-            })?;
-    }
-
-    ClientboundNotification::UserSettingsUpdate {
-        id: user.id.clone(),
-        update: json!(set),
-    }
-    .publish(user.id);
-
-    Ok(EmptyResponse {})
+    settings.set(db, &user.id).await.map(|_| EmptyResponse)
 }

@@ -1,20 +1,17 @@
-use crate::database::*;
-use crate::util::result::{Error, Result};
+use revolt_quark::{
+    models::{Server, User},
+    perms, Db, Ref, Result,
+};
+use rocket::serde::json::Json;
 
-use rocket::serde::json::Value;
-
+/// # Fetch Server
+///
+/// Fetch a server by its id.
+#[openapi(tag = "Server Information")]
 #[get("/<target>")]
-pub async fn req(user: User, target: Ref) -> Result<Value> {
-    let target = target.fetch_server().await?;
+pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<Server>> {
+    let server = target.as_server(db).await?;
+    perms(&user).server(&server).calc(db).await?;
 
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_server(&target)
-        .for_server()
-        .await?;
-
-    if !perm.get_view() {
-        Err(Error::MissingPermission)?
-    }
-
-    Ok(json!(target))
+    Ok(Json(server))
 }

@@ -1,50 +1,55 @@
-use crate::database::*;
-use crate::util::result::{Error, Result};
+use revolt_quark::{
+    models::{Channel, User},
+    perms, Database, Error, Ref, Result, UserPermission,
+};
 
-use mongodb::bson::doc;
-use rocket::serde::json::Value;
+use rocket::{serde::json::Json, State};
 use ulid::Ulid;
 
+/// # Open Direct Message
+///
+/// Open a DM with another user.
+///
+/// If the target is oneself, a saved messages channel is returned.
+#[openapi(tag = "Direct Messaging")]
 #[get("/<target>/dm")]
-pub async fn req(user: User, target: Ref) -> Result<Value> {
-    let query = if user.id == target.id {
-        doc! {
-            "channel_type": "SavedMessages",
-            "user": &user.id
-        }
-    } else {
-        doc! {
-            "channel_type": "DirectMessage",
-            "recipients": {
-                "$all": [ &user.id, &target.id ]
-            }
-        }
-    };
+pub async fn req(db: &State<Database>, user: User, target: Ref) -> Result<Json<Channel>> {
+    let target = target.as_user(db).await?;
 
-    let existing_channel = get_collection("channels")
-        .find_one(query, None)
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "find_one",
-            with: "channel",
-        })?;
-
-    if let Some(doc) = existing_channel {
-        Ok(json!(doc))
-    } else {
-        let id = Ulid::new().to_string();
-        let channel = if user.id == target.id {
-            Channel::SavedMessages { id, user: user.id }
+    // If the target is oneself, open saved messages.
+    if target.id == user.id {
+        return if let Ok(channel) = db.find_direct_message_channel(&user.id, &target.id).await {
+            Ok(Json(channel))
         } else {
-            Channel::DirectMessage {
-                id,
-                active: false,
-                recipients: vec![user.id, target.id],
-                last_message_id: None,
-            }
+            let new_channel = Channel::SavedMessages {
+                id: Ulid::new().to_string(),
+                user: user.id,
+            };
+
+            new_channel.create(db).await?;
+            Ok(Json(new_channel))
+        };
+    }
+
+    // Otherwise try to find or create a DM.
+    if let Ok(channel) = db.find_direct_message_channel(&user.id, &target.id).await {
+        Ok(Json(channel))
+    } else if perms(&user)
+        .user(&target)
+        .calc_user(db)
+        .await
+        .get_send_message()
+    {
+        let new_channel = Channel::DirectMessage {
+            id: Ulid::new().to_string(),
+            active: false,
+            recipients: vec![user.id, target.id],
+            last_message_id: None,
         };
 
-        channel.clone().publish().await?;
-        Ok(json!(channel))
+        new_channel.create(db).await?;
+        Ok(Json(new_channel))
+    } else {
+        Error::from_user_permission(UserPermission::SendMessage)
     }
 }

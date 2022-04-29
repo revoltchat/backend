@@ -1,56 +1,42 @@
-use crate::database::*;
-use crate::util::result::{Error, Result};
+use revolt_quark::{
+    models::{Bot, User},
+    Db, Error, Result,
+};
+use rocket::serde::json::Json;
+use serde::Serialize;
 
-use futures::StreamExt;
-use mongodb::bson::{Document, doc, from_document};
-use serde_json::Value;
+/// # Owned Bots Response
+///
+/// Both lists are sorted by their IDs.
+#[derive(Serialize, JsonSchema)]
+pub struct OwnedBotsResponse {
+    /// Bot objects
+    bots: Vec<Bot>,
+    /// User objects
+    users: Vec<User>,
+}
 
+/// # Fetch Owned Bots
+///
+/// Fetch all of the bots that you have control over.
+#[openapi(tag = "Bots")]
 #[get("/@me")]
-pub async fn fetch_owned_bots(user: User) -> Result<Value> {
+pub async fn fetch_owned_bots(db: &Db, user: User) -> Result<Json<OwnedBotsResponse>> {
     if user.bot.is_some() {
-        return Err(Error::IsBot)
+        return Err(Error::IsBot);
     }
-    
-    let bots = get_collection("bots")
-        .find(
-            doc! {
-                "owner": &user.id
-            },
-            None
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            with: "bots",
-            operation: "find"
-        })?
-        .filter_map(async move |s| s.ok())
-        .collect::<Vec<Document>>()
-        .await
-        .into_iter()
-        .filter_map(|x| from_document(x).ok())
-        .collect::<Vec<Bot>>();
-    
-    let users = get_collection("users")
-        .find(
-            doc! {
-                "bot.owner": &user.id
-            },
-            None
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            with: "users",
-            operation: "find"
-        })?
-        .filter_map(async move |s| s.ok())
-        .collect::<Vec<Document>>()
-        .await
-        .into_iter()
-        .filter_map(|x| from_document(x).ok())
-        .collect::<Vec<User>>();
-    
-    Ok(json!({
-        "bots": bots,
-        "users": users
-    }))
+
+    let mut bots = db.fetch_bots_by_user(&user.id).await?;
+    let user_ids = bots
+        .iter()
+        .map(|x| x.id.to_owned())
+        .collect::<Vec<String>>();
+
+    let mut users = db.fetch_users(&user_ids).await?;
+
+    // Ensure the lists match up exactly.
+    bots.sort_by(|a, b| a.id.cmp(&b.id));
+    users.sort_by(|a, b| a.id.cmp(&b.id));
+
+    Ok(Json(OwnedBotsResponse { users, bots }))
 }

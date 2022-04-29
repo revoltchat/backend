@@ -1,62 +1,42 @@
-use crate::database::*;
-use crate::util::result::{Error, Result};
+use revolt_quark::models::User;
+use revolt_quark::{perms, Database, Error, Ref, Result};
 
-use futures::StreamExt;
-use mongodb::bson::{doc, Document};
-use mongodb::options::FindOptions;
-use rocket::serde::json::Value;
+use rocket::serde::json::Json;
+use rocket::State;
+use serde::Serialize;
 
+/// # Mutual Friends and Servers Response
+#[derive(Serialize, JsonSchema)]
+pub struct MutualResponse {
+    /// Array of mutual user IDs that both users are friends with
+    users: Vec<String>,
+    /// Array of mutual server IDs that both users are in
+    servers: Vec<String>,
+}
+
+/// # Fetch Mutual Friends And Servers
+///
+/// Retrieve a list of mutual friends and servers with another user.
+#[openapi(tag = "Relationships")]
 #[get("/<target>/mutual")]
-pub async fn req(user: User, target: Ref) -> Result<Value> {
-    let users = get_collection("users")
-        .find(
-            doc! {
-                "$and": [
-                    { "relations": { "$elemMatch": { "_id": &user.id, "status": "Friend" } } },
-                    { "relations": { "$elemMatch": { "_id": &target.id, "status": "Friend" } } }
-                ]
-            },
-            FindOptions::builder().projection(doc! { "_id": 1 }).build(),
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "find",
-            with: "users",
-        })?
-        .filter_map(async move |s| s.ok())
-        .collect::<Vec<Document>>()
-        .await
-        .into_iter()
-        .filter_map(|x| x.get_str("_id").ok().map(|x| x.to_string()))
-        .collect::<Vec<String>>();
-    
-    let server_ids = User::fetch_server_ids(&user.id).await?;
-    let servers = get_collection("server_members")
-        .find(
-            doc! {
-                "_id.user": &target.id,
-                "_id.server": {
-                    "$in": server_ids
-                }
-            },
-            None
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "find_one",
-            with: "server_members",
-        })?
-        .filter_map(async move |s| s.ok())
-        .collect::<Vec<Document>>()
-        .await
-        .into_iter()
-        .filter_map(|x| {
-            x.get_document("_id")
-                .ok()
-                .map(|i| i.get_str("server").ok().map(|x| x.to_string()))
-        })
-        .flatten()
-        .collect::<Vec<String>>();
+pub async fn req(db: &State<Database>, user: User, target: Ref) -> Result<Json<MutualResponse>> {
+    if target.id == user.id {
+        return Err(Error::InvalidOperation);
+    }
 
-    Ok(json!({ "users": users, "servers": servers }))
+    let target = target.as_user(db).await?;
+
+    if perms(&user)
+        .user(&target)
+        .calc_user(db)
+        .await
+        .get_view_profile()
+    {
+        Ok(Json(MutualResponse {
+            users: db.fetch_mutual_user_ids(&user.id, &target.id).await?,
+            servers: db.fetch_mutual_server_ids(&user.id, &target.id).await?,
+        }))
+    } else {
+        Err(Error::NotFound)
+    }
 }

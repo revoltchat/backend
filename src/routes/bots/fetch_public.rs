@@ -1,28 +1,44 @@
-use crate::database::*;
-use crate::util::result::{Error, Result};
+use revolt_quark::{
+    models::{File, User},
+    Db, Error, Ref, Result,
+};
 
-use serde_json::Value;
+use rocket::serde::json::Json;
+use serde::{Deserialize, Serialize};
 
+/// # Public Bot
+#[derive(Serialize, Deserialize, JsonSchema)]
+pub struct PublicBot {
+    /// Bot Id
+    #[serde(rename = "_id")]
+    id: String,
+    /// Bot Username
+    username: String,
+    /// Profile Avatar
+    #[serde(skip_serializing_if = "Option::is_none")]
+    avatar: Option<File>,
+    /// Profile Description
+    #[serde(skip_serializing_if = "Option::is_none")]
+    description: Option<String>,
+}
+
+/// # Fetch Public Bot
+///
+/// Fetch details of a public (or owned) bot by its id.
+#[openapi(tag = "Bots")]
 #[get("/<target>/invite")]
-pub async fn fetch_public_bot(user: User, target: Ref) -> Result<Value> {
-    if user.bot.is_some() {
-        return Err(Error::IsBot)
-    }
-    
-    let bot = target.fetch_bot().await?;
-
-    if !bot.public {
-        if bot.owner != user.id {
-            return Err(Error::BotIsPrivate);
-        }
+pub async fn fetch_public_bot(db: &Db, user: Option<User>, target: Ref) -> Result<Json<PublicBot>> {
+    let bot = target.as_bot(db).await?;
+    if !bot.public && user.map_or(true, |x| x.id != bot.owner) {
+        return Err(Error::NotFound);
     }
 
-    let user = Ref::from_unchecked(bot.id.clone()).fetch_user().await?;
+    let user = db.fetch_user(&bot.id).await?;
 
-    Ok(json!({
-        "_id": bot.id,
-        "username": user.username,
-        "avatar": user.avatar,
-        "description": user.profile.map(|p| p.content)
+    Ok(Json(PublicBot {
+        id: bot.id,
+        username: user.username,
+        avatar: user.avatar,
+        description: user.profile.and_then(|p| p.content),
     }))
 }

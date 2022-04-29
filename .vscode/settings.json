@@ -1,5 +1,4 @@
 {
-    "rust-analyzer.diagnostics.disabled": [
-        "unresolved-macro-call"
-    ]
+    "editor.formatOnSave": true,
+    "rust-analyzer.checkOnSave.command": "clippy"
 }

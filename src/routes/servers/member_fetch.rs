@@ -1,21 +1,17 @@
-use crate::database::*;
-use crate::util::result::{Error, Result};
+use revolt_quark::{
+    models::{Member, User},
+    perms, Db, Ref, Result,
+};
+use rocket::serde::json::Json;
 
-use mongodb::bson::doc;
-use rocket::serde::json::Value;
-
+/// # Fetch Member
+///
+/// Retrieve a member.
+#[openapi(tag = "Server Members")]
 #[get("/<target>/members/<member>")]
-pub async fn req(user: User, target: Ref, member: String) -> Result<Value> {
-    let target = target.fetch_server().await?;
+pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<Json<Member>> {
+    let server = target.as_server(db).await?;
+    perms(&user).server(&server).calc(db).await?;
 
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_server(&target)
-        .for_server()
-        .await?;
-
-    if !perm.get_view() {
-        Err(Error::MissingPermission)?
-    }
-
-    Ok(json!(Ref::from(member)?.fetch_member(&target.id).await?))
+    member.as_member(db, &server.id).await.map(Json)
 }

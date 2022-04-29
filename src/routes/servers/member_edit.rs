@@ -1,158 +1,84 @@
-use std::collections::HashSet;
+use revolt_quark::{
+    models::{
+        server_member::{FieldsMember, PartialMember},
+        File, Member, User,
+    },
+    perms, Db, Error, Ref, Result,
+};
 
-use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result, EmptyResponse};
-use crate::{database::*, notifications::events::RemoveMemberField};
-
-use mongodb::bson::{doc, to_document};
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # Member Data
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataMemberEdit {
+    /// Member nickname
     #[validate(length(min = 1, max = 32))]
     nickname: Option<String>,
+    /// Attachment Id to set for avatar
     avatar: Option<String>,
+    /// Array of role ids
     roles: Option<Vec<String>>,
-    remove: Option<RemoveMemberField>,
+    /// Fields to remove from channel object
+    #[validate(length(min = 1))]
+    remove: Option<Vec<FieldsMember>>,
 }
 
+/// # Edit Member
+///
+/// Edit a member by their id.
+#[openapi(tag = "Server Members")]
 #[patch("/<server>/members/<target>", data = "<data>")]
-pub async fn req(user: User, server: Ref, target: String, data: Json<Data>) -> Result<EmptyResponse> {
+pub async fn req(
+    db: &Db,
+    user: User,
+    server: Ref,
+    target: Ref,
+    data: Json<DataMemberEdit>,
+) -> Result<Json<Member>> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if data.nickname.is_none() && data.avatar.is_none() && data.roles.is_none() && data.remove.is_none() {
-        return Ok(EmptyResponse {});
+    let server = server.as_server(db).await?;
+    perms(&user).server(&server).calc(db).await?;
+
+    let mut member = target.as_member(db, &server.id).await?;
+
+    let DataMemberEdit {
+        nickname,
+        avatar,
+        roles,
+        remove,
+    } = data;
+
+    let mut partial = PartialMember {
+        nickname,
+        roles,
+        ..Default::default()
+    };
+
+    // ! FIXME: calculate permission against member
+    // ! FIXME: also check roles exist lol
+
+    // 1. Remove fields from object
+    if let Some(fields) = &remove {
+        if fields.contains(&FieldsMember::Avatar) {
+            if let Some(avatar) = &member.avatar {
+                db.mark_attachment_as_deleted(&avatar.id).await?;
+            }
+        }
     }
 
-    let server = server.fetch_server().await?;
-    let target = Ref::from(target)?.fetch_member(&server.id).await?;
+    // 2. Apply new avatar
+    if let Some(avatar) = avatar {
+        partial.avatar = Some(File::use_avatar(db, &avatar, &user.id).await?);
+    }
 
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_server(&server)
-        .for_server()
+    member
+        .update(db, partial, remove.unwrap_or_default())
         .await?;
 
-    if data.roles.is_some() && !perm.get_manage_roles() {
-        return Err(Error::MissingPermission);
-    }
-
-    if target.id.user == user.id {
-        if (data.nickname.is_some() && !perm.get_change_nickname())
-            || (data.avatar.is_some() && !perm.get_change_avatar())
-        {
-            return Err(Error::MissingPermission);
-        }
-
-        if let Some(remove) = &data.remove {
-            if match remove {
-                RemoveMemberField::Avatar => !perm.get_change_avatar(),
-                RemoveMemberField::Nickname => !perm.get_change_nickname(),
-            } {
-                return Err(Error::MissingPermission);
-            }
-        }
-    } else {
-        if data.avatar.is_some() || (data.nickname.is_some() && !perm.get_manage_nicknames()) {
-            return Err(Error::MissingPermission);
-        }
-
-        if let Some(remove) = &data.remove {
-            if match remove {
-                RemoveMemberField::Avatar => !perm.get_remove_avatars(),
-                RemoveMemberField::Nickname => !perm.get_manage_nicknames(),
-            } {
-                return Err(Error::MissingPermission);
-            }
-        }
-    }
-
-    let mut set = doc! {};
-    let mut unset = doc! {};
-
-    let mut remove_avatar = false;
-    if let Some(remove) = &data.remove {
-        match remove {
-            RemoveMemberField::Avatar => {
-                unset.insert("avatar", 1);
-                remove_avatar = true;
-            }
-            RemoveMemberField::Nickname => {
-                unset.insert("nickname", 1);
-            }
-        }
-    }
-
-    if let Some(name) = &data.nickname {
-        set.insert("nickname", name);
-    }
-
-    if let Some(attachment_id) = &data.avatar {
-        let attachment =
-            File::find_and_use(&attachment_id, "avatars", "user", &target.id.user).await?;
-        set.insert(
-            "avatar",
-            to_document(&attachment).map_err(|_| Error::DatabaseError {
-                operation: "to_document",
-                with: "attachment",
-            })?,
-        );
-
-        remove_avatar = true;
-    }
-
-    if let Some(role_ids) = &data.roles {
-        let mut ids = HashSet::new();
-
-        for role in role_ids {
-            if server.roles.contains_key(role) {
-                ids.insert(role.clone());
-            }
-        }
-
-        set.insert("roles", ids.into_iter().collect::<Vec<String>>());
-    }
-
-    let mut operations = doc! {};
-    if set.len() > 0 {
-        operations.insert("$set", &set);
-    }
-
-    if unset.len() > 0 {
-        operations.insert("$unset", unset);
-    }
-
-    if operations.len() > 0 {
-        get_collection("server_members")
-            .update_one(
-                doc! { "_id.server": &server.id, "_id.user": &target.id.user },
-                operations,
-                None,
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "update_one",
-                with: "server_member",
-            })?;
-    }
-
-    ClientboundNotification::ServerMemberUpdate {
-        id: target.id.clone(),
-        data: json!(set),
-        clear: data.remove,
-    }
-    .publish(server.id.clone());
-
-    let Member { avatar, .. } = target;
-
-    if remove_avatar {
-        if let Some(old_avatar) = avatar {
-            old_avatar.delete().await?;
-        }
-    }
-
-    Ok(EmptyResponse {})
+    Ok(Json(member))
 }

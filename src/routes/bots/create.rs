@@ -1,89 +1,65 @@
-use crate::database::*;
-use crate::util::result::{Error, Result};
-use crate::util::variables::MAX_BOT_COUNT;
 use crate::util::regex::RE_USERNAME;
 
-use mongodb::bson::{doc, to_document};
-use rocket::serde::json::{Json, Value};
-use serde::{Deserialize, Serialize};
-use ulid::Ulid;
 use nanoid::nanoid;
+use revolt_quark::{
+    models::{user::BotInformation, Bot, User},
+    variables::delta::MAX_BOT_COUNT,
+    Db, Error, Result,
+};
+
+use rocket::serde::json::Json;
+use serde::Deserialize;
+use ulid::Ulid;
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # Bot Details
+#[derive(Validate, Deserialize, JsonSchema)]
+pub struct DataCreateBot {
+    /// Bot username
     #[validate(length(min = 2, max = 32), regex = "RE_USERNAME")]
     name: String,
 }
 
+/// # Create Bot
+///
+/// Create a new Revolt bot.
+#[openapi(tag = "Bots")]
 #[post("/create", data = "<info>")]
-pub async fn create_bot(user: User, info: Json<Data>) -> Result<Value> {
+pub async fn create_bot(db: &Db, user: User, info: Json<DataCreateBot>) -> Result<Json<Bot>> {
     if user.bot.is_some() {
-        return Err(Error::IsBot)
+        return Err(Error::IsBot);
     }
-    
+
     let info = info.into_inner();
     info.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if get_collection("bots")
-        .count_documents(
-            doc! {
-                "owner": &user.id
-            },
-            None,
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "count_documents",
-            with: "bots",
-        })? as usize >= *MAX_BOT_COUNT {
-        return Err(Error::ReachedMaximumBots)
+    if db.get_number_of_bots_by_user(&user.id).await? >= *MAX_BOT_COUNT {
+        return Err(Error::ReachedMaximumBots);
     }
 
-    let id = Ulid::new().to_string();
-    let token = nanoid!(64);
-    let bot = Bot {
-        id: id.clone(),
-        owner: user.id.clone(),
-        token,
-        public: false,
-        analytics: false,
-        discoverable: false,
-        interactions_url: None
-    };
-
-    if User::is_username_taken(&info.name).await? {
+    if db.is_username_taken(&info.name).await? {
         return Err(Error::UsernameTaken);
     }
 
-    get_collection("users")
-        .insert_one(
-            doc! {
-                "_id": &id,
-                "username": &info.name,
-                "bot": {
-                    "owner": &user.id
-                }
-            },
-            None,
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "insert_one",
-            with: "user",
-        })?;
+    let id = Ulid::new().to_string();
+    let bot_user = User {
+        id: id.clone(),
+        username: info.name,
+        bot: Some(BotInformation {
+            owner: user.id.clone(),
+        }),
+        ..Default::default()
+    };
 
-    get_collection("bots")
-        .insert_one(
-            to_document(&bot).map_err(|_| Error::DatabaseError { with: "bot", operation: "to_document" })?,
-            None,
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "insert_one",
-            with: "user",
-        })?;
+    let bot = Bot {
+        id,
+        owner: user.id,
+        token: nanoid!(64),
+        ..Default::default()
+    };
 
-    Ok(json!(bot))
+    db.insert_user(&bot_user).await?;
+    db.insert_bot(&bot).await?;
+    Ok(Json(bot))
 }

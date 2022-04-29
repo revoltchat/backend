@@ -1,14 +1,15 @@
-use crate::database::*;
-use crate::util::result::{Error, Result};
+use revolt_quark::{
+    models::{ChannelUnread, User},
+    Db, Result,
+};
 
-use mongodb::bson::doc;
-use rocket::serde::json::Value;
+use rocket::serde::json::Json;
 
+/// # Fetch Unreads
+///
+/// Fetch information about unread state on channels.
+#[openapi(tag = "Sync")]
 #[get("/unreads")]
-pub async fn req(user: User) -> Result<Value> {
-    if user.bot.is_some() {
-        return Err(Error::IsBot);
-    }
-
-    Ok(json!(User::fetch_unreads(&user.id).await?))
+pub async fn req(db: &Db, user: User) -> Result<Json<Vec<ChannelUnread>>> {
+    db.fetch_unreads(&user.id).await.map(Json)
 }

@@ -1,70 +1,71 @@
-use crate::database::*;
-use crate::util::result::{Error, Result, EmptyResponse};
+use revolt_quark::{models::User, perms, Db, EmptyResponse, Error, Permission, Ref, Result};
 
 use rocket::serde::json::Json;
 use serde::Deserialize;
 
-#[derive(Deserialize)]
-pub struct ServerId {
-    server: String
-}
-
-#[derive(Deserialize)]
-pub struct GroupId {
-    group: String
-}
-
-#[derive(Deserialize)]
+/// # Invite Destination
+#[derive(Deserialize, JsonSchema)]
 #[serde(untagged)]
-pub enum Destination {
-    Server(ServerId),
-    Group(GroupId)
+pub enum InviteBotDestination {
+    /// Invite to a server
+    Server {
+        /// Server Id
+        server: String,
+    },
+    /// Invite to a group
+    Group {
+        /// Group Id
+        group: String,
+    },
 }
 
+/// # Invite Bot
+///
+/// Invite a bot to a server or group by its id.`
+#[openapi(tag = "Bots")]
 #[post("/<target>/invite", data = "<dest>")]
-pub async fn invite_bot(user: User, target: Ref, dest: Json<Destination>) -> Result<EmptyResponse> {
+pub async fn invite_bot(
+    db: &Db,
+    user: User,
+    target: Ref,
+    dest: Json<InviteBotDestination>,
+) -> Result<EmptyResponse> {
     if user.bot.is_some() {
-        return Err(Error::IsBot)
+        return Err(Error::IsBot);
     }
-    
-    let bot = target.fetch_bot().await?;
 
-    if !bot.public {
-        if bot.owner != user.id {
-            return Err(Error::BotIsPrivate);
-        }
+    let bot = target.as_bot(db).await?;
+    if !bot.public && bot.owner != user.id {
+        return Err(Error::BotIsPrivate);
     }
 
     match dest.into_inner() {
-        Destination::Server(ServerId { server }) => {
-            let server = Ref::from(server)?.fetch_server().await?;
+        InviteBotDestination::Server { server } => {
+            let server = db.fetch_server(&server).await?;
 
-            let perm = permissions::PermissionCalculator::new(&user)
-                .with_server(&server)
-                .for_server()
+            perms(&user)
+                .server(&server)
+                .throw_permission(db, Permission::ManageServer)
                 .await?;
 
-            if !perm.get_manage_server() {
-                Err(Error::MissingPermission)?
-            }
-
-            server.join_member(&bot.id).await?;
-            Ok(EmptyResponse {})
+            let user = db.fetch_user(&bot.id).await?;
+            server
+                .create_member(db, user, None)
+                .await
+                .map(|_| EmptyResponse)
         }
-        Destination::Group(GroupId { group }) => {
-            let channel = Ref::from(group)?.fetch_channel().await?;
+        InviteBotDestination::Group { group } => {
+            let mut channel = db.fetch_channel(&group).await?;
 
-            let perm = permissions::PermissionCalculator::new(&user)
-                .with_channel(&channel)
-                .for_channel()
+            perms(&user)
+                .channel(&channel)
+                .throw_permission_and_view_channel(db, Permission::InviteOthers)
                 .await?;
 
-            if !perm.get_invite_others() {
-                Err(Error::MissingPermission)?
-            }
-
-            channel.add_to_group(bot.id, user.id).await?;
-            Ok(EmptyResponse {})
+            channel
+                .add_user_to_group(db, &bot.id, &user.id)
+                .await
+                .map(|_| EmptyResponse)
         }
     }
 }

@@ -1,120 +1,107 @@
-use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result, EmptyResponse};
-use crate::{database::*, notifications::events::RemoveBotField};
 use crate::util::regex::RE_USERNAME;
 
-use mongodb::bson::doc;
+use revolt_quark::{
+    models::{
+        bot::{FieldsBot, PartialBot},
+        Bot, User,
+    },
+    Db, Error, Ref, Result,
+};
+
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # Bot Details
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataEditBot {
+    /// Bot username
     #[validate(length(min = 2, max = 32), regex = "RE_USERNAME")]
     #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
+    /// Whether the bot can be added by anyone
     public: Option<bool>,
+    /// Whether analytics should be gathered for this bot
+    ///
+    /// Must be enabled in order to show up on [Revolt Discover](https://rvlt.gg).
     analytics: Option<bool>,
+    /// Interactions URL
+    #[validate(length(min = 1, max = 2048))]
     interactions_url: Option<String>,
-    remove: Option<RemoveBotField>,
+    /// Fields to remove from bot object
+    #[validate(length(min = 1))]
+    remove: Option<Vec<FieldsBot>>,
 }
 
+/// # Edit Bot
+///
+/// Edit bot details by its id.
+#[openapi(tag = "Bots")]
 #[patch("/<target>", data = "<data>")]
-pub async fn edit_bot(user: User, target: Ref, data: Json<Data>) -> Result<EmptyResponse> {
+pub async fn edit_bot(
+    db: &Db,
+    user: User,
+    target: Ref,
+    data: Json<DataEditBot>,
+) -> Result<Json<Bot>> {
     if user.bot.is_some() {
-        return Err(Error::IsBot)
+        return Err(Error::IsBot);
     }
-    
+
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if data.name.is_none()
-        && data.public.is_none()
+    let mut bot = target.as_bot(db).await?;
+    if bot.owner != user.id {
+        return Err(Error::NotFound);
+    }
+
+    if let Some(name) = data.name {
+        if db.is_username_taken(&name).await? {
+            return Err(Error::UsernameTaken);
+        }
+
+        let mut user = db.fetch_user(&bot.id).await?;
+        user.update_username(db, name).await?;
+    }
+
+    if data.public.is_none()
         && data.analytics.is_none()
         && data.interactions_url.is_none()
         && data.remove.is_none()
     {
-        return Ok(EmptyResponse {});
+        return Ok(Json(bot));
     }
 
-    let bot = target.fetch_bot().await?;
-    if bot.owner != user.id {
-        return Err(Error::MissingPermission);
-    }
+    let DataEditBot {
+        public,
+        analytics,
+        interactions_url,
+        remove,
+        ..
+    } = data;
 
-    if let Some(name) = &data.name {
-        if User::is_username_taken(&name).await? {
-            return Err(Error::UsernameTaken);
+    let mut partial = PartialBot {
+        public,
+        analytics,
+        interactions_url,
+        ..Default::default()
+    };
+
+    if let Some(remove) = &remove {
+        for field in remove {
+            bot.remove(field);
         }
 
-        get_collection("users")
-            .update_one(
-                doc! { "_id": &target.id },
-                doc! {
-                    "$set": {
-                        "username": name
-                    }
-                },
-                None
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "update_one",
-                with: "user",
-            })?;
-
-        ClientboundNotification::UserUpdate {
-            id: target.id.clone(),
-            data: json!({
-                "username": name
-            }),
-            clear: None,
-        }
-        .publish_as_user(target.id.clone());
-    }
-
-    let mut set = doc! {};
-    let mut unset = doc! {};
-
-    if let Some(remove) = &data.remove {
-        match remove {
-            RemoveBotField::InteractionsURL => {
-                unset.insert("interactions_url", 1);
-            }
+        if remove.iter().any(|x| x == &FieldsBot::Token) {
+            partial.token = Some(bot.token.clone());
         }
     }
 
-    if let Some(public) = &data.public {
-        set.insert("public", public);
-    }
+    db.update_bot(&bot.id, &partial, remove.unwrap_or_default())
+        .await?;
 
-    if let Some(analytics) = &data.analytics {
-        set.insert("analytics", analytics);
-    }
-
-    if let Some(interactions_url) = &data.interactions_url {
-        set.insert("interactions_url", interactions_url);
-    }
-
-    let mut operations = doc! {};
-    if set.len() > 0 {
-        operations.insert("$set", &set);
-    }
-
-    if unset.len() > 0 {
-        operations.insert("$unset", unset);
-    }
-
-    if operations.len() > 0 {
-        get_collection("bots")
-            .update_one(doc! { "_id": &target.id }, operations, None)
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "update_one",
-                with: "bot",
-            })?;
-    }
-
-    Ok(EmptyResponse {})
+    bot.apply_options(partial);
+    Ok(Json(bot))
 }

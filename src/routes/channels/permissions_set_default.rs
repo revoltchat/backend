@@ -1,97 +1,95 @@
-use mongodb::bson::doc;
 use rocket::serde::json::Json;
-use serde::{Serialize, Deserialize};
+use serde::Deserialize;
 
-use crate::database::*;
-use crate::database::permissions::channel::{ ChannelPermission, DEFAULT_PERMISSION_DM };
-use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result, EmptyResponse};
+use revolt_quark::{
+    models::{channel::PartialChannel, Channel, User},
+    perms, Db, Error, Override, Permission, Ref, Result,
+};
 
-#[derive(Serialize, Deserialize)]
-pub struct Data {
-    permissions: u32
+/// # Permission Value
+#[derive(Deserialize, JsonSchema)]
+#[serde(untagged)]
+pub enum DataDefaultChannelPermissions {
+    Value {
+        /// Permission values to set for members in a `Group`
+        permissions: u64,
+    },
+    Field {
+        /// Allow / deny values to set for members in this `TextChannel` or `VoiceChannel`
+        permissions: Override,
+    },
 }
 
+/// # Set Default Permission
+///
+/// Sets permissions for the default role in this channel.
+///
+/// Channel must be a `Group`, `TextChannel` or `VoiceChannel`.
+#[openapi(tag = "Channel Permissions")]
 #[put("/<target>/permissions/default", data = "<data>", rank = 1)]
-pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyResponse> {
-    let target = target.fetch_channel().await?;
+pub async fn req(
+    db: &Db,
+    user: User,
+    target: Ref,
+    data: Json<DataDefaultChannelPermissions>,
+) -> Result<Json<Channel>> {
+    let data = data.into_inner();
 
-    match target {
-        Channel::Group { id, owner, .. } => {
-            if user.id == owner {
-                let permissions: u32 = ChannelPermission::View as u32 | (data.permissions & *DEFAULT_PERMISSION_DM);
+    let mut channel = target.as_channel(db).await?;
+    let mut perm = perms(&user).channel(&channel);
 
-                get_collection("channels")
-                    .update_one(
-                        doc! { "_id": &id },
-                        doc! {
-                            "$set": {
-                                "permissions": permissions as i32
-                            }
+    perm.throw_permission_and_view_channel(db, Permission::ManagePermissions)
+        .await?;
+
+    match &channel {
+        Channel::Group { .. } => {
+            if let DataDefaultChannelPermissions::Value { permissions } = data {
+                channel
+                    .update(
+                        db,
+                        PartialChannel {
+                            permissions: Some(permissions as i64),
+                            ..Default::default()
                         },
-                        None
+                        vec![],
                     )
-                    .await
-                    .map_err(|_| Error::DatabaseError {
-                        operation: "update_one",
-                        with: "channel"
-                    })?;
-
-                ClientboundNotification::ChannelUpdate {
-                    id: id.clone(),
-                    data: json!({
-                        "permissions": permissions as i32
-                    }),
-                    clear: None
-                }
-                .publish(id);
-
-                Ok(EmptyResponse {})
+                    .await?;
             } else {
-                Err(Error::MissingPermission)
+                return Err(Error::InvalidOperation);
             }
         }
-        Channel::TextChannel { id, server, .. }
-        | Channel::VoiceChannel { id, server, .. } => {
-            let target = Ref::from_unchecked(server).fetch_server().await?;
-            let perm = permissions::PermissionCalculator::new(&user)
-                .with_server(&target)
-                .for_server()
+        Channel::TextChannel {
+            default_permissions,
+            ..
+        }
+        | Channel::VoiceChannel {
+            default_permissions,
+            ..
+        } => {
+            if let DataDefaultChannelPermissions::Field { permissions } = data {
+                perm.throw_permission_override(
+                    db,
+                    default_permissions.map(|x| x.into()),
+                    permissions,
+                )
                 .await?;
 
-            if !perm.get_manage_roles() {
-                return Err(Error::MissingPermission);
+                channel
+                    .update(
+                        db,
+                        PartialChannel {
+                            default_permissions: Some(permissions.into()),
+                            ..Default::default()
+                        },
+                        vec![],
+                    )
+                    .await?;
+            } else {
+                return Err(Error::InvalidOperation);
             }
-
-            let permissions: u32 = data.permissions;
-
-            get_collection("channels")
-                .update_one(
-                    doc! { "_id": &id },
-                    doc! {
-                        "$set": {
-                            "default_permissions": permissions as i32
-                        }
-                    },
-                    None
-                )
-                .await
-                .map_err(|_| Error::DatabaseError {
-                    operation: "update_one",
-                    with: "channel"
-                })?;
-
-            ClientboundNotification::ChannelUpdate {
-                id: id.clone(),
-                data: json!({
-                    "default_permissions": permissions as i32
-                }),
-                clear: None
-            }
-            .publish(id);
-
-            Ok(EmptyResponse {})
         }
-        _ => Err(Error::InvalidOperation)
+        _ => return Err(Error::InvalidOperation),
     }
+
+    Ok(Json(channel))
 }

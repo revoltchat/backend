@@ -1,40 +1,15 @@
-use crate::database::*;
-use crate::util::result::{Error, Result};
+use revolt_quark::{
+    models::{Channel, User},
+    Database, Result,
+};
 
-use futures::StreamExt;
-use mongodb::bson::doc;
-use rocket::serde::json::Value;
+use rocket::{serde::json::Json, State};
 
+/// # Fetch Direct Message Channels
+///
+/// This fetches your direct messages, including any DM and group DM conversations.
+#[openapi(tag = "Direct Messaging")]
 #[get("/dms")]
-pub async fn req(user: User) -> Result<Value> {
-    let mut cursor = get_collection("channels")
-        .find(
-            doc! {
-                "$or": [
-                    {
-                        "channel_type": "DirectMessage",
-                        "active": true
-                    },
-                    {
-                        "channel_type": "Group"
-                    }
-                ],
-                "recipients": user.id
-            },
-            None,
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "find",
-            with: "channels",
-        })?;
-
-    let mut channels = vec![];
-    while let Some(result) = cursor.next().await {
-        if let Ok(doc) = result {
-            channels.push(doc);
-        }
-    }
-
-    Ok(json!(channels))
+pub async fn req(db: &State<Database>, user: User) -> Result<Json<Vec<Channel>>> {
+    db.find_direct_messages(&user.id).await.map(Json)
 }

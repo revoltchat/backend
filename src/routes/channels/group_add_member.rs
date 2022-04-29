@@ -1,24 +1,28 @@
-use crate::util::result::{Error, Result, EmptyResponse};
-use crate::database::*;
+use revolt_quark::{
+    models::{Channel, User},
+    perms, Db, EmptyResponse, Error, Permission, Ref, Result,
+};
 
-use mongodb::bson::doc;
-
+/// # Add Member to Group
+///
+/// Adds another user to the group.
+#[openapi(tag = "Groups")]
 #[put("/<target>/recipients/<member>")]
-pub async fn req(user: User, target: Ref, member: Ref) -> Result<EmptyResponse> {
-    if get_relationship(&user, &member.id) != RelationshipStatus::Friend {
-        Err(Error::NotFriends)?
-    }
-
-    let channel = target.fetch_channel().await?;
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_channel(&channel)
-        .for_channel()
+pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyResponse> {
+    let mut channel = target.as_channel(db).await?;
+    perms(&user)
+        .channel(&channel)
+        .throw_permission_and_view_channel(db, Permission::InviteOthers)
         .await?;
 
-    if !perm.get_invite_others() {
-        Err(Error::MissingPermission)?
+    match &channel {
+        Channel::Group { .. } => {
+            let member = member.as_user(db).await?;
+            channel
+                .add_user_to_group(db, &member.id, &user.id)
+                .await
+                .map(|_| EmptyResponse)
+        }
+        _ => Err(Error::InvalidOperation),
     }
-
-    channel.add_to_group(member.id, user.id).await?;
-    Ok(EmptyResponse {})
 }

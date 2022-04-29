@@ -1,29 +1,22 @@
-use crate::database::*;
-use crate::util::result::{Error, Result, EmptyResponse};
+use revolt_quark::{models::User, perms, Db, EmptyResponse, Error, Permission, Ref, Result};
 
-use mongodb::bson::doc;
-
+/// # Delete Message
+///
+/// Delete a message you've sent or one you have permission to delete.
+#[openapi(tag = "Messaging")]
 #[delete("/<target>/messages/<msg>")]
-pub async fn req(user: User, target: Ref, msg: Ref) -> Result<EmptyResponse> {
-    let channel = target.fetch_channel().await?;
-    channel.has_messaging()?;
-
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_channel(&channel)
-        .for_channel()
-        .await?;
-    if !perm.get_view() {
-        Err(Error::MissingPermission)?
+pub async fn req(db: &Db, user: User, target: Ref, msg: Ref) -> Result<EmptyResponse> {
+    let message = msg.as_message(db).await?;
+    if message.channel != target.id {
+        return Err(Error::NotFound);
     }
 
-    let message = msg.fetch_message(&channel).await?;
-    if message.author != user.id && !perm.get_manage_messages() {
-        match channel {
-            Channel::SavedMessages { .. } => unreachable!(),
-            _ => Err(Error::CannotEditMessage)?,
-        }
+    if message.author != user.id {
+        perms(&user)
+            .channel(&target.as_channel(db).await?)
+            .throw_permission(db, Permission::ManageMessages)
+            .await?;
     }
 
-    message.delete().await?;
-    Ok(EmptyResponse {})
+    message.delete(db).await.map(|_| EmptyResponse)
 }

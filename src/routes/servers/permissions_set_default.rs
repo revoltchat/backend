@@ -1,68 +1,52 @@
-use mongodb::bson::doc;
 use rocket::serde::json::Json;
-use serde::{Serialize, Deserialize};
+use serde::Deserialize;
 
-use crate::database::*;
-use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result, EmptyResponse};
+use revolt_quark::{
+    models::{server::PartialServer, Server, User},
+    perms, Db, Permission, Ref, Result,
+};
 
-#[derive(Serialize, Deserialize)]
-pub struct Values {
-    server: u32,
-    channel: u32
+/// # Permission Value
+#[derive(Deserialize, JsonSchema)]
+pub struct DataSetServerDefaultPermission {
+    /// Default member permission value
+    permissions: u64,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct Data {
-    permissions: Values
-}
-
+/// # Set Default Permission
+///
+/// Sets permissions for the default role in this server.
+#[openapi(tag = "Server Permissions")]
 #[put("/<target>/permissions/default", data = "<data>", rank = 1)]
-pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyResponse> {
-    let target = target.fetch_server().await?;
+pub async fn req(
+    db: &Db,
+    user: User,
+    target: Ref,
+    data: Json<DataSetServerDefaultPermission>,
+) -> Result<Json<Server>> {
+    let data = data.into_inner();
 
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_server(&target)
-        .for_server()
+    let mut server = target.as_server(db).await?;
+    let mut permissions = perms(&user).server(&server);
+
+    permissions
+        .throw_permission(db, Permission::ManagePermissions)
         .await?;
 
-    if !perm.get_manage_roles() {
-        return Err(Error::MissingPermission);
-    }
+    permissions
+        .throw_permission_value(db, data.permissions)
+        .await?;
 
-    let server_permissions: u32 = data.permissions.server;
-    let channel_permissions: u32 = data.permissions.channel;
-
-    get_collection("servers")
-        .update_one(
-            doc! { "_id": &target.id },
-            doc! {
-                "$set": {
-                    "default_permissions": [
-                        server_permissions as i32,
-                        channel_permissions as i32
-                    ]
-                }
+    server
+        .update(
+            db,
+            PartialServer {
+                default_permissions: Some(data.permissions as i64),
+                ..Default::default()
             },
-            None
+            vec![],
         )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "update_one",
-            with: "server"
-        })?;
+        .await?;
 
-    ClientboundNotification::ServerUpdate {
-        id: target.id.clone(),
-        data: json!({
-            "default_permissions": [
-                server_permissions as i32,
-                channel_permissions as i32
-            ]
-        }),
-        clear: None
-    }
-    .publish(target.id);
-
-    Ok(EmptyResponse {})
+    Ok(Json(server))
 }

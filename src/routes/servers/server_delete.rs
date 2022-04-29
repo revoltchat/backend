@@ -1,25 +1,23 @@
-use crate::database::*;
-use crate::util::result::{Error, Result, EmptyResponse};
+use revolt_quark::{
+    models::{server_member::RemovalIntention, User},
+    Db, EmptyResponse, Ref, Result,
+};
 
-use mongodb::bson::doc;
-
+/// # Delete / Leave Server
+///
+/// Deletes a server if owner otherwise leaves.
+#[openapi(tag = "Server Information")]
 #[delete("/<target>")]
-pub async fn req(user: User, target: Ref) -> Result<EmptyResponse> {
-    let target = target.fetch_server().await?;
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_server(&target)
-        .for_server()
-        .await?;
+pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
+    let server = target.as_server(db).await?;
+    let member = db.fetch_member(&target.id, &user.id).await?;
 
-    if !perm.get_view() {
-        return Err(Error::MissingPermission);
-    }
-
-    if user.id == target.owner {
-        target.delete().await?;
+    if server.owner == user.id {
+        server.delete(db).await
     } else {
-        target.remove_member(&user.id, RemoveMember::Leave).await?;
+        server
+            .remove_member(db, member, RemovalIntention::Leave)
+            .await
     }
-
-    Ok(EmptyResponse {})
+    .map(|_| EmptyResponse)
 }

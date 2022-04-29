@@ -1,68 +1,59 @@
-use mongodb::bson::doc;
 use rocket::serde::json::Json;
-use serde::{Serialize, Deserialize};
-use validator::Contains;
+use serde::Deserialize;
 
-use crate::database::*;
-use crate::util::result::{Error, Result, EmptyResponse};
-use crate::notifications::events::ClientboundNotification;
+use revolt_quark::{
+    models::{Channel, User},
+    perms, Db, Error, Override, Permission, Ref, Result,
+};
 
-#[derive(Serialize, Deserialize)]
+/// # Permission Value
+#[derive(Deserialize, JsonSchema)]
 pub struct Data {
-    permissions: u32
+    /// Allow / deny values to set for this role
+    permissions: Override,
 }
 
-#[put("/<target>/permissions/<role>", data = "<data>", rank = 2)]
-pub async fn req(user: User, target: Ref, role: String, data: Json<Data>) -> Result<EmptyResponse> {
-    let target = target.fetch_channel().await?;
+/// # Set Role Permission
+///
+/// Sets permissions for the specified role in this channel.
+///
+/// Channel must be a `TextChannel` or `VoiceChannel`.
+#[openapi(tag = "Channel Permissions")]
+#[put("/<target>/permissions/<role_id>", data = "<data>", rank = 2)]
+pub async fn req(
+    db: &Db,
+    user: User,
+    target: Ref,
+    role_id: String,
+    data: Json<Data>,
+) -> Result<Json<Channel>> {
+    let mut channel = target.as_channel(db).await?;
+    let mut permissions = perms(&user).channel(&channel);
 
-    match target {
-        Channel::TextChannel { id, server, mut role_permissions, .. }
-        | Channel::VoiceChannel { id, server, mut role_permissions, .. } => {
-            let target = Ref::from_unchecked(server).fetch_server().await?;
-            let perm = permissions::PermissionCalculator::new(&user)
-                .with_server(&target)
-                .for_server()
+    permissions
+        .throw_permission_and_view_channel(db, Permission::ManagePermissions)
+        .await?;
+
+    if let Some(server) = permissions.server.get() {
+        if let Some(role) = server.roles.get(&role_id) {
+            if role.rank <= permissions.get_member_rank().unwrap_or(i64::MIN) {
+                return Err(Error::NotElevated);
+            }
+
+            let current_value: Override = role.permissions.into();
+            permissions
+                .throw_permission_override(db, current_value, data.permissions)
                 .await?;
 
-            if !perm.get_manage_roles() {
-                return Err(Error::MissingPermission);
-            }
+            channel
+                .set_role_permission(db, &role_id, data.permissions.into())
+                .await?;
 
-            if !target.roles.has_element(&role) {
-                return Err(Error::NotFound);
-            }
-
-            let permissions: u32 = data.permissions;
-
-            get_collection("channels")
-            .update_one(
-                doc! { "_id": &id },
-                doc! {
-                    "$set": {
-                        "role_permissions.".to_owned() + &role: permissions as i32
-                    }
-                },
-                None
-            )
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "update_one",
-                with: "channel"
-            })?;
-
-            role_permissions.insert(role, permissions as i32);
-            ClientboundNotification::ChannelUpdate {
-                id: id.clone(),
-                data: json!({
-                    "role_permissions": role_permissions
-                }),
-                clear: None
-            }
-            .publish(id);
-
-            Ok(EmptyResponse {})
+            Ok(Json(channel))
+        } else {
+            Err(Error::NotFound)
         }
-        _ => Err(Error::InvalidOperation)
+    } else {
+        Err(Error::InvalidOperation)
     }
 }

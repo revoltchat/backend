@@ -1,45 +1,47 @@
-use crate::database::*;
-use crate::util::result::{Error, Result, EmptyResponse};
 use crate::util::regex::RE_USERNAME;
+use revolt_quark::{models::User, Database, EmptyResponse, Error, Result};
 
-use mongodb::bson::doc;
 use rauth::entities::Session;
-use rocket::serde::json::Json;
+use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # New User Data
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataOnboard {
+    /// New username which will be used to identify the user on the platform
     #[validate(length(min = 2, max = 32), regex = "RE_USERNAME")]
     username: String,
 }
 
+/// # Complete Onboarding
+///
+/// This sets a new username, completes onboarding and allows a user to start using Revolt.
+#[openapi(tag = "Onboarding")]
 #[post("/complete", data = "<data>")]
-pub async fn req(session: Session, user: Option<User>, data: Json<Data>) -> Result<EmptyResponse> {
+pub async fn req(
+    db: &State<Database>,
+    session: Session,
+    user: Option<User>,
+    data: Json<DataOnboard>,
+) -> Result<EmptyResponse> {
     if user.is_some() {
-        Err(Error::AlreadyOnboarded)?
+        return Err(Error::AlreadyOnboarded);
     }
 
+    let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if User::is_username_taken(&data.username).await? {
+    if db.is_username_taken(&data.username).await? {
         return Err(Error::UsernameTaken);
     }
 
-    get_collection("users")
-        .insert_one(
-            doc! {
-                "_id": session.user_id,
-                "username": &data.username
-            },
-            None,
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "insert_one",
-            with: "user",
-        })?;
+    let user = User {
+        id: session.user_id,
+        username: data.username,
+        ..Default::default()
+    };
 
-    Ok(EmptyResponse {})
+    db.insert_user(&user).await.map(|_| EmptyResponse)
 }

@@ -1,43 +1,17 @@
-use crate::database::*;
-use crate::util::result::{Error, Result, EmptyResponse};
+use revolt_quark::{models::User, perms, Db, EmptyResponse, Permission, Ref, Result};
 
-use mongodb::bson::doc;
-
+/// # Unban user
+///
+/// Remove a user's ban.
+#[openapi(tag = "Server Members")]
 #[delete("/<server>/bans/<target>")]
-pub async fn req(user: User, server: Ref, target: Ref) -> Result<EmptyResponse> {
-    let server = server.fetch_server().await?;
-
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_server(&server)
-        .for_server()
+pub async fn req(db: &Db, user: User, server: Ref, target: Ref) -> Result<EmptyResponse> {
+    let server = server.as_server(db).await?;
+    perms(&user)
+        .server(&server)
+        .throw_permission(db, Permission::BanMembers)
         .await?;
 
-    if !perm.get_ban_members() {
-        Err(Error::MissingPermission)?
-    }
-
-    if target.id == user.id {
-        return Err(Error::InvalidOperation);
-    }
-
-    if target.id == server.owner {
-        return Err(Error::MissingPermission);
-    }
-
-    let target = target.fetch_ban(&server.id).await?;
-    get_collection("server_bans")
-        .delete_one(
-            doc! {
-                "_id.server": &server.id,
-                "_id.user": &target.id.user
-            },
-            None,
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "delete_one",
-            with: "server_ban",
-        })?;
-
-    Ok(EmptyResponse {})
+    let ban = target.as_ban(db, &server.id).await?;
+    db.delete_ban(&ban.id).await.map(|_| EmptyResponse)
 }

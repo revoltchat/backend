@@ -1,62 +1,59 @@
-use crate::database::*;
-use crate::util::result::{Error, Result, EmptyResponse};
+use revolt_quark::{
+    models::{ServerBan, User},
+    perms, Db, Error, Permission, Ref, Result,
+};
 
-use mongodb::bson::doc;
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # Ban Information
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataBanCreate {
+    /// Ban reason
     #[validate(length(min = 1, max = 1024))]
     reason: Option<String>,
 }
 
+/// # Ban User
+///
+/// Ban a user by their id.
+#[openapi(tag = "Server Members")]
 #[put("/<server>/bans/<target>", data = "<data>")]
-pub async fn req(user: User, server: Ref, target: Ref, data: Json<Data>) -> Result<EmptyResponse> {
+pub async fn req(
+    db: &Db,
+    user: User,
+    server: Ref,
+    target: Ref,
+    data: Json<DataBanCreate>,
+) -> Result<Json<ServerBan>> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    let server = server.fetch_server().await?;
+    let server = server.as_server(db).await?;
 
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_server(&server)
-        .for_server()
-        .await?;
-
-    if !perm.get_ban_members() {
-        Err(Error::MissingPermission)?
-    }
-
-    let target = target.fetch_user().await?;
     if target.id == user.id {
-        return Err(Error::InvalidOperation);
+        return Err(Error::CannotRemoveYourself);
     }
 
     if target.id == server.owner {
-        return Err(Error::MissingPermission);
+        return Err(Error::InvalidOperation);
     }
 
-    let mut document = doc! {
-        "_id": {
-            "server": &server.id,
-            "user": &target.id
-        }
-    };
+    let mut permissions = perms(&user).server(&server);
 
-    if let Some(reason) = data.reason {
-        document.insert("reason", reason);
+    permissions
+        .throw_permission(db, Permission::BanMembers)
+        .await?;
+
+    let member = target.as_member(db, &server.id).await?;
+
+    if member.get_ranking(permissions.server.get().unwrap())
+        <= permissions.get_member_rank().unwrap_or(i64::MIN)
+    {
+        return Err(Error::NotElevated);
     }
 
-    get_collection("server_bans")
-        .insert_one(document, None)
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "insert_one",
-            with: "server_ban",
-        })?;
-
-    server.remove_member(&target.id, RemoveMember::Ban).await?;
-    Ok(EmptyResponse {})
+    server.ban_member(db, member, data.reason).await.map(Json)
 }

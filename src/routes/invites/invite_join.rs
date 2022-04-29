@@ -1,41 +1,46 @@
-use crate::database::*;
-use crate::util::result::{Error, Result};
-use crate::util::variables::MAX_SERVER_COUNT;
+use revolt_quark::{
+    models::{Channel, Invite, Server, User},
+    variables::delta::MAX_SERVER_COUNT,
+    Db, Error, Ref, Result,
+};
 
-use rocket::serde::json::Value;
+use rocket::serde::json::Json;
+use serde::Serialize;
 
+/// # Join Response
+#[derive(Serialize, JsonSchema)]
+#[serde(tag = "type")]
+pub enum InviteJoinResponse {
+    Server {
+        /// Channels in the server
+        channels: Vec<Channel>,
+        /// Server we are joining
+        server: Server,
+    },
+}
+
+/// # Join Invite
+///
+/// Join an invite by its ID.
+#[openapi(tag = "Invites")]
 #[post("/<target>")]
-pub async fn req(user: User, target: Ref) -> Result<Value> {
+pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<InviteJoinResponse>> {
     if user.bot.is_some() {
-        return Err(Error::IsBot)
+        return Err(Error::IsBot);
     }
 
-    if !User::can_acquire_server(&user.id).await? {
-        Err(Error::TooManyServers {
+    if !user.can_acquire_server(db).await? {
+        return Err(Error::TooManyServers {
             max: *MAX_SERVER_COUNT,
-        })?
+        });
     }
-    
-    let target = target.fetch_invite().await?;
 
-    match target {
-        Invite::Server { channel, .. } => {
-            let channel = Ref::from_unchecked(channel).fetch_channel().await?;
-            let server = match &channel {
-                Channel::TextChannel { server, .. }
-                | Channel::VoiceChannel { server, .. } => {
-                    Ref::from_unchecked(server.clone()).fetch_server().await?
-                }
-                _ => unreachable!()
-            };
-
-            server.join_member(&user.id).await?;
-
-            Ok(json!({
-                "type": "Server",
-                "channel": channel,
-                "server": server
-            }))
+    let invite = target.as_invite(db).await?;
+    match &invite {
+        Invite::Server { server, .. } => {
+            let server = db.fetch_server(server).await?;
+            let channels = server.create_member(db, user, None).await?;
+            Ok(Json(InviteJoinResponse::Server { channels, server }))
         }
         _ => unreachable!(),
     }

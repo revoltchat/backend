@@ -1,36 +1,42 @@
-use crate::database::*;
-use crate::util::result::{Error, Result};
-use crate::util::variables::{USE_VOSO, VOSO_MANAGE_TOKEN, VOSO_URL};
+use revolt_quark::{
+    models::{Channel, User},
+    perms,
+    variables::delta::{USE_VOSO, VOSO_MANAGE_TOKEN, VOSO_URL},
+    Db, Error, Permission, Ref, Result,
+};
 
-use rocket::serde::json::Value;
+use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
-struct CreateUserResponse {
+/// # Voice Server Token Response
+#[derive(Serialize, Deserialize, JsonSchema)]
+pub struct CreateVoiceUserResponse {
+    /// Token for authenticating with the voice server
     token: String,
 }
 
+/// # Join Call
+///
+/// Asks the voice server for a token to join the call.
+#[openapi(tag = "Voice")]
 #[post("/<target>/join_call")]
-pub async fn req(user: User, target: Ref) -> Result<Value> {
+pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<CreateVoiceUserResponse>> {
+    let channel = target.as_channel(db).await?;
+    let mut permissions = perms(&user).channel(&channel);
+
+    permissions
+        .throw_permission_and_view_channel(db, Permission::Connect)
+        .await?;
+
     if !*USE_VOSO {
         return Err(Error::VosoUnavailable);
     }
 
-    let target = target.fetch_channel().await?;
-    match target {
+    match channel {
         Channel::SavedMessages { .. } | Channel::TextChannel { .. } => {
             return Err(Error::CannotJoinCall)
         }
         _ => {}
-    }
-
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_channel(&target)
-        .for_channel()
-        .await?;
-
-    if !perm.get_voice_call() {
-        return Err(Error::MissingPermission);
     }
 
     // To join a call:
@@ -38,7 +44,7 @@ pub async fn req(user: User, target: Ref) -> Result<Value> {
     // - If not, create it.
     let client = reqwest::Client::new();
     let result = client
-        .get(&format!("{}/room/{}", *VOSO_URL, target.id()))
+        .get(&format!("{}/room/{}", *VOSO_URL, channel.id()))
         .header(
             reqwest::header::AUTHORIZATION,
             VOSO_MANAGE_TOKEN.to_string(),
@@ -51,14 +57,15 @@ pub async fn req(user: User, target: Ref) -> Result<Value> {
         Ok(result) => match result.status() {
             reqwest::StatusCode::OK => (),
             reqwest::StatusCode::NOT_FOUND => {
-                if let Err(_) = client
-                    .post(&format!("{}/room/{}", *VOSO_URL, target.id()))
+                if (client
+                    .post(&format!("{}/room/{}", *VOSO_URL, channel.id()))
                     .header(
                         reqwest::header::AUTHORIZATION,
                         VOSO_MANAGE_TOKEN.to_string(),
                     )
                     .send()
-                    .await
+                    .await)
+                    .is_err()
                 {
                     return Err(Error::VosoUnavailable);
                 }
@@ -72,7 +79,7 @@ pub async fn req(user: User, target: Ref) -> Result<Value> {
         .post(&format!(
             "{}/room/{}/user/{}",
             *VOSO_URL,
-            target.id(),
+            channel.id(),
             user.id
         ))
         .header(
@@ -82,9 +89,11 @@ pub async fn req(user: User, target: Ref) -> Result<Value> {
         .send()
         .await
     {
-        let res: CreateUserResponse = response.json().await.map_err(|_| Error::InvalidOperation)?;
-
-        Ok(json!(res))
+        response
+            .json()
+            .await
+            .map_err(|_| Error::InvalidOperation)
+            .map(Json)
     } else {
         Err(Error::VosoUnavailable)
     }

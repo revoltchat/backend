@@ -1,44 +1,53 @@
-use crate::database::*;
-use crate::util::idempotency::IdempotencyKey;
-use crate::util::result::{Error, Result};
-use crate::util::variables::MAX_GROUP_SIZE;
+use std::{collections::HashSet, iter::FromIterator};
 
-use mongodb::bson::doc;
-use rocket::serde::json::{Json, Value};
+use revolt_quark::{
+    get_relationship,
+    models::{user::RelationshipStatus, Channel, User},
+    variables::delta::MAX_GROUP_SIZE,
+    Db, Error, Result,
+};
+
+use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
-use std::iter::FromIterator;
 use ulid::Ulid;
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # Group Data
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataCreateGroup {
+    /// Group name
     #[validate(length(min = 1, max = 32))]
     name: String,
+    /// Group description
     #[validate(length(min = 0, max = 1024))]
     description: Option<String>,
+    /// Array of user IDs to add to the group
+    ///
+    /// Must be friends with these users.
+    #[validate(length(min = 0, max = 49))]
     users: Vec<String>,
+    /// Whether this group is age-restricted
     #[serde(skip_serializing_if = "Option::is_none")]
-    nsfw: Option<bool>
+    nsfw: Option<bool>,
 }
 
+/// # Create Group
+///
+/// Create a new group channel.
+#[openapi(tag = "Groups")]
 #[post("/create", data = "<info>")]
-pub async fn req(_idempotency: IdempotencyKey, user: User, info: Json<Data>) -> Result<Value> {
-    if user.bot.is_some() {
-        return Err(Error::IsBot)
-    }
-    
+pub async fn req(db: &Db, user: User, info: Json<DataCreateGroup>) -> Result<Json<Channel>> {
     let info = info.into_inner();
     info.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    let mut set: HashSet<String> = HashSet::from_iter(info.users.iter().cloned());
+    let mut set: HashSet<String> = HashSet::from_iter(info.users.into_iter());
     set.insert(user.id.clone());
 
     if set.len() > *MAX_GROUP_SIZE {
-        Err(Error::GroupTooLarge {
+        return Err(Error::GroupTooLarge {
             max: *MAX_GROUP_SIZE,
-        })?
+        });
     }
 
     for target in &set {
@@ -50,20 +59,22 @@ pub async fn req(_idempotency: IdempotencyKey, user: User, info: Json<Data>) -> 
         }
     }
 
-    let id = Ulid::new().to_string();
-    let channel = Channel::Group {
-        id,
+    let group = Channel::Group {
+        id: Ulid::new().to_string(),
+
         name: info.name,
-        description: info.description,
         owner: user.id,
+        description: info.description,
         recipients: set.into_iter().collect::<Vec<String>>(),
+
         icon: None,
         last_message_id: None,
+
         permissions: None,
-        nsfw: info.nsfw.unwrap_or_default()
+
+        nsfw: info.nsfw.unwrap_or(false),
     };
 
-    channel.clone().publish().await?;
-
-    Ok(json!(channel))
+    group.create(db).await?;
+    Ok(Json(group))
 }

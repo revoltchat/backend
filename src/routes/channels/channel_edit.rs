@@ -1,160 +1,173 @@
-use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result, EmptyResponse};
-use crate::{database::*, notifications::events::RemoveChannelField};
+use revolt_quark::{
+    models::{
+        channel::{Channel, FieldsChannel, PartialChannel},
+        message::SystemMessage,
+        File, User,
+    },
+    perms, Database, Error, Permission, Ref, Result,
+};
 
-use mongodb::bson::{doc, to_document};
-use rocket::serde::json::Json;
+use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # Channel Details
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataEditChannel {
+    /// Channel name
     #[validate(length(min = 1, max = 32))]
     #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
+    /// Channel description
     #[validate(length(min = 0, max = 1024))]
     #[serde(skip_serializing_if = "Option::is_none")]
     description: Option<String>,
+    /// Icon
+    ///
+    /// Provide an Autumn attachment Id.
     #[validate(length(min = 1, max = 128))]
     icon: Option<String>,
-    remove: Option<RemoveChannelField>,
+    /// Whether this channel is age-restricted
     #[serde(skip_serializing_if = "Option::is_none")]
-    nsfw: Option<bool>
+    nsfw: Option<bool>,
+    #[validate(length(min = 1))]
+    remove: Option<Vec<FieldsChannel>>,
 }
 
+/// # Edit Channel
+///
+/// Edit a channel object by its id.
+#[openapi(tag = "Channel Information")]
 #[patch("/<target>", data = "<data>")]
-pub async fn req(user: User, target: Ref, data: Json<Data>) -> Result<EmptyResponse> {
+pub async fn req(
+    db: &State<Database>,
+    user: User,
+    target: Ref,
+    data: Json<DataEditChannel>,
+) -> Result<Json<Channel>> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
+    let mut channel = target.as_channel(db).await?;
+    perms(&user)
+        .channel(&channel)
+        .throw_permission_and_view_channel(db, Permission::ManageChannel)
+        .await?;
+
     if data.name.is_none()
         && data.description.is_none()
         && data.icon.is_none()
-        && data.remove.is_none()
         && data.nsfw.is_none()
+        && data.remove.is_none()
     {
-        return Ok(EmptyResponse {});
+        return Ok(Json(channel));
     }
 
-    let target = target.fetch_channel().await?;
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_channel(&target)
-        .for_channel()
-        .await?;
-
-    if !perm.get_manage_channel() {
-        Err(Error::MissingPermission)?
-    }
-
-    match &target {
-        Channel::Group { id, icon, .. }
-        | Channel::TextChannel { id, icon, .. }
-        | Channel::VoiceChannel { id, icon, .. } => {
-            let mut set = doc! {};
-            let mut unset = doc! {};
-
-            let mut remove_icon = false;
-            if let Some(remove) = &data.remove {
-                match remove {
-                    RemoveChannelField::Icon => {
-                        unset.insert("icon", 1);
-                        remove_icon = true;
+    let mut partial: PartialChannel = Default::default();
+    match &mut channel {
+        Channel::Group {
+            id,
+            name,
+            description,
+            icon,
+            nsfw,
+            ..
+        }
+        | Channel::TextChannel {
+            id,
+            name,
+            description,
+            icon,
+            nsfw,
+            ..
+        }
+        | Channel::VoiceChannel {
+            id,
+            name,
+            description,
+            icon,
+            nsfw,
+            ..
+        } => {
+            if let Some(fields) = &data.remove {
+                if fields.contains(&FieldsChannel::Icon) {
+                    if let Some(icon) = &icon {
+                        db.mark_attachment_as_deleted(&icon.id).await?;
                     }
-                    RemoveChannelField::Description => {
-                        unset.insert("description", 1);
+                }
+
+                for field in fields {
+                    match field {
+                        FieldsChannel::Description => {
+                            description.take();
+                        }
+                        FieldsChannel::Icon => {
+                            icon.take();
+                        }
+                        _ => {}
                     }
                 }
             }
 
-            if let Some(name) = &data.name {
-                set.insert("name", name);
+            if let Some(icon_id) = data.icon {
+                partial.icon = Some(File::use_icon(db, &icon_id, id).await?);
+                *icon = partial.icon.clone();
             }
 
-            if let Some(description) = &data.description {
-                set.insert("description", description);
+            if let Some(new_name) = data.name {
+                *name = new_name.clone();
+                partial.name = Some(new_name);
             }
 
-            if let Some(attachment_id) = &data.icon {
-                let attachment =
-                    File::find_and_use(&attachment_id, "icons", "object", target.id()).await?;
-                set.insert(
-                    "icon",
-                    to_document(&attachment).map_err(|_| Error::DatabaseError {
-                        operation: "to_document",
-                        with: "attachment",
-                    })?,
-                );
-
-                remove_icon = true;
+            if let Some(new_description) = data.description {
+                partial.description = Some(new_description);
+                *description = partial.description.clone();
             }
 
-            if let Some(nsfw) = &data.nsfw {
-                set.insert("nsfw", nsfw);
-            }
-            
-            let mut operations = doc! {};
-            if set.len() > 0 {
-                operations.insert("$set", &set);
+            if let Some(new_nsfw) = data.nsfw {
+                *nsfw = new_nsfw;
+                partial.nsfw = Some(new_nsfw);
             }
 
-            if unset.len() > 0 {
-                operations.insert("$unset", unset);
-            }
-
-            if operations.len() > 0 {
-                get_collection("channels")
-                    .update_one(doc! { "_id": &id }, operations, None)
-                    .await
-                    .map_err(|_| Error::DatabaseError {
-                        operation: "update_one",
-                        with: "channel",
-                    })?;
-            }
-
-            ClientboundNotification::ChannelUpdate {
-                id: id.clone(),
-                data: json!(set),
-                clear: data.remove,
-            }
-            .publish(id.clone());
-
-            if let Channel::Group { .. } = &target {
-                if let Some(name) = data.name {
-                    Content::SystemMessage(SystemMessage::ChannelRenamed {
-                        name,
+            // Send out mutation system messages.
+            if let Channel::Group { .. } = &channel {
+                if let Some(name) = &partial.name {
+                    SystemMessage::ChannelRenamed {
+                        name: name.to_string(),
                         by: user.id.clone(),
-                    })
-                    .send_as_system(&target)
+                    }
+                    .into_message(channel.id().to_string())
+                    .create(db, &channel, None)
                     .await
                     .ok();
                 }
 
-                if let Some(_) = data.description {
-                    Content::SystemMessage(SystemMessage::ChannelDescriptionChanged {
+                if partial.description.is_some() {
+                    SystemMessage::ChannelDescriptionChanged {
                         by: user.id.clone(),
-                    })
-                    .send_as_system(&target)
+                    }
+                    .into_message(channel.id().to_string())
+                    .create(db, &channel, None)
                     .await
                     .ok();
                 }
 
-                if let Some(_) = data.icon {
-                    Content::SystemMessage(SystemMessage::ChannelIconChanged { by: user.id })
-                        .send_as_system(&target)
+                if partial.icon.is_some() {
+                    SystemMessage::ChannelIconChanged { by: user.id }
+                        .into_message(channel.id().to_string())
+                        .create(db, &channel, None)
                         .await
                         .ok();
                 }
             }
 
-            if remove_icon {
-                if let Some(old_icon) = icon {
-                    old_icon.delete().await?;
-                }
-            }
-
-            Ok(EmptyResponse {})
+            channel
+                .update(db, partial, data.remove.unwrap_or_default())
+                .await?;
         }
-        _ => Err(Error::InvalidOperation),
-    }
+        _ => return Err(Error::InvalidOperation),
+    };
+
+    Ok(Json(channel))
 }

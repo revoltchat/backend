@@ -1,67 +1,19 @@
-use crate::database::*;
-use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, EmptyResponse, Result};
+use revolt_quark::{models::User, Db, EmptyResponse, Error, Ref, Result};
 
-use mongodb::bson::doc;
-
+/// # Delete Bot
+///
+/// Delete a bot by its id.
+#[openapi(tag = "Bots")]
 #[delete("/<target>")]
-pub async fn delete_bot(user: User, target: Ref) -> Result<EmptyResponse> {
+pub async fn delete_bot(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
     if user.bot.is_some() {
-        return Err(Error::IsBot)
+        return Err(Error::IsBot);
     }
-    
-    let bot = target.fetch_bot().await?;
+
+    let bot = target.as_bot(db).await?;
     if bot.owner != user.id {
-        return Err(Error::MissingPermission);
+        return Err(Error::NotFound);
     }
 
-    let username = format!("Deleted User {}", &bot.id);
-    get_collection("users")
-        .update_one(
-            doc! {
-                "_id": &bot.id
-            },
-            doc! {
-                "$set": {
-                    "username": &username,
-                    "flags": 2
-                },
-                "$unset": {
-                    "avatar": 1,
-                    "status": 1,
-                    "profile": 1
-                }
-            },
-            None
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            with: "user",
-            operation: "update_one"
-        })?;
-
-    ClientboundNotification::UserUpdate {
-        id: target.id.clone(),
-        data: json!({
-            "username": username,
-            "flags": 2
-        }),
-        clear: None,
-    }
-    .publish_as_user(target.id.clone());
-
-    get_collection("bots")
-        .delete_one(
-            doc! {
-                "_id": &bot.id
-            },
-            None
-        )
-        .await
-        .map_err(|_| Error::DatabaseError {
-            with: "bot",
-            operation: "delete_one"
-        })?;
-
-    Ok(EmptyResponse {})
+    bot.delete(db).await.map(|_| EmptyResponse)
 }

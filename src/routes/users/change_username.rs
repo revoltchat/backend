@@ -1,63 +1,37 @@
-use crate::database::*;
-use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result, EmptyResponse};
 use crate::util::regex::RE_USERNAME;
-use mongodb::bson::doc;
 use rauth::entities::Account;
-use rocket::serde::json::Json;
+use revolt_quark::{models::User, Database, Error, Result};
+use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # Username Information
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataChangeUsername {
+    /// New username
     #[validate(length(min = 2, max = 32), regex = "RE_USERNAME")]
-    username: Option<String>,
+    username: String,
+    /// Current account password
     #[validate(length(min = 8, max = 1024))]
     password: String,
 }
 
-#[patch("/<_ignore_id>/username", data = "<data>")]
+/// # Change Username
+///
+/// Change your username.
+#[openapi(tag = "User Information")]
+#[patch("/@me/username", data = "<data>")]
 pub async fn req(
+    db: &State<Database>,
     account: Account,
-    user: User,
-    data: Json<Data>,
-    _ignore_id: String,
-) -> Result<EmptyResponse> {
-    if user.bot.is_some() {
-        return Err(Error::IsBot)
-    }
-
-    data.validate()
-        .map_err(|error| Error::FailedValidation { error })?;
-
-    account.verify_password(&data.password)
+    mut user: User,
+    data: Json<DataChangeUsername>,
+) -> Result<Json<User>> {
+    let data = data.into_inner();
+    account
+        .verify_password(&data.password)
         .map_err(|_| Error::InvalidCredentials)?;
 
-    let mut set = doc! {};
-    if let Some(username) = &data.username {
-        if (username.to_lowercase() != user.username.to_lowercase()) && User::is_username_taken(&username).await? {
-            return Err(Error::UsernameTaken);
-        }
-
-        set.insert("username", username.clone());
-    }
-
-    get_collection("users")
-        .update_one(doc! { "_id": &user.id }, doc! { "$set": set }, None)
-        .await
-        .map_err(|_| Error::DatabaseError {
-            operation: "update_one",
-            with: "user",
-        })?;
-
-    ClientboundNotification::UserUpdate {
-        id: user.id.clone(),
-        data: json!({
-            "username": data.username
-        }),
-        clear: None,
-    }
-    .publish_as_user(user.id.clone());
-
-    Ok(EmptyResponse {})
+    user.update_username(db, data.username).await?;
+    Ok(Json(user.foreign()))
 }

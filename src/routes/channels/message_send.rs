@@ -1,64 +1,42 @@
 use std::collections::HashSet;
 
-use crate::database::*;
-use crate::util::idempotency::IdempotencyKey;
-use crate::util::ratelimit::{Ratelimiter, RatelimitResponse};
-use crate::util::result::{Error, Result};
+use revolt_quark::{
+    models::{
+        message::{Masquerade, Reply, SendableEmbed},
+        Message, User,
+    },
+    perms, Db, Error, Permission, Ref, Result,
+};
 
-use mongodb::bson::doc;
 use regex::Regex;
-use rocket::serde::json::{Json, Value};
+use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use validator::Validate;
 
-#[derive(Serialize, Deserialize)]
-pub struct Reply {
-    id: String,
-    mention: bool
-}
+use crate::util::idempotency::IdempotencyKey;
 
-#[derive(Validate, Serialize, Deserialize, Clone, Debug)]
-pub struct SendableEmbed {
-    icon_url: Option<String>,
-    url: Option<String>,
-    #[validate(length(min = 1, max = 100))]
-    title: Option<String>,
-    #[validate(length(min = 1, max = 2000))]
-    description: Option<String>,
-    media: Option<String>,
-	colour: Option<String>,
-}
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataMessageSend {
+    /// Unique token to prevent duplicate message sending
+    ///
+    /// **This is deprecated and replaced by `Idempotency-Key`!**
+    nonce: Option<String>,
 
-impl SendableEmbed {
-    pub async fn into_embed(self, message_id: String) -> Result<Embed> {
-        let media = if let Some(id) = self.media {
-            Some(File::find_and_use(&id, "attachments", "message", &message_id).await?)
-        } else { None };
-
-        Ok(Embed::Text(Text {
-            icon_url: self.icon_url,
-            url: self.url,
-            title: self.title,
-            description: self.description,
-            media,
-            colour: self.colour
-        }))
-    }
-}
-
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+    /// Message content to send
     #[validate(length(min = 0, max = 2000))]
-    content: String,
+    content: Option<String>,
+    /// Attachments to include in message
     #[validate(length(min = 1, max = 128))]
     attachments: Option<Vec<String>>,
-    nonce: Option<String>,
+    /// Messages to reply to
     replies: Option<Vec<Reply>>,
+    /// Embeds to include in message
+    #[validate(length(min = 1, max = 10))]
+    embeds: Option<Vec<SendableEmbed>>,
+    /// Masquerade to apply to this message
     #[validate]
     masquerade: Option<Masquerade>,
-    #[validate(length(min = 1, max = 10))]
-    embeds: Option<Vec<SendableEmbed>>
 }
 
 lazy_static! {
@@ -66,116 +44,150 @@ lazy_static! {
     static ref RE_MENTION: Regex = Regex::new(r"<@([0-9A-HJKMNP-TV-Z]{26})>").unwrap();
 }
 
-#[post("/<target>/messages", data = "<message>")]
-pub async fn message_send(user: User, _r: Ratelimiter, mut idempotency: IdempotencyKey, target: Ref, message: Json<Data>) -> Result<RatelimitResponse<Value>> {
-    let message = message.into_inner();
-    idempotency.consume_nonce(message.nonce.clone());
-
-    message
-        .validate()
+/// # Send Message
+///
+/// Sends a message to the given channel.
+#[openapi(tag = "Messaging")]
+#[post("/<target>/messages", data = "<data>")]
+pub async fn message_send(
+    db: &Db,
+    user: User,
+    target: Ref,
+    data: Json<DataMessageSend>,
+    mut idempotency: IdempotencyKey,
+) -> Result<Json<Message>> {
+    let data = data.into_inner();
+    data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if message.content.len() == 0
-        && (message.attachments.is_none() || message.attachments.as_ref().unwrap().len() == 0)
+    idempotency.consume_nonce(data.nonce).await?;
+
+    let channel = target.as_channel(db).await?;
+    let mut permissions = perms(&user).channel(&channel);
+    permissions
+        .throw_permission_and_view_channel(db, Permission::SendMessage)
+        .await?;
+
+    if (data.content.as_ref().map_or(true, |v| v.is_empty()))
+        && (data.attachments.as_ref().map_or(true, |v| v.is_empty()))
+        && (data.embeds.as_ref().map_or(true, |v| v.is_empty()))
     {
         return Err(Error::EmptyMessage);
     }
 
-    let target = target.fetch_channel().await?;
-    target.has_messaging()?;
-    
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_channel(&target)
-        .for_channel()
-        .await?;
+    let message_id = Ulid::new().to_string();
+    let mut message = Message {
+        id: message_id.clone(),
+        channel: channel.id().to_string(),
+        author: user.id.clone(),
+        ..Default::default()
+    };
 
-    if !perm.get_send_message() {
-        return Err(Error::MissingPermission)
-    }
-
+    // 1. Parse mentions in message.
     let mut mentions = HashSet::new();
-    for capture in RE_MENTION.captures_iter(&message.content) {
-        if let Some(mention) = capture.get(1) {
-            mentions.insert(mention.as_str().to_string());
+    if let Some(content) = &data.content {
+        for capture in RE_MENTION.captures_iter(content) {
+            if let Some(mention) = capture.get(1) {
+                mentions.insert(mention.as_str().to_string());
+            }
         }
     }
 
-    if let Some(_) = &message.masquerade {
-        if !perm.get_masquerade() {
-            return Err(Error::MissingPermission)
-        }
+    // 2. Verify permissions for masquerade.
+    if data.masquerade.is_some() {
+        permissions
+            .throw_permission(db, Permission::Masquerade)
+            .await?;
     }
 
+    // 3. Verify replies are valid.
     let mut replies = HashSet::new();
-    if let Some(entries) = message.replies {
-        // ! FIXME: move this to app config
+    if let Some(entries) = data.replies {
         if entries.len() > 5 {
-            return Err(Error::TooManyReplies)
+            return Err(Error::TooManyReplies);
         }
 
         for Reply { id, mention } in entries {
-            let message = Ref::from_unchecked(id)
-                .fetch_message(&target)
-                .await?;
-            
+            let message = Ref::from_unchecked(id).as_message(db).await?;
+
             replies.insert(message.id);
-            
+
             if mention {
                 mentions.insert(message.author);
             }
         }
     }
 
-    let id = Ulid::new().to_string();
-    let mut attachments = vec![];
+    if !mentions.is_empty() {
+        message.mentions.replace(
+            mentions
+                .into_iter()
+                .filter(|id| !user.has_blocked(id))
+                .collect::<Vec<String>>(),
+        );
+    }
 
-    if let Some(ids) = &message.attachments {
-        if ids.len() > 0 && !perm.get_upload_files() {
-            return Err(Error::MissingPermission)
+    if !replies.is_empty() {
+        message
+            .replies
+            .replace(replies.into_iter().collect::<Vec<String>>());
+    }
+
+    // 4. Add attachments to message.
+    let mut attachments = vec![];
+    if let Some(ids) = &data.attachments {
+        if !ids.is_empty() {
+            permissions
+                .throw_permission(db, Permission::UploadFiles)
+                .await?;
         }
 
         // ! FIXME: move this to app config
         if ids.len() > 5 {
-            return Err(Error::TooManyAttachments)
+            return Err(Error::TooManyAttachments);
         }
 
         for attachment_id in ids {
-            attachments
-                .push(File::find_and_use(attachment_id, "attachments", "message", &id).await?);
+            attachments.push(
+                db.find_and_use_attachment(attachment_id, "attachments", "message", &message_id)
+                    .await?,
+            );
         }
     }
 
+    if !attachments.is_empty() {
+        message.attachments.replace(attachments);
+    }
+
+    // 5. Process included embeds.
     let mut embeds = vec![];
-
-    if let Some(sendable_embeds) = message.embeds {
+    if let Some(sendable_embeds) = data.embeds {
         for sendable_embed in sendable_embeds {
-            embeds.push(sendable_embed.into_embed(id.clone()).await?)
+            embeds.push(sendable_embed.into_embed(db, message_id.clone()).await?)
         }
     }
 
-    let msg = Message {
-        id,
-        channel: target.id().to_string(),
-        author: user.id,
+    if !embeds.is_empty() {
+        message.embeds.replace(embeds);
+    }
 
-        content: Content::Text(message.content.clone()),
-        nonce: Some(idempotency.key),
-        edited: None,
-        embeds: if embeds.len() > 0 { Some(embeds) } else { None },
-        attachments: if attachments.len() > 0 { Some(attachments) } else { None },
-        mentions: if mentions.len() > 0 {
-            Some(mentions.into_iter().collect::<Vec<String>>())
-        } else {
-            None
-        },
-        replies: if replies.len() > 0 {
-            Some(replies.into_iter().collect::<Vec<String>>())
-        } else {
-            None
-        },
-        masquerade: message.masquerade
-    };
+    // 6. Set content
+    message.content = data.content;
 
-    msg.clone().publish(&target, perm.get_embed_links()).await?;
-    Ok(RatelimitResponse(json!(msg)))
+    // 7. Pass-through nonce value for clients
+    message.nonce = Some(idempotency.into_key());
+
+    message.create(db, &channel, Some(&user)).await?;
+
+    // Queue up a task for processing embeds
+    if let Some(content) = &message.content {
+        revolt_quark::tasks::process_embeds::queue(
+            channel.id().to_string(),
+            message.id.to_string(),
+            content.clone(),
+        )
+        .await;
+    }
+
+    Ok(Json(message))
 }

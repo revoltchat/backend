@@ -1,37 +1,56 @@
-use crate::notifications::events::ClientboundNotification;
-use crate::util::result::{Error, Result, EmptyResponse};
-use crate::{database::*, notifications::events::RemoveUserField};
+use revolt_quark::models::user::{FieldsUser, PartialUser, User};
+use revolt_quark::models::File;
+use revolt_quark::{Database, Error, Result};
 
-use mongodb::bson::{doc, to_document};
+use revolt_quark::models::user::UserStatus;
 use rocket::serde::json::Json;
+use rocket::State;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize, Debug)]
+/// # Profile Data
+#[derive(Validate, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct UserProfileData {
+    /// Text to set as user profile description
     #[validate(length(min = 0, max = 2000))]
     #[serde(skip_serializing_if = "Option::is_none")]
     content: Option<String>,
+    /// Attachment Id for background
     #[serde(skip_serializing_if = "Option::is_none")]
     #[validate(length(min = 1, max = 128))]
     background: Option<String>,
 }
 
-#[derive(Validate, Serialize, Deserialize)]
-pub struct Data {
+/// # User Data
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataEditUser {
+    /// New user status
     #[validate]
     status: Option<UserStatus>,
+    /// New user profile data
+    ///
+    /// This is applied as a partial.
     #[validate]
     profile: Option<UserProfileData>,
+    /// Attachment Id for avatar
     #[validate(length(min = 1, max = 128))]
     avatar: Option<String>,
-    remove: Option<RemoveUserField>,
+    /// Fields to remove from user object
+    #[validate(length(min = 1))]
+    remove: Option<Vec<FieldsUser>>,
 }
 
-#[patch("/<_ignore_id>", data = "<data>")]
-pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<EmptyResponse> {
-    let mut data = data.into_inner();
-
+/// # Edit User
+///
+/// Edit currently authenticated user.
+#[openapi(tag = "User Information")]
+#[patch("/@me", data = "<data>")]
+pub async fn req(
+    db: &State<Database>,
+    mut user: User,
+    data: Json<DataEditUser>,
+) -> Result<Json<User>> {
+    let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
@@ -40,117 +59,67 @@ pub async fn req(user: User, data: Json<Data>, _ignore_id: String) -> Result<Emp
         && data.avatar.is_none()
         && data.remove.is_none()
     {
-        return Ok(EmptyResponse {});
+        return Ok(Json(user));
     }
 
-    let mut unset = doc! {};
-    let mut set = doc! {};
+    // 1. Remove fields from object
+    if let Some(fields) = &data.remove {
+        if fields.contains(&FieldsUser::Avatar) {
+            if let Some(avatar) = &user.avatar {
+                db.mark_attachment_as_deleted(&avatar.id).await?;
+            }
+        }
 
-    let mut remove_background = false;
-    let mut remove_avatar = false;
+        if fields.contains(&FieldsUser::ProfileBackground) {
+            if let Some(profile) = &user.profile {
+                if let Some(background) = &profile.background {
+                    db.mark_attachment_as_deleted(&background.id).await?;
+                }
+            }
+        }
 
-    if let Some(remove) = &data.remove {
-        match remove {
-            RemoveUserField::ProfileContent => {
-                unset.insert("profile.content", 1);
-            }
-            RemoveUserField::ProfileBackground => {
-                unset.insert("profile.background", 1);
-                remove_background = true;
-            }
-            RemoveUserField::StatusText => {
-                unset.insert("status.text", 1);
-            }
-            RemoveUserField::Avatar => {
-                unset.insert("avatar", 1);
-                remove_avatar = true;
-            }
+        for field in fields {
+            user.remove(field);
         }
     }
 
-    if let Some(status) = &data.status {
-        set.insert(
-            "status",
-            to_document(&status).map_err(|_| Error::DatabaseError {
-                operation: "to_document",
-                with: "status",
-            })?,
-        );
+    let mut partial: PartialUser = Default::default();
+
+    // 2. Apply new avatar
+    if let Some(avatar) = data.avatar {
+        partial.avatar = Some(File::use_avatar(db, &avatar, &user.id).await?);
     }
 
+    // 3. Apply new status
+    if let Some(status) = data.status {
+        let mut new_status = user.status.take().unwrap_or_default();
+        if let Some(text) = status.text {
+            new_status.text = Some(text);
+        }
+
+        if let Some(presence) = status.presence {
+            new_status.presence = Some(presence);
+        }
+
+        partial.status = Some(new_status);
+    }
+
+    // 4. Apply new profile
     if let Some(profile) = data.profile {
+        let mut new_profile = user.profile.take().unwrap_or_default();
         if let Some(content) = profile.content {
-            set.insert("profile.content", content);
+            new_profile.content = Some(content);
         }
 
-        if let Some(attachment_id) = profile.background {
-            let attachment =
-                File::find_and_use(&attachment_id, "backgrounds", "user", &user.id).await?;
-            set.insert(
-                "profile.background",
-                to_document(&attachment).map_err(|_| Error::DatabaseError {
-                    operation: "to_document",
-                    with: "attachment",
-                })?,
-            );
-
-            remove_background = true;
+        if let Some(background) = profile.background {
+            new_profile.background = Some(File::use_background(db, &background, &user.id).await?);
         }
+
+        partial.profile = Some(new_profile);
     }
 
-    let avatar = std::mem::replace(&mut data.avatar, None);
-    if let Some(attachment_id) = avatar {
-        let attachment = File::find_and_use(&attachment_id, "avatars", "user", &user.id).await?;
-        set.insert(
-            "avatar",
-            to_document(&attachment).map_err(|_| Error::DatabaseError {
-                operation: "to_document",
-                with: "attachment",
-            })?,
-        );
+    user.update(db, partial, data.remove.unwrap_or_default())
+        .await?;
 
-        remove_avatar = true;
-    }
-
-    let mut operations = doc! {};
-    if set.len() > 0 {
-        operations.insert("$set", &set);
-    }
-
-    if unset.len() > 0 {
-        operations.insert("$unset", unset);
-    }
-
-    if operations.len() > 0 {
-        get_collection("users")
-            .update_one(doc! { "_id": &user.id }, operations, None)
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "update_one",
-                with: "user",
-            })?;
-    }
-
-    ClientboundNotification::UserUpdate {
-        id: user.id.clone(),
-        data: json!(set),
-        clear: data.remove,
-    }
-    .publish_as_user(user.id.clone());
-
-    if remove_avatar {
-        if let Some(old_avatar) = user.avatar {
-            old_avatar.delete().await?;
-        }
-    }
-
-    if remove_background {
-        if let Some(profile) = user.profile {
-            if let Some(old_background) = profile.background {
-                old_background.delete().await?;
-            }
-        }
-    }
-
-    Ok(EmptyResponse {})
+    Ok(Json(user.foreign()))
 }

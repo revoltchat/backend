@@ -1,21 +1,26 @@
-use crate::database::*;
-use crate::util::result::{Error, Result};
+use revolt_quark::{
+    models::{Message, User},
+    perms, Db, Error, Permission, Ref, Result,
+};
 
-use rocket::serde::json::Value;
+use rocket::serde::json::Json;
 
+/// # Fetch Message
+///
+/// Retrieves a message by its id.
+#[openapi(tag = "Messaging")]
 #[get("/<target>/messages/<msg>")]
-pub async fn req(user: User, target: Ref, msg: Ref) -> Result<Value> {
-    let channel = target.fetch_channel().await?;
-    channel.has_messaging()?;
-
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_channel(&channel)
-        .for_channel()
+pub async fn req(db: &Db, user: User, target: Ref, msg: Ref) -> Result<Json<Message>> {
+    let channel = target.as_channel(db).await?;
+    perms(&user)
+        .channel(&channel)
+        .throw_permission(db, Permission::ViewChannel)
         .await?;
-    if !perm.get_view() {
-        Err(Error::MissingPermission)?
+
+    let message = msg.as_message(db).await?;
+    if message.channel != channel.as_id() {
+        return Err(Error::NotFound);
     }
 
-    let message = msg.fetch_message(&channel).await?;
-    Ok(json!(message))
+    Ok(Json(message))
 }

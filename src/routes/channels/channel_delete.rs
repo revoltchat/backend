@@ -1,119 +1,41 @@
-use crate::util::result::{Error, Result, EmptyResponse};
-use crate::{database::*, notifications::events::ClientboundNotification};
+use revolt_quark::{
+    models::{channel::PartialChannel, Channel, User},
+    perms, Db, EmptyResponse, Error, Permission, Ref, Result,
+};
 
-use mongodb::bson::doc;
-
+/// # Close Channel
+///
+/// Deletes a server channel, leaves a group or closes a group.
+#[openapi(tag = "Channel Information")]
 #[delete("/<target>")]
-pub async fn req(user: User, target: Ref) -> Result<EmptyResponse> {
-    let target = target.fetch_channel().await?;
+pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
+    let mut channel = target.as_channel(db).await?;
+    let mut perms = perms(&user).channel(&channel);
+    perms.throw_permission(db, Permission::ViewChannel).await?;
 
-    let perm = permissions::PermissionCalculator::new(&user)
-        .with_channel(&target)
-        .for_channel()
-        .await?;
-
-    if !perm.get_view() {
-        Err(Error::MissingPermission)?
-    }
-
-    match &target {
+    match &channel {
         Channel::SavedMessages { .. } => Err(Error::NoEffect),
-        Channel::DirectMessage { .. } => {
-            get_collection("channels")
-                .update_one(
-                    doc! {
-                        "_id": target.id()
-                    },
-                    doc! {
-                        "$set": {
-                            "active": false
-                        }
-                    },
-                    None,
-                )
-                .await
-                .map_err(|_| Error::DatabaseError {
-                    operation: "update_one",
-                    with: "channel",
-                })?;
+        Channel::DirectMessage { .. } => channel
+            .update(
+                db,
+                PartialChannel {
+                    active: Some(false),
+                    ..Default::default()
+                },
+                vec![],
+            )
+            .await
+            .map(|_| EmptyResponse),
+        Channel::Group { .. } => channel
+            .remove_user_from_group(db, &user.id, None)
+            .await
+            .map(|_| EmptyResponse),
+        Channel::TextChannel { .. } | Channel::VoiceChannel { .. } => {
+            perms
+                .throw_permission(db, Permission::ManageChannel)
+                .await?;
 
-            Ok(EmptyResponse {})
-        }
-        Channel::Group {
-            id,
-            owner,
-            recipients,
-            ..
-        } => {
-            if &user.id == owner {
-                if let Some(new_owner) = recipients.iter().find(|x| *x != &user.id) {
-                    get_collection("channels")
-                        .update_one(
-                            doc! {
-                                "_id": &id
-                            },
-                            doc! {
-                                "$set": {
-                                    "owner": new_owner
-                                },
-                                "$pull": {
-                                    "recipients": &user.id
-                                }
-                            },
-                            None,
-                        )
-                        .await
-                        .map_err(|_| Error::DatabaseError {
-                            operation: "update_one",
-                            with: "channel",
-                        })?;
-
-                    target.publish_update(json!({ "owner": new_owner })).await?;
-                } else {
-                    target.delete().await?;
-                    return Ok(EmptyResponse {});
-                }
-            } else {
-                get_collection("channels")
-                    .update_one(
-                        doc! {
-                            "_id": &id
-                        },
-                        doc! {
-                            "$pull": {
-                                "recipients": &user.id
-                            }
-                        },
-                        None,
-                    )
-                    .await
-                    .map_err(|_| Error::DatabaseError {
-                        operation: "update_one",
-                        with: "channel",
-                    })?;
-            }
-
-            ClientboundNotification::ChannelGroupLeave {
-                id: id.clone(),
-                user: user.id.clone(),
-            }
-            .publish(id.clone());
-
-            Content::SystemMessage(SystemMessage::UserLeft { id: user.id })
-                .send_as_system(&target)
-                .await
-                .ok();
-
-            Ok(EmptyResponse {})
-        }
-        Channel::TextChannel { .. } |
-        Channel::VoiceChannel { .. } => {
-            if perm.get_manage_channel() {
-                target.delete().await?;
-                Ok(EmptyResponse {})
-            } else {
-                Err(Error::MissingPermission)
-            }
+            channel.delete(db).await.map(|_| EmptyResponse)
         }
     }
 }
