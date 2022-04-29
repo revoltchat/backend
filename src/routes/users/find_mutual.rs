@@ -22,6 +22,10 @@ pub struct MutualResponse {
 pub async fn req(db: &State<Database>, user: User, target: Ref) -> Result<Json<MutualResponse>> {
     let target = target.as_user(db).await?;
 
+    if target.id == user.id {
+        return Err(Error::InvalidOperation);
+    }
+
     if perms(&user)
         .user(&target)
         .calc_user(db)
