@@ -2999,7 +2999,7 @@ dependencies = [
 [[package]]
 name = "revolt-quark"
 version = "0.1.0"
-source = "git+https://github.com/revoltchat/quark?rev=eafefbcb3c612c8fdc3f052d05ddd9b1a4c5ec1b#eafefbcb3c612c8fdc3f052d05ddd9b1a4c5ec1b"
+source = "git+https://github.com/revoltchat/quark?rev=4356bcd09dc9382b1a8c0e339895682a8b096dfb#4356bcd09dc9382b1a8c0e339895682a8b096dfb"
 dependencies = [
  "async-recursion",
  "async-std",
