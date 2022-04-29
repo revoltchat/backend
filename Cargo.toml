@@ -64,5 +64,5 @@ schemars = "0.8.8"
 rocket_okapi = { git = "https://github.com/insertish/okapi", rev = "dcf0df115596ee07a587a7a543cddf3d7944645b", features = [ "swagger" ] }
 
 # quark
-revolt-quark = { git = "https://github.com/revoltchat/quark", rev = "68403fb55912de9ad98257741b8c93ce165b7abf" }
+revolt-quark = { git = "https://github.com/revoltchat/quark", rev = "e70a32d0a0a7e401c9c493ab1e557924e28ddf8a" }
 # revolt-quark = { path = "../quark" }
