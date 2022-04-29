@@ -8,6 +8,10 @@ use rocket::{serde::json::Json, State};
 #[openapi(tag = "User Information")]
 #[get("/<target>")]
 pub async fn req(db: &State<Database>, user: User, target: Ref) -> Result<Json<User>> {
+    if target.id == user.id {
+        return Ok(Json(user));
+    }
+
     let target = target.as_user(db).await?;
 
     let permissions = perms(&user).user(&target).calc_user(db).await;

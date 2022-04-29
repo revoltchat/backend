@@ -20,11 +20,11 @@ pub struct MutualResponse {
 #[openapi(tag = "Relationships")]
 #[get("/<target>/mutual")]
 pub async fn req(db: &State<Database>, user: User, target: Ref) -> Result<Json<MutualResponse>> {
-    let target = target.as_user(db).await?;
-
     if target.id == user.id {
         return Err(Error::InvalidOperation);
     }
+
+    let target = target.as_user(db).await?;
 
     if perms(&user)
         .user(&target)
