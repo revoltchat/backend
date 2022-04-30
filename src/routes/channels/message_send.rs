@@ -80,6 +80,7 @@ pub async fn message_send(
         id: message_id.clone(),
         channel: channel.id().to_string(),
         author: user.id.clone(),
+        masquerade: data.masquerade,
         ..Default::default()
     };
 
@@ -94,7 +95,7 @@ pub async fn message_send(
     }
 
     // 2. Verify permissions for masquerade.
-    if data.masquerade.is_some() {
+    if message.masquerade.is_some() {
         permissions
             .throw_permission(db, Permission::Masquerade)
             .await?;
