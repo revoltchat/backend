@@ -1,3 +1,4 @@
+use chrono::Utc;
 use revolt_quark::{
     models::{Message, User},
     perms, Db, EmptyResponse, Error, Permission, Ref, Result,
@@ -19,6 +20,8 @@ pub struct OptionsBulkDelete {
 /// Delete multiple messages you've sent or one you have permission to delete.
 ///
 /// This will always require `ManageMessages` permission regardless of whether you own the message or not.
+///
+/// Messages must have been sent within the past 1 week.
 #[openapi(tag = "Messaging")]
 #[delete("/<target>/messages/bulk", data = "<options>", rank = 1)]
 pub async fn req(
@@ -31,6 +34,19 @@ pub async fn req(
     options
         .validate()
         .map_err(|error| Error::FailedValidation { error })?;
+
+    for id in &options.ids {
+        if ulid::Ulid::from_string(id)
+            .map_err(|_| Error::InvalidOperation)?
+            .datetime()
+            .signed_duration_since(Utc::now())
+            .num_days()
+            .abs()
+            > 7
+        {
+            return Err(Error::InvalidOperation);
+        }
+    }
 
     perms(&user)
         .channel(&target.as_channel(db).await?)
