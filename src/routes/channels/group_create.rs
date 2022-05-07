@@ -37,6 +37,10 @@ pub struct DataCreateGroup {
 #[openapi(tag = "Groups")]
 #[post("/create", data = "<info>")]
 pub async fn req(db: &Db, user: User, info: Json<DataCreateGroup>) -> Result<Json<Channel>> {
+    if user.bot.is_some() {
+        return Err(Error::IsBot);
+    }
+
     let info = info.into_inner();
     info.validate()
         .map_err(|error| Error::FailedValidation { error })?;

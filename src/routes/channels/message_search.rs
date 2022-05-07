@@ -48,6 +48,10 @@ pub async fn req(
     target: Ref,
     options: Json<OptionsMessageSearch>,
 ) -> Result<Json<BulkMessageResponse>> {
+    if user.bot.is_some() {
+        return Err(Error::IsBot);
+    }
+
     let options = options.into_inner();
     options
         .validate()

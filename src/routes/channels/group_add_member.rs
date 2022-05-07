@@ -9,6 +9,10 @@ use revolt_quark::{
 #[openapi(tag = "Groups")]
 #[put("/<target>/recipients/<member>")]
 pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyResponse> {
+    if user.bot.is_some() {
+        return Err(Error::IsBot);
+    }
+
     let mut channel = target.as_channel(db).await?;
     perms(&user)
         .channel(&channel)

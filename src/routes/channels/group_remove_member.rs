@@ -9,6 +9,10 @@ use revolt_quark::{
 #[openapi(tag = "Groups")]
 #[delete("/<target>/recipients/<member>")]
 pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyResponse> {
+    if user.bot.is_some() {
+        return Err(Error::IsBot);
+    }
+
     let channel = target.as_channel(db).await?;
 
     match &channel {

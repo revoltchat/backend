@@ -11,6 +11,10 @@ use rocket::serde::json::Json;
 #[openapi(tag = "Groups")]
 #[get("/<target>/members")]
 pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<Vec<User>>> {
+    if user.bot.is_some() {
+        return Err(Error::IsBot);
+    }
+
     let channel = target.as_channel(db).await?;
     perms(&user)
         .channel(&channel)

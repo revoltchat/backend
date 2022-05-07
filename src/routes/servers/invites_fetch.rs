@@ -1,6 +1,6 @@
 use revolt_quark::{
     models::{Invite, User},
-    perms, Db, Permission, Ref, Result,
+    perms, Db, Error, Permission, Ref, Result,
 };
 
 use rocket::serde::json::Json;
@@ -11,6 +11,10 @@ use rocket::serde::json::Json;
 #[openapi(tag = "Server Members")]
 #[get("/<target>/invites")]
 pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<Vec<Invite>>> {
+    if user.bot.is_some() {
+        return Err(Error::IsBot);
+    }
+
     let server = target.as_server(db).await?;
     perms(&user)
         .server(&server)

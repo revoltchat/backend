@@ -1,4 +1,4 @@
-use revolt_quark::{models::User, perms, Db, EmptyResponse, Ref, Result};
+use revolt_quark::{models::User, perms, Db, EmptyResponse, Error, Ref, Result};
 
 /// # Mark Server As Read
 ///
@@ -6,6 +6,10 @@ use revolt_quark::{models::User, perms, Db, EmptyResponse, Ref, Result};
 #[openapi(tag = "Server Information")]
 #[put("/<target>/ack")]
 pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
+    if user.bot.is_some() {
+        return Err(Error::IsBot);
+    }
+
     let server = target.as_server(db).await?;
     perms(&user).server(&server).calc(db).await?;
 
