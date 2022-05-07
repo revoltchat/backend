@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 /// # Search Parameters
-#[derive(Validate, Serialize, Deserialize, JsonSchema, FromForm)]
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
 pub struct OptionsMessageSearch {
     /// Full-text search query
     ///

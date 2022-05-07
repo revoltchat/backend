@@ -4,7 +4,7 @@ use revolt_quark::{models::User, perms, Db, EmptyResponse, Error, Permission, Re
 ///
 /// Delete a message you've sent or one you have permission to delete.
 #[openapi(tag = "Messaging")]
-#[delete("/<target>/messages/<msg>")]
+#[delete("/<target>/messages/<msg>", rank = 2)]
 pub async fn req(db: &Db, user: User, target: Ref, msg: Ref) -> Result<EmptyResponse> {
     let message = msg.as_message(db).await?;
     if message.channel != target.id {

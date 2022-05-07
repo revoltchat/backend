@@ -10,6 +10,7 @@ mod group_create;
 mod group_remove_member;
 mod invite_create;
 mod members_fetch;
+mod message_bulk_delete;
 mod message_delete;
 mod message_edit;
 mod message_fetch;
@@ -35,6 +36,7 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         message_query_stale::req,
         message_fetch::req,
         message_edit::req,
+        message_bulk_delete::req,
         message_delete::req,
         group_create::req,
         group_add_member::req,
