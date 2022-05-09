@@ -45,7 +45,7 @@ pub async fn create_bot(db: &Db, user: User, info: Json<DataCreateBot>) -> Resul
     let id = Ulid::new().to_string();
     let bot_user = User {
         id: id.clone(),
-        username: info.name,
+        username: info.name.trim().to_string(),
         bot: Some(BotInformation {
             owner: user.id.clone(),
         }),

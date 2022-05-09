@@ -28,6 +28,9 @@ pub async fn req(
     data: Json<DataChangeUsername>,
 ) -> Result<Json<User>> {
     let data = data.into_inner();
+    data.validate()
+        .map_err(|error| Error::FailedValidation { error })?;
+
     account
         .verify_password(&data.password)
         .map_err(|_| Error::InvalidCredentials)?;
