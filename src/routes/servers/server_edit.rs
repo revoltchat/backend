@@ -139,7 +139,7 @@ pub async fn req(
 
     // 3. Apply new banner
     if let Some(banner) = banner {
-        partial.banner = Some(File::use_server_icon(db, &banner, &server.id).await?);
+        partial.banner = Some(File::use_banner(db, &banner, &server.id).await?);
         server.banner = partial.banner.clone();
     }
 
