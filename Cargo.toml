@@ -46,7 +46,7 @@ async-std = { version = "1.8.0", features = ["tokio1", "tokio02", "attributes"] 
 
 # internal util
 lettre = "0.10.0-alpha.4"
-rauth = { git = "https://github.com/insertish/rauth", rev = "611b11baa9e199bcefd0ca5bd3302f9d6904a2c6" }
+rauth = { git = "https://github.com/insertish/rauth", rev = "001a9698c56cea79e69e4ae71d7bc2cb48aec1a6" }
 
 # redis
 redis = { version = "0.21.2", features = ["async-std-comp"] }
@@ -64,5 +64,5 @@ schemars = "0.8.8"
 rocket_okapi = { git = "https://github.com/insertish/okapi", rev = "dcf0df115596ee07a587a7a543cddf3d7944645b", features = [ "swagger" ] }
 
 # quark
-revolt-quark = { git = "https://github.com/revoltchat/quark", rev = "45706b93d4da11cf3e0f3ca41514c73945bb348d" }
+revolt-quark = { git = "https://github.com/revoltchat/quark", rev = "d16dc5f92ea0d9ad6ada829f3b68408a8fa5d442" }
 # revolt-quark = { path = "../quark" }

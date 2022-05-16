@@ -27,8 +27,7 @@ use std::str::FromStr;
 
 #[async_std::main]
 async fn main() {
-    dotenv::dotenv().ok();
-    env_logger::init_from_env(env_logger::Env::default().filter_or("RUST_LOG", "info"));
+    let _guard = revolt_quark::setup_logging();
 
     info!(
         "Starting Revolt server [version {}].",
