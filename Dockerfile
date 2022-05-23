@@ -1,5 +1,6 @@
 # Build Stage
-FROM rustlang/rust:nightly-slim AS builder
+#FROM rustlang/rust:nightly-slim AS builder
+FROM rustlang/rust:nightly-slim@sha256:7cab2f9ad67980b21258701f8ca9df2b89275a9fed9d1de02bfb35c3d4fd477e AS builder
 USER 0:0
 WORKDIR /home/rust/src
 
