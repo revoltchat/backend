@@ -1,21 +1,16 @@
-# Delta
+# Revolt Backend
 
-## Description
+This is a monorepo for the Revolt backend.
 
-Delta is the API server for the Revolt platform.
+| Crate         | Description                       |
+| ------------- | --------------------------------- |
+| `delta`       | REST API server                   |
+| `bonfire`     | WebSocket events server           |
+| `quark`       | Models and logic                  |
+| `revcord/api` | Discord REST translation layer    |
+| `revcord/ws`  | Discord gateway translation layer |
 
-**Features:**
-
-- Robust and efficient API routes for running a chat platform.
-- Distributed notification system, allowing any node to be seamlessly connected.
-- Simple deployment, based mostly on pure Rust code and libraries.
-- Hooks up to a MongoDB deployment, provide URI and no extra work needed.
-
-## Stack
-
-- [Rocket](https://rocket.rs/) (REST)
-- [Async Tungstenite](https://github.com/sdroege/async-tungstenite) (WebSockets)
-- [MongoDB](https://mongodb.com/)
+Note: `january`, `autumn`, and `vortex` are yet to be moved into this monorepo.
 
 ## Resources
 
@@ -25,16 +20,6 @@ Delta is the API server for the Revolt platform.
 - [Revolt Testers Server](https://app.revolt.chat/invite/Testers)
 - [Contribution Guide](https://developers.revolt.chat/contributing)
 
-## CLI Commands
-
-| Command            | Description                                                                               |
-| ------------------ | ----------------------------------------------------------------------------------------- |
-| `./publish.sh`     | Publish a Docker Image.                                                                   |
-| `./set_version.sh` | Update the version. **Not intended for PR use.**                                          |
-| `cargo build`      | Build/compile Delta.                                                                      |
-| `cargo run`        | Run Delta.                                                                                |
-| `cargo fmt`        | Format Delta. Not intended for PR use to avoid accidentally formatting unformatted files. |
-
 ## Contributing
 
 The contribution guide is located at [developers.revolt.chat/contributing](https://developers.revolt.chat/contributing).
@@ -42,4 +27,4 @@ Please note that a pull request should only take care of one issue so that we ca
 
 ## License
 
-Delta is licensed under the [GNU Affero General Public License v3.0](https://github.com/revoltchat/delta/blob/master/LICENSE).
+The Revolt backend is generally licensed under the [GNU Affero General Public License v3.0](https://github.com/revoltchat/backend/blob/master/LICENSE). Please check individual crates for further license information.
