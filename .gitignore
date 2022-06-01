@@ -1,8 +1,2 @@
 Rocket.toml
-/target
-/target_backup
-**/*.rs.bk
-.mongo
-.data
-.env
-avatar.png
+target

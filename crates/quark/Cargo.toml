@@ -1,0 +1,70 @@
+[package]
+name = "revolt-quark"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+mongo = [ "mongodb" ]
+rocket_impl = [ "rocket" ]
+test = [ "async-std", "mongo", "mongodb/async-std-runtime", "rocket_impl", "rauth" ]
+default = [ "test" ]
+
+[dependencies]
+# Serialisation
+serde = { version = "1", features = ["derive"] }
+validator = { version = "0.14", features = ["derive"] }
+iso8601-timestamp = { version = "0.1.8", features = ["schema", "bson"] }
+optional_struct = { git = "https://github.com/insertish/OptionalStruct", rev = "e275d2726595474632485934aa0887fa52281f70" }
+
+# Formats
+bincode = "1.3.3"
+serde_json = "1.0.78"
+bson = { version = "2.1.0", features = ["chrono-0_4"] }
+
+# Spec Generation
+schemars = "0.8.8"
+okapi = { git = "https://github.com/insertish/okapi", rev = "dcf0df115596ee07a587a7a543cddf3d7944645b" }
+rocket_okapi = { git = "https://github.com/insertish/okapi", rev = "dcf0df115596ee07a587a7a543cddf3d7944645b" }
+# okapi = "0.7.0-rc.1"
+# rocket_okapi = "0.8.0-rc.1"
+
+# Databases
+redis-kiss = { version = "0.1.3" }
+mongodb = { optional = true, version = "2.1.0", default-features = false }
+
+# Async
+futures = "0.3.19"
+deadqueue = "0.2.1"
+async-trait = "0.1.51"
+async-recursion = "1.0.0"
+async-std = { version = "1.8.0", features = ["attributes"], optional = true }
+
+# Logging
+log = "0.4.14"
+pretty_env_logger = "0.4.0"
+
+# Util
+ulid = "0.5.0"
+regex = "1.5.5"
+nanoid = "0.4.0"
+linkify = "0.8.1"
+dotenv = "0.15.0"
+impl_ops = "0.1.1"
+num_enum = "0.5.6"
+reqwest = "0.11.10"
+bitfield = "0.13.2"
+lazy_static = "1.4.0"
+
+# Web Push
+base64 = "0.13.0"
+web-push = "0.7.2"
+
+# Implementations
+rauth = { optional = true, git = "https://github.com/insertish/rauth", rev = "001a9698c56cea79e69e4ae71d7bc2cb48aec1a6" }
+rocket = { optional = true, version = "=0.5.0-rc.1", default-features = false, features = ["json"] }
+rocket_http = { optional = true, version = "=0.5.0-rc.1" }
+
+# Sentry
+sentry = "0.25.0"
