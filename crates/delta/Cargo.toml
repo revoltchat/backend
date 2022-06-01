@@ -1,0 +1,64 @@
+[package]
+name = "revolt-delta"
+version = "0.5.3-5-patch.2"
+authors = ["Paul Makles <paulmakles@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# Utility
+lru = "0.7.0"
+url = "2.2.2"
+log = "0.4.11"
+dotenv = "0.15.0"
+dashmap = "5.2.0"
+linkify = "0.6.0"
+once_cell = "1.4.1"
+env_logger = "0.7.1"
+lazy_static = "1.4.0"
+ctrlc = { version = "3.0", features = ["termination"] }
+
+# Lang. Utilities
+regex = "1"
+num_enum = "0.5.1"
+impl_ops = "0.1.1"
+bitfield = "0.13.2"
+
+# ID / key generation
+ulid = "0.4.1"
+nanoid = "0.4.0"
+
+# serde
+serde_json = "1.0.57"
+serde = { version = "1.0.115", features = ["derive"] }
+validator = { version = "0.14", features = ["derive"] }
+
+# async
+futures = "0.3.8"
+chrono = "0.4.15"
+async-channel = "1.6.1"
+reqwest = { version = "0.11.4", features = ["json"] }
+async-std = { version = "1.8.0", features = ["tokio1", "tokio02", "attributes"] }
+
+# internal util
+lettre = "0.10.0-alpha.4"
+rauth = { git = "https://github.com/insertish/rauth", rev = "001a9698c56cea79e69e4ae71d7bc2cb48aec1a6" }
+
+# redis
+redis = { version = "0.21.2", features = ["async-std-comp"] }
+mobc = { version = "0.7.3" }
+mobc-redis = { version = "0.7.0", default-features = false, features = ["async-std-comp"] }
+
+# web
+rocket = { version = "0.5.0-rc.1", default-features = false, features = ["json"] }
+mongodb = { version = "1.2.2", features = ["async-std-runtime"], default-features = false }
+rocket_cors = { git = "https://github.com/lawliet89/rocket_cors", rev = "5843861a88958c16bfaa0b40f0d8910772bcd2f6" }
+
+# spec generation
+schemars = "0.8.8"
+# rocket_okapi = "0.8.0-rc.1"
+rocket_okapi = { git = "https://github.com/insertish/okapi", rev = "dcf0df115596ee07a587a7a543cddf3d7944645b", features = [ "swagger" ] }
+
+# quark
+revolt-quark = { path = "../quark" }
