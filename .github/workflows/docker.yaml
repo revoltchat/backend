@@ -71,7 +71,7 @@ jobs:
       - uses: kanga333/variable-mapper@master
         id: export
         with:
-          key: "${{github.base_ref}}"
+          key: "${{ matrix.project }}"
           map: |
             {
               "delta": {
