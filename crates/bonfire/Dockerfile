@@ -1,19 +1,10 @@
 # Build Stage
-FROM rustlang/rust:nightly-slim AS builder
-USER 0:0
-WORKDIR /home/rust/src
-
-RUN USER=root cargo new --bin bonfire
-WORKDIR /home/rust/src/bonfire
-RUN apt-get update && apt-get install -y libssl-dev pkg-config
-
-COPY Cargo.toml Cargo.lock ./
-COPY src ./src
-RUN cargo install --locked --path .
+FROM revolt.chat/base:latest AS builder
+RUN cargo install --locked --path crates/bonfire
 
 # Bundle Stage
 FROM debian:buster-slim
 RUN apt-get update && apt-get install -y ca-certificates
-COPY --from=builder /usr/local/cargo/bin/bonfire ./
+COPY --from=builder /usr/local/cargo/bin/revolt-bonfire ./
 EXPOSE 9000
-CMD ["./bonfire"]
+CMD ["./revolt-bonfire"]

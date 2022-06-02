@@ -1,23 +1,13 @@
 # Build Stage
-FROM rustlang/rust:nightly-slim AS builder
-USER 0:0
-WORKDIR /home/rust/src
-
-RUN USER=root cargo new --bin revolt
-WORKDIR /home/rust/src/revolt
-RUN apt-get update && apt-get install -y libssl-dev pkg-config
-
-COPY Cargo.toml Cargo.lock ./
-COPY assets ./assets
-COPY src ./src
-RUN cargo install --locked --path .
+FROM revolt.chat/base:latest AS builder
+RUN cargo install --locked --path crates/delta
 
 # Bundle Stage
 FROM debian:buster-slim
 RUN apt-get update && apt-get install -y ca-certificates
-COPY --from=builder /usr/local/cargo/bin/revolt ./
+COPY --from=builder /usr/local/cargo/bin/revolt-delta ./
 
 EXPOSE 8000
 ENV ROCKET_ADDRESS 0.0.0.0
 ENV ROCKET_PORT 8000
-CMD ["./revolt"]
+CMD ["./revolt-delta"]
