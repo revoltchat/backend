@@ -8,7 +8,7 @@ edition = "2021"
 
 [features]
 mongo = [ "mongodb" ]
-rocket_impl = [ "rocket" ]
+rocket_impl = [ "rocket", "rocket_empty" ]
 test = [ "async-std", "mongo", "mongodb/async-std-runtime", "rocket_impl", "rauth" ]
 default = [ "test" ]
 
@@ -66,6 +66,7 @@ web-push = "0.7.2"
 rauth = { optional = true, git = "https://github.com/insertish/rauth", rev = "001a9698c56cea79e69e4ae71d7bc2cb48aec1a6" }
 rocket = { optional = true, version = "=0.5.0-rc.1", default-features = false, features = ["json"] }
 rocket_http = { optional = true, version = "=0.5.0-rc.1" }
+rocket_empty = { optional = true, git = "https://github.com/insertish/rocket_empty", branch = "rc1" }
 
 # Sentry
 sentry = "0.25.0"

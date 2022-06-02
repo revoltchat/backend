@@ -3022,6 +3022,7 @@ dependencies = [
  "revolt-quark",
  "rocket",
  "rocket_cors",
+ "rocket_empty",
  "rocket_okapi",
  "schemars",
  "serde",
@@ -3061,6 +3062,7 @@ dependencies = [
  "regex",
  "reqwest",
  "rocket",
+ "rocket_empty",
  "rocket_http",
  "rocket_okapi",
  "schemars",
@@ -3177,6 +3179,16 @@ dependencies = [
  "unicase",
  "unicase_serde",
  "url",
+]
+
+[[package]]
+name = "rocket_empty"
+version = "0.1.0"
+source = "git+https://github.com/insertish/rocket_empty?branch=rc1#5b987e4d5090d28c6658aca25f09f7458e0de0fe"
+dependencies = [
+ "okapi",
+ "rocket",
+ "rocket_okapi",
 ]
 
 [[package]]

@@ -39,8 +39,11 @@ pub use permissions::defn::*;
 pub use permissions::{get_relationship, perms};
 
 pub use util::r#ref::Ref;
-pub use util::result::{EmptyResponse, Error, Result};
+pub use util::result::{Error, Result};
 pub use util::variables;
+
+#[cfg(feature = "rocket_impl")]
+pub use rocket_empty::EmptyResponse;
 
 #[cfg(feature = "rocket_impl")]
 use rocket::State;
