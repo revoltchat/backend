@@ -1,6 +1,7 @@
 [package]
 name = "revolt-delta"
 version = "0.5.3-5-patch.2"
+license = "AGPL-3.0-or-later"
 authors = ["Paul Makles <paulmakles@gmail.com>"]
 edition = "2018"
 
