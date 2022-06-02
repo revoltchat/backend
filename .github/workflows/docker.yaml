@@ -21,8 +21,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  base:
     runs-on: ubuntu-latest
+    name: Build base image (amd64)
     steps:
       # Configure build environment
       - name: Checkout
@@ -30,23 +31,32 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
+      # Authenticate with GHCR
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       # Build all projects and cache
       - name: Build Base Image
         uses: docker/build-push-action@v3
         with:
           context: .
-          push: false
-          tags: revolt.chat/base:latest
+          push: true
+          tags: ghcr.io/revoltchat/base:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   publish_amd64:
-    needs: [test]
+    needs: [base]
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
     strategy:
       matrix:
         project: [delta, bonfire]
+    name: Build ${{ matrix.project }} image (amd64)
     steps:
       # Configure build environment
       - name: Checkout
