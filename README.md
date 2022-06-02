@@ -7,9 +7,9 @@ This is a monorepo for the Revolt backend.
 | `delta`          | [crates/delta](crates/delta)                   | REST API server                      |
 | `bonfire`        | [crates/bonfire](crates/bonfire)               | WebSocket events server              |
 | `quark`          | [crates/quark](crates/quark)                   | Models and logic                     |
-| `revcord/api`    | [crates/revcord/api](crates/revcord/api)       | Discord REST translation layer       |
+<!--| `revcord/api`    | [crates/revcord/api](crates/revcord/api)       | Discord REST translation layer       |
 | `revcord/ws`     | [crates/revcord/ws](crates/revcord/ws)         | Discord gateway translation layer    |
-| `revcord/models` | [crates/revcord/models](crates/revcord/models) | Discord models and quark translation |
+| `revcord/models` | [crates/revcord/models](crates/revcord/models) | Discord models and quark translation |-->
 
 Note: `january`, `autumn`, and `vortex` are yet to be moved into this monorepo.
 
