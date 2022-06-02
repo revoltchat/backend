@@ -2245,6 +2245,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ordered-float"
+version = "2.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7940cf2ca942593318d07fcf2596cdca60a85c9e7fab408a5e21a4f9dcd40d87"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "os_info"
 version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2975,6 +2984,88 @@ dependencies = [
 ]
 
 [[package]]
+name = "revcord-api"
+version = "0.1.0"
+dependencies = [
+ "async-channel",
+ "async-std",
+ "bitfield",
+ "chrono",
+ "ctrlc",
+ "dashmap",
+ "dotenv",
+ "env_logger",
+ "futures",
+ "impl_ops",
+ "lazy_static",
+ "lettre",
+ "linkify 0.6.0",
+ "log",
+ "lru",
+ "mobc",
+ "mobc-redis",
+ "mongodb 1.2.5",
+ "nanoid",
+ "num_enum",
+ "once_cell",
+ "rauth",
+ "redis 0.21.5",
+ "regex",
+ "reqwest",
+ "revcord-models",
+ "revolt-quark",
+ "rocket",
+ "rocket_cors",
+ "rocket_okapi",
+ "schemars",
+ "serde",
+ "serde_json",
+ "ulid 0.4.1",
+ "url",
+ "validator",
+]
+
+[[package]]
+name = "revcord-models"
+version = "0.1.0"
+dependencies = [
+ "async-recursion",
+ "async-std",
+ "async-trait",
+ "bincode",
+ "bitfield",
+ "bson 2.2.0",
+ "deadqueue",
+ "dotenv",
+ "futures",
+ "impl_ops",
+ "iso8601-timestamp",
+ "lazy_static",
+ "linkify 0.8.1",
+ "log",
+ "num_enum",
+ "okapi",
+ "optional_struct",
+ "pretty_env_logger",
+ "rauth",
+ "redis-kiss",
+ "regex",
+ "revolt-quark",
+ "rocket",
+ "rocket_okapi",
+ "schemars",
+ "serde",
+ "serde_json",
+ "twilight-model",
+ "ulid 0.5.0",
+ "validator",
+]
+
+[[package]]
+name = "revcord-ws"
+version = "0.1.0"
+
+[[package]]
 name = "revolt-bonfire"
 version = "1.0.6-patch.2"
 dependencies = [
@@ -3542,6 +3633,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde-value"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f3a1a3341211875ef120e117ea7fd5228530ae7e7036a779fdc9117be6b3282c"
+dependencies = [
+ "ordered-float",
+ "serde",
+]
+
+[[package]]
 name = "serde_bytes"
 version = "0.11.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3582,6 +3683,17 @@ dependencies = [
  "itoa 1.0.2",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "serde_repr"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2ad84e47328a31223de7fed7a4f5087f2d6ddfe586cf3ca25b7a165bc0a5aed"
+dependencies = [
+ "proc-macro2",
+ "quote 1.0.18",
+ "syn 1.0.95",
 ]
 
 [[package]]
@@ -4417,6 +4529,20 @@ dependencies = [
  "thiserror",
  "url",
  "utf-8",
+]
+
+[[package]]
+name = "twilight-model"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c44d87f62a032ea0d8053481672844cab0115330d99d655791be94a31d585256"
+dependencies = [
+ "bitflags",
+ "serde",
+ "serde-value",
+ "serde_repr",
+ "time 0.3.9",
+ "tracing",
 ]
 
 [[package]]

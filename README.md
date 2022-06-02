@@ -2,13 +2,14 @@
 
 This is a monorepo for the Revolt backend.
 
-| Crate         | Description                       |
-| ------------- | --------------------------------- |
-| `delta`       | REST API server                   |
-| `bonfire`     | WebSocket events server           |
-| `quark`       | Models and logic                  |
-| `revcord/api` | Discord REST translation layer    |
-| `revcord/ws`  | Discord gateway translation layer |
+| Crate            | Description                          |
+| ---------------- | ------------------------------------ |
+| `delta`          | REST API server                      |
+| `bonfire`        | WebSocket events server              |
+| `quark`          | Models and logic                     |
+| `revcord/api`    | Discord REST translation layer       |
+| `revcord/ws`     | Discord gateway translation layer    |
+| `revcord/models` | Discord models and quark translation |
 
 Note: `january`, `autumn`, and `vortex` are yet to be moved into this monorepo.
 
