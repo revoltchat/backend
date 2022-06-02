@@ -1,5 +1,5 @@
 # Build Stage
-FROM revolt.chat/base:latest AS builder
+FROM ghcr.io/revoltchat/base:latest AS builder
 RUN cargo install --locked --path crates/delta
 
 # Bundle Stage
