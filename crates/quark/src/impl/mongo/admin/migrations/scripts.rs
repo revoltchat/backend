@@ -2,7 +2,6 @@ use std::time::Duration;
 
 use bson::Bson;
 use futures::StreamExt;
-use log::info;
 use mongodb::{
     bson::{doc, from_bson, from_document, to_document, Document},
     options::FindOptions,

@@ -1,5 +1,6 @@
+use crate::{Error, Result};
+
 use async_std::sync::Mutex;
-use revolt_quark::{Error, Result};
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
 use rocket_okapi::gen::OpenApiGenerator;

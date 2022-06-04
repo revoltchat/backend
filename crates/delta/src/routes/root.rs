@@ -76,7 +76,7 @@ pub struct RevoltConfig {
 #[get("/")]
 pub async fn root() -> Result<Json<RevoltConfig>> {
     Ok(Json(RevoltConfig {
-        revolt: crate::version::VERSION.to_string(),
+        revolt: env!("CARGO_PKG_VERSION").to_string(),
         features: RevoltFeatures {
             captcha: CaptchaFeature {
                 enabled: *USE_HCAPTCHA,

@@ -2,7 +2,6 @@ use crate::r#impl::mongo::MongoDb;
 
 use super::scripts::LATEST_REVISION;
 
-use log::info;
 use mongodb::bson::doc;
 use mongodb::options::CreateCollectionOptions;
 

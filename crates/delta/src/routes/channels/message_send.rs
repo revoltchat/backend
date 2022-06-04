@@ -5,7 +5,9 @@ use revolt_quark::{
         message::{Masquerade, Reply, SendableEmbed},
         Message, User,
     },
-    perms, Db, Error, Permission, Ref, Result,
+    perms,
+    web::idempotency::IdempotencyKey,
+    Db, Error, Permission, Ref, Result,
 };
 
 use regex::Regex;
@@ -13,8 +15,6 @@ use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use validator::Validate;
-
-use crate::util::idempotency::IdempotencyKey;
 
 #[derive(Validate, Serialize, Deserialize, JsonSchema)]
 pub struct DataMessageSend {
