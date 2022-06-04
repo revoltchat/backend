@@ -8,8 +8,9 @@ edition = "2021"
 
 [features]
 mongo = [ "mongodb" ]
-rocket_impl = [ "rocket", "rocket_empty" ]
-test = [ "async-std", "mongo", "mongodb/async-std-runtime", "rocket_impl", "rauth" ]
+rocket_impl = [ "rocket", "rocket_empty", "rauth/database-mongodb", "rauth/rocket_impl", "rauth/okapi_impl" ]
+
+test = [ "async-std", "mongo", "mongodb/async-std-runtime", "rocket_impl" ]
 default = [ "test" ]
 
 [dependencies]
@@ -26,8 +27,8 @@ bson = { version = "2.1.0", features = ["chrono-0_4"] }
 
 # Spec Generation
 schemars = "0.8.8"
-okapi = { git = "https://github.com/insertish/okapi", rev = "dcf0df115596ee07a587a7a543cddf3d7944645b" }
-rocket_okapi = { git = "https://github.com/insertish/okapi", rev = "dcf0df115596ee07a587a7a543cddf3d7944645b" }
+okapi = { git = "https://github.com/insertish/okapi", rev = "a1048d0c8cd771e424ec97d33d825c32e06aa120" }
+rocket_okapi = { git = "https://github.com/insertish/okapi", rev = "a1048d0c8cd771e424ec97d33d825c32e06aa120" }
 # okapi = "0.7.0-rc.1"
 # rocket_okapi = "0.8.0-rc.1"
 
@@ -63,10 +64,12 @@ base64 = "0.13.0"
 web-push = "0.7.2"
 
 # Implementations
-rauth = { optional = true, git = "https://github.com/insertish/rauth", rev = "001a9698c56cea79e69e4ae71d7bc2cb48aec1a6" }
-rocket = { optional = true, version = "=0.5.0-rc.1", default-features = false, features = ["json"] }
-rocket_http = { optional = true, version = "=0.5.0-rc.1" }
-rocket_empty = { optional = true, git = "https://github.com/insertish/rocket_empty", branch = "rc1" }
+rocket_http = { optional = true, version = "0.5.0-rc.2" }
+rocket = { optional = true, version = "0.5.0-rc.2", default-features = false, features = ["json"] }
+rocket_empty = { optional = true, git = "https://github.com/insertish/rocket_empty", branch = "master" }
+
+# rAuth
+rauth = { git = "https://github.com/insertish/rauth", rev = "a82cb5d23da4787e75d6f3c795189ce31e1590c4", features = [ "async-std-runtime" ] }
 
 # Sentry
 sentry = "0.25.0"

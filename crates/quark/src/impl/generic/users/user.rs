@@ -8,9 +8,6 @@ use crate::{perms, Database, Error, Result};
 
 use futures::try_join;
 use impl_ops::impl_op_ex_commutative;
-use okapi::openapi3::{SecurityScheme, SecuritySchemeData};
-use rocket_okapi::gen::OpenApiGenerator;
-use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 use std::ops;
 
 impl_op_ex_commutative!(+ |a: &i32, b: &Badges| -> i32 { *a | *b as i32 });
@@ -357,74 +354,5 @@ impl User {
                 }
             }
         }
-    }
-}
-
-use rauth::entities::Session;
-use rocket::http::Status;
-use rocket::request::{self, FromRequest, Outcome, Request};
-
-#[rocket::async_trait]
-impl<'r> FromRequest<'r> for User {
-    type Error = rauth::util::Error;
-
-    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
-        let user: &Option<User> = request
-            .local_cache_async(async {
-                let db = request
-                    .rocket()
-                    .state::<Database>()
-                    .expect("Database state not reachable!");
-
-                let header_bot_token = request
-                    .headers()
-                    .get("x-bot-token")
-                    .next()
-                    .map(|x| x.to_string());
-
-                if let Some(bot_token) = header_bot_token {
-                    if let Ok(user) = User::from_token(db, &bot_token, UserHint::Bot).await {
-                        return Some(user);
-                    }
-                } else if let Outcome::Success(session) = request.guard::<Session>().await {
-                    // This uses a guard so can't really easily be refactored into from_token at this stage.
-                    if let Ok(user) = db.fetch_user(&session.user_id).await {
-                        return Some(user);
-                    }
-                }
-
-                None
-            })
-            .await;
-
-        if let Some(user) = user {
-            Outcome::Success(user.clone())
-        } else {
-            Outcome::Failure((Status::Unauthorized, rauth::util::Error::InvalidSession))
-        }
-    }
-}
-
-impl<'r> OpenApiFromRequest<'r> for User {
-    fn from_request_input(
-        _gen: &mut OpenApiGenerator,
-        _name: String,
-        _required: bool,
-    ) -> rocket_okapi::Result<RequestHeaderInput> {
-        let mut requirements = schemars::Map::new();
-        requirements.insert("Api Key".to_owned(), vec![]);
-
-        Ok(RequestHeaderInput::Security(
-            "Api Key".to_owned(),
-            SecurityScheme {
-                data: SecuritySchemeData::ApiKey {
-                    name: "x-session-token".to_owned(),
-                    location: "header".to_owned(),
-                },
-                description: Some("Session Token".to_owned()),
-                extensions: schemars::Map::new(),
-            },
-            requirements,
-        ))
     }
 }

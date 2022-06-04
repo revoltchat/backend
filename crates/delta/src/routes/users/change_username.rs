@@ -1,6 +1,5 @@
 use crate::util::regex::RE_USERNAME;
-use rauth::entities::Account;
-use revolt_quark::{models::User, Database, Error, Result};
+use revolt_quark::{models::User, rauth::models::Account, Database, Error, Result};
 use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 use validator::Validate;

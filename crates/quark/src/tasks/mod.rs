@@ -18,7 +18,7 @@ pub async fn start_workers(db: Database) {
         task::spawn(ack::worker(db.clone()));
         task::spawn(last_message_id::worker(db.clone()));
         task::spawn(process_embeds::worker(db.clone()));
-        task::spawn(web_push::worker(db.clone()));
+        task::spawn(web_push::worker(db.clone().into()));
     }
 }
 

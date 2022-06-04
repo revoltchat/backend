@@ -1,9 +1,8 @@
+use crate::bson::doc;
 use crate::util::variables::delta::VAPID_PRIVATE_KEY;
-use crate::{bson::doc, r#impl::mongo::MongoDb, Database};
 
 use deadqueue::limited::Queue;
-use futures::StreamExt;
-use rauth::entities::Session;
+use rauth::Database;
 use web_push::{
     ContentEncoding, SubscriptionInfo, SubscriptionKeys, VapidSignatureBuilder, WebPushClient,
     WebPushMessageBuilder,
@@ -43,90 +42,69 @@ pub async fn worker(db: Database) {
     let key = base64::decode_config(VAPID_PRIVATE_KEY.clone(), base64::URL_SAFE)
         .expect("valid `VAPID_PRIVATE_KEY`");
 
-    if let Database::MongoDb(MongoDb(db)) = db {
-        loop {
-            let task = Q.pop().await;
+    loop {
+        let task = Q.pop().await;
 
-            // ! FIXME: this is hard-coded until rauth is merged into quark
-            if let Ok(mut cursor) = db
-                .database("revolt")
-                .collection::<Session>("sessions")
-                .find(
-                    doc! {
-                        "user_id": {
-                            "$in": task.recipients
+        if let Ok(sessions) = db.find_sessions_with_subscription(&task.recipients).await {
+            for session in sessions {
+                if let Some(sub) = session.subscription {
+                    let subscription = SubscriptionInfo {
+                        endpoint: sub.endpoint,
+                        keys: SubscriptionKeys {
+                            auth: sub.auth,
+                            p256dh: sub.p256dh,
                         },
-                        "subscription": {
-                            "$exists": true
-                        }
-                    },
-                    None,
-                )
-                .await
-            {
-                while let Some(Ok(session)) = cursor.next().await {
-                    if let Some(sub) = session.subscription {
-                        let subscription = SubscriptionInfo {
-                            endpoint: sub.endpoint,
-                            keys: SubscriptionKeys {
-                                auth: sub.auth,
-                                p256dh: sub.p256dh,
-                            },
-                        };
+                    };
 
-                        match WebPushMessageBuilder::new(&subscription) {
-                            Ok(mut builder) => {
-                                match VapidSignatureBuilder::from_pem(
-                                    std::io::Cursor::new(&key),
-                                    &subscription,
-                                ) {
-                                    Ok(sig_builder) => match sig_builder.build() {
-                                        Ok(signature) => {
-                                            builder.set_vapid_signature(signature);
-                                            builder.set_payload(
-                                                ContentEncoding::AesGcm,
-                                                task.payload.as_bytes(),
-                                            );
+                    match WebPushMessageBuilder::new(&subscription) {
+                        Ok(mut builder) => {
+                            match VapidSignatureBuilder::from_pem(
+                                std::io::Cursor::new(&key),
+                                &subscription,
+                            ) {
+                                Ok(sig_builder) => match sig_builder.build() {
+                                    Ok(signature) => {
+                                        builder.set_vapid_signature(signature);
+                                        builder.set_payload(
+                                            ContentEncoding::AesGcm,
+                                            task.payload.as_bytes(),
+                                        );
 
-                                            match builder.build() {
-                                                Ok(msg) => match client.send(msg).await {
-                                                    Ok(_) => {
-                                                        info!(
-                                                            "Sent Web Push notification to {:?}.",
-                                                            session.id
-                                                        )
-                                                    }
-                                                    Err(err) => {
-                                                        error!(
-                                                            "Hit error sending Web Push! {:?}",
-                                                            err
-                                                        )
-                                                    }
-                                                },
-                                                Err(err) => {
-                                                    error!(
-                                                        "Failed to build message for {}! {:?}",
-                                                        session.user_id, err
+                                        match builder.build() {
+                                            Ok(msg) => match client.send(msg).await {
+                                                Ok(_) => {
+                                                    info!(
+                                                        "Sent Web Push notification to {:?}.",
+                                                        session.id
                                                     )
                                                 }
+                                                Err(err) => {
+                                                    error!("Hit error sending Web Push! {:?}", err)
+                                                }
+                                            },
+                                            Err(err) => {
+                                                error!(
+                                                    "Failed to build message for {}! {:?}",
+                                                    session.user_id, err
+                                                )
                                             }
                                         }
-                                        Err(err) => error!(
-                                            "Failed to build signature for {}! {:?}",
-                                            session.user_id, err
-                                        ),
-                                    },
+                                    }
                                     Err(err) => error!(
-                                        "Failed to create signature builder for {}! {:?}",
+                                        "Failed to build signature for {}! {:?}",
                                         session.user_id, err
                                     ),
-                                }
+                                },
+                                Err(err) => error!(
+                                    "Failed to create signature builder for {}! {:?}",
+                                    session.user_id, err
+                                ),
                             }
-                            Err(err) => error!(
-                                "Invalid subscription information for {}! {:?}",
-                                session.user_id, err
-                            ),
                         }
+                        Err(err) => error!(
+                            "Invalid subscription information for {}! {:?}",
+                            session.user_id, err
+                        ),
                     }
                 }
             }

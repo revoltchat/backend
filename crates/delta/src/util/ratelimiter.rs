@@ -8,6 +8,7 @@ use std::hash::Hasher;
 use std::ops::Add;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use revolt_quark::rauth::models::Session;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::uri::Origin;
 use rocket::http::{Method, Status};
@@ -207,10 +208,9 @@ impl<'r> FromRequest<'r> for Ratelimiter {
         let ratelimiter = request
             .local_cache_async(async {
                 use rocket::outcome::Outcome;
-                let identifier = if let Outcome::Success(session) =
-                    request.guard::<rauth::entities::Session>().await
+                let identifier = if let Outcome::Success(session) = request.guard::<Session>().await
                 {
-                    session.id.expect("`id` on User")
+                    session.id
                 } else {
                     to_real_ip(request)
                 };

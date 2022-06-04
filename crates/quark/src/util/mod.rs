@@ -1,3 +1,4 @@
+pub mod log;
 pub mod manipulation;
 pub mod r#ref;
 pub mod result;

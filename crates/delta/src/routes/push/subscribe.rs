@@ -1,9 +1,11 @@
-use revolt_quark::{EmptyResponse, Error, Result};
-
-use rauth::{
-    entities::{Model, Session, WebPushSubscription},
-    logic::Auth,
+use revolt_quark::{
+    rauth::{
+        models::{Session, WebPushSubscription},
+        RAuth,
+    },
+    EmptyResponse, Error, Result,
 };
+
 use rocket::{serde::json::Json, State};
 
 /// # Push Subscribe
@@ -14,13 +16,13 @@ use rocket::{serde::json::Json, State};
 #[openapi(tag = "Web Push")]
 #[post("/subscribe", data = "<data>")]
 pub async fn req(
-    auth: &State<Auth>,
+    rauth: &State<RAuth>,
     mut session: Session,
     data: Json<WebPushSubscription>,
 ) -> Result<EmptyResponse> {
     session.subscription = Some(data.into_inner());
     session
-        .save(&auth.db, None)
+        .save(&rauth)
         .await
         .map(|_| EmptyResponse)
         .map_err(|_| Error::DatabaseError {
