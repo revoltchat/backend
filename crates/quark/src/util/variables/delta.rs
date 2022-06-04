@@ -1,8 +1,5 @@
 use std::env;
 
-#[cfg(debug_assertions)]
-use log::warn;
-
 lazy_static! {
     // Application Settings
     pub static ref PUBLIC_URL: String =

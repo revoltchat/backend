@@ -8,7 +8,7 @@ use std::hash::Hasher;
 use std::ops::Add;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use revolt_quark::rauth::models::Session;
+use crate::rauth::models::Session;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::uri::Origin;
 use rocket::http::{Method, Status};
@@ -22,8 +22,6 @@ use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 use serde::Serialize;
 
 use dashmap::DashMap;
-
-use log::info;
 
 /// Ratelimit Bucket
 #[derive(Clone, Copy)]
@@ -304,11 +302,11 @@ impl<'r> FromRequest<'r> for RatelimitInformation {
     }
 }
 
-#[get("/ratelimit")]
+#[rocket::get("/ratelimit")]
 fn ratelimit_info(info: RatelimitInformation) -> Json<RatelimitInformation> {
     Json(info)
 }
 
 pub fn routes() -> Vec<rocket::Route> {
-    routes![ratelimit_info]
+    rocket::routes![ratelimit_info]
 }

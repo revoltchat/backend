@@ -685,16 +685,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ctrlc"
-version = "3.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b37feaa84e6861e00a1f5e5aa8da3ee56d605c9992d33e082786754828e20865"
-dependencies = [
- "nix",
- "winapi 0.3.9",
-]
-
-[[package]]
 name = "darling"
 version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1915,17 +1905,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nix"
-version = "0.24.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f17df307904acd05aa8e32e97bb20f2a0df1728bbc2d771ae8f9a90463441e9"
-dependencies = [
- "bitflags",
- "cfg-if 1.0.0",
- "libc",
-]
-
-[[package]]
 name = "nom"
 version = "7.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2757,7 +2736,6 @@ dependencies = [
  "async-std",
  "bitfield",
  "chrono",
- "ctrlc",
  "dashmap",
  "dotenv",
  "env_logger",
@@ -2778,7 +2756,6 @@ dependencies = [
  "reqwest",
  "revolt-quark",
  "rocket",
- "rocket_cors",
  "rocket_empty",
  "rocket_okapi",
  "rocket_rauth",
@@ -2801,6 +2778,7 @@ dependencies = [
  "bincode",
  "bitfield",
  "bson",
+ "dashmap",
  "deadqueue",
  "dotenv",
  "futures",
@@ -2809,6 +2787,7 @@ dependencies = [
  "lazy_static",
  "linkify 0.8.1",
  "log",
+ "lru",
  "mongodb",
  "nanoid",
  "num_enum",
@@ -2820,6 +2799,7 @@ dependencies = [
  "regex",
  "reqwest",
  "rocket",
+ "rocket_cors",
  "rocket_empty",
  "rocket_http",
  "rocket_okapi",

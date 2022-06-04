@@ -8,7 +8,18 @@ edition = "2021"
 
 [features]
 mongo = [ "mongodb" ]
-rocket_impl = [ "rocket", "rocket_empty", "rauth/database-mongodb", "rauth/rocket_impl", "rauth/okapi_impl" ]
+rocket_impl = [
+    "rocket",
+    "rocket_empty",
+    "rocket_cors",
+
+    "lru",
+    "dashmap",
+
+    "rauth/database-mongodb",
+    "rauth/rocket_impl",
+    "rauth/okapi_impl"
+]
 
 test = [ "async-std", "mongo", "mongodb/async-std-runtime", "rocket_impl" ]
 default = [ "test" ]
@@ -59,6 +70,9 @@ reqwest = "0.11.10"
 bitfield = "0.13.2"
 lazy_static = "1.4.0"
 
+lru = { version = "0.7.6", optional = true }
+dashmap = { version = "5.2.0", optional = true }
+
 # Web Push
 base64 = "0.13.0"
 web-push = "0.7.2"
@@ -67,6 +81,7 @@ web-push = "0.7.2"
 rocket_http = { optional = true, version = "0.5.0-rc.2" }
 rocket = { optional = true, version = "0.5.0-rc.2", default-features = false, features = ["json"] }
 rocket_empty = { optional = true, git = "https://github.com/insertish/rocket_empty", branch = "master" }
+rocket_cors = { optional = true, git = "https://github.com/lawliet89/rocket_cors", rev = "5843861a88958c16bfaa0b40f0d8910772bcd2f6" }
 
 # rAuth
 rauth = { git = "https://github.com/insertish/rauth", rev = "a82cb5d23da4787e75d6f3c795189ce31e1590c4", features = [ "async-std-runtime" ] }

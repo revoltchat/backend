@@ -6,7 +6,6 @@ use crate::{
 };
 
 use deadqueue::limited::Queue;
-use log::error;
 
 /// Task information
 #[derive(Debug)]

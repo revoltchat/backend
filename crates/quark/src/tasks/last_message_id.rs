@@ -2,7 +2,6 @@
 use crate::{models::channel::PartialChannel, Database};
 
 use deadqueue::limited::Queue;
-use log::info;
 use mongodb::bson::doc;
 use std::{collections::HashMap, time::Duration};
 
