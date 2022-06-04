@@ -17,7 +17,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 15;
+pub const LATEST_REVISION: i32 = 16;
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -599,6 +599,15 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
                 },
                 None,
             )
+            .await
+            .unwrap();
+    }
+
+    if revision <= 15 {
+        info!("Running migration [revision 15 / 04-06-2022]: Migrate rAuth to latest version.");
+
+        let db = rauth::Database::MongoDb(rauth::database::MongoDb(db.db()));
+        db.run_migration(rauth::Migration::M2022_06_03EnsureUpToSpec)
             .await
             .unwrap();
     }

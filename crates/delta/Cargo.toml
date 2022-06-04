@@ -44,7 +44,6 @@ async-std = { version = "1.8.0", features = ["tokio1", "tokio02", "attributes"] 
 
 # internal util
 lettre = "0.10.0-alpha.4"
-rauth = { git = "https://github.com/insertish/rauth", rev = "001a9698c56cea79e69e4ae71d7bc2cb48aec1a6" }
 
 # redis
 redis = { version = "0.21.2", features = ["async-std-comp"] }
@@ -52,15 +51,15 @@ mobc = { version = "0.7.3" }
 mobc-redis = { version = "0.7.0", default-features = false, features = ["async-std-comp"] }
 
 # web
-rocket_empty = { git = "https://github.com/insertish/rocket_empty", branch = "rc1" }
-rocket = { version = "0.5.0-rc.1", default-features = false, features = ["json"] }
-mongodb = { version = "1.2.2", features = ["async-std-runtime"], default-features = false }
+rocket = { version = "0.5.0-rc.2", default-features = false, features = ["json"] }
+rocket_empty = { git = "https://github.com/insertish/rocket_empty", branch = "master" }
+rocket_rauth = { git = "https://github.com/insertish/rauth", rev = "a82cb5d23da4787e75d6f3c795189ce31e1590c4" }
 rocket_cors = { git = "https://github.com/lawliet89/rocket_cors", rev = "5843861a88958c16bfaa0b40f0d8910772bcd2f6" }
 
 # spec generation
 schemars = "0.8.8"
 # rocket_okapi = "0.8.0-rc.1"
-rocket_okapi = { git = "https://github.com/insertish/okapi", rev = "dcf0df115596ee07a587a7a543cddf3d7944645b", features = [ "swagger" ] }
+rocket_okapi = { git = "https://github.com/insertish/okapi", rev = "a1048d0c8cd771e424ec97d33d825c32e06aa120", features = [ "swagger" ] }
 
 # quark
 revolt-quark = { path = "../quark" }

@@ -1,8 +1,7 @@
 use std::env;
 use std::ops::Deref;
 
-use crate::r#impl::dummy::DummyDb;
-use crate::r#impl::mongo::MongoDb;
+use crate::r#impl::{DummyDb, MongoDb};
 use crate::AbstractDatabase;
 
 /// Database information to use to create a client
@@ -58,6 +57,17 @@ impl Deref for Database {
         match self {
             Database::Dummy(dummy) => dummy,
             Database::MongoDb(mongo) => mongo,
+        }
+    }
+}
+
+impl From<Database> for rauth::Database {
+    fn from(val: Database) -> Self {
+        match val {
+            Database::Dummy(_) => rauth::Database::default(),
+            Database::MongoDb(MongoDb(client)) => {
+                rauth::Database::MongoDb(rauth::database::MongoDb(client.database("revolt")))
+            }
         }
     }
 }

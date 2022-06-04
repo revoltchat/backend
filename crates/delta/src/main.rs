@@ -13,10 +13,10 @@ pub mod util;
 pub mod version;
 
 use log::info;
-use rauth::{
-    config::{Captcha, Config, EmailVerification, SMTPSettings, Template, Templates},
-    logic::Auth,
+use revolt_quark::rauth::config::{
+    Captcha, Config, EmailVerificationConfig, SMTPSettings, Template, Templates,
 };
+use revolt_quark::rauth::RAuth;
 use revolt_quark::variables::delta::{
     APP_URL, HCAPTCHA_KEY, INVITE_ONLY, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD, SMTP_USERNAME,
     USE_EMAIL, USE_HCAPTCHA,
@@ -25,8 +25,8 @@ use revolt_quark::DatabaseInfo;
 use rocket_cors::AllowedOrigins;
 use std::str::FromStr;
 
-#[async_std::main]
-async fn main() {
+#[launch]
+async fn rocket() -> _ {
     let _guard = revolt_quark::setup_logging();
 
     info!(
@@ -58,7 +58,7 @@ async fn main() {
 
     let mut config = Config {
         email_verification: if *USE_EMAIL {
-            EmailVerification::Enabled {
+            EmailVerificationConfig::Enabled {
                 smtp: SMTPSettings {
                     from: (*SMTP_FROM).to_string(),
                     host: (*SMTP_HOST).to_string(),
@@ -86,7 +86,7 @@ async fn main() {
                 },
             }
         } else {
-            EmailVerification::Disabled
+            EmailVerificationConfig::Disabled
         },
         ..Default::default()
     };
@@ -101,23 +101,20 @@ async fn main() {
         };
     }
 
+    // Setup database
     let db = DatabaseInfo::Auto.connect().await.unwrap();
     db.migrate_database().await.unwrap();
 
-    // This is entirely temporary code until rauth is migrated to quark.
-    // (and / or otherwise gets updated to MongoDB v2 driver)
-    let mongo_db = mongodb::Client::with_uri_str(
-        &std::env::var("MONGODB").unwrap_or_else(|_| "mongodb://localhost".to_string()),
-    )
-    .await
-    .expect("Failed to init db connection.");
-
-    rauth::entities::sync_models(&mongo_db.database("revolt")).await;
+    // Setup rAuth
+    let rauth = RAuth {
+        database: db.clone().into(),
+        config,
+    };
 
     // Launch background task workers.
     async_std::task::spawn(revolt_quark::tasks::start_workers(db.clone()));
 
-    let auth = Auth::new(mongo_db.database("revolt"), config);
+    // Configure Rocket
     let rocket = rocket::build();
     routes::mount(rocket)
         .mount("/", rocket_cors::catch_all_options_routes())
@@ -129,14 +126,11 @@ async fn main() {
                 ..Default::default()
             }),
         )
-        .manage(auth)
+        .manage(rauth)
         .manage(db)
         .manage(cors.clone())
         .attach(util::ratelimiter::RatelimitFairing)
         .attach(cors)
-        .launch()
-        .await
-        .unwrap();
 }
 
 /// Resolve asset

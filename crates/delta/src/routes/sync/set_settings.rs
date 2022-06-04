@@ -1,5 +1,5 @@
 use revolt_quark::models::User;
-use revolt_quark::r#impl::generic::users::user_settings::UserSettingsImpl;
+use revolt_quark::r#impl::UserSettingsImpl;
 use revolt_quark::{Db, EmptyResponse, Result};
 
 use chrono::prelude::*;

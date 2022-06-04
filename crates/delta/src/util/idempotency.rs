@@ -1,5 +1,4 @@
 use async_std::sync::Mutex;
-use mongodb::bson::doc;
 use revolt_quark::{Error, Result};
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
