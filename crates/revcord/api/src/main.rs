@@ -62,12 +62,16 @@ async fn main() {
 
     let auth = Auth::new(mongo_db.database("revolt"), Config::default());
     let rocket = rocket::build();
-    routes::mount(rocket)
+    let r = routes::mount(rocket)
         .mount("/", rocket_cors::catch_all_options_routes())
         .manage(auth)
         .manage(db)
         .manage(cors.clone())
-        .attach(cors)
+        .attach(cors);
+
+    let config = r.figment().clone().merge((rocket::Config::PORT, 1111));
+
+    r.configure(config)
         .launch()
         .await
         .unwrap();

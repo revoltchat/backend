@@ -19,5 +19,8 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
 
 
 fn custom_openapi_spec() -> OpenApi {
-    OpenApi::default()
+    OpenApi {
+        openapi: OpenApi::default_version(),
+        ..Default::default()
+    }
 }
