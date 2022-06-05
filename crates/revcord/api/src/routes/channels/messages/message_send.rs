@@ -53,7 +53,6 @@ impl<'r> FromData<'r> for MessageBody<'r> {
 
     async fn from_data(req: &'r rocket::Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         if let Some(content_type) = req.headers().get_one("content-type") {
-            println!("{content_type}");
             match content_type.split(';').next().unwrap() {
                 "application/json" => {
                     match Json::<MessagePostJson>::from_data(req, data).await {
