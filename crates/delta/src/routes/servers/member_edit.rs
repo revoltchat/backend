@@ -1,9 +1,11 @@
+use std::collections::HashSet;
+
 use revolt_quark::{
     models::{
         server_member::{FieldsMember, PartialMember},
         File, Member, User,
     },
-    perms, Db, Error, Ref, Result,
+    perms, Db, Error, Permission, Ref, Result,
 };
 
 use rocket::serde::json::Json;
@@ -41,11 +43,91 @@ pub async fn req(
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    let server = server.as_server(db).await?;
-    perms(&user).server(&server).calc(db).await?;
-
+    // Fetch server, target member and current permissions
+    let mut server = server.as_server(db).await?;
     let mut member = target.as_member(db, &server.id).await?;
+    let mut permissions = perms(&user).server(&server);
 
+    // Check permissions in server
+    let mut required = vec![];
+
+    if data.nickname.is_some()
+        || data
+            .remove
+            .as_ref()
+            .map(|x| x.contains(&FieldsMember::Nickname))
+            .unwrap_or_default()
+    {
+        if user.id == member.id.user {
+            required.push(Permission::ChangeNickname);
+        } else {
+            required.push(Permission::ManageNicknames);
+        }
+    }
+
+    if data.avatar.is_some()
+        || data
+            .remove
+            .as_ref()
+            .map(|x| x.contains(&FieldsMember::Avatar))
+            .unwrap_or_default()
+    {
+        if user.id == member.id.user {
+            required.push(Permission::ChangeAvatar);
+        } else {
+            return Err(Error::InvalidOperation);
+        }
+    }
+
+    if data.roles.is_some()
+        || data
+            .remove
+            .as_ref()
+            .map(|x| x.contains(&FieldsMember::Roles))
+            .unwrap_or_default()
+    {
+        required.push(Permission::AssignRoles);
+    }
+
+    for permission in required {
+        permissions.throw_permission(db, permission).await?;
+    }
+
+    // Resolve our ranking
+    let our_ranking = permissions.get_member_rank().unwrap_or(i64::MIN);
+
+    // Check that we have permissions to act against this member
+    if member.id.user != user.id
+        && member.get_ranking(permissions.server.get().unwrap()) <= our_ranking
+    {
+        return Err(Error::NotElevated);
+    }
+
+    // Check permissions against roles in diff
+    if let Some(roles) = &data.roles {
+        let fallback = vec![];
+        let current_roles = member
+            .roles
+            .as_ref()
+            .unwrap_or(&fallback)
+            .iter()
+            .collect::<HashSet<&String>>();
+
+        let new_roles = roles.iter().collect::<HashSet<&String>>();
+        let added_roles: Vec<&&String> = new_roles.difference(&current_roles).collect();
+
+        for role_id in added_roles {
+            if let Some(role) = server.roles.remove(*role_id) {
+                if role.rank <= our_ranking {
+                    return Err(Error::NotElevated);
+                }
+            } else {
+                return Err(Error::InvalidRole);
+            }
+        }
+    }
+
+    // Apply edits to the member object
     let DataMemberEdit {
         nickname,
         avatar,
@@ -58,9 +140,6 @@ pub async fn req(
         roles,
         ..Default::default()
     };
-
-    // ! FIXME: calculate permission against member
-    // ! FIXME: also check roles exist lol
 
     // 1. Remove fields from object
     if let Some(fields) = &remove {
