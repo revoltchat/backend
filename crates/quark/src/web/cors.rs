@@ -3,7 +3,7 @@ use std::str::FromStr;
 pub use rocket_cors::catch_all_options_routes;
 use rocket_cors::{AllowedOrigins, Cors};
 
-pub fn fairing() -> Cors {
+pub fn new() -> Cors {
     rocket_cors::CorsOptions {
         allowed_origins: AllowedOrigins::All,
         allowed_methods: [
