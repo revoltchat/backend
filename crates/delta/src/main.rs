@@ -34,6 +34,9 @@ async fn rocket() -> _ {
     // Launch background task workers.
     async_std::task::spawn(revolt_quark::tasks::start_workers(db.clone()));
 
+    // Configure CORS
+    let cors = revolt_quark::web::cors::new();
+
     // Configure Rocket
     let rocket = rocket::build();
     routes::mount(rocket)
@@ -42,6 +45,7 @@ async fn rocket() -> _ {
         .mount("/swagger/", revolt_quark::web::swagger::routes())
         .manage(rauth)
         .manage(db)
+        .manage(cors.clone())
         .attach(revolt_quark::web::ratelimiter::RatelimitFairing)
-        .attach(revolt_quark::web::cors::fairing())
+        .attach(cors)
 }
