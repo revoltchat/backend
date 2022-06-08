@@ -134,7 +134,23 @@ pub async fn message_send(
             .replace(replies.into_iter().collect::<Vec<String>>());
     }
 
-    // 4. Add attachments to message.
+    // 4. Process included embeds.
+    let mut embeds = vec![];
+    if let Some(sendable_embeds) = data.embeds {
+        for sendable_embed in sendable_embeds {
+            sendable_embed
+                .validate()
+                .map_err(|error| Error::FailedValidation { error })?;
+
+            embeds.push(sendable_embed.into_embed(db, message_id.clone()).await?)
+        }
+    }
+
+    if !embeds.is_empty() {
+        message.embeds.replace(embeds);
+    }
+
+    // 5. Add attachments to message.
     let mut attachments = vec![];
     if let Some(ids) = &data.attachments {
         if !ids.is_empty() {
@@ -158,22 +174,6 @@ pub async fn message_send(
 
     if !attachments.is_empty() {
         message.attachments.replace(attachments);
-    }
-
-    // 5. Process included embeds.
-    let mut embeds = vec![];
-    if let Some(sendable_embeds) = data.embeds {
-        for sendable_embed in sendable_embeds {
-            sendable_embed
-                .validate()
-                .map_err(|error| Error::FailedValidation { error })?;
-
-            embeds.push(sendable_embed.into_embed(db, message_id.clone()).await?)
-        }
-    }
-
-    if !embeds.is_empty() {
-        message.embeds.replace(embeds);
     }
 
     // 6. Set content

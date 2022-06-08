@@ -2730,7 +2730,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-delta"
-version = "0.5.3-6"
+version = "0.5.3-7"
 dependencies = [
  "async-channel",
  "async-std",
