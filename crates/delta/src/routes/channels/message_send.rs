@@ -164,6 +164,10 @@ pub async fn message_send(
     let mut embeds = vec![];
     if let Some(sendable_embeds) = data.embeds {
         for sendable_embed in sendable_embeds {
+            sendable_embed
+                .validate()
+                .map_err(|error| Error::FailedValidation { error })?;
+
             embeds.push(sendable_embed.into_embed(db, message_id.clone()).await?)
         }
     }
