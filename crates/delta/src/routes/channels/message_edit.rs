@@ -71,10 +71,6 @@ pub async fn req(
         new_embeds.clear();
 
         for embed in embeds {
-            embed
-                .validate()
-                .map_err(|error| Error::FailedValidation { error })?;
-
             new_embeds.push(embed.clone().into_embed(db, message.id.clone()).await?);
         }
     }

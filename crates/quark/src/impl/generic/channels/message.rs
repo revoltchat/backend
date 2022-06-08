@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use serde_json::json;
 use ulid::Ulid;
+use validator::Validate;
 
 use crate::{
     events::client::EventV1,
@@ -17,7 +18,7 @@ use crate::{
         january::{Embed, Text},
         push::PushNotification,
     },
-    Database, Result,
+    Database, Error, Result,
 };
 
 impl Message {
@@ -232,6 +233,9 @@ impl From<SystemMessage> for String {
 
 impl SendableEmbed {
     pub async fn into_embed(self, db: &Database, message_id: String) -> Result<Embed> {
+        self.validate()
+            .map_err(|error| Error::FailedValidation { error })?;
+
         let media = if let Some(id) = self.media {
             Some(
                 db.find_and_use_attachment(&id, "attachments", "message", &message_id)
