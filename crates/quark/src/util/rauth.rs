@@ -34,6 +34,12 @@ pub fn config() -> Config {
                         url: format!("{}/login/reset/", *APP_URL),
                         html: None,
                     },
+                    deletion: Template {
+                        title: "Confirm account deletion.".into(),
+                        text: include_str!(crate::asset!("templates/deletion.txt")).into(),
+                        url: format!("{}/delete/", *APP_URL),
+                        html: None,
+                    },
                     welcome: None,
                 },
             }

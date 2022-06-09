@@ -2505,7 +2505,7 @@ dependencies = [
 [[package]]
 name = "rauth"
 version = "1.0.0"
-source = "git+https://github.com/insertish/rauth?rev=1fe2187ad30231b6ba6432167ba0d929e97ffcc2#1fe2187ad30231b6ba6432167ba0d929e97ffcc2"
+source = "git+https://github.com/insertish/rauth?rev=e71d54eba4712b6c6a8a4354ad9fa39677714e1f#e71d54eba4712b6c6a8a4354ad9fa39677714e1f"
 dependencies = [
  "async-std",
  "async-trait",
@@ -2986,15 +2986,23 @@ dependencies = [
 [[package]]
 name = "rocket_rauth"
 version = "1.0.0"
-source = "git+https://github.com/insertish/rauth?rev=1fe2187ad30231b6ba6432167ba0d929e97ffcc2#1fe2187ad30231b6ba6432167ba0d929e97ffcc2"
+source = "git+https://github.com/insertish/rauth?rev=e71d54eba4712b6c6a8a4354ad9fa39677714e1f#e71d54eba4712b6c6a8a4354ad9fa39677714e1f"
 dependencies = [
+ "async-std",
+ "base32",
+ "chrono",
+ "iso8601-timestamp",
+ "mongodb",
  "okapi",
  "rauth",
+ "regex",
+ "reqwest",
  "rocket",
  "rocket_empty",
  "rocket_okapi",
  "schemars",
  "serde",
+ "serde_json",
 ]
 
 [[package]]

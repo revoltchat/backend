@@ -1,0 +1,5 @@
+You requested to have your account deleted, if you did not perform this action please take measures to secure your account immediately.
+
+Confirm here: {{url}}
+
+Sent by Revolt.
