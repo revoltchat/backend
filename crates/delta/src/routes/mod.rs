@@ -131,7 +131,7 @@ fn custom_openapi_spec() -> OpenApi {
                 url: Some("https://github.com/revoltchat/delta/blob/master/LICENSE".to_owned()),
                 ..Default::default()
             }),
-            version: "0.5.3-rc.1".to_owned(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
             ..Default::default()
         },
         servers: vec![
