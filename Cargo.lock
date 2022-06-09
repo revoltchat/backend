@@ -2505,7 +2505,7 @@ dependencies = [
 [[package]]
 name = "rauth"
 version = "1.0.0"
-source = "git+https://github.com/insertish/rauth?rev=e71d54eba4712b6c6a8a4354ad9fa39677714e1f#e71d54eba4712b6c6a8a4354ad9fa39677714e1f"
+source = "git+https://github.com/insertish/rauth?rev=7a579daa6a90845fe86139edcadbd01639b330b6#7a579daa6a90845fe86139edcadbd01639b330b6"
 dependencies = [
  "async-std",
  "async-trait",
@@ -2986,7 +2986,7 @@ dependencies = [
 [[package]]
 name = "rocket_rauth"
 version = "1.0.0"
-source = "git+https://github.com/insertish/rauth?rev=e71d54eba4712b6c6a8a4354ad9fa39677714e1f#e71d54eba4712b6c6a8a4354ad9fa39677714e1f"
+source = "git+https://github.com/insertish/rauth?rev=7a579daa6a90845fe86139edcadbd01639b330b6#7a579daa6a90845fe86139edcadbd01639b330b6"
 dependencies = [
  "async-std",
  "base32",

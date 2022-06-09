@@ -101,7 +101,8 @@ fn custom_openapi_spec() -> OpenApi {
             "tags": [
               "Account",
               "Session",
-              "Onboarding"
+              "Onboarding",
+              "MFA"
             ]
           },
           {
@@ -118,7 +119,7 @@ fn custom_openapi_spec() -> OpenApi {
         openapi: OpenApi::default_version(),
         info: Info {
             title: "Revolt API".to_owned(),
-            description: Some("User-first privacy focused chat platform.".to_owned()),
+            description: Some("Open source user-first chat platform.".to_owned()),
             terms_of_service: Some("https://revolt.chat/terms".to_owned()),
             contact: Some(Contact {
                 name: Some("Revolt Support".to_owned()),
@@ -241,6 +242,11 @@ fn custom_openapi_spec() -> OpenApi {
             Tag {
                 name: "Session".to_owned(),
                 description: Some("Create and manage sessions".to_owned()),
+                ..Default::default()
+            },
+            Tag {
+                name: "MFA".to_owned(),
+                description: Some("Multi-factor Authentication".to_owned()),
                 ..Default::default()
             },
             Tag {

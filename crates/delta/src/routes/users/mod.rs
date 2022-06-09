@@ -13,6 +13,7 @@ mod find_mutual;
 mod get_default_avatar;
 mod open_dm;
 mod remove_friend;
+mod send_friend_request;
 mod unblock_user;
 
 pub fn routes() -> (Vec<Route>, OpenApi) {
@@ -33,5 +34,6 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         remove_friend::req,
         block_user::req,
         unblock_user::req,
+        send_friend_request::req,
     ]
 }
