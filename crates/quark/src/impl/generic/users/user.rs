@@ -152,8 +152,36 @@ impl User {
 
     /// Update a user's username
     pub async fn update_username(&mut self, db: &Database, username: String) -> Result<()> {
+        // Trim surrounding spaces
         let username = username.trim().to_string();
 
+        // Make sure username is still at least 3 characters
+        if username.len() < 2 {
+            return Err(Error::InvalidUsername);
+        }
+
+        // Copy the username for validation
+        let username_lowercase = username.to_lowercase();
+
+        // Ensure the username itself isn't blocked
+        const BLOCKED_USERNAMES: &[&str] = &["admin", "revolt"];
+
+        for username in BLOCKED_USERNAMES {
+            if username_lowercase == *username {
+                return Err(Error::InvalidUsername);
+            }
+        }
+
+        // Ensure none of the following substrings show up in the username
+        const BLOCKED_SUBSTRINGS: &[&str] = &["@", "#", ":", "```", "\n"];
+
+        for substr in BLOCKED_SUBSTRINGS {
+            if username_lowercase.contains(substr) {
+                return Err(Error::InvalidUsername);
+            }
+        }
+
+        // Make sure the username isn't taken
         if db.is_username_taken(&username).await? {
             return Err(Error::UsernameTaken);
         }

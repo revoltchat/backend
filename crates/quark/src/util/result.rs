@@ -24,6 +24,7 @@ pub enum Error {
 
     // ? User related errors.
     UsernameTaken,
+    InvalidUsername,
     UnknownUser,
     AlreadyFriends,
     AlreadySentRequest,
@@ -128,6 +129,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::AlreadyOnboarded => Status::Forbidden,
 
             Error::UnknownUser => Status::NotFound,
+            Error::InvalidUsername => Status::BadRequest,
             Error::UsernameTaken => Status::Conflict,
             Error::AlreadyFriends => Status::Conflict,
             Error::AlreadySentRequest => Status::Conflict,
