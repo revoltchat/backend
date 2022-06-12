@@ -2505,7 +2505,7 @@ dependencies = [
 [[package]]
 name = "rauth"
 version = "1.0.0"
-source = "git+https://github.com/insertish/rauth?rev=d68558d3211268068a38aa5012ac284e679609c3#d68558d3211268068a38aa5012ac284e679609c3"
+source = "git+https://github.com/insertish/rauth?rev=fee1e906c3726e6f0bdf9314508bd8a8e071ab4a#fee1e906c3726e6f0bdf9314508bd8a8e071ab4a"
 dependencies = [
  "async-std",
  "async-trait",
@@ -2986,7 +2986,7 @@ dependencies = [
 [[package]]
 name = "rocket_rauth"
 version = "1.0.0"
-source = "git+https://github.com/insertish/rauth?rev=d68558d3211268068a38aa5012ac284e679609c3#d68558d3211268068a38aa5012ac284e679609c3"
+source = "git+https://github.com/insertish/rauth?rev=fee1e906c3726e6f0bdf9314508bd8a8e071ab4a#fee1e906c3726e6f0bdf9314508bd8a8e071ab4a"
 dependencies = [
  "okapi",
  "rauth",
