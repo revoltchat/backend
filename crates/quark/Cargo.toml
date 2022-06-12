@@ -84,7 +84,7 @@ rocket_empty = { optional = true, git = "https://github.com/insertish/rocket_emp
 rocket_cors = { optional = true, git = "https://github.com/lawliet89/rocket_cors", rev = "5843861a88958c16bfaa0b40f0d8910772bcd2f6" }
 
 # rAuth
-rauth = { git = "https://github.com/insertish/rauth", rev = "c82ddb6165408267e3cece99f4ed6722e3c86a5a", features = [ "async-std-runtime" ] }
+rauth = { git = "https://github.com/insertish/rauth", rev = "7e727e2b9625b4f061b4f69a38de91e9351e266f", features = [ "async-std-runtime" ] }
 
 # Sentry
 sentry = "0.25.0"
