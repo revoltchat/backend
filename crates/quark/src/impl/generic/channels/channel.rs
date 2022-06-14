@@ -242,7 +242,12 @@ impl Channel {
     /// Add user to a group
     pub async fn add_user_to_group(&mut self, db: &Database, user: &str, by: &str) -> Result<()> {
         if let Channel::Group { recipients, .. } = self {
-            recipients.push(user.to_string());
+            let user = user.to_string();
+            if recipients.contains(&user) {
+                return Err(Error::AlreadyInGroup);
+            }
+
+            recipients.push(user);
         }
 
         match &self {
