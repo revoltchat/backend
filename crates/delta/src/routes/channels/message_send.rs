@@ -21,6 +21,7 @@ pub struct DataMessageSend {
     /// Unique token to prevent duplicate message sending
     ///
     /// **This is deprecated and replaced by `Idempotency-Key`!**
+    #[validate(length(min = 1, max = 64))]
     nonce: Option<String>,
 
     /// Message content to send
