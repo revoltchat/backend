@@ -37,30 +37,46 @@ impl AbstractChannelUnread for MongoDb {
     }
 
     async fn acknowledge_channels(&self, user: &str, channels: &[String]) -> Result<()> {
+        let current_time = Ulid::new().to_string();
+
         self.col::<Document>(COL)
-            .update_one(
+            .delete_many(
                 doc! {
                     "_id.channel": {
                         "$in": channels
                     },
-                    "_id.user": user,
+                    "_id.user": user
                 },
-                doc! {
-                    "$unset": {
-                        "mentions": 1_i32
-                    },
-                    "$set": {
-                        "last_id": Ulid::new().to_string()
-                    }
-                },
-                UpdateOptions::builder().upsert(true).build(),
+                None,
             )
             .await
-            .map(|_| ())
             .map_err(|_| Error::DatabaseError {
-                operation: "update",
-                with: "channel_unread",
+                operation: "delete_many",
+                with: "channel_unreads",
+            })?;
+
+        self.col::<Document>(COL)
+            .insert_many(
+                channels
+                    .iter()
+                    .map(|channel| {
+                        doc! {
+                            "_id": {
+                                "channel": channel,
+                                "user": user
+                            },
+                            "last_id": &current_time
+                        }
+                    })
+                    .collect::<Vec<Document>>(),
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "update_many",
+                with: "channel_unreads",
             })
+            .map(|_| ())
     }
 
     async fn add_mention_to_unread<'a>(
