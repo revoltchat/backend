@@ -173,7 +173,7 @@ impl User {
         }
 
         // Ensure none of the following substrings show up in the username
-        const BLOCKED_SUBSTRINGS: &[&str] = &["@", "#", ":", "```", "\n"];
+        const BLOCKED_SUBSTRINGS: &[&str] = &["@", "#", ":", "```", "\n", "\r", "[", "]"]; // Both [  & ] can disrupt the mention
 
         for substr in BLOCKED_SUBSTRINGS {
             if username_lowercase.contains(substr) {
