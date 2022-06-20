@@ -14,7 +14,7 @@ impl MongoDb {
     pub async fn delete_bulk_messages(&self, projection: Document) -> Result<()> {
         let mut for_attachments = projection.clone();
         for_attachments.insert(
-            "attachment",
+            "attachments",
             doc! {
                 "$exists": 1_i32
             },
@@ -126,10 +126,7 @@ impl AbstractMessage for MongoDb {
     }
 
     async fn delete_message(&self, id: &str) -> Result<()> {
-        self.delete_bulk_messages(doc! {
-            "_id": id
-        })
-        .await
+        self.delete_one_by_id(COL, id).await.map(|_| ())
     }
 
     async fn delete_messages(&self, channel: &str, ids: Vec<String>) -> Result<()> {

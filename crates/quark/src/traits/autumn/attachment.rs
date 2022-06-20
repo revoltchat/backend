@@ -13,4 +13,5 @@ pub trait AbstractAttachment: Sync + Send {
     async fn insert_attachment(&self, attachment: &File) -> Result<()>;
     async fn mark_attachment_as_reported(&self, id: &str) -> Result<()>;
     async fn mark_attachment_as_deleted(&self, id: &str) -> Result<()>;
+    async fn mark_attachments_as_deleted(&self, ids: &[String]) -> Result<()>;
 }

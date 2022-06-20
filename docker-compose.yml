@@ -1,18 +1,73 @@
 version: "3.3"
 services:
+  # Redis
   redis:
     image: eqalpha/keydb
     ports:
       - "6379:6379"
+
+  # MongoDB
   database:
     image: mongo
     ports:
       - "27017:27017"
     volumes:
       - ./.data/db:/data/db
+
+  # MinIO
+  minio:
+    image: minio/minio
+    command: server /data
+    env_file: .env
+    volumes:
+      - ./.data/minio:/data
+    ports:
+      - "10000:9000"
+    restart: always
+
+  # Mongo Express
   mongo-express:
     image: mongo-express
     ports:
       - "8081:8081"
     environment:
       - ME_CONFIG_MONGODB_SERVER=database
+    depends_on:
+      - database
+
+  # Create buckets for minio.
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      - minio
+    env_file: .env
+    entrypoint: >
+      /bin/sh -c "
+      while ! curl -s --output /dev/null --connect-timeout 1 http://minio:9000; do echo 'Waiting minio...' && sleep 0.1; done;
+      /usr/bin/mc alias set minio http://minio:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD;
+      /usr/bin/mc mb minio/attachments;
+      /usr/bin/mc mb minio/avatars;
+      /usr/bin/mc mb minio/backgrounds;
+      /usr/bin/mc mb minio/icons;
+      /usr/bin/mc mb minio/banners;
+      exit 0;
+      "
+  # File server (autumn)
+  autumn:
+    image: ghcr.io/revoltchat/autumn:1.1.4
+    env_file: .env
+    depends_on:
+      - database
+      - createbuckets
+    environment:
+      - AUTUMN_MONGO_URI=mongodb://database
+    ports:
+      - "3000:3000"
+    restart: always
+
+  # Metadata and image proxy (january)
+  january:
+    image: ghcr.io/revoltchat/january:0.3.4
+    ports:
+      - "7000:7000"
+    restart: always

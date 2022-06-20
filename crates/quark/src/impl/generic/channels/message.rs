@@ -135,7 +135,17 @@ impl Message {
 
     /// Delete a message
     pub async fn delete(self, db: &Database) -> Result<()> {
+        let file_ids: Vec<String> = self
+            .attachments
+            .map(|files| files.iter().map(|file| file.id.to_string()).collect())
+            .unwrap_or_default();
+
+        if !file_ids.is_empty() {
+            db.mark_attachments_as_deleted(&file_ids).await?;
+        }
+
         db.delete_message(&self.id).await?;
+
         EventV1::MessageDelete {
             id: self.id,
             channel: self.channel.clone(),

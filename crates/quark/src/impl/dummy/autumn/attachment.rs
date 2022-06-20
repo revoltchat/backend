@@ -39,4 +39,9 @@ impl AbstractAttachment for DummyDb {
         info!("Marked {id} as deleted");
         Ok(())
     }
+
+    async fn mark_attachments_as_deleted(&self, ids: &[String]) -> Result<()> {
+        info!("Marked {ids:?} as deleted");
+        Ok(())
+    }
 }

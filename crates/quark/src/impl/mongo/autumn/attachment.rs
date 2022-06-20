@@ -122,4 +122,27 @@ impl AbstractAttachment for MongoDb {
                 with: "attachment",
             })
     }
+
+    async fn mark_attachments_as_deleted(&self, ids: &[String]) -> Result<()> {
+        self.col::<Document>(COL)
+            .update_many(
+                doc! {
+                    "_id": {
+                        "$in": ids
+                    }
+                },
+                doc! {
+                    "$set": {
+                        "deleted": true
+                    }
+                },
+                None,
+            )
+            .await
+            .map(|_| ())
+            .map_err(|_| Error::DatabaseError {
+                operation: "update",
+                with: "attachments",
+            })
+    }
 }
