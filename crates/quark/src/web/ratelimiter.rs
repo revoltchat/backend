@@ -100,7 +100,13 @@ fn resolve_bucket<'r>(request: &'r rocket::Request<'_>) -> (&'r str, Option<&'r 
     if let Some(segment) = request.routed_segment(0) {
         let resource = request.routed_segment(1);
         match (segment, resource) {
-            ("users", _) => ("users", None),
+            ("users", _) => {
+                if let Some("default_avatar") = request.routed_segment(2) {
+                    return ("default_avatar", None);
+                }
+
+                ("users", None)
+            }
             ("bots", _) => ("bots", None),
             ("channels", Some(id)) => {
                 if request.method() == Method::Post {
@@ -137,6 +143,7 @@ fn resolve_bucket_limit(bucket: &str) -> u8 {
         "servers" => 5,
         "auth" => 15,
         "auth_delete" => 255,
+        "default_avatar" => 255,
         "swagger" => 100,
         _ => 20,
     }
