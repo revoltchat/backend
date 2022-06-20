@@ -33,6 +33,8 @@ pub struct DataMessageSend {
     /// Messages to reply to
     replies: Option<Vec<Reply>>,
     /// Embeds to include in message
+    ///
+    /// Text embed content contributes to the content length cap
     #[validate(length(min = 1, max = 10))]
     embeds: Option<Vec<SendableEmbed>>,
     /// Masquerade to apply to this message
@@ -60,6 +62,8 @@ pub async fn message_send(
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
+
+    Message::validate_sum(&data.content, &data.embeds)?;
 
     idempotency.consume_nonce(data.nonce).await?;
 

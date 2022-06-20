@@ -166,6 +166,31 @@ impl Message {
         .await;
         Ok(())
     }
+
+    /// Validate the sum of content of a message is under threshold
+    pub fn validate_sum(
+        content: &Option<String>,
+        embeds: &Option<Vec<SendableEmbed>>,
+    ) -> Result<()> {
+        let mut running_total = 0;
+        if let Some(content) = content {
+            running_total += content.len();
+        }
+
+        if let Some(embeds) = embeds {
+            for embed in embeds {
+                if let Some(desc) = &embed.description {
+                    running_total += desc.len();
+                }
+            }
+        }
+
+        if running_total <= 2000 {
+            Ok(())
+        } else {
+            Err(Error::PayloadTooLarge)
+        }
+    }
 }
 
 pub trait IntoUsers {

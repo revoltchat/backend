@@ -36,6 +36,8 @@ pub async fn req(
     edit.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
+    Message::validate_sum(&edit.content, &edit.embeds)?;
+
     let mut message = msg.as_message(db).await?;
     if message.channel != target {
         return Err(Error::NotFound);

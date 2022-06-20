@@ -41,6 +41,7 @@ pub enum Error {
     TooManyAttachments,
     TooManyReplies,
     EmptyMessage,
+    PayloadTooLarge,
     CannotRemoveYourself,
     GroupTooLarge {
         max: usize,
@@ -145,6 +146,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::TooManyAttachments => Status::BadRequest,
             Error::TooManyReplies => Status::BadRequest,
             Error::EmptyMessage => Status::UnprocessableEntity,
+            Error::PayloadTooLarge => Status::UnprocessableEntity,
             Error::CannotRemoveYourself => Status::BadRequest,
             Error::GroupTooLarge { .. } => Status::Forbidden,
             Error::AlreadyInGroup => Status::Conflict,
