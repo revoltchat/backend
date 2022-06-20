@@ -150,8 +150,8 @@ impl User {
         Ok(db.fetch_server_count(&self.id).await? <= 100)
     }
 
-    /// Update a user's username
-    pub async fn update_username(&mut self, db: &Database, username: String) -> Result<()> {
+    /// Sanitise and validate a username can be used
+    pub async fn validate_username(db: &Database, username: String) -> Result<String> {
         // Trim surrounding spaces
         let username = username.trim().to_string();
 
@@ -173,7 +173,7 @@ impl User {
         }
 
         // Ensure none of the following substrings show up in the username
-        const BLOCKED_SUBSTRINGS: &[&str] = &["@", "#", ":", "```", "\n"];
+        const BLOCKED_SUBSTRINGS: &[&str] = &["```"];
 
         for substr in BLOCKED_SUBSTRINGS {
             if username_lowercase.contains(substr) {
@@ -186,10 +186,15 @@ impl User {
             return Err(Error::UsernameTaken);
         }
 
+        Ok(username)
+    }
+
+    /// Update a user's username
+    pub async fn update_username(&mut self, db: &Database, username: String) -> Result<()> {
         self.update(
             db,
             PartialUser {
-                username: Some(username),
+                username: Some(User::validate_username(db, username).await?),
                 ..Default::default()
             },
             vec![],

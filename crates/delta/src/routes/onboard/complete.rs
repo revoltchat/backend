@@ -32,13 +32,10 @@ pub async fn req(
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    if db.is_username_taken(&data.username).await? {
-        return Err(Error::UsernameTaken);
-    }
-
+    let username = User::validate_username(db, data.username).await?;
     let user = User {
         id: session.user_id,
-        username: data.username,
+        username,
         ..Default::default()
     };
 
