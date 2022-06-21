@@ -202,12 +202,22 @@ impl Embed {
         let mut finder = LinkFinder::new();
         finder.kinds(&[LinkKind::Url]);
 
-        let links: HashSet<String> = finder
+        // Process all links, stripping anchors and
+        // only taking up to `max_embeds` of links.
+        let links: Vec<String> = finder
             .links(&content)
+            .map(|x| {
+                x.as_str()
+                    .chars()
+                    .take_while(|&ch| ch != '#')
+                    .collect::<String>()
+            })
+            .collect::<HashSet<String>>()
+            .into_iter()
             .take(max_embeds)
-            .map(|x| x.as_str().to_string())
             .collect();
 
+        // If no links, fail out.
         if links.is_empty() {
             return Err(Error::LabelMe);
         }
