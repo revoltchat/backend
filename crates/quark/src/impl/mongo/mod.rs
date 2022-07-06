@@ -15,7 +15,7 @@ pub mod admin {
     pub mod migrations;
 }
 
-pub mod autumn {
+pub mod media {
     pub mod attachment;
 }
 

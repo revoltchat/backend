@@ -2,7 +2,7 @@ mod admin {
     pub mod migrations;
 }
 
-mod autumn {
+mod media {
     pub mod attachment;
 }
 
@@ -27,7 +27,7 @@ mod users {
 
 pub use admin::migrations::AbstractMigrations;
 
-pub use autumn::attachment::AbstractAttachment;
+pub use media::attachment::AbstractAttachment;
 
 pub use channels::channel::AbstractChannel;
 pub use channels::channel_invite::AbstractChannelInvite;

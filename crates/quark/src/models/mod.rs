@@ -3,7 +3,7 @@ mod admin {
     pub mod simple;
 }
 
-mod autumn {
+mod media {
     pub mod attachment;
 }
 
@@ -27,8 +27,8 @@ mod users {
 }
 
 pub use admin::*;
-pub use autumn::*;
 pub use channels::*;
+pub use media::*;
 pub use servers::*;
 pub use users::*;
 
