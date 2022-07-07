@@ -16,7 +16,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 16;
+pub const LATEST_REVISION: i32 = 17;
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -609,6 +609,39 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
         db.run_migration(rauth::Migration::M2022_06_03EnsureUpToSpec)
             .await
             .unwrap();
+    }
+
+    if revision <= 16 {
+        info!("Running migration [revision 16 / 07-07-2022]: Add `emojis` collection and rAuth migration.");
+
+        let rauth_db = rauth::Database::MongoDb(rauth::database::MongoDb(db.db()));
+        rauth_db
+            .run_migration(rauth::Migration::M2022_06_09AddIndexForDeletion)
+            .await
+            .unwrap();
+
+        db.db()
+            .create_collection("emojis", None)
+            .await
+            .expect("Failed to create emojis collection.");
+
+        db.db()
+            .run_command(
+                doc! {
+                    "createIndexes": "emojis",
+                    "indexes": [
+                        {
+                            "key": {
+                                "parent.id": 1_i32,
+                            },
+                            "name": "parent_id"
+                        }
+                    ]
+                },
+                None,
+            )
+            .await
+            .expect("Failed to create emoji parent index.");
     }
 
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.

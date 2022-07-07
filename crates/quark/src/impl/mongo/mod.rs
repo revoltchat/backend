@@ -17,6 +17,7 @@ pub mod admin {
 
 pub mod media {
     pub mod attachment;
+    pub mod emoji;
 }
 
 pub mod channels {

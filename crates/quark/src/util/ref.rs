@@ -4,7 +4,7 @@ use schemars::schema::{InstanceType, Schema, SchemaObject, SingleOrVec};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::models::{Bot, Channel, Invite, Member, Message, Server, ServerBan, User};
+use crate::models::{Bot, Channel, Emoji, Invite, Member, Message, Server, ServerBan, User};
 use crate::presence::presence_is_online;
 use crate::{Database, Result};
 
@@ -62,6 +62,11 @@ impl Ref {
     /// Fetch ban from Ref
     pub async fn as_ban(&self, db: &Database, server: &str) -> Result<ServerBan> {
         db.fetch_ban(server, &self.id).await
+    }
+
+    /// Fetch emoji from Ref
+    pub async fn as_emoji(&self, db: &Database) -> Result<Emoji> {
+        db.fetch_emoji(&self.id).await
     }
 }
 

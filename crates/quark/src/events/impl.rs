@@ -151,6 +151,17 @@ impl State {
             )
             .await?;
 
+        // Fetch customisations.
+        let emojis = Some(
+            db.fetch_emoji_by_parent_ids(
+                &servers
+                    .iter()
+                    .map(|x| x.id.to_string())
+                    .collect::<Vec<String>>(),
+            )
+            .await?,
+        );
+
         // Copy data into local state cache.
         self.cache.users = users.iter().cloned().map(|x| (x.id.clone(), x)).collect();
         self.cache
@@ -202,6 +213,7 @@ impl State {
             servers,
             channels,
             members,
+            emojis,
         })
     }
 

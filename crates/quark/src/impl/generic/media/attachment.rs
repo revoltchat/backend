@@ -30,4 +30,9 @@ impl File {
         db.find_and_use_attachment(id, "banners", "server", parent)
             .await
     }
+
+    pub async fn use_emoji(db: &Database, id: &str, parent: &str) -> Result<File> {
+        db.find_and_use_attachment(id, "emojis", "object", parent)
+            .await
+    }
 }

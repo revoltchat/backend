@@ -5,7 +5,7 @@ use crate::models::message::{AppendMessage, PartialMessage};
 use crate::models::server::{FieldsRole, FieldsServer, PartialRole, PartialServer};
 use crate::models::server_member::{FieldsMember, MemberCompositeKey, PartialMember};
 use crate::models::user::{FieldsUser, PartialUser, RelationshipStatus};
-use crate::models::{Channel, Member, Message, Server, User, UserSettings};
+use crate::models::{Channel, Emoji, Member, Message, Server, User, UserSettings};
 use crate::Error;
 
 /// WebSocket Client Errors
@@ -52,6 +52,7 @@ pub enum EventV1 {
         servers: Vec<Server>,
         channels: Vec<Channel>,
         members: Vec<Member>,
+        emojis: Option<Vec<Emoji>>,
     },
 
     /// Ping response
@@ -170,4 +171,10 @@ pub enum EventV1 {
 
     /// Settings updated remotely
     UserSettingsUpdate { id: String, update: UserSettings },
+
+    /// New emoji
+    EmojiCreate(Emoji),
+
+    /// Delete emoji
+    EmojiDelete { id: String },
 }

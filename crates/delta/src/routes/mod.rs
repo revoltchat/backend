@@ -5,6 +5,7 @@ use rocket_okapi::{okapi::openapi3::OpenApi, settings::OpenApiSettings};
 
 mod bots;
 mod channels;
+mod customisation;
 mod invites;
 mod onboard;
 mod push;
@@ -25,6 +26,7 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
         "/channels" => channels::routes(),
         "/servers" => servers::routes(),
         "/invites" => invites::routes(),
+        "/custom" => customisation::routes(),
         "/auth/account" => rocket_rauth::routes::account::routes(),
         "/auth/session" => rocket_rauth::routes::session::routes(),
         "/auth/mfa" => rocket_rauth::routes::mfa::routes(),
@@ -94,6 +96,12 @@ fn custom_openapi_spec() -> OpenApi {
             "name": "Invites",
             "tags": [
               "Invites"
+            ]
+          },
+          {
+            "name": "Customisation",
+            "tags": [
+              "Emojis"
             ]
           },
           {

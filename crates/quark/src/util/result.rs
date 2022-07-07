@@ -56,6 +56,7 @@ pub enum Error {
     TooManyServers {
         max: usize,
     },
+    TooManyEmoji,
 
     // ? Bot related errors.
     ReachedMaximumBots,
@@ -156,6 +157,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::InvalidRole => Status::NotFound,
             Error::Banned => Status::Forbidden,
             Error::TooManyServers { .. } => Status::Forbidden,
+            Error::TooManyEmoji => Status::BadRequest,
 
             Error::ReachedMaximumBots => Status::BadRequest,
             Error::IsBot => Status::BadRequest,

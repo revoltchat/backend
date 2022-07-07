@@ -18,6 +18,20 @@ impl MongoDb {
         })
         .await?;
 
+        // Delete all emoji.
+        self.col::<Document>("emojis")
+            .delete_many(
+                doc! {
+                    "parent.id": &server.id
+                },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "delete_many",
+                with: "emojis",
+            })?;
+
         // Delete all channels.
         self.col::<Document>("channels")
             .delete_many(

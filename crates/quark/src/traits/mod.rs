@@ -4,6 +4,7 @@ mod admin {
 
 mod media {
     pub mod attachment;
+    pub mod emoji;
 }
 
 mod channels {
@@ -28,6 +29,7 @@ mod users {
 pub use admin::migrations::AbstractMigrations;
 
 pub use media::attachment::AbstractAttachment;
+pub use media::emoji::AbstractEmoji;
 
 pub use channels::channel::AbstractChannel;
 pub use channels::channel_invite::AbstractChannelInvite;
@@ -42,14 +44,12 @@ pub use users::bot::AbstractBot;
 pub use users::user::AbstractUser;
 pub use users::user_settings::AbstractUserSettings;
 
-// pub trait AbstractEventEmitter {}
-// + AbstractEventEmitter
-
 pub trait AbstractDatabase:
     Sync
     + Send
     + AbstractMigrations
     + AbstractAttachment
+    + AbstractEmoji
     + AbstractChannel
     + AbstractChannelInvite
     + AbstractChannelUnread

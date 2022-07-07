@@ -5,6 +5,7 @@ mod admin {
 
 mod media {
     pub mod attachment;
+    pub mod emoji;
 }
 
 mod channels {
@@ -37,6 +38,7 @@ pub use bot::Bot;
 pub use channel::Channel;
 pub use channel_invite::Invite;
 pub use channel_unread::ChannelUnread;
+pub use emoji::Emoji;
 pub use message::Message;
 pub use migrations::MigrationInfo;
 pub use server::Server;

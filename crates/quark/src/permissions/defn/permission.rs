@@ -21,8 +21,10 @@ pub enum Permission {
     ManagePermissions = 1 << 2,
     /// Manage roles on server
     ManageRole = 1 << 3,
+    /// Manage server customisation (includes emoji)
+    ManageCustomisation = 1 << 4,
 
-    // % 2 bits reserved
+    // % 1 bits reserved
 
     // * Member permissions
     /// Kick other members below their ranking
@@ -122,6 +124,7 @@ bitfield! {
     pub can_manage_server, _: 62;
     pub can_manage_permissions, _: 61;
     pub can_manage_roles, _: 60;
+    pub can_manage_customisation, _: 59;
 
     // * Member permissions
     pub can_kick_members, _: 57;

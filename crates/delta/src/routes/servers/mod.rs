@@ -1,30 +1,26 @@
 use rocket::Route;
 use rocket_okapi::okapi::openapi3::OpenApi;
 
-mod server_ack;
-mod server_create;
-mod server_delete;
-mod server_edit;
-mod server_fetch;
-
+mod ban_create;
+mod ban_list;
+mod ban_remove;
 mod channel_create;
-
+mod emoji_list;
+mod invites_fetch;
 mod member_edit;
 mod member_fetch;
 mod member_fetch_all;
 mod member_remove;
-
-mod ban_create;
-mod ban_list;
-mod ban_remove;
-
-mod invites_fetch;
-
 mod permissions_set;
 mod permissions_set_default;
 mod roles_create;
 mod roles_delete;
 mod roles_edit;
+mod server_ack;
+mod server_create;
+mod server_delete;
+mod server_edit;
+mod server_fetch;
 
 pub fn routes() -> (Vec<Route>, OpenApi) {
     openapi_get_routes_spec![
@@ -46,6 +42,7 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         roles_edit::req,
         roles_delete::req,
         permissions_set::req,
-        permissions_set_default::req
+        permissions_set_default::req,
+        emoji_list::list_emoji
     ]
 }
