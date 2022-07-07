@@ -10,11 +10,7 @@ use rocket::State;
 #[openapi(tag = "Relationships")]
 #[put("/<target>/friend")]
 pub async fn req(db: &State<Database>, user: User, target: Ref) -> Result<Json<User>> {
-    let mut target = if let Ok(user) = db.fetch_user_by_username(&target.id).await {
-        user
-    } else {
-        target.as_user(db).await?
-    };
+    let mut target = target.as_user(db).await?;
 
     if user.bot.is_some() || target.bot.is_some() {
         return Err(Error::IsBot);
