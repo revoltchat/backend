@@ -110,7 +110,13 @@ async fn calculate_channel_permission(
 
     // 1. Check channel type.
     let value: PermissionValue = match channel {
-        Channel::SavedMessages { .. } => (*DEFAULT_PERMISSION_SAVED_MESSAGES).into(),
+        Channel::SavedMessages { user, .. } => {
+            if user == &data.perspective.id {
+                (*DEFAULT_PERMISSION_SAVED_MESSAGES).into()
+            } else {
+                0_u64.into()
+            }
+        }
         Channel::DirectMessage { recipients, .. } => {
             // 2. Fetch user.
             let other_user = recipients
