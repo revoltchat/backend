@@ -11,4 +11,4 @@ pub static RE_USERNAME: Lazy<Regex> =
 /// Regex for valid emoji names
 ///
 /// Alphanumeric and underscores
-pub static RE_EMOJI: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[a-zA-Z0-9_]+$").unwrap());
+pub static RE_EMOJI: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[a-z0-9_]+$").unwrap());
