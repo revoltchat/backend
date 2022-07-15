@@ -1,3 +1,5 @@
+use iso8601_timestamp::Timestamp;
+
 use crate::{
     events::client::EventV1,
     models::{
@@ -46,6 +48,15 @@ impl Member {
         }
 
         value
+    }
+
+    /// Check whether this member is in timeout
+    pub fn in_timeout(&self) -> bool {
+        if let Some(timeout) = self.timeout {
+            *timeout > *Timestamp::now_utc()
+        } else {
+            false
+        }
     }
 
     pub fn remove(&mut self, field: &FieldsMember) {

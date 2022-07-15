@@ -45,8 +45,23 @@ impl Override {
 impl PermissionValue {
     /// Apply a given override to this value
     pub fn apply(&mut self, v: Override) {
-        self.0 |= v.allow;
-        self.0 &= !v.deny;
+        self.allow(v.allow);
+        self.revoke(v.deny);
+    }
+
+    /// Allow given permissions
+    pub fn allow(&mut self, v: u64) {
+        self.0 |= v;
+    }
+
+    /// Revoke given permissions
+    pub fn revoke(&mut self, v: u64) {
+        self.0 &= !v;
+    }
+
+    /// Restrict to given permissions
+    pub fn restrict(&mut self, v: u64) {
+        self.0 &= v;
     }
 }
 

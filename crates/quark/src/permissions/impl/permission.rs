@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::{
     models::Channel, permissions::PermissionCalculator, Override, Permission, PermissionValue,
-    Permissions, Perms, Result, DEFAULT_PERMISSION_DIRECT_MESSAGE,
+    Permissions, Perms, Result, ALLOW_IN_TIMEOUT, DEFAULT_PERMISSION_DIRECT_MESSAGE,
     DEFAULT_PERMISSION_SAVED_MESSAGES, DEFAULT_PERMISSION_VIEW_ONLY,
 };
 
@@ -74,6 +74,11 @@ async fn calculate_server_permission(
         for (_, v) in roles {
             permissions.apply(v);
         }
+    }
+
+    // 5. Revoke permissions if member is timed out.
+    if member.in_timeout() {
+        permissions.restrict(*ALLOW_IN_TIMEOUT);
     }
 
     Ok(permissions)
@@ -204,6 +209,11 @@ async fn calculate_channel_permission(
                     for (_, v) in roles {
                         permissions.apply(v);
                     }
+                }
+
+                // 5. Revoke permissions if member is timed out.
+                if member.in_timeout() {
+                    permissions.restrict(*ALLOW_IN_TIMEOUT);
                 }
 
                 permissions
