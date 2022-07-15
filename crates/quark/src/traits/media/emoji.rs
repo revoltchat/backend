@@ -15,6 +15,6 @@ pub trait AbstractEmoji: Sync + Send {
     /// Insert emoji into database.
     async fn insert_emoji(&self, emoji: &Emoji) -> Result<()>;
 
-    /// Delete an emoji by its id
-    async fn delete_emoji(&self, emoji: &Emoji) -> Result<()>;
+    /// Detach an emoji by its id
+    async fn detach_emoji(&self, emoji: &Emoji) -> Result<()>;
 }

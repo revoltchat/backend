@@ -33,9 +33,9 @@ impl AbstractEmoji for DummyDb {
         Ok(())
     }
 
-    /// Delete an emoji by its id
-    async fn delete_emoji(&self, emoji: &Emoji) -> Result<()> {
-        info!("Delete {emoji:?}");
+    /// Detach an emoji by its id
+    async fn detach_emoji(&self, emoji: &Emoji) -> Result<()> {
+        info!("Detach {emoji:?}");
         Ok(())
     }
 }

@@ -1,5 +1,7 @@
+use bson::Document;
+
 use crate::models::Emoji;
-use crate::{AbstractEmoji, Result};
+use crate::{AbstractEmoji, Error, Result};
 
 use super::super::MongoDb;
 
@@ -42,7 +44,26 @@ impl AbstractEmoji for MongoDb {
     }
 
     /// Delete an emoji by its id
-    async fn delete_emoji(&self, emoji: &Emoji) -> Result<()> {
-        self.delete_one_by_id(COL, &emoji.id).await.map(|_| ())
+    async fn detach_emoji(&self, emoji: &Emoji) -> Result<()> {
+        self.col::<Document>(COL)
+            .update_one(
+                doc! {
+                    "_id": &emoji.id
+                },
+                doc! {
+                    "$set": {
+                        "parent": {
+                            "type": "Detached"
+                        }
+                    }
+                },
+                None,
+            )
+            .await
+            .map(|_| ())
+            .map_err(|_| Error::DatabaseError {
+                operation: "update_one",
+                with: "emojis",
+            })
     }
 }

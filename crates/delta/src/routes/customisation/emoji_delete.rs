@@ -28,6 +28,7 @@ pub async fn delete_emoji(db: &Db, user: User, id: Ref) -> Result<EmptyResponse>
                     .throw_permission(db, Permission::ManageCustomisation)
                     .await?;
             }
+            EmojiParent::Detached => return Ok(EmptyResponse),
         };
     }
 

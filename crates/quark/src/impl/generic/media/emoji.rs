@@ -9,6 +9,7 @@ impl Emoji {
     fn parent(&self) -> &str {
         match &self.parent {
             EmojiParent::Server { id } => id,
+            EmojiParent::Detached => "",
         }
     }
 
@@ -30,7 +31,6 @@ impl Emoji {
         .p(self.parent().to_string())
         .await;
 
-        db.mark_attachment_as_deleted(&self.id).await?;
-        db.delete_emoji(&self).await
+        db.detach_emoji(&self).await
     }
 }

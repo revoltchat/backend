@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 #[serde(tag = "type")]
 pub enum EmojiParent {
     Server { id: String },
+    Detached,
 }
 
 /// Representation of an Emoji on Revolt
