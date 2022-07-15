@@ -14,6 +14,7 @@ impl AbstractEmoji for DummyDb {
             parent: EmojiParent::Server { id: id.into() },
             creator_id: id.into(),
             animated: false,
+            nsfw: false,
         })
     }
 

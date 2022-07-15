@@ -111,6 +111,7 @@ impl State {
 
         // Fetch all memberships with their corresponding servers.
         let members: Vec<Member> = db.fetch_all_memberships(&user.id).await?;
+
         let server_ids: Vec<String> = members.iter().map(|x| x.id.server.clone()).collect();
         let servers = db.fetch_servers(&server_ids).await?;
 

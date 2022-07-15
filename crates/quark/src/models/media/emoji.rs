@@ -1,5 +1,10 @@
 use serde::{Deserialize, Serialize};
 
+/// Utility function to check if a boolean value is false
+pub fn if_false(t: &bool) -> bool {
+    !t
+}
+
 /// Information about what owns this emoji
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
 #[serde(tag = "type")]
@@ -21,5 +26,9 @@ pub struct Emoji {
     /// Emoji name
     pub name: String,
     /// Whether the emoji is animated
+    #[serde(skip_serializing_if = "if_false", default)]
     pub animated: bool,
+    /// Whether the emoji is marked as nsfw
+    #[serde(skip_serializing_if = "if_false", default)]
+    pub nsfw: bool,
 }

@@ -14,7 +14,11 @@ pub struct DataCreateEmoji {
     /// Server name
     #[validate(length(min = 1, max = 32), regex = "RE_EMOJI")]
     name: String,
+    /// Parent information
     parent: EmojiParent,
+    /// Whether the emoji is mature
+    #[serde(default)]
+    nsfw: bool,
 }
 
 /// # Create New Emoji
@@ -55,6 +59,7 @@ pub async fn create_emoji(
                 return Err(Error::TooManyEmoji);
             }
         }
+        EmojiParent::Detached => return Err(Error::InvalidOperation),
     };
 
     // Find the relevant attachment
@@ -67,6 +72,7 @@ pub async fn create_emoji(
         creator_id: user.id,
         name: data.name,
         animated: "image/gif" == &attachment.content_type,
+        nsfw: data.nsfw,
     };
 
     // Save emoji
