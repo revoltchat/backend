@@ -1,8 +1,7 @@
 use std::time::Duration;
 
-use bson::{to_bson, Bson};
+use bson::{Bson, DateTime};
 use futures::StreamExt;
-use iso8601_timestamp::Timestamp;
 use mongodb::{
     bson::{doc, from_bson, from_document, to_document, Document},
     options::FindOptions,
@@ -653,7 +652,7 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
                 doc! {},
                 doc! {
                     "$set": {
-                        "joined_at": to_bson(&Timestamp::now_utc()).expect("to_bson")
+                        "joined_at": DateTime::now().to_rfc3339_string()
                     }
                 },
                 None,
