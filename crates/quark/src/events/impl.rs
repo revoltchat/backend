@@ -484,10 +484,8 @@ impl State {
 
                 if data.rank.is_some() || data.permissions.is_some() {
                     if let Some(member) = self.cache.members.get(id) {
-                        if let Some(roles) = &member.roles {
-                            if roles.contains(role_id) {
-                                queue_server = Some(id.clone());
-                            }
+                        if member.roles.contains(role_id) {
+                            queue_server = Some(id.clone());
                         }
                     }
                 }
@@ -498,10 +496,8 @@ impl State {
                 }
 
                 if let Some(member) = self.cache.members.get(id) {
-                    if let Some(roles) = &member.roles {
-                        if roles.contains(role_id) {
-                            queue_server = Some(id.clone());
-                        }
+                    if member.roles.contains(role_id) {
+                        queue_server = Some(id.clone());
                     }
                 }
             }

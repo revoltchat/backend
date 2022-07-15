@@ -1,7 +1,8 @@
 use std::time::Duration;
 
-use bson::Bson;
+use bson::{to_bson, Bson};
 use futures::StreamExt;
+use iso8601_timestamp::Timestamp;
 use mongodb::{
     bson::{doc, from_bson, from_document, to_document, Document},
     options::FindOptions,
@@ -16,7 +17,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 17;
+pub const LATEST_REVISION: i32 = 18;
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -642,6 +643,23 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             )
             .await
             .expect("Failed to create emoji parent index.");
+    }
+
+    if revision <= 17 {
+        info!("Running migration [revision 17 / 15-07-2022]: Initialise `joined_at` property on server members.");
+
+        db.col::<Document>("server_members")
+            .update_many(
+                doc! {},
+                doc! {
+                    "$set": {
+                        "joined_at": to_bson(&Timestamp::now_utc()).expect("to_bson")
+                    }
+                },
+                None,
+            )
+            .await
+            .expect("Failed to update server members.");
     }
 
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.

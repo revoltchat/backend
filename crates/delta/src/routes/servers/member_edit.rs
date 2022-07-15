@@ -5,7 +5,7 @@ use revolt_quark::{
         server_member::{FieldsMember, PartialMember},
         File, Member, User,
     },
-    perms, Db, Error, Permission, Ref, Result,
+    perms, Db, Error, Permission, Ref, Result, Timestamp,
 };
 
 use rocket::serde::json::Json;
@@ -22,6 +22,8 @@ pub struct DataMemberEdit {
     avatar: Option<String>,
     /// Array of role ids
     roles: Option<Vec<String>>,
+    /// Timestamp this member is timed out until
+    timeout: Option<Timestamp>,
     /// Fields to remove from channel object
     #[validate(length(min = 1))]
     remove: Option<Vec<FieldsMember>>,
@@ -105,13 +107,7 @@ pub async fn req(
 
     // Check permissions against roles in diff
     if let Some(roles) = &data.roles {
-        let fallback = vec![];
-        let current_roles = member
-            .roles
-            .as_ref()
-            .unwrap_or(&fallback)
-            .iter()
-            .collect::<HashSet<&String>>();
+        let current_roles = member.roles.iter().collect::<HashSet<&String>>();
 
         let new_roles = roles.iter().collect::<HashSet<&String>>();
         let added_roles: Vec<&&String> = new_roles.difference(&current_roles).collect();
@@ -132,12 +128,14 @@ pub async fn req(
         nickname,
         avatar,
         roles,
+        timeout,
         remove,
     } = data;
 
     let mut partial = PartialMember {
         nickname,
         roles,
+        timeout,
         ..Default::default()
     };
 

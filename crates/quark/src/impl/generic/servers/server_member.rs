@@ -36,27 +36,24 @@ impl Member {
 
     /// Get this user's current ranking
     pub fn get_ranking(&self, server: &Server) -> i64 {
-        if let Some(roles) = &self.roles {
-            let mut value = i64::MAX;
-            for role in roles {
-                if let Some(role) = server.roles.get(role) {
-                    if role.rank < value {
-                        value = role.rank;
-                    }
+        let mut value = i64::MAX;
+        for role in &self.roles {
+            if let Some(role) = server.roles.get(role) {
+                if role.rank < value {
+                    value = role.rank;
                 }
             }
-
-            value
-        } else {
-            i64::MAX
         }
+
+        value
     }
 
     pub fn remove(&mut self, field: &FieldsMember) {
         match field {
             FieldsMember::Avatar => self.avatar = None,
             FieldsMember::Nickname => self.nickname = None,
-            FieldsMember::Roles => self.roles = None,
+            FieldsMember::Roles => self.roles.clear(),
+            FieldsMember::Timeout => self.timeout = None,
         }
     }
 }

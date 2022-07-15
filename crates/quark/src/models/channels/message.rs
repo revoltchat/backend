@@ -74,6 +74,14 @@ pub struct Masquerade {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[validate(length(min = 1, max = 128))]
     pub avatar: Option<String>,
+    /// Replace the display role colour shown on this message
+    ///
+    /// Must have `ManageRole` permission to use
+    ///
+    /// This can be any valid CSS colour
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(length(min = 1, max = 32))]
+    pub colour: Option<String>,
 }
 
 /// Representation of a Message on Revolt

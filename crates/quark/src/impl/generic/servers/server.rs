@@ -1,3 +1,4 @@
+use iso8601_timestamp::Timestamp;
 use ulid::Ulid;
 
 use crate::{
@@ -188,7 +189,11 @@ impl Server {
                 server: self.id.clone(),
                 user: user.id.clone(),
             },
-            ..Default::default()
+            joined_at: Timestamp::now_utc(),
+            nickname: None,
+            avatar: None,
+            roles: vec![],
+            timeout: None,
         };
 
         db.insert_member(&member).await?;

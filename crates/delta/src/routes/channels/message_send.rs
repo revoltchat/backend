@@ -100,10 +100,16 @@ pub async fn message_send(
     }
 
     // 2. Verify permissions for masquerade.
-    if message.masquerade.is_some() {
+    if let Some(masq) = &message.masquerade {
         permissions
             .throw_permission(db, Permission::Masquerade)
             .await?;
+
+        if masq.colour.is_some() {
+            permissions
+                .throw_permission(db, Permission::ManageRole)
+                .await?;
+        }
     }
 
     // 3. Verify replies are valid.

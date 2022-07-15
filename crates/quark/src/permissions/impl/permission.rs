@@ -55,11 +55,7 @@ async fn calculate_server_permission(
     let mut permissions: PermissionValue = server.default_permissions.into();
 
     // 4. Resolve each role in order.
-    let member_roles: HashSet<&String> = if let Some(roles) = member.roles.as_ref() {
-        roles.iter().collect()
-    } else {
-        HashSet::new()
-    };
+    let member_roles: HashSet<&String> = member.roles.iter().collect();
 
     if !member_roles.is_empty() {
         let mut roles = server
@@ -188,11 +184,7 @@ async fn calculate_channel_permission(
                 }
 
                 // 4. Resolve each role in order.
-                let member_roles: HashSet<&String> = if let Some(roles) = member.roles.as_ref() {
-                    roles.iter().collect()
-                } else {
-                    HashSet::new()
-                };
+                let member_roles: HashSet<&String> = member.roles.iter().collect();
 
                 if !member_roles.is_empty() {
                     let mut roles = role_permissions

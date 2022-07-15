@@ -129,6 +129,7 @@ impl IntoDocumentPath for FieldsMember {
             FieldsMember::Avatar => "avatar",
             FieldsMember::Nickname => "nickname",
             FieldsMember::Roles => "roles",
+            FieldsMember::Timeout => "timeout",
         })
     }
 }

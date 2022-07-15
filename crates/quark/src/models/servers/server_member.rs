@@ -1,3 +1,4 @@
+use iso8601_timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 
 use crate::models::attachment::File;
@@ -12,7 +13,7 @@ pub struct MemberCompositeKey {
 }
 
 /// Representation of a member of a server on Revolt
-#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, OptionalStruct, Default)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, OptionalStruct)]
 #[optional_derive(Serialize, Deserialize, JsonSchema, Debug, Default, Clone)]
 #[optional_name = "PartialMember"]
 #[opt_skip_serializing_none]
@@ -22,6 +23,9 @@ pub struct Member {
     #[serde(rename = "_id")]
     pub id: MemberCompositeKey,
 
+    /// Time at which this user joined the server
+    pub joined_at: Timestamp,
+
     /// Member's nickname
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nickname: Option<String>,
@@ -30,8 +34,11 @@ pub struct Member {
     pub avatar: Option<File>,
 
     /// Member's roles
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub roles: Vec<String>,
+    /// Timestamp this member is timed out until
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub roles: Option<Vec<String>>,
+    pub timeout: Option<Timestamp>,
 }
 
 /// Optional fields on server member object
@@ -40,6 +47,7 @@ pub enum FieldsMember {
     Nickname,
     Avatar,
     Roles,
+    Timeout,
 }
 
 /// Member removal intention
