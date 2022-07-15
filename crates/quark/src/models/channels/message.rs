@@ -1,3 +1,5 @@
+use crate::util::regex::RE_COLOUR;
+
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -33,7 +35,7 @@ pub struct SendableEmbed {
     #[validate(length(min = 1, max = 2000))]
     pub description: Option<String>,
     pub media: Option<String>,
-    #[validate(length(min = 1, max = 64))]
+    #[validate(length(min = 1, max = 128), regex = "RE_COLOUR")]
     pub colour: Option<String>,
 }
 

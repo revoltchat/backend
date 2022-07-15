@@ -3,7 +3,9 @@ use revolt_quark::{
         server::{FieldsRole, PartialRole, Role},
         User,
     },
-    perms, Db, Error, Permission, Ref, Result,
+    perms,
+    util::regex::RE_COLOUR,
+    Db, Error, Permission, Ref, Result,
 };
 
 use rocket::serde::json::Json;
@@ -17,7 +19,7 @@ pub struct DataEditRole {
     #[validate(length(min = 1, max = 32))]
     name: Option<String>,
     /// Role colour
-    #[validate(length(min = 1, max = 32))]
+    #[validate(length(min = 1, max = 128), regex = "RE_COLOUR")]
     colour: Option<String>,
     /// Whether this role should be displayed separately
     hoist: Option<bool>,
