@@ -262,6 +262,9 @@ impl From<SystemMessage> for String {
                 "Channel description changed.".to_string()
             }
             SystemMessage::ChannelIconChanged { .. } => "Channel icon changed.".to_string(),
+            SystemMessage::ChannelOwnershipChanged { .. } => {
+                "Channel ownership changed.".to_string()
+            }
         }
     }
 }

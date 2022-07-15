@@ -63,6 +63,8 @@ pub enum SystemMessage {
     ChannelDescriptionChanged { by: String },
     #[serde(rename = "channel_icon_changed")]
     ChannelIconChanged { by: String },
+    #[serde(rename = "channel_ownership_changed")]
+    ChannelOwnershipChanged { from: String, to: String },
 }
 
 /// Name and / or avatar override information

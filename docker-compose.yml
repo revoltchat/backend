@@ -50,6 +50,7 @@ services:
       /usr/bin/mc mb minio/backgrounds;
       /usr/bin/mc mb minio/icons;
       /usr/bin/mc mb minio/banners;
+      /usr/bin/mc mb minio/emojis;
       exit 0;
       "
   # File server (autumn)

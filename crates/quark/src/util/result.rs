@@ -72,6 +72,7 @@ pub enum Error {
     },
     NotElevated,
     CannotGiveMissingPermissions,
+    NotOwner,
 
     // ? General errors.
     DatabaseError {
@@ -167,6 +168,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::MissingUserPermission { .. } => Status::Forbidden,
             Error::NotElevated => Status::Forbidden,
             Error::CannotGiveMissingPermissions => Status::Forbidden,
+            Error::NotOwner => Status::Forbidden,
 
             Error::DatabaseError { .. } => Status::InternalServerError,
             Error::InternalError => Status::InternalServerError,

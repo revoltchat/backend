@@ -16,19 +16,18 @@ use validator::Validate;
 pub struct DataEditChannel {
     /// Channel name
     #[validate(length(min = 1, max = 32))]
-    #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
     /// Channel description
     #[validate(length(min = 0, max = 1024))]
-    #[serde(skip_serializing_if = "Option::is_none")]
     description: Option<String>,
+    /// Group owner
+    owner: Option<String>,
     /// Icon
     ///
     /// Provide an Autumn attachment Id.
     #[validate(length(min = 1, max = 128))]
     icon: Option<String>,
     /// Whether this channel is age-restricted
-    #[serde(skip_serializing_if = "Option::is_none")]
     nsfw: Option<bool>,
     #[validate(length(min = 1))]
     remove: Option<Vec<FieldsChannel>>,
@@ -59,12 +58,47 @@ pub async fn req(
         && data.description.is_none()
         && data.icon.is_none()
         && data.nsfw.is_none()
+        && data.owner.is_none()
         && data.remove.is_none()
     {
         return Ok(Json(channel));
     }
 
     let mut partial: PartialChannel = Default::default();
+
+    // Transfer group ownership
+    if let Some(new_owner) = data.owner {
+        if let Channel::Group {
+            owner, recipients, ..
+        } = &mut channel
+        {
+            // Make sure we are the owner of this group
+            if owner != &user.id {
+                return Err(Error::NotOwner);
+            }
+
+            // Ensure user is part of group
+            if !recipients.contains(&new_owner) {
+                return Err(Error::NotInGroup);
+            }
+
+            // Transfer ownership
+            *owner = new_owner.to_string();
+
+            // Notify clients
+            SystemMessage::ChannelOwnershipChanged {
+                from: owner.to_string(),
+                to: new_owner,
+            }
+        } else {
+            return Err(Error::InvalidOperation);
+        }
+        .into_message(channel.id().to_string())
+        .create(db, &channel, None)
+        .await
+        .ok();
+    }
+
     match &mut channel {
         Channel::Group {
             id,

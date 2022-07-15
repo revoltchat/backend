@@ -305,6 +305,15 @@ impl Channel {
                             vec![],
                         )
                         .await?;
+
+                        SystemMessage::ChannelOwnershipChanged {
+                            from: owner.to_string(),
+                            to: new_owner.into(),
+                        }
+                        .into_message(id.to_string())
+                        .create(db, self, None)
+                        .await
+                        .ok();
                     } else {
                         db.delete_channel(self).await?;
                         return Ok(());
