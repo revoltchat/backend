@@ -34,7 +34,7 @@ pub struct Member {
     pub avatar: Option<File>,
 
     /// Member's roles
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub roles: Vec<String>,
     /// Timestamp this member is timed out until
     #[serde(skip_serializing_if = "Option::is_none")]
