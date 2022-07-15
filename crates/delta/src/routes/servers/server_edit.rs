@@ -33,6 +33,8 @@ pub struct DataEditServer {
 
     // Whether this server is age-restricted
     // nsfw: Option<bool>,
+    /// Whether this server is public and should show up on [Revolt Discover](https://rvlt.gg)
+    discoverable: Option<bool>,
     /// Whether analytics should be collected for this server
     ///
     /// Must be enabled in order to show up on [Revolt Discover](https://rvlt.gg).
@@ -102,6 +104,7 @@ pub async fn req(
         categories,
         system_messages,
         // nsfw,
+        discoverable,
         analytics,
         remove,
     } = data;
@@ -112,6 +115,7 @@ pub async fn req(
         categories,
         system_messages,
         // nsfw,
+        discoverable,
         analytics,
         ..Default::default()
     };
