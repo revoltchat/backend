@@ -64,4 +64,22 @@ impl AbstractMessage for DummyDb {
     ) -> Result<Vec<Message>> {
         Ok(vec![self.fetch_message(channel).await.unwrap()])
     }
+
+    /// Add a new reaction to a message
+    async fn add_reaction(&self, id: &str, emoji: &str, user: &str) -> Result<()> {
+        info!("Add to {id} with {emoji} and {user}");
+        Ok(())
+    }
+
+    /// Remove a reaction from a message
+    async fn remove_reaction(&self, id: &str, emoji: &str, user: &str) -> Result<()> {
+        info!("Remove {emoji} from {id} for {user}");
+        Ok(())
+    }
+
+    /// Remove reaction from a message
+    async fn clear_reaction(&self, id: &str, emoji: &str) -> Result<()> {
+        info!("Clear {emoji} on {id}");
+        Ok(())
+    }
 }

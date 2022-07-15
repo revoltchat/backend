@@ -78,6 +78,29 @@ pub enum EventV1 {
     /// Delete message
     MessageDelete { id: String, channel: String },
 
+    /// New reaction to a message
+    MessageReact {
+        id: String,
+        channel_id: String,
+        user_id: String,
+        emoji_id: String,
+    },
+
+    /// Remove user's reaction from message
+    MessageUnreact {
+        id: String,
+        channel_id: String,
+        user_id: String,
+        emoji_id: String,
+    },
+
+    /// Remove a reaction from message
+    MessageRemoveReaction {
+        id: String,
+        channel_id: String,
+        emoji_id: String,
+    },
+
     /// Bulk delete messages
     BulkMessageDelete { channel: String, ids: Vec<String> },
 

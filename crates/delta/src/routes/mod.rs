@@ -80,6 +80,7 @@ fn custom_openapi_spec() -> OpenApi {
               "Channel Invites",
               "Channel Permissions",
               "Messaging",
+              "Interactions",
               "Groups",
               "Voice"
             ]

@@ -65,8 +65,8 @@ pub enum Permission {
     UploadFiles = 1 << 27,
     /// Masquerade messages using custom nickname and avatar
     Masquerade = 1 << 28,
-
-    // % 1 bits reserved
+    /// React to messages with emojis
+    React = 1 << 29,
 
     // * Voice permissions
     /// Connect to a voice channel

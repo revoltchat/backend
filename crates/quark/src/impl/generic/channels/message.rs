@@ -8,9 +8,10 @@ use crate::{
     events::client::EventV1,
     models::{
         message::{
-            AppendMessage, BulkMessageResponse, PartialMessage, SendableEmbed, SystemMessage,
+            AppendMessage, BulkMessageResponse, Interactions, PartialMessage, SendableEmbed,
+            SystemMessage,
         },
-        Channel, Message, User,
+        Channel, Emoji, Message, User,
     },
     presence::presence_filter_online,
     tasks::ack::AckEvent,
@@ -191,6 +192,79 @@ impl Message {
             Err(Error::PayloadTooLarge)
         }
     }
+
+    /// Add a reaction to a message
+    pub async fn add_reaction(&self, db: &Database, user: &User, emoji: &str) -> Result<()> {
+        // Check if the emoji is whitelisted
+        if !self.interactions.can_use(emoji) {
+            return Err(Error::InvalidOperation);
+        }
+
+        // Check if the emoji is usable by us
+        if !Emoji::can_use(db, emoji).await? {
+            return Err(Error::InvalidOperation);
+        }
+
+        // Send reaction event
+        EventV1::MessageReact {
+            id: self.id.to_string(),
+            channel_id: self.channel.to_string(),
+            user_id: user.id.to_string(),
+            emoji_id: emoji.to_string(),
+        }
+        .p(self.channel.to_string())
+        .await;
+
+        // Add emoji
+        db.add_reaction(&self.id, emoji, &user.id).await
+    }
+
+    /// Remove a reaction from a message
+    pub async fn remove_reaction(&self, db: &Database, user: &str, emoji: &str) -> Result<()> {
+        // Check if it actually exists
+        let empty = if let Some(users) = self.reactions.get(emoji) {
+            if !users.contains(user) {
+                return Err(Error::NotFound);
+            }
+
+            users.len() == 1
+        } else {
+            return Err(Error::NotFound);
+        };
+
+        // Send reaction event
+        EventV1::MessageUnreact {
+            id: self.id.to_string(),
+            channel_id: self.channel.to_string(),
+            user_id: user.to_string(),
+            emoji_id: emoji.to_string(),
+        }
+        .p(self.channel.to_string())
+        .await;
+
+        if empty {
+            // If empty, remove the reaction entirely
+            db.clear_reaction(&self.id, emoji).await
+        } else {
+            // Otherwise only remove that one reaction
+            db.remove_reaction(&self.id, emoji, user).await
+        }
+    }
+
+    /// Remove a reaction from a message
+    pub async fn clear_reaction(&self, db: &Database, emoji: &str) -> Result<()> {
+        // Send reaction event
+        EventV1::MessageRemoveReaction {
+            id: self.id.to_string(),
+            channel_id: self.channel.to_string(),
+            emoji_id: emoji.to_string(),
+        }
+        .p(self.channel.to_string())
+        .await;
+
+        // Write to database
+        db.clear_reaction(&self.id, emoji).await
+    }
 }
 
 pub trait IntoUsers {
@@ -322,5 +396,42 @@ impl BulkMessageResponse {
         } else {
             Ok(BulkMessageResponse::JustMessages(messages))
         }
+    }
+}
+
+impl Interactions {
+    /// Validate interactions info is correct
+    pub async fn validate(&self, db: &Database) -> Result<()> {
+        if let Some(reactions) = &self.reactions {
+            if reactions.len() > 20 {
+                return Err(Error::InvalidOperation);
+            }
+
+            for reaction in reactions {
+                if !Emoji::can_use(db, reaction).await? {
+                    return Err(Error::InvalidOperation);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Check if we can use a given emoji to react
+    pub fn can_use(&self, emoji: &str) -> bool {
+        if self.restrict_reactions {
+            if let Some(reactions) = &self.reactions {
+                reactions.contains(emoji)
+            } else {
+                false
+            }
+        } else {
+            true
+        }
+    }
+
+    /// Check if default initialisation of fields
+    pub fn is_default(&self) -> bool {
+        !self.restrict_reactions && self.reactions.is_none()
     }
 }

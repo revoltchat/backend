@@ -42,4 +42,13 @@ pub trait AbstractMessage: Sync + Send {
         after: Option<String>,
         sort: MessageSort,
     ) -> Result<Vec<Message>>;
+
+    /// Add a new reaction to a message
+    async fn add_reaction(&self, id: &str, emoji: &str, user: &str) -> Result<()>;
+
+    /// Remove a reaction from a message
+    async fn remove_reaction(&self, id: &str, emoji: &str, user: &str) -> Result<()>;
+
+    /// Remove reaction from a message
+    async fn clear_reaction(&self, id: &str, emoji: &str) -> Result<()>;
 }

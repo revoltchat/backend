@@ -279,4 +279,70 @@ impl AbstractMessage for MongoDb {
         )
         .await
     }
+
+    /// Add a new reaction to a message
+    async fn add_reaction(&self, id: &str, emoji: &str, user: &str) -> Result<()> {
+        self.col::<Document>(COL)
+            .update_one(
+                doc! {
+                    "_id": id
+                },
+                doc! {
+                    "$addToSet": {
+                        format!("reactions.{emoji}"): user
+                    }
+                },
+                None,
+            )
+            .await
+            .map(|_| ())
+            .map_err(|_| Error::DatabaseError {
+                operation: "update_one",
+                with: "message",
+            })
+    }
+
+    /// Remove a reaction from a message
+    async fn remove_reaction(&self, id: &str, emoji: &str, user: &str) -> Result<()> {
+        self.col::<Document>(COL)
+            .update_one(
+                doc! {
+                    "_id": id
+                },
+                doc! {
+                    "$pull": {
+                        format!("reactions.{emoji}"): user
+                    }
+                },
+                None,
+            )
+            .await
+            .map(|_| ())
+            .map_err(|_| Error::DatabaseError {
+                operation: "update_one",
+                with: "message",
+            })
+    }
+
+    /// Remove reaction from a message
+    async fn clear_reaction(&self, id: &str, emoji: &str) -> Result<()> {
+        self.col::<Document>(COL)
+            .update_one(
+                doc! {
+                    "_id": id
+                },
+                doc! {
+                    "$unset": {
+                        format!("reactions.{emoji}"): 1
+                    }
+                },
+                None,
+            )
+            .await
+            .map(|_| ())
+            .map_err(|_| Error::DatabaseError {
+                operation: "update_one",
+                with: "message",
+            })
+    }
 }

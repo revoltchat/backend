@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::models::{Bot, Channel, Emoji, Invite, Member, Message, Server, ServerBan, User};
 use crate::presence::presence_is_online;
-use crate::{Database, Result};
+use crate::{Database, Error, Result};
 
 /// Reference to some object in the database
 #[derive(Serialize, Deserialize)]
@@ -42,6 +42,16 @@ impl Ref {
     /// Fetch message from Ref
     pub async fn as_message(&self, db: &Database) -> Result<Message> {
         db.fetch_message(&self.id).await
+    }
+
+    /// Fetch message in channel from Ref
+    pub async fn as_message_in(&self, db: &Database, channel: &str) -> Result<Message> {
+        let message = self.as_message(db).await?;
+        if message.channel != channel {
+            return Err(Error::NotFound);
+        }
+
+        Ok(message)
     }
 
     /// Fetch bot from Ref

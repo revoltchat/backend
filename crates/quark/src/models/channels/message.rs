@@ -1,4 +1,5 @@
 use crate::util::regex::RE_COLOUR;
+use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -12,6 +13,11 @@ use crate::{
     models::{attachment::File, Member, User},
     types::january::Embed,
 };
+
+/// Utility function to check if a boolean value is false
+pub fn if_false(t: &bool) -> bool {
+    !t
+}
 
 /// # Reply
 ///
@@ -88,6 +94,17 @@ pub struct Masquerade {
     pub colour: Option<String>,
 }
 
+/// Information to guide interactions on this message
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Validate, Default)]
+pub struct Interactions {
+    /// Reactions which should always appear and be distinct
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub reactions: Option<HashSet<String>>,
+    /// Whether reactions should be restricted to the given list
+    #[serde(skip_serializing_if = "if_false", default)]
+    pub restrict_reactions: bool,
+}
+
 /// Representation of a Message on Revolt
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, OptionalStruct, Default)]
 #[optional_derive(Serialize, Deserialize, JsonSchema, Debug, Default, Clone)]
@@ -127,6 +144,12 @@ pub struct Message {
     /// Array of message ids this message is replying to
     #[serde(skip_serializing_if = "Option::is_none")]
     pub replies: Option<Vec<String>>,
+    /// Hashmap of emoji IDs to array of user IDs
+    #[serde(skip_serializing_if = "HashMap::is_empty", default)]
+    pub reactions: HashMap<String, HashSet<String>>,
+    /// Information about how this message should be interacted with
+    #[serde(skip_serializing_if = "Interactions::is_default", default)]
+    pub interactions: Interactions,
     /// Name and / or avatar overrides for this message
     #[serde(skip_serializing_if = "Option::is_none")]
     pub masquerade: Option<Masquerade>,

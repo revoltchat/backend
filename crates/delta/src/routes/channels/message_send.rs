@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use revolt_quark::{
     models::{
-        message::{Masquerade, Reply, SendableEmbed},
+        message::{Interactions, Masquerade, Reply, SendableEmbed},
         Message, User,
     },
     perms,
@@ -40,6 +40,8 @@ pub struct DataMessageSend {
     /// Masquerade to apply to this message
     #[validate]
     masquerade: Option<Masquerade>,
+    /// Information about how this message should be interacted with
+    interactions: Option<Interactions>,
 }
 
 lazy_static! {
@@ -86,6 +88,7 @@ pub async fn message_send(
         channel: channel.id().to_string(),
         author: user.id.clone(),
         masquerade: data.masquerade,
+        interactions: data.interactions.unwrap_or_default(),
         ..Default::default()
     };
 
@@ -112,7 +115,10 @@ pub async fn message_send(
         }
     }
 
-    // 3. Verify replies are valid.
+    // 3. Ensure interactions information is correct
+    message.interactions.validate(db).await?;
+
+    // 4. Verify replies are valid.
     let mut replies = HashSet::new();
     if let Some(entries) = data.replies {
         if entries.len() > 5 {
@@ -145,7 +151,7 @@ pub async fn message_send(
             .replace(replies.into_iter().collect::<Vec<String>>());
     }
 
-    // 4. Process included embeds.
+    // 5. Process included embeds.
     let mut embeds = vec![];
     if let Some(sendable_embeds) = data.embeds {
         for sendable_embed in sendable_embeds {
@@ -157,7 +163,7 @@ pub async fn message_send(
         message.embeds.replace(embeds);
     }
 
-    // 5. Add attachments to message.
+    // 6. Add attachments to message.
     let mut attachments = vec![];
     if let Some(ids) = &data.attachments {
         if !ids.is_empty() {
@@ -183,10 +189,10 @@ pub async fn message_send(
         message.attachments.replace(attachments);
     }
 
-    // 6. Set content
+    // 7. Set content
     message.content = data.content;
 
-    // 7. Pass-through nonce value for clients
+    // 8. Pass-through nonce value for clients
     message.nonce = Some(idempotency.into_key());
 
     message.create(db, &channel, Some(&user)).await?;
