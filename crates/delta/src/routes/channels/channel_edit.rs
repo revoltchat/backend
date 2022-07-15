@@ -83,11 +83,11 @@ pub async fn req(
             }
 
             // Transfer ownership
-            *owner = new_owner.to_string();
+            let old_owner = std::mem::replace(owner, new_owner.to_string());
 
             // Notify clients
             SystemMessage::ChannelOwnershipChanged {
-                from: owner.to_string(),
+                from: old_owner,
                 to: new_owner,
             }
         } else {
