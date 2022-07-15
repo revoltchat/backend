@@ -1,5 +1,5 @@
 use revolt_quark::{
-    models::{ServerBan, User},
+    models::{server_member::MemberCompositeKey, ServerBan, User},
     perms, Db, Error, Permission, Ref, Result,
 };
 
@@ -47,13 +47,27 @@ pub async fn req(
         .throw_permission(db, Permission::BanMembers)
         .await?;
 
-    let member = target.as_member(db, &server.id).await?;
+    // If member exists, check privileges against them
+    if let Ok(member) = target.as_member(db, &server.id).await {
+        if member.get_ranking(permissions.server.get().unwrap())
+            <= permissions.get_member_rank().unwrap_or(i64::MIN)
+        {
+            return Err(Error::NotElevated);
+        }
 
-    if member.get_ranking(permissions.server.get().unwrap())
-        <= permissions.get_member_rank().unwrap_or(i64::MIN)
-    {
-        return Err(Error::NotElevated);
+        server.ban_member(db, member, data.reason).await.map(Json)
+    } else {
+        let server_id = server.id.to_string();
+        server
+            .ban_user(
+                db,
+                MemberCompositeKey {
+                    server: server_id,
+                    user: target.id,
+                },
+                data.reason,
+            )
+            .await
+            .map(Json)
     }
-
-    server.ban_member(db, member, data.reason).await.map(Json)
 }

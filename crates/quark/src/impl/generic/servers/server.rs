@@ -283,6 +283,18 @@ impl Server {
         Ok(())
     }
 
+    /// Create ban
+    pub async fn ban_user(
+        self,
+        db: &Database,
+        id: MemberCompositeKey,
+        reason: Option<String>,
+    ) -> Result<ServerBan> {
+        let ban = ServerBan { id, reason };
+        db.insert_ban(&ban).await?;
+        Ok(ban)
+    }
+
     /// Ban a member from a server
     pub async fn ban_member(
         self,
@@ -290,16 +302,10 @@ impl Server {
         member: Member,
         reason: Option<String>,
     ) -> Result<ServerBan> {
-        let ban = ServerBan {
-            id: member.id.clone(),
-            reason,
-        };
-
-        self.remove_member(db, member, RemovalIntention::Ban)
+        self.remove_member(db, member.clone(), RemovalIntention::Ban)
             .await?;
 
-        db.insert_ban(&ban).await?;
-        Ok(ban)
+        self.ban_user(db, member.id, reason).await
     }
 }
 
