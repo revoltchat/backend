@@ -119,23 +119,28 @@ async fn calculate_channel_permission(
             }
         }
         Channel::DirectMessage { recipients, .. } => {
-            // 2. Fetch user.
-            let other_user = recipients
-                .iter()
-                .find(|x| x != &&data.perspective.id)
-                .unwrap();
+            // 2. Ensure we are a recipient.
+            if recipients.contains(&data.perspective.id) {
+                // 3. Fetch user.
+                let other_user = recipients
+                    .iter()
+                    .find(|x| x != &&data.perspective.id)
+                    .unwrap();
 
-            let user = db.fetch_user(other_user).await?;
-            data.user.set(user);
+                let user = db.fetch_user(other_user).await?;
+                data.user.set(user);
 
-            // 3. Calculate user permissions.
-            let perms = data.calc_user(db).await;
+                // 4. Calculate user permissions.
+                let perms = data.calc_user(db).await;
 
-            // 4. Check if the user can send messages.
-            if perms.get_send_message() {
-                (*DEFAULT_PERMISSION_DIRECT_MESSAGE).into()
+                // 5. Check if the user can send messages.
+                if perms.get_send_message() {
+                    (*DEFAULT_PERMISSION_DIRECT_MESSAGE).into()
+                } else {
+                    (*DEFAULT_PERMISSION_VIEW_ONLY).into()
+                }
             } else {
-                (*DEFAULT_PERMISSION_VIEW_ONLY).into()
+                0_u64.into()
             }
         }
         Channel::Group {
