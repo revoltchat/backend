@@ -91,6 +91,16 @@ pub async fn req(
         required.push(Permission::AssignRoles);
     }
 
+    if data.timeout.is_some()
+        || data
+            .remove
+            .as_ref()
+            .map(|x| x.contains(&FieldsMember::Timeout))
+            .unwrap_or_default()
+    {
+        required.push(Permission::TimeoutMembers);
+    }
+
     for permission in required {
         permissions.throw_permission(db, permission).await?;
     }
