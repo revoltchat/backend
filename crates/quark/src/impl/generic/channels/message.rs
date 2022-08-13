@@ -195,6 +195,11 @@ impl Message {
 
     /// Add a reaction to a message
     pub async fn add_reaction(&self, db: &Database, user: &User, emoji: &str) -> Result<()> {
+        // Check how many reactions are already on the message
+        if self.reactions.len() >= 20 {
+            return Err(Error::InvalidOperation);
+        }
+
         // Check if the emoji is whitelisted
         if !self.interactions.can_use(emoji) {
             return Err(Error::InvalidOperation);
