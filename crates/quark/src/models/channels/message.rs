@@ -1,10 +1,9 @@
 use crate::util::regex::RE_COLOUR;
-use std::collections::{HashMap, HashSet};
 
+use indexmap::{IndexMap, IndexSet};
+use iso8601_timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
-
-use iso8601_timestamp::Timestamp;
 
 #[cfg(feature = "rocket_impl")]
 use rocket::FromFormField;
@@ -99,7 +98,7 @@ pub struct Masquerade {
 pub struct Interactions {
     /// Reactions which should always appear and be distinct
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub reactions: Option<HashSet<String>>,
+    pub reactions: Option<IndexSet<String>>,
     /// Whether reactions should be restricted to the given list
     #[serde(skip_serializing_if = "if_false", default)]
     pub restrict_reactions: bool,
@@ -145,8 +144,8 @@ pub struct Message {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub replies: Option<Vec<String>>,
     /// Hashmap of emoji IDs to array of user IDs
-    #[serde(skip_serializing_if = "HashMap::is_empty", default)]
-    pub reactions: HashMap<String, HashSet<String>>,
+    #[serde(skip_serializing_if = "IndexMap::is_empty", default)]
+    pub reactions: IndexMap<String, IndexSet<String>>,
     /// Information about how this message should be interacted with
     #[serde(skip_serializing_if = "Interactions::is_default", default)]
     pub interactions: Interactions,
