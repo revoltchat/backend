@@ -13,13 +13,14 @@ use crate::{
         },
         Channel, Emoji, Message, User,
     },
+    permissions::PermissionCalculator,
     presence::presence_filter_online,
     tasks::ack::AckEvent,
     types::{
         january::{Embed, Text},
         push::PushNotification,
     },
-    Database, Error, Result,
+    Database, Error, Permission, Result,
 };
 
 impl Message {
@@ -406,8 +407,14 @@ impl BulkMessageResponse {
 
 impl Interactions {
     /// Validate interactions info is correct
-    pub async fn validate(&self, db: &Database) -> Result<()> {
+    pub async fn validate(
+        &self,
+        db: &Database,
+        permissions: &mut PermissionCalculator<'_>,
+    ) -> Result<()> {
         if let Some(reactions) = &self.reactions {
+            permissions.throw_permission(db, Permission::React).await?;
+
             if reactions.len() > 20 {
                 return Err(Error::InvalidOperation);
             }

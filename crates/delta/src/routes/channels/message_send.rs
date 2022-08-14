@@ -116,7 +116,7 @@ pub async fn message_send(
     }
 
     // 3. Ensure interactions information is correct
-    message.interactions.validate(db).await?;
+    message.interactions.validate(db, &mut permissions).await?;
 
     // 4. Verify replies are valid.
     let mut replies = HashSet::new();
