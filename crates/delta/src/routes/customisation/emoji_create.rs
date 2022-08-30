@@ -55,7 +55,7 @@ pub async fn create_emoji(
             // Check that there are no more than 100 emoji
             // ! FIXME: hardcoded upper limit
             let emojis = db.fetch_emoji_by_parent_id(&server.id).await?;
-            if emojis.len() > 100 {
+            if emojis.len() > 99 {
                 return Err(Error::TooManyEmoji);
             }
         }
