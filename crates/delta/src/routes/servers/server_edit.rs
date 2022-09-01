@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use revolt_quark::{
     models::{
         server::{Category, FieldsServer, PartialServer, SystemMessageChannels},
@@ -135,27 +137,41 @@ pub async fn req(
         }
     }
 
-    // 2. Apply new icon
+    // 2. Validate changes
+    let mut unknown_channels = HashSet::new();
+    if let Some(system_messages) = &partial.system_messages {
+        unknown_channels = system_messages.clone().into_channel_ids();
+    }
+
+    if let Some(categories) = &partial.categories {
+        let mut channel_ids = HashSet::new();
+        for category in categories {
+            for channel in &category.channels {
+                if channel_ids.contains(channel) {
+                    return Err(Error::InvalidOperation);
+                }
+
+                channel_ids.insert(channel.to_string());
+            }
+        }
+
+        unknown_channels.extend(channel_ids);
+    }
+
+    if !db.check_channels_exist(&unknown_channels).await? {
+        return Err(Error::NotFound);
+    }
+
+    // 3. Apply new icon
     if let Some(icon) = icon {
         partial.icon = Some(File::use_server_icon(db, &icon, &server.id).await?);
         server.icon = partial.icon.clone();
     }
 
-    // 3. Apply new banner
+    // 4. Apply new banner
     if let Some(banner) = banner {
         partial.banner = Some(File::use_banner(db, &banner, &server.id).await?);
         server.banner = partial.banner.clone();
-    }
-
-    // 4. Validate changes
-    if let Some(system_messages) = &partial.system_messages {
-        let channels = system_messages.clone().into_channel_ids();
-        if !db
-            .check_channels_exist(&channels.into_iter().collect())
-            .await?
-        {
-            return Err(Error::NotFound);
-        }
     }
 
     server

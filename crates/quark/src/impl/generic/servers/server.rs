@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use iso8601_timestamp::Timestamp;
 use ulid::Ulid;
 
@@ -310,23 +312,23 @@ impl Server {
 }
 
 impl SystemMessageChannels {
-    pub fn into_channel_ids(self) -> Vec<String> {
-        let mut ids = vec![];
+    pub fn into_channel_ids(self) -> HashSet<String> {
+        let mut ids = HashSet::new();
 
         if let Some(id) = self.user_joined {
-            ids.push(id);
+            ids.insert(id);
         }
 
         if let Some(id) = self.user_left {
-            ids.push(id);
+            ids.insert(id);
         }
 
         if let Some(id) = self.user_kicked {
-            ids.push(id);
+            ids.insert(id);
         }
 
         if let Some(id) = self.user_banned {
-            ids.push(id);
+            ids.insert(id);
         }
 
         ids

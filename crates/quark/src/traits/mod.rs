@@ -1,3 +1,5 @@
+use crate::Result;
+
 mod admin {
     pub mod migrations;
 }
