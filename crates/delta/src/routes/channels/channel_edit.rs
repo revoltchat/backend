@@ -83,6 +83,7 @@ pub async fn req(
             }
 
             // Transfer ownership
+            partial.owner = Some(new_owner.to_string());
             let old_owner = std::mem::replace(owner, new_owner.to_string());
 
             // Notify clients
