@@ -33,7 +33,7 @@ pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyR
             }
 
             channel
-                .remove_user_from_group(db, &member.id, Some(&user.id))
+                .remove_user_from_group(db, &member.id, Some(&user.id), false)
                 .await
                 .map(|_| EmptyResponse)
         }

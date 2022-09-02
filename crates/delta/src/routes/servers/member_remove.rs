@@ -34,7 +34,7 @@ pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyR
     }
 
     server
-        .remove_member(db, member, RemovalIntention::Kick)
+        .remove_member(db, member, RemovalIntention::Kick, false)
         .await
         .map(|_| EmptyResponse)
 }

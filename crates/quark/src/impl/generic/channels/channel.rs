@@ -286,6 +286,7 @@ impl Channel {
         db: &Database,
         user: &str,
         by: Option<&str>,
+        silent: bool,
     ) -> Result<()> {
         match &self {
             Channel::Group {
@@ -329,20 +330,22 @@ impl Channel {
                 .p(id.to_string())
                 .await;
 
-                if let Some(by) = by {
-                    SystemMessage::UserRemove {
-                        id: user.to_string(),
-                        by: by.to_string(),
+                if !silent {
+                    if let Some(by) = by {
+                        SystemMessage::UserRemove {
+                            id: user.to_string(),
+                            by: by.to_string(),
+                        }
+                    } else {
+                        SystemMessage::UserLeft {
+                            id: user.to_string(),
+                        }
                     }
-                } else {
-                    SystemMessage::UserLeft {
-                        id: user.to_string(),
-                    }
+                    .into_message(id.to_string())
+                    .create(db, self, None)
+                    .await
+                    .ok();
                 }
-                .into_message(id.to_string())
-                .create(db, self, None)
-                .await
-                .ok();
 
                 Ok(())
             }

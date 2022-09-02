@@ -256,6 +256,7 @@ impl Server {
         db: &Database,
         member: Member,
         intention: RemovalIntention,
+        silent: bool,
     ) -> Result<()> {
         db.delete_member(&member.id).await?;
 
@@ -266,20 +267,22 @@ impl Server {
         .p(member.id.server)
         .await;
 
-        if let Some(id) = self.system_messages.as_ref().and_then(|x| match intention {
-            RemovalIntention::Leave => x.user_left.as_ref(),
-            RemovalIntention::Kick => x.user_kicked.as_ref(),
-            RemovalIntention::Ban => x.user_banned.as_ref(),
-        }) {
-            match intention {
-                RemovalIntention::Leave => SystemMessage::UserLeft { id: member.id.user },
-                RemovalIntention::Kick => SystemMessage::UserKicked { id: member.id.user },
-                RemovalIntention::Ban => SystemMessage::UserBanned { id: member.id.user },
+        if !silent {
+            if let Some(id) = self.system_messages.as_ref().and_then(|x| match intention {
+                RemovalIntention::Leave => x.user_left.as_ref(),
+                RemovalIntention::Kick => x.user_kicked.as_ref(),
+                RemovalIntention::Ban => x.user_banned.as_ref(),
+            }) {
+                match intention {
+                    RemovalIntention::Leave => SystemMessage::UserLeft { id: member.id.user },
+                    RemovalIntention::Kick => SystemMessage::UserKicked { id: member.id.user },
+                    RemovalIntention::Ban => SystemMessage::UserBanned { id: member.id.user },
+                }
+                .into_message(id.to_string())
+                .create_no_web_push(db, id, false)
+                .await
+                .ok();
             }
-            .into_message(id.to_string())
-            .create_no_web_push(db, id, false)
-            .await
-            .ok();
         }
 
         Ok(())
@@ -304,7 +307,7 @@ impl Server {
         member: Member,
         reason: Option<String>,
     ) -> Result<ServerBan> {
-        self.remove_member(db, member.clone(), RemovalIntention::Ban)
+        self.remove_member(db, member.clone(), RemovalIntention::Ban, false)
             .await?;
 
         self.ban_user(db, member.id, reason).await

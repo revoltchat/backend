@@ -29,6 +29,8 @@ pub struct DataEditChannel {
     icon: Option<String>,
     /// Whether this channel is age-restricted
     nsfw: Option<bool>,
+    /// Whether this channel is archived
+    archived: Option<bool>,
     #[validate(length(min = 1))]
     remove: Option<Vec<FieldsChannel>>,
 }
