@@ -86,10 +86,8 @@ pub struct Masquerade {
     /// Replace the display role colour shown on this message
     ///
     /// Must have `ManageRole` permission to use
-    ///
-    /// This can be any valid CSS colour
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[validate(length(min = 1, max = 32))]
+    #[validate(length(min = 1, max = 128), regex = "RE_COLOUR")]
     pub colour: Option<String>,
 }
 
