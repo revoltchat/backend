@@ -1,3 +1,5 @@
 Rocket.toml
 target
 .data
+
+.vercel

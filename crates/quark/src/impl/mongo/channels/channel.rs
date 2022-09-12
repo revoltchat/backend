@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use bson::{Bson, Document};
 
 use crate::models::channel::{Channel, FieldsChannel, PartialChannel};
@@ -288,25 +286,6 @@ impl AbstractChannel for MongoDb {
             .map(|_| ())
             .map_err(|_| Error::DatabaseError {
                 operation: "update_one",
-                with: "channel",
-            })
-    }
-
-    async fn check_channels_exist(&self, channels: &HashSet<String>) -> Result<bool> {
-        let count = channels.len() as u64;
-        self.col::<Document>(COL)
-            .count_documents(
-                doc! {
-                    "_id": {
-                        "$in": channels.iter().cloned().collect::<Vec<String>>()
-                    }
-                },
-                None,
-            )
-            .await
-            .map(|x| x == count)
-            .map_err(|_| Error::DatabaseError {
-                operation: "count_documents",
                 with: "channel",
             })
     }

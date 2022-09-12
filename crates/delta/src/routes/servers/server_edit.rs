@@ -138,12 +138,15 @@ pub async fn req(
     }
 
     // 2. Validate changes
-    let mut unknown_channels = HashSet::new();
     if let Some(system_messages) = &partial.system_messages {
-        unknown_channels = system_messages.clone().into_channel_ids();
+        for id in system_messages.clone().into_channel_ids() {
+            if !server.channels.contains(&id) {
+                return Err(Error::NotFound);
+            }
+        }
     }
 
-    if let Some(categories) = &partial.categories {
+    if let Some(categories) = &mut partial.categories {
         let mut channel_ids = HashSet::new();
         for category in categories {
             for channel in &category.channels {
@@ -153,13 +156,11 @@ pub async fn req(
 
                 channel_ids.insert(channel.to_string());
             }
+
+            category
+                .channels
+                .retain(|item| server.channels.contains(item));
         }
-
-        unknown_channels.extend(channel_ids);
-    }
-
-    if !db.check_channels_exist(&unknown_channels).await? {
-        return Err(Error::NotFound);
     }
 
     // 3. Apply new icon
