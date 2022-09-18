@@ -32,9 +32,15 @@ pub struct Relationship {
 /// Presence status
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, PartialEq)]
 pub enum Presence {
+    /// User is online
     Online,
+    /// User is not currently available
     Idle,
+    /// User is focusing / will only receive mentions
+    Focus,
+    /// User is busy / will not receive any notifications
     Busy,
+    /// User appears to be offline
     Invisible,
 }
 
