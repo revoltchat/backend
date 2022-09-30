@@ -48,6 +48,11 @@ impl User {
                     x.text = None;
                 }
             }
+            FieldsUser::StatusChat => {
+                if let Some(x) = self.status.as_mut() {
+                    x.chat_status = None;
+                }
+            }
             FieldsUser::StatusPresence => {
                 if let Some(x) = self.status.as_mut() {
                     x.presence = None;

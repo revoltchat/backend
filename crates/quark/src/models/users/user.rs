@@ -51,6 +51,10 @@ pub struct UserStatus {
     #[validate(length(min = 1, max = 128))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<String>,
+    /// Custom status text that appears next to the username on chat messages
+    #[validate(length(min = 1, max = 32))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub chat_status: Option<String>,
     /// Current presence option
     #[serde(skip_serializing_if = "Option::is_none")]
     pub presence: Option<Presence>,
@@ -167,6 +171,7 @@ pub struct User {
 pub enum FieldsUser {
     Avatar,
     StatusText,
+    StatusChat,
     StatusPresence,
     ProfileContent,
     ProfileBackground,

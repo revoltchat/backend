@@ -97,6 +97,10 @@ pub async fn req(
             new_status.text = Some(text);
         }
 
+        if let Some(chat_status) = status.chat_status {
+            new_status.chat_status = Some(chat_status);
+        }
+
         if let Some(presence) = status.presence {
             new_status.presence = Some(presence);
         }
