@@ -189,10 +189,11 @@ impl Ratelimiter {
         let entry = Entry::from(key);
 
         let remaining = entry.get_remaining(limit);
-        let reset = entry.left_until_reset();
+        let mut reset = entry.left_until_reset();
 
         if remaining > 0 {
             entry.deduct(key);
+            reset = MAP.get(&key).unwrap().left_until_reset();
             Ok(Ratelimiter {
                 key,
                 limit,
