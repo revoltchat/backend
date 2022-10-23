@@ -1,5 +1,6 @@
 You requested a password reset, if you did not perform this action you can safely ignore this email.
 
-Reset your password here: {{url}}
+Please navigate to: {{url}}
 
 Sent by Revolt.
+Made in the EU.

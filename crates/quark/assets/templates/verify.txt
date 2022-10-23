@@ -1,6 +1,7 @@
-You're almost there!
-If you did not perform this action you can safely ignore this email.
+Almost there!
+To complete your sign up, we just need to verify your email.
 
-Please verify your account here: {{url}}
+Please navigate to: {{url}}
 
 Sent by Revolt.
+Made in the EU.
