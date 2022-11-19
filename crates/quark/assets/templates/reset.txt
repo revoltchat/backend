@@ -2,5 +2,6 @@ You requested a password reset, if you did not perform this action you can safel
 
 Please navigate to: {{url}}
 
-Sent by Revolt.
-Made in the EU.
+This email is intended for {{email}}
+Sent by Revolt
+Made in the EU

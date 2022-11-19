@@ -52,7 +52,7 @@ mobc-redis = { version = "0.7.0", default-features = false, features = ["async-s
 # web
 rocket = { version = "0.5.0-rc.2", default-features = false, features = ["json"] }
 rocket_empty = { git = "https://github.com/insertish/rocket_empty", branch = "master" }
-rocket_rauth = { git = "https://github.com/insertish/rauth", rev = "43a4081dd5943db39d27229d4792b0afe82c1674" }
+rocket_rauth = { git = "https://github.com/insertish/rauth", rev = "cbdec69c684a4854fbedba9ed1f0e7ee466bf3f7" }
 
 # spec generation
 schemars = "0.8.8"

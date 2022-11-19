@@ -2,5 +2,6 @@ You requested to have your account deleted, if you did not perform this action p
 
 Please navigate to: {{url}}
 
-Sent by Revolt.
-Made in the EU.
+This email is intended for {{email}}
+Sent by Revolt
+Made in the EU

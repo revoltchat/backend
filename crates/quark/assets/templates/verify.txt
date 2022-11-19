@@ -3,5 +3,6 @@ To complete your sign up, we just need to verify your email.
 
 Please navigate to: {{url}}
 
-Sent by Revolt.
-Made in the EU.
+This email is intended for {{email}}
+Sent by Revolt
+Made in the EU
