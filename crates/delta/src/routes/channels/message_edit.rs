@@ -43,7 +43,7 @@ pub async fn req(
         return Err(Error::NotFound);
     }
 
-    if message.author != user.id {
+    if message.author.as_deref().unwrap_or_default() != user.id {
         return Err(Error::CannotEditMessage);
     }
 

@@ -1,11 +1,12 @@
 use serde::{Deserialize, Serialize};
 
 use crate::models::channel::{FieldsChannel, PartialChannel};
+use crate::models::webhook::{PartialWebhook, FieldsWebhook};
 use crate::models::message::{AppendMessage, PartialMessage};
 use crate::models::server::{FieldsRole, FieldsServer, PartialRole, PartialServer};
 use crate::models::server_member::{FieldsMember, MemberCompositeKey, PartialMember};
 use crate::models::user::{FieldsUser, PartialUser, RelationshipStatus};
-use crate::models::{Channel, Emoji, Member, Message, Server, User, UserSettings};
+use crate::models::{Channel, Emoji, Member, Message, Server, User, UserSettings, Webhook};
 use crate::Error;
 
 /// WebSocket Client Errors
@@ -200,4 +201,19 @@ pub enum EventV1 {
 
     /// Delete emoji
     EmojiDelete { id: String },
+
+    /// New webhook
+    WebhookCreate(Webhook),
+
+    /// Update existing webhook
+    WebhookUpdate {
+        id: String,
+        data: PartialWebhook,
+        remove: Vec<FieldsWebhook>
+    },
+
+    /// Delete webhook
+    WebhookDelete {
+        id: String
+    }
 }

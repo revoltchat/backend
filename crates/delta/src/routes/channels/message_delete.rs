@@ -11,7 +11,7 @@ pub async fn req(db: &Db, user: User, target: Ref, msg: Ref) -> Result<EmptyResp
         return Err(Error::NotFound);
     }
 
-    if message.author != user.id {
+    if message.author.as_deref().unwrap_or_default() != user.id {
         perms(&user)
             .channel(&target.as_channel(db).await?)
             .throw_permission(db, Permission::ManageMessages)

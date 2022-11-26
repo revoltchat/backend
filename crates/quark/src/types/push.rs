@@ -2,7 +2,7 @@ use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 
-use crate::models::{Message, User};
+use crate::models::{Message, User, Webhook, File};
 use crate::variables::delta::{APP_URL, AUTUMN_URL, PUBLIC_URL};
 
 /// Push Notification
@@ -25,14 +25,42 @@ pub struct PushNotification {
     pub url: String,
 }
 
+pub enum MessageAuthor<'a> {
+    User(&'a User),
+    Webhook(&'a Webhook)
+}
+
+impl<'a> MessageAuthor<'a> {
+    pub fn id(&self) -> &str {
+        match self {
+            MessageAuthor::User(user) => &user.id,
+            MessageAuthor::Webhook(webhook) => &webhook.id,
+        }
+    }
+
+    pub fn avatar(&self) -> Option<&File> {
+        match self {
+            MessageAuthor::User(user) => user.avatar.as_ref(),
+            MessageAuthor::Webhook(webhook) => webhook.avatar.as_ref(),
+        }
+    }
+
+    pub fn username(&self) -> &str {
+        match self {
+            MessageAuthor::User(user) => &user.username,
+            MessageAuthor::Webhook(webhook) => &webhook.name,
+        }
+    }
+}
+
 impl PushNotification {
     /// Create a new notification from a given message, author and channel ID
-    pub fn new(msg: Message, author: Option<&User>, channel_id: &str) -> Self {
-        let icon = if let Some(author) = author {
-            if let Some(avatar) = &author.avatar {
+    pub fn new(msg: Message, author: Option<MessageAuthor<'_>>, channel_id: &str) -> Self {
+        let icon = if let Some(author) = &author {
+            if let Some(avatar) = author.avatar() {
                 format!("{}/avatars/{}", &*AUTUMN_URL, avatar.id)
             } else {
-                format!("{}/users/{}/default_avatar", &*PUBLIC_URL, msg.author)
+                format!("{}/users/{}/default_avatar", &*PUBLIC_URL, author.id())
             }
         } else {
             format!("{}/assets/logo.png", &*APP_URL)
@@ -59,7 +87,7 @@ impl PushNotification {
 
         Self {
             author: author
-                .map(|x| x.username.to_string())
+                .map(|x| x.username().to_string())
                 .unwrap_or_else(|| "Revolt".to_string()),
             icon,
             image,

@@ -1,79 +1,32 @@
 use std::collections::HashSet;
 
-use revolt_quark::{
-    models::{
-        message::{Interactions, Masquerade, Reply, SendableEmbed},
-        Message, User,
-    },
-    perms,
-    web::idempotency::IdempotencyKey,
-    Db, Error, Permission, Ref, Result, types::push::MessageAuthor,
-};
-
-use regex::Regex;
+use revolt_quark::{Db, Ref, Result, Error, models::{Message, message::Reply}, web::idempotency::IdempotencyKey, types::push::MessageAuthor};
 use rocket::serde::json::Json;
-use serde::{Deserialize, Serialize};
 use ulid::Ulid;
+use crate::routes::channels::message_send::{DataMessageSend, RE_MENTION};
 use validator::Validate;
 
-#[derive(Validate, Serialize, Deserialize, JsonSchema)]
-pub struct DataMessageSend {
-    /// Unique token to prevent duplicate message sending
-    ///
-    /// **This is deprecated and replaced by `Idempotency-Key`!**
-    #[validate(length(min = 1, max = 64))]
-    pub nonce: Option<String>,
-
-    /// Message content to send
-    #[validate(length(min = 0, max = 2000))]
-    pub content: Option<String>,
-    /// Attachments to include in message
-    #[validate(length(min = 1, max = 128))]
-    pub attachments: Option<Vec<String>>,
-    /// Messages to reply to
-    pub replies: Option<Vec<Reply>>,
-    /// Embeds to include in message
-    ///
-    /// Text embed content contributes to the content length cap
-    #[validate(length(min = 1, max = 10))]
-    pub embeds: Option<Vec<SendableEmbed>>,
-    /// Masquerade to apply to this message
-    #[validate]
-    pub masquerade: Option<Masquerade>,
-    /// Information about how this message should be interacted with
-    pub interactions: Option<Interactions>,
-}
-
-lazy_static! {
-    // ignoring I L O and U is intentional
-    pub static ref RE_MENTION: Regex = Regex::new(r"<@([0-9A-HJKMNP-TV-Z]{26})>").unwrap();
-}
-
-/// # Send Message
+/// # Executes a webhook
 ///
-/// Sends a message to the given channel.
-#[openapi(tag = "Messaging")]
-#[post("/<target>/messages", data = "<data>")]
-pub async fn message_send(
-    db: &Db,
-    user: User,
-    target: Ref,
-    data: Json<DataMessageSend>,
-    mut idempotency: IdempotencyKey,
-) -> Result<Json<Message>> {
+/// executes a webhook and sends a message
+#[openapi(tag = "Webhooks")]
+#[post("/<target>/<token>", data="<data>")]
+pub async fn req(db: &Db, target: Ref, token: String, data: Json<DataMessageSend>, mut idempotency: IdempotencyKey) -> Result<Json<Message>> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
+
+    let webhook = target.as_webhook(db).await?;
+
+    (webhook.token == token)
+        .then_some(())
+        .ok_or(Error::InvalidCredentials)?;
 
     Message::validate_sum(&data.content, &data.embeds)?;
 
     idempotency.consume_nonce(data.nonce).await?;
 
-    let channel = target.as_channel(db).await?;
-    let mut permissions = perms(&user).channel(&channel);
-    permissions
-        .throw_permission_and_view_channel(db, Permission::SendMessage)
-        .await?;
+    let channel = Ref::from_unchecked(webhook.channel.clone()).as_channel(db).await?;
 
     if (data.content.as_ref().map_or(true, |v| v.is_empty()))
         && (data.attachments.as_ref().map_or(true, |v| v.is_empty()))
@@ -86,7 +39,7 @@ pub async fn message_send(
     let mut message = Message {
         id: message_id.clone(),
         channel: channel.id().to_string(),
-        author: Some(user.id.clone()),
+        webhook: Some(webhook.id.clone()),
         masquerade: data.masquerade,
         interactions: data.interactions.unwrap_or_default(),
         ..Default::default()
@@ -101,22 +54,6 @@ pub async fn message_send(
             }
         }
     }
-
-    // 2. Verify permissions for masquerade.
-    if let Some(masq) = &message.masquerade {
-        permissions
-            .throw_permission(db, Permission::Masquerade)
-            .await?;
-
-        if masq.colour.is_some() {
-            permissions
-                .throw_permission(db, Permission::ManageRole)
-                .await?;
-        }
-    }
-
-    // 3. Ensure interactions information is correct
-    message.interactions.validate(db, &mut permissions).await?;
 
     // 4. Verify replies are valid.
     let mut replies = HashSet::new();
@@ -137,12 +74,7 @@ pub async fn message_send(
     }
 
     if !mentions.is_empty() {
-        message.mentions.replace(
-            mentions
-                .into_iter()
-                .filter(|id| !user.has_blocked(id))
-                .collect::<Vec<String>>(),
-        );
+        message.mentions.replace(mentions.into_iter().collect());
     }
 
     if !replies.is_empty() {
@@ -166,12 +98,6 @@ pub async fn message_send(
     // 6. Add attachments to message.
     let mut attachments = vec![];
     if let Some(ids) = &data.attachments {
-        if !ids.is_empty() {
-            permissions
-                .throw_permission(db, Permission::UploadFiles)
-                .await?;
-        }
-
         // ! FIXME: move this to app config
         if ids.len() > 5 {
             return Err(Error::TooManyAttachments);
@@ -195,7 +121,7 @@ pub async fn message_send(
     // 8. Pass-through nonce value for clients
     message.nonce = Some(idempotency.into_key());
 
-    message.create(db, &channel, Some(MessageAuthor::User(&user))).await?;
+    message.create(db, &channel, Some(MessageAuthor::Webhook(&webhook))).await?;
 
     // Queue up a task for processing embeds
     if let Some(content) = &message.content {
@@ -208,4 +134,5 @@ pub async fn message_send(
     }
 
     Ok(Json(message))
+
 }

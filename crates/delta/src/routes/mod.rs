@@ -13,6 +13,7 @@ mod root;
 mod servers;
 mod sync;
 mod users;
+mod webhooks;
 
 pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
     let settings = OpenApiSettings::default();
@@ -33,6 +34,7 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
         "/onboard" => onboard::routes(),
         "/push" => push::routes(),
         "/sync" => sync::routes(),
+        "/webhooks" => webhooks::routes()
     };
 
     rocket
@@ -82,7 +84,8 @@ fn custom_openapi_spec() -> OpenApi {
               "Messaging",
               "Interactions",
               "Groups",
-              "Voice"
+              "Voice",
+              "Webhooks",
             ]
           },
           {
@@ -277,6 +280,13 @@ fn custom_openapi_spec() -> OpenApi {
                 ),
                 ..Default::default()
             },
+            Tag {
+                name: "Webhooks".to_owned(),
+                description: Some(
+                    "Send messages from 3rd party services".to_owned(),
+                ),
+                ..Default::default()
+            }
         ],
         ..Default::default()
     }

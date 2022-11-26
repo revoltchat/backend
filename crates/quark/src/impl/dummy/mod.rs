@@ -14,6 +14,7 @@ pub mod channels {
     pub mod channel_invite;
     pub mod channel_unread;
     pub mod message;
+    pub mod webhook;
 }
 
 pub mod servers {

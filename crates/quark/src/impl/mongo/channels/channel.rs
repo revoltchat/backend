@@ -37,9 +37,24 @@ impl MongoDb {
                 operation: "delete_many",
                 with: "channel_unreads",
             })
-            .map(|_| ())
+            .map(|_| ())?;
 
         // update many attachments with parent id
+
+        // Delete all webhooks on this channel.
+        self.col::<Document>("webhooks")
+            .delete_many(
+                doc! {
+                    "channel": &id
+                },
+                None,
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "delete_many",
+                with: "webhooks",
+            })
+            .map(|_| ())
     }
 }
 

@@ -18,7 +18,7 @@ use crate::{
     tasks::ack::AckEvent,
     types::{
         january::{Embed, Text},
-        push::PushNotification,
+        push::{PushNotification, MessageAuthor},
     },
     Database, Error, Permission, Result,
 };
@@ -66,7 +66,7 @@ impl Message {
         &mut self,
         db: &Database,
         channel: &Channel,
-        sender: Option<&User>,
+        sender: Option<MessageAuthor<'_>>,
     ) -> Result<()> {
         self.create_no_web_push(db, channel.id(), channel.is_direct_dm())
             .await?;
@@ -271,6 +271,14 @@ impl Message {
         // Write to database
         db.clear_reaction(&self.id, emoji).await
     }
+
+    /// Gets either the user or the webhook id which sent this message
+    pub fn author_id(&self) -> &str {
+        match &self.author {
+            Some(id) => id,
+            None => self.webhook.as_deref().unwrap()
+        }
+    }
 }
 
 pub trait IntoUsers {
@@ -279,7 +287,11 @@ pub trait IntoUsers {
 
 impl IntoUsers for Message {
     fn get_user_ids(&self) -> Vec<String> {
-        let mut ids = vec![self.author.clone()];
+        let mut ids = Vec::new();
+
+        if let Some(author) = &self.author {
+            ids.push(author.clone());
+        };
 
         if let Some(msg) = &self.system {
             match msg {
@@ -319,7 +331,7 @@ impl SystemMessage {
         Message {
             id: Ulid::new().to_string(),
             channel,
-            author: "00000000000000000000000000".to_string(),
+            author: Some("00000000000000000000000000".to_string()),
             system: Some(self),
 
             ..Default::default()

@@ -117,9 +117,12 @@ pub struct Message {
     pub nonce: Option<String>,
     /// Id of the channel this message was sent in
     pub channel: String,
-    /// Id of the user that sent this message
-    pub author: String,
-
+    /// Id of the user that sent this message, will be none when a webhook sent the message
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub author: Option<String>,
+    /// Id of the webhook that sent this message, mutually exclusive with `author`
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub webhook: Option<String>,
     /// Message content
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<String>,
