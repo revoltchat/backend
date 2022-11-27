@@ -30,7 +30,7 @@ pub struct Reply {
 }
 
 /// Representation of a text embed before it is sent.
-#[derive(Validate, Serialize, Deserialize, JsonSchema, Clone, Debug)]
+#[derive(Validate, Serialize, Deserialize, JsonSchema, Clone, Debug, Default)]
 pub struct SendableEmbed {
     #[validate(length(min = 1, max = 128))]
     pub icon_url: Option<String>,
