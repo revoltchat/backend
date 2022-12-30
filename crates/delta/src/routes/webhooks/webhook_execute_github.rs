@@ -127,7 +127,7 @@ pub struct GithubRepository {
     watchers_count: Option<u32>,
     size: Option<u64>,
     default_branch: Option<String>,
-    open_issues_count: Option<String>,
+    open_issues_count: Option<u32>,
     is_template: Option<bool>,
     topics: Option<Vec<String>>,
     has_issues: Option<bool>,
@@ -139,16 +139,16 @@ pub struct GithubRepository {
     archived: Option<bool>,
     disabled: Option<bool>,
     visibility: Option<String>,
-    pushed_at: Option<String>,
-    created_at: Option<String>,
+    pushed_at: Option<u64>,
+    created_at: Option<u64>,
     updated_at: Option<String>,
-    permissions: GithubRepositoryPermissions,
+    permissions: Option<GithubRepositoryPermissions>,
     role_name: Option<String>,
     temp_clone_token: Option<String>,
     delete_branch_on_merge: Option<bool>,
     subscribers_count: Option<u32>,
     network_count: Option<u32>,
-    code_of_conduct: GithubRepositoryCodeOfConduct,
+    code_of_conduct: Option<GithubRepositoryCodeOfConduct>,
     license: Option<GithubRepositoryLicense>,
     forks: Option<u32>,
     open_issues: Option<u32>,
@@ -158,17 +158,55 @@ pub struct GithubRepository {
     security_and_analysis: Option<GithubRepositorySecurityAndAnalysis>
 }
 
+
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+pub struct CommitAuthor {
+    date: Option<String>,
+    email: Option<String>,
+    name: String,
+    username: Option<String>
+}
+
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct GithubCommit {
+    added: Option<Vec<String>>,
+    author: CommitAuthor,
+    committer: CommitAuthor,
+    distinct: bool,
+    id: String,
+    message: String,
+    modified: Option<Vec<String>>,
+    removed: Option<Vec<String>>,
+    timestamp: String,
+    tree_id: String,
+    url: String
+}
+
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[serde(rename_all = "lowercase", tag = "type")]
 pub enum BaseEvent {
     Star {
         starred_at: Option<String>,
+    },
+    Ping {},
+    Push {
+        after: String,
+        base_ref: Option<String>,
+        before: String,
+        commits: Vec<GithubCommit>,
+        compare: String,
+        created: bool,
+        deleted: bool,
+        forced: bool,
+        head_commit: Option<GithubCommit>,
+        pusher: CommitAuthor,
+        r#ref: String
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub struct Event {
-    action: String,
+    action: Option<String>,
     sender: GithubUser,
     repository: GithubRepository,
     organization: Option<Value>,
@@ -228,6 +266,14 @@ impl<'r> OpenApiFromRequest<'r> for EventHeader<'r> {
     }
 }
 
+const GREEN: &'static str = "#0f890f";
+const RED: &'static str = "#e73e3e";
+const GREY: &'static str = "#202224";
+const BLUE: &'static str = "#279adc";
+const ORANGE: &'static str = "#d76a34";
+const LIGHT_ORANGE: &'static str = "#d9916d";
+const WHITE: &'static str = "#c3e1c3";
+
 /// # executes a webhook specific to github
 ///
 /// executes a webhook specific to github and sends a message containg the relavent info about the event
@@ -242,27 +288,68 @@ pub async fn req(db: &Db, target: Ref, token: String, event: EventHeader<'_>, da
 
     let channel = db.fetch_channel(&webhook.channel).await?;
 
-    let body = format!(r#"{{"{}": {data}}}"#, &event.0);
+    let body = format!(r#"{}, "type": "{}"}}"#, &data[0..data.len() - 1], &event.0);
 
     log::info!("{body}");
 
-    let Ok(event) = serde_json::from_str::<Event>(&body) else {
-        return Err(Error::InvalidOperation)
+    let event = match serde_json::from_str::<Event>(&body) {
+        Ok(event) => event,
+        Err(err) => {
+            log::error!("{err:?}");
+            return Err(Error::InvalidOperation);
+        }
     };
+
+    log::info!("{event:?}");
 
     let sendable_embed = match event.event {
         BaseEvent::Star { .. } => {
-            if event.action != "created" { return Ok(()) };
+            if !(event.action.as_deref() == Some("created")) { return Ok(()) };
 
             SendableEmbed {
                 title: Some(event.sender.login),
                 description: Some(format!("[[{}] New star added]({})", event.repository.full_name, event.repository.html_url)),
-                colour: Some("#202224".to_string()),
+                colour: Some(GREY.to_string()),
                 icon_url: Some(event.sender.avatar_url),
                 url: Some(event.sender.html_url),
                 ..Default::default()
             }
         },
+        BaseEvent::Push { after, base_ref, before, commits, compare, created, deleted, forced, head_commit, pusher, r#ref } => {
+            let branch = r#ref.split('/').nth(2).unwrap();
+
+            if forced {
+                let description = format!("[{}] Branch {} was force-pushed to {}\n[compare changes]({})", event.repository.full_name, branch, &after[0..=7], compare);
+
+                SendableEmbed {
+                    icon_url: Some(event.sender.avatar_url),
+                    title: Some(event.sender.login),
+                    description: Some(description),
+                    url: Some(event.sender.html_url),
+                    colour: Some(RED.to_string()),
+                    ..Default::default()
+                }
+            } else {
+                let title = format!("[[{}:{}] {} new commit]({})", event.repository.full_name, branch, commits.len(), compare);
+                let commit_description = commits
+                    .into_iter()
+                    .map(|commit| format!("[`{}`]({}) {} - {}", &commit.id[0..=7], commit.url, commit.message, commit.author.name))
+                    .collect::<Vec<String>>()
+                    .join("\n");
+
+                SendableEmbed {
+                    title: Some(event.sender.login),
+                    description: Some(format!("{title}\n{commit_description}")),
+                    colour: Some(BLUE.to_string()),
+                    icon_url: Some(event.sender.avatar_url),
+                    url: Some(event.sender.html_url),
+                    ..Default::default()
+                }
+            }
+        }
+        _ => {
+            return Ok(())
+        }
     };
 
     let message_id = Ulid::new().to_string();
