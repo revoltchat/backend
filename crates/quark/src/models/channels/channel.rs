@@ -161,7 +161,7 @@ pub struct PartialChannel {
 }
 
 /// Optional fields on channel object
-#[derive(Serialize, Deserialize, JsonSchema, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, PartialEq, Eq, Clone)]
 pub enum FieldsChannel {
     Description,
     Icon,

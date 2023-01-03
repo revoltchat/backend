@@ -10,7 +10,7 @@ pub fn if_false(t: &bool) -> bool {
 }
 
 /// User's relationship with another user (or themselves)
-#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, PartialEq, Eq)]
 pub enum RelationshipStatus {
     None,
     User,
@@ -30,7 +30,7 @@ pub struct Relationship {
 }
 
 /// Presence status
-#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, PartialEq, Eq)]
 pub enum Presence {
     /// User is online
     Online,
@@ -163,7 +163,7 @@ pub struct User {
 }
 
 /// Optional fields on user object
-#[derive(Serialize, Deserialize, JsonSchema, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, PartialEq, Eq, Clone)]
 pub enum FieldsUser {
     Avatar,
     StatusText,

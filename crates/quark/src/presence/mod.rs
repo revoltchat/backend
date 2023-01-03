@@ -147,7 +147,7 @@ pub async fn presence_clear_region(region_id: Option<&str>) {
         // also send out any relevant events.
         for session in sessions {
             let parts = session.split(':').collect::<Vec<&str>>();
-            if let (Some(user_id), Some(session_id)) = (parts.get(0), parts.get(1)) {
+            if let (Some(user_id), Some(session_id)) = (parts.first(), parts.get(1)) {
                 if let Ok(session_id) = session_id.parse() {
                     presence_delete_session_internal(user_id, session_id, true).await;
                 }

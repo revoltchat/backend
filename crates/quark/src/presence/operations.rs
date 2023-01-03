@@ -53,5 +53,5 @@ pub async fn __get_set_sessions(conn: &mut Conn, region_id: &str) -> Vec<String>
 
 /// Delete region session set
 pub async fn __delete_set_sessions(conn: &mut Conn, region_id: &str) {
-    let _: () = conn.del(region_id).await.unwrap();
+    conn.del::<_, ()>(region_id).await.unwrap();
 }

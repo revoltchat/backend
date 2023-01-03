@@ -22,7 +22,7 @@ pub async fn req(
 ) -> Result<EmptyResponse> {
     session.subscription = Some(data.into_inner());
     session
-        .save(&rauth)
+        .save(rauth)
         .await
         .map(|_| EmptyResponse)
         .map_err(|_| Error::DatabaseError {
