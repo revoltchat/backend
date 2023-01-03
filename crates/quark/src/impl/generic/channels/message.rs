@@ -383,7 +383,7 @@ impl BulkMessageResponse {
     ) -> Result<BulkMessageResponse> {
         if let Some(true) = include_users {
             let user_ids = messages.get_user_ids();
-            let users = db.fetch_users(&user_ids).await?;
+            let users = User::fetch_foreign_users(db, &user_ids).await?;
 
             Ok(match channel {
                 Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => {

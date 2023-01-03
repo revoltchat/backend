@@ -1,8 +1,6 @@
 use revolt_quark::{
     models::{Member, User},
-    perms,
-    presence::presence_filter_online,
-    Db, Ref, Result,
+    perms, Db, Ref, Result,
 };
 
 use rocket::serde::json::Json;
@@ -47,16 +45,7 @@ pub async fn req(
         user_ids.push(member.id.user.clone());
     }
 
-    let online_ids = presence_filter_online(&user_ids).await;
-    let mut users = db
-        .fetch_users(&user_ids)
-        .await?
-        .into_iter()
-        .map(|mut user| {
-            user.online = Some(online_ids.contains(&user.id));
-            user.foreign()
-        })
-        .collect::<Vec<User>>();
+    let mut users = User::fetch_foreign_users(db, &user_ids).await?;
 
     // Ensure the lists match up exactly.
     members.sort_by(|a, b| a.id.user.cmp(&b.id.user));
