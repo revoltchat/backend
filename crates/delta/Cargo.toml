@@ -61,3 +61,6 @@ rocket_okapi = { git = "https://github.com/insertish/okapi", rev = "a1048d0c8cd7
 
 # quark
 revolt-quark = { path = "../quark" }
+
+[build-dependencies]
+vergen = "7.5.0"

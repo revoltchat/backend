@@ -54,6 +54,21 @@ pub struct RevoltFeatures {
     pub voso: VoiceFeature,
 }
 
+/// # Build Information
+#[derive(Serialize, JsonSchema, Debug)]
+pub struct BuildInformation {
+    /// Commit Hash
+    pub commit_sha: String,
+    /// Commit Timestamp
+    pub commit_timestamp: String,
+    /// Git Semver
+    pub semver: String,
+    /// Git Origin URL
+    pub origin_url: String,
+    /// Build Timestamp
+    pub timestamp: String,
+}
+
 /// # Server Configuration
 #[derive(Serialize, JsonSchema, Debug)]
 pub struct RevoltConfig {
@@ -67,6 +82,8 @@ pub struct RevoltConfig {
     pub app: String,
     /// Web Push VAPID public key
     pub vapid: String,
+    /// Build information
+    pub build: BuildInformation,
 }
 
 /// # Query Node
@@ -101,6 +118,13 @@ pub async fn root() -> Result<Json<RevoltConfig>> {
         ws: EXTERNAL_WS_URL.to_string(),
         app: APP_URL.to_string(),
         vapid: VAPID_PUBLIC_KEY.to_string(),
+        build: BuildInformation {
+            commit_sha: env!("VERGEN_GIT_SHA").to_string(),
+            commit_timestamp: env!("VERGEN_GIT_COMMIT_TIMESTAMP").to_string(),
+            semver: env!("VERGEN_GIT_SEMVER").to_string(),
+            origin_url: env!("GIT_ORIGIN_URL", "<missing>").to_string(),
+            timestamp: env!("VERGEN_BUILD_TIMESTAMP").to_string(),
+        },
     }))
 }
 
