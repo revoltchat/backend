@@ -1,10 +1,10 @@
-name: Rust build and test
+name: Rust build, test, and generate specification
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 env:
   CARGO_TERM_COLOR: always
@@ -18,16 +18,51 @@ jobs:
       - name: Install latest nightly
         uses: actions-rs/toolchain@v1
         with:
-            toolchain: nightly
-            override: true
-            components: rustfmt, clippy
+          toolchain: nightly
+          override: true
+          components: rustfmt, clippy
 
       - name: Run cargo build
         uses: actions-rs/cargo@v1
         with:
           command: build
-      
+
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         with:
           command: test
+
+      - name: Copy .env.example
+        run: |
+          cp .env.example .env
+
+      - name: Run services in background
+        run: |
+          docker-compose up -d -f docker-compose.db.yml
+
+      - name: Start API in background
+        run: |
+          cargo run --bin revolt-delta &
+
+      - name: Wait for API to go up
+        uses: nev7n/wait_for_response@v1
+        with:
+          url: "http://localhost:8000/"
+
+      - name: Checkout API repository
+        uses: actions/checkout@v3
+        with:
+          repository: revoltchat/api
+          path: api
+
+      - name: Download OpenAPI specification
+        run: curl http://localhost:8000/openapi.json -o api/OpenAPI.json
+
+      - name: Commit changes
+        uses: EndBug/add-and-commit@v4
+        with:
+          cwd: "api"
+          add: "*.json"
+          message: "chore: generate OpenAPI specification"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
