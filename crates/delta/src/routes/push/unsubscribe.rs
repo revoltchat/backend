@@ -13,7 +13,7 @@ use rocket::State;
 pub async fn req(rauth: &State<RAuth>, mut session: Session) -> Result<EmptyResponse> {
     session.subscription = None;
     session
-        .save(&rauth)
+        .save(rauth)
         .await
         .map(|_| EmptyResponse)
         .map_err(|_| Error::DatabaseError {

@@ -51,7 +51,7 @@ impl Entry {
     }
 
     /// Deduct one unit from the bucket and save
-    pub fn deduct(mut self, key: u64) {
+    pub fn deduct(mut self) {
         let current_time = now().as_millis();
         if current_time > self.reset {
             self.used = 1;
@@ -59,7 +59,10 @@ impl Entry {
         } else {
             self.used += 1;
         }
+    }
 
+    /// Save information
+    pub fn save(self, key: u64) {
         MAP.insert(key, self);
     }
 
@@ -189,10 +192,12 @@ impl Ratelimiter {
         let entry = Entry::from(key);
 
         let remaining = entry.get_remaining(limit);
-        let reset = entry.left_until_reset();
-
         if remaining > 0 {
-            entry.deduct(key);
+            entry.deduct();
+
+            let reset = entry.left_until_reset();
+            entry.save(key);
+
             Ok(Ratelimiter {
                 key,
                 limit,
@@ -200,7 +205,7 @@ impl Ratelimiter {
                 reset,
             })
         } else {
-            Err(reset)
+            Err(entry.left_until_reset())
         }
     }
 }

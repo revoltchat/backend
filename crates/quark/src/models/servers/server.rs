@@ -134,7 +134,7 @@ pub struct Server {
 }
 
 /// Optional fields on server object
-#[derive(Serialize, Deserialize, JsonSchema, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, PartialEq, Eq, Clone)]
 pub enum FieldsServer {
     Description,
     Categories,
@@ -144,7 +144,7 @@ pub enum FieldsServer {
 }
 
 /// Optional fields on server object
-#[derive(Serialize, Deserialize, JsonSchema, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, PartialEq, Eq, Clone)]
 pub enum FieldsRole {
     Colour,
 }

@@ -81,7 +81,7 @@ pub struct Masquerade {
     pub name: Option<String>,
     /// Replace the avatar shown on this message (URL to image file)
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[validate(length(min = 1, max = 128))]
+    #[validate(length(min = 1, max = 256))]
     pub avatar: Option<String>,
     /// Replace the display role colour shown on this message
     ///

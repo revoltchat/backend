@@ -42,7 +42,7 @@ pub struct Member {
 }
 
 /// Optional fields on server member object
-#[derive(Serialize, Deserialize, JsonSchema, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, PartialEq, Eq, Clone)]
 pub enum FieldsMember {
     Nickname,
     Avatar,

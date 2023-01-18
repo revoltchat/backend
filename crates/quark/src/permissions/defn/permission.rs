@@ -24,7 +24,7 @@ pub enum Permission {
     /// Manage server customisation (includes emoji)
     ManageCustomisation = 1 << 4,
 
-    // % 1 bits reserved
+    // % 1 bit reserved
 
     // * Member permissions
     /// Kick other members below their ranking
@@ -109,10 +109,11 @@ lazy_static! {
         + Permission::Connect
         + Permission::Speak;
     pub static ref DEFAULT_PERMISSION_SAVED_MESSAGES: u64 = Permission::GrantAllSafe as u64;
-    pub static ref DEFAULT_PERMISSION_DIRECT_MESSAGE: u64 =
-        *DEFAULT_PERMISSION + Permission::ManageChannel;
+    pub static ref DEFAULT_PERMISSION_DIRECT_MESSAGE: u64 = *DEFAULT_PERMISSION 
+        + Permission::ManageChannel
+        + Permission::React;
     pub static ref DEFAULT_PERMISSION_SERVER: u64 =
-        *DEFAULT_PERMISSION + Permission::ChangeNickname + Permission::ChangeAvatar;
+        *DEFAULT_PERMISSION + Permission::React + Permission::ChangeNickname + Permission::ChangeAvatar;
 }
 
 bitfield! {

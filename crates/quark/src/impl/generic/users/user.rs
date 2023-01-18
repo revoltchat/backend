@@ -4,6 +4,7 @@ use crate::models::user::{
 };
 use crate::permissions::defn::UserPerms;
 use crate::permissions::r#impl::user::get_relationship;
+use crate::presence::presence_filter_online;
 use crate::{perms, Database, Error, Result};
 
 use futures::try_join;
@@ -67,6 +68,7 @@ impl User {
     }
 
     /// Mutate the user object to remove redundant information
+    #[must_use]
     pub fn foreign(mut self) -> User {
         self.profile = None;
         self.relations = None;
@@ -92,6 +94,21 @@ impl User {
         }
 
         self
+    }
+
+    /// Fetch foreign users by a list of IDs
+    pub async fn fetch_foreign_users(db: &Database, user_ids: &[String]) -> Result<Vec<User>> {
+        let online_ids = presence_filter_online(user_ids).await;
+
+        Ok(db
+            .fetch_users(user_ids)
+            .await?
+            .into_iter()
+            .map(|mut user| {
+                user.online = Some(online_ids.contains(&user.id));
+                user.foreign()
+            })
+            .collect::<Vec<User>>())
     }
 
     /// Mutate the user object to include relationship (if it does not already exist)
