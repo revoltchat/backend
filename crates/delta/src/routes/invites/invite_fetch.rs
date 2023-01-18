@@ -23,6 +23,9 @@ pub enum InviteResponse {
         /// Attachment for server banner
         #[serde(skip_serializing_if = "Option::is_none")]
         server_banner: Option<File>,
+        /// Enum of server flags
+        #[serde(skip_serializing_if = "Option::is_none")]
+        server_flags: Option<i32>,
         /// Id of server channel
         channel_id: String,
         /// Name of server channel
@@ -94,6 +97,7 @@ pub async fn req(db: &Db, target: Ref) -> Result<Json<InviteResponse>> {
                         server_name: server.name,
                         server_icon: server.icon,
                         server_banner: server.banner,
+                        server_flags: server.flags,
                         channel_id: id,
                         channel_name: name,
                         channel_description: description,
