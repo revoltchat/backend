@@ -126,6 +126,8 @@ fn resolve_bucket<'r>(request: &'r rocket::Request<'_>) -> (&'r str, Option<&'r 
                 }
             }
             ("swagger", _) => ("swagger", None),
+            ("safety", Some("report")) => ("safety_report", Some("report")),
+            ("safety", _) => ("safety", None),
             _ => ("any", None),
         }
     } else {
@@ -145,6 +147,8 @@ fn resolve_bucket_limit(bucket: &str) -> u8 {
         "auth_delete" => 255,
         "default_avatar" => 255,
         "swagger" => 100,
+        "safety" => 15,
+        "safety_report" => 3,
         _ => 20,
     }
 }
