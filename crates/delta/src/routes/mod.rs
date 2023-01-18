@@ -1,7 +1,7 @@
+use revolt_rocket_okapi::{revolt_okapi::openapi3::OpenApi, settings::OpenApiSettings};
 pub use rocket::http::Status;
 pub use rocket::response::Redirect;
 use rocket::{Build, Rocket};
-use rocket_okapi::{okapi::openapi3::OpenApi, settings::OpenApiSettings};
 
 mod bots;
 mod channels;
@@ -39,7 +39,7 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
 }
 
 fn custom_openapi_spec() -> OpenApi {
-    use rocket_okapi::okapi::openapi3::*;
+    use revolt_rocket_okapi::revolt_okapi::openapi3::*;
 
     let mut extensions = schemars::Map::new();
     extensions.insert(

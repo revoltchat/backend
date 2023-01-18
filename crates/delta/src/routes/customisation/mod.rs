@@ -1,5 +1,5 @@
+use revolt_rocket_okapi::revolt_okapi::openapi3::OpenApi;
 use rocket::Route;
-use rocket_okapi::okapi::openapi3::OpenApi;
 
 mod emoji_create;
 mod emoji_delete;

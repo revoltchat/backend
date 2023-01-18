@@ -51,13 +51,12 @@ mobc-redis = { version = "0.7.0", default-features = false, features = ["async-s
 
 # web
 rocket = { version = "0.5.0-rc.2", default-features = false, features = ["json"] }
-rocket_empty = { git = "https://github.com/insertish/rocket_empty", branch = "master" }
+rocket_empty = { version = "0.1.1", features = ["schema"] }
 rocket_rauth = { git = "https://github.com/insertish/rauth", rev = "cbdec69c684a4854fbedba9ed1f0e7ee466bf3f7" }
 
 # spec generation
 schemars = "0.8.8"
-# rocket_okapi = "0.8.0-rc.1"
-rocket_okapi = { git = "https://github.com/insertish/okapi", rev = "a1048d0c8cd771e424ec97d33d825c32e06aa120", features = [ "swagger" ] }
+revolt_rocket_okapi = { version = "0.9.1", features = [ "swagger" ] }
 
 # quark
 revolt-quark = { path = "../quark" }
