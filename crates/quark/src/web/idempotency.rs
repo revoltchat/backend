@@ -1,11 +1,11 @@
 use crate::{Error, Result};
 
 use async_std::sync::Mutex;
+use revolt_rocket_okapi::gen::OpenApiGenerator;
+use revolt_rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
+use revolt_rocket_okapi::revolt_okapi::openapi3::{Parameter, ParameterValue};
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
-use rocket_okapi::gen::OpenApiGenerator;
-use rocket_okapi::okapi::openapi3::{Parameter, ParameterValue};
-use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 use schemars::schema::{InstanceType, SchemaObject, SingleOrVec};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -47,7 +47,7 @@ impl<'r> OpenApiFromRequest<'r> for IdempotencyKey {
         _gen: &mut OpenApiGenerator,
         _name: String,
         _required: bool,
-    ) -> rocket_okapi::Result<RequestHeaderInput> {
+    ) -> revolt_rocket_okapi::Result<RequestHeaderInput> {
         Ok(RequestHeaderInput::Parameter(Parameter {
             name: "Idempotency-Key".to_string(),
             description: Some("Unique key to prevent duplicate requests".to_string()),

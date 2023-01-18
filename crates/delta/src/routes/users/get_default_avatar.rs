@@ -1,7 +1,7 @@
+use revolt_rocket_okapi::revolt_okapi::openapi3::{self, MediaType, RefOr};
 use rocket::http::ContentType;
 use rocket::response::{self, Responder};
 use rocket::{Request, Response};
-use rocket_okapi::okapi::openapi3::{self, MediaType, RefOr};
 use schemars::schema::{InstanceType, SchemaObject, SingleOrVec};
 
 pub struct CachedFile((ContentType, Vec<u8>));
@@ -16,10 +16,10 @@ impl<'r> Responder<'r, 'static> for CachedFile {
     }
 }
 
-impl rocket_okapi::response::OpenApiResponderInner for CachedFile {
+impl revolt_rocket_okapi::response::OpenApiResponderInner for CachedFile {
     fn responses(
-        _gen: &mut rocket_okapi::gen::OpenApiGenerator,
-    ) -> std::result::Result<openapi3::Responses, rocket_okapi::OpenApiError> {
+        _gen: &mut revolt_rocket_okapi::gen::OpenApiGenerator,
+    ) -> std::result::Result<openapi3::Responses, revolt_rocket_okapi::OpenApiError> {
         let mut responses = schemars::Map::new();
         let mut content = schemars::Map::new();
 

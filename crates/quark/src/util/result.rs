@@ -1,4 +1,5 @@
-use okapi::openapi3::{self, SchemaObject};
+use revolt_okapi::openapi3::SchemaObject;
+use revolt_rocket_okapi::revolt_okapi::openapi3;
 use rocket::{
     http::{ContentType, Status},
     response::{self, Responder},
@@ -194,11 +195,11 @@ impl<'r> Responder<'r, 'static> for Error {
     }
 }
 
-impl rocket_okapi::response::OpenApiResponderInner for Error {
+impl revolt_rocket_okapi::response::OpenApiResponderInner for Error {
     fn responses(
-        gen: &mut rocket_okapi::gen::OpenApiGenerator,
-    ) -> std::result::Result<openapi3::Responses, rocket_okapi::OpenApiError> {
-        let mut content = okapi::Map::new();
+        gen: &mut revolt_rocket_okapi::gen::OpenApiGenerator,
+    ) -> std::result::Result<openapi3::Responses, revolt_rocket_okapi::OpenApiError> {
+        let mut content = revolt_okapi::Map::new();
 
         let settings = schemars::gen::SchemaSettings::default().with(|s| {
             s.option_nullable = true;
