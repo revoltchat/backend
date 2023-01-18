@@ -35,7 +35,7 @@ pub async fn presence_create_session(user_id: &str, flags: u8) -> (bool, u8) {
     __set_key_presence_entry(&mut conn, user_id, entry).await;
 
     // Add to region set in case of failure.
-    __add_to_set_sessions(&mut conn, &*REGION_KEY, user_id, session_id).await;
+    __add_to_set_sessions(&mut conn, &REGION_KEY, user_id, session_id).await;
     (was_empty, session_id)
 }
 
@@ -74,7 +74,7 @@ async fn presence_delete_session_internal(
 
         // Remove from region set.
         if !skip_region {
-            __remove_from_set_sessions(&mut conn, &*REGION_KEY, user_id, session_id).await;
+            __remove_from_set_sessions(&mut conn, &REGION_KEY, user_id, session_id).await;
         }
     }
 

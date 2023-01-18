@@ -38,7 +38,7 @@ pub async fn queue(channel: String, id: String, content: String) {
 pub async fn worker(db: Database) {
     loop {
         let task = Q.pop().await;
-        if let Ok(embeds) = Embed::generate(task.content, &*JANUARY_URL, *MAX_EMBED_COUNT).await {
+        if let Ok(embeds) = Embed::generate(task.content, &JANUARY_URL, *MAX_EMBED_COUNT).await {
             if let Err(err) = Message::append(
                 &db,
                 task.id,

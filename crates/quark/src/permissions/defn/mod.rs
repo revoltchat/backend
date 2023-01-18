@@ -97,7 +97,7 @@ impl From<i64> for PermissionValue {
 
 impl From<u64> for PermissionValue {
     fn from(v: u64) -> Self {
-        Self(v as u64)
+        Self(v)
     }
 }
 
