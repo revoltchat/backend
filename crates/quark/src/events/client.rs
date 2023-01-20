@@ -1,3 +1,4 @@
+use rauth::RAuthEvent;
 use serde::{Deserialize, Serialize};
 
 use crate::models::channel::{FieldsChannel, PartialChannel};
@@ -196,6 +197,17 @@ pub enum EventV1 {
     /// Settings updated remotely
     UserSettingsUpdate { id: String, update: UserSettings },
 
+    /// User has been platform banned or deleted their account
+    ///
+    /// Clients should remove the following associated data:
+    /// - Messages
+    /// - DM Channels
+    /// - Relationships
+    /// - Server Memberships
+    ///
+    /// User flags are specified to explain why a wipe is occurring though not all reasons will necessarily ever appear.
+    UserPlatformWipe { user_id: String, flags: i32 },
+
     /// New emoji
     EmojiCreate(Emoji),
 
@@ -215,5 +227,8 @@ pub enum EventV1 {
     /// Delete webhook
     WebhookDelete {
         id: String
-    }
+    },
+
+    /// Auth events
+    Auth(RAuthEvent),
 }

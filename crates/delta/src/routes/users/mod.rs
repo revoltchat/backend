@@ -1,5 +1,5 @@
+use revolt_rocket_okapi::revolt_okapi::openapi3::OpenApi;
 use rocket::Route;
-use rocket_okapi::okapi::openapi3::OpenApi;
 
 mod add_friend;
 mod block_user;
@@ -9,6 +9,7 @@ mod fetch_dms;
 mod fetch_profile;
 mod fetch_self;
 mod fetch_user;
+mod fetch_user_flags;
 mod find_mutual;
 mod get_default_avatar;
 mod open_dm;
@@ -21,6 +22,7 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         // User Information
         fetch_self::req,
         fetch_user::req,
+        fetch_user_flags::fetch_user_flags,
         edit_user::req,
         change_username::req,
         get_default_avatar::req,

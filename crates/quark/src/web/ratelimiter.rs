@@ -16,8 +16,8 @@ use rocket::request::{FromRequest, Outcome};
 use rocket::serde::json::Json;
 use rocket::{Data, Request, Response};
 
-use rocket_okapi::gen::OpenApiGenerator;
-use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
+use revolt_rocket_okapi::gen::OpenApiGenerator;
+use revolt_rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 
 use serde::Serialize;
 
@@ -241,7 +241,7 @@ impl<'r> OpenApiFromRequest<'r> for Ratelimiter {
         _gen: &mut OpenApiGenerator,
         _name: String,
         _required: bool,
-    ) -> rocket_okapi::Result<RequestHeaderInput> {
+    ) -> revolt_rocket_okapi::Result<RequestHeaderInput> {
         Ok(RequestHeaderInput::None)
     }
 }

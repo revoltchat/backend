@@ -2070,17 +2070,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "okapi"
-version = "0.7.0-rc.1"
-source = "git+https://github.com/insertish/okapi?rev=a1048d0c8cd771e424ec97d33d825c32e06aa120#a1048d0c8cd771e424ec97d33d825c32e06aa120"
-dependencies = [
- "log",
- "schemars",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "once_cell"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2591,8 +2580,8 @@ dependencies = [
 
 [[package]]
 name = "rauth"
-version = "1.0.0"
-source = "git+https://github.com/insertish/rauth?rev=cbdec69c684a4854fbedba9ed1f0e7ee466bf3f7#cbdec69c684a4854fbedba9ed1f0e7ee466bf3f7"
+version = "1.0.4"
+source = "git+https://github.com/insertish/rauth?tag=1.0.4#2d3bc59623672e3ff57c49a90c4d3cd20780dbba"
 dependencies = [
  "async-std",
  "async-trait",
@@ -2607,12 +2596,12 @@ dependencies = [
  "log",
  "mongodb",
  "nanoid",
- "okapi",
  "rand 0.8.5",
  "regex",
  "reqwest",
+ "revolt_okapi",
+ "revolt_rocket_okapi",
  "rocket",
- "rocket_okapi",
  "rust-argon2",
  "schemars",
  "serde",
@@ -2801,7 +2790,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-bonfire"
-version = "0.5.5"
+version = "0.5.6"
 dependencies = [
  "async-std",
  "async-tungstenite",
@@ -2817,7 +2806,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-delta"
-version = "0.5.5"
+version = "0.5.6"
 dependencies = [
  "async-channel",
  "async-std",
@@ -2842,9 +2831,9 @@ dependencies = [
  "regex",
  "reqwest",
  "revolt-quark",
+ "revolt_rocket_okapi",
  "rocket",
  "rocket_empty",
- "rocket_okapi",
  "rocket_rauth",
  "schemars",
  "serde",
@@ -2857,7 +2846,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-quark"
-version = "0.1.0"
+version = "0.5.6"
 dependencies = [
  "async-recursion",
  "async-std",
@@ -2880,7 +2869,6 @@ dependencies = [
  "mongodb",
  "nanoid",
  "num_enum",
- "okapi",
  "once_cell",
  "optional_struct",
  "pretty_env_logger",
@@ -2888,11 +2876,12 @@ dependencies = [
  "redis-kiss",
  "regex",
  "reqwest",
+ "revolt_okapi",
+ "revolt_rocket_okapi",
  "rocket",
  "rocket_cors",
  "rocket_empty",
  "rocket_http",
- "rocket_okapi",
  "schemars",
  "sentry",
  "serde",
@@ -2900,6 +2889,47 @@ dependencies = [
  "ulid 0.5.0",
  "validator 0.14.0",
  "web-push",
+]
+
+[[package]]
+name = "revolt_okapi"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23bfdf7ae769c3042fe727f6e5c17363b02a64b4b33ad60c3e5f73b26df7835b"
+dependencies = [
+ "log",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "revolt_rocket_okapi"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "275e1e9bd3343f75225cafa64f4bfb939c8b21c5f861141180fc0e24769ff6cf"
+dependencies = [
+ "either",
+ "log",
+ "revolt_okapi",
+ "revolt_rocket_okapi_codegen",
+ "rocket",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "revolt_rocket_okapi_codegen"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc6620569d8ac8f0a1690fcca13f488503807a60e96ebf729749b59aca1dbef9"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote 1.0.18",
+ "rocket_http",
+ "syn 1.0.96",
 ]
 
 [[package]]
@@ -2996,9 +3026,10 @@ dependencies = [
 
 [[package]]
 name = "rocket_cors"
-version = "0.5.2"
-source = "git+https://github.com/lawliet89/rocket_cors?rev=5843861a88958c16bfaa0b40f0d8910772bcd2f6#5843861a88958c16bfaa0b40f0d8910772bcd2f6"
+version = "0.6.0-alpha1"
+source = "git+https://github.com/lawliet89/rocket_cors?rev=c17e8145baa4790319fdb6a473e465b960f55e7c#c17e8145baa4790319fdb6a473e465b960f55e7c"
 dependencies = [
+ "http",
  "log",
  "regex",
  "rocket",
@@ -3011,12 +3042,13 @@ dependencies = [
 
 [[package]]
 name = "rocket_empty"
-version = "0.1.0"
-source = "git+https://github.com/insertish/rocket_empty?branch=master#9d8234fc3bb215ea241b787301e8cff68ae53652"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c0922e47f981204fee38578a8efcf47a5c1a4ac0eb7f59e6bdfa3e61c8e3d69"
 dependencies = [
- "okapi",
+ "revolt_okapi",
+ "revolt_rocket_okapi",
  "rocket",
- "rocket_okapi",
 ]
 
 [[package]]
@@ -3047,43 +3079,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "rocket_okapi"
-version = "0.8.0-rc.1"
-source = "git+https://github.com/insertish/okapi?rev=a1048d0c8cd771e424ec97d33d825c32e06aa120#a1048d0c8cd771e424ec97d33d825c32e06aa120"
-dependencies = [
- "either",
- "log",
- "okapi",
- "rocket",
- "rocket_okapi_codegen",
- "schemars",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "rocket_okapi_codegen"
-version = "0.8.0-rc.1"
-source = "git+https://github.com/insertish/okapi?rev=a1048d0c8cd771e424ec97d33d825c32e06aa120#a1048d0c8cd771e424ec97d33d825c32e06aa120"
-dependencies = [
- "darling",
- "proc-macro2",
- "quote 1.0.18",
- "rocket_http",
- "syn 1.0.96",
-]
-
-[[package]]
 name = "rocket_rauth"
-version = "1.0.0"
-source = "git+https://github.com/insertish/rauth?rev=cbdec69c684a4854fbedba9ed1f0e7ee466bf3f7#cbdec69c684a4854fbedba9ed1f0e7ee466bf3f7"
+version = "1.0.4"
+source = "git+https://github.com/insertish/rauth?tag=1.0.4#2d3bc59623672e3ff57c49a90c4d3cd20780dbba"
 dependencies = [
  "iso8601-timestamp",
- "okapi",
  "rauth",
+ "revolt_okapi",
+ "revolt_rocket_okapi",
  "rocket",
  "rocket_empty",
- "rocket_okapi",
  "schemars",
  "serde",
 ]
