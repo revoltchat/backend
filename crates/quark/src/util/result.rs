@@ -20,10 +20,10 @@ pub enum Error {
     /// This error was not labeled :(
     LabelMe,
 
-    // ? Onboarding related errors.
+    // ? Onboarding related errors
     AlreadyOnboarded,
 
-    // ? User related errors.
+    // ? User related errors
     UsernameTaken,
     InvalidUsername,
     UnknownUser,
@@ -33,7 +33,7 @@ pub enum Error {
     BlockedByOther,
     NotFriends,
 
-    // ? Channel related errors.
+    // ? Channel related errors
     UnknownChannel,
     UnknownAttachment,
     UnknownMessage,
@@ -50,7 +50,7 @@ pub enum Error {
     AlreadyInGroup,
     NotInGroup,
 
-    // ? Server related errors.
+    // ? Server related errors
     UnknownServer,
     InvalidRole,
     Banned,
@@ -59,12 +59,12 @@ pub enum Error {
     },
     TooManyEmoji,
 
-    // ? Bot related errors.
+    // ? Bot related errors
     ReachedMaximumBots,
     IsBot,
     BotIsPrivate,
 
-    // ? Permission errors.
+    // ? Permission errors
     MissingPermission {
         permission: Permission,
     },
@@ -75,7 +75,7 @@ pub enum Error {
     CannotGiveMissingPermissions,
     NotOwner,
 
-    // ? General errors.
+    // ? General errors
     DatabaseError {
         operation: &'static str,
         with: &'static str,
@@ -83,6 +83,7 @@ pub enum Error {
     InternalError,
     InvalidOperation,
     InvalidCredentials,
+    InvalidProperty,
     InvalidSession,
     DuplicateNonce,
     VosoUnavailable,
@@ -175,6 +176,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::InternalError => Status::InternalServerError,
             Error::InvalidOperation => Status::BadRequest,
             Error::InvalidCredentials => Status::Unauthorized,
+            Error::InvalidProperty => Status::BadRequest,
             Error::InvalidSession => Status::Unauthorized,
             Error::DuplicateNonce => Status::Conflict,
             Error::VosoUnavailable => Status::BadRequest,
