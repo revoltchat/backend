@@ -14,6 +14,7 @@ use async_std::channel::unbounded;
 use revolt_quark::events::client::EventV1;
 use revolt_quark::rauth::{RAuth, RAuthEvent};
 use revolt_quark::DatabaseInfo;
+use rocket::data::ToByteUnit;
 
 #[launch]
 async fn rocket() -> _ {
@@ -70,4 +71,9 @@ async fn rocket() -> _ {
         .manage(cors.clone())
         .attach(revolt_quark::web::ratelimiter::RatelimitFairing)
         .attach(cors)
+        .configure(rocket::Config {
+            limits: rocket::data::Limits::default()
+                .limit("string", 5.megabytes()),
+            ..Default::default()
+        })
 }

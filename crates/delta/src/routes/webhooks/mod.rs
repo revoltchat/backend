@@ -1,5 +1,5 @@
 use rocket::Route;
-use rocket_okapi::okapi::openapi3::OpenApi;
+use revolt_rocket_okapi::revolt_okapi::openapi3::OpenApi;
 
 mod webhook_delete;
 mod webhook_edit;

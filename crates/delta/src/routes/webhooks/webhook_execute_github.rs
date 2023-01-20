@@ -1,7 +1,7 @@
-use revolt_quark::{Db, Ref, Result, Error, models::{Webhook, Message, message::SendableEmbed}, types::push::MessageAuthor};
+use revolt_quark::{Db, Ref, Result, Error, models::{Message, message::SendableEmbed}, types::push::MessageAuthor};
 use rocket::{Request, request::FromRequest, http::Status};
-use rocket_okapi::{request::{OpenApiFromRequest, RequestHeaderInput}, okapi::openapi3::{Parameter, ParameterValue, MediaType}, gen::OpenApiGenerator};
-use schemars::schema::{SchemaObject, StringValidation};
+use revolt_rocket_okapi::{request::{OpenApiFromRequest, RequestHeaderInput}, revolt_okapi::openapi3::{Parameter, ParameterValue, MediaType}, gen::OpenApiGenerator};
+use schemars::schema::SchemaObject;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use ulid::Ulid;
@@ -139,8 +139,8 @@ pub struct GithubRepository {
     archived: Option<bool>,
     disabled: Option<bool>,
     visibility: Option<String>,
-    pushed_at: Option<u64>,
-    created_at: Option<u64>,
+    pushed_at: Option<String>,
+    created_at: Value,
     updated_at: Option<String>,
     permissions: Option<GithubRepositoryPermissions>,
     role_name: Option<String>,
@@ -181,9 +181,252 @@ pub struct GithubCommit {
     tree_id: String,
     url: String
 }
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct GithubReactions {
+    #[serde(rename="+1")]
+    plus_one: u32,
+    #[serde(rename="-1")]
+    minus_one: u32,
+    confused: u32,
+    eyes: u32,
+    heart: u32,
+    hooray: u32,
+    laugh: u32,
+    rocket: u32,
+    total_count: u32,
+    url: String
+}
 
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
-#[serde(rename_all = "lowercase", tag = "type")]
+pub struct GithubComment {
+    author_association: String,
+    body: String,
+    commit_id: String,
+    created_at: Value,
+    html_url: String,
+    id: u32,
+    line: Option<u32>,
+    node_id: String,
+    path: Option<String>,
+    position: Option<u32>,
+    reactions: Option<GithubReactions>,
+    updated_at: String,
+    url: String,
+    user: GithubUser
+}
+
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct GithubDiscussionComment {
+    #[serde(flatten)]
+    comment: GithubComment,
+    child_comment_count: u32,
+    parent_id: Option<u32>,
+    repository_url: String
+}
+
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct GithubDiscussionCategory {
+    id: u32,
+    node_id: String,
+    repository_id: u32,
+    emoji: String,
+    name: String,
+    description: String,
+    created_at: Value,
+    updated_at: String,
+    slug: String,
+    is_answerable: bool
+}
+
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct GithubDiscussion {
+    repository_url: String,
+    category: GithubDiscussionCategory,
+    answer_html_url: Option<String>,
+    answer_chosen_at: Value,  // ??
+    answer_chosen_by: Value,  // ??
+    html_url: String,
+    id: u32,
+    node_id: String,
+    number: u32,
+    title: String,
+    user: GithubUser,
+    state: String,
+    locked: bool,
+    comments: u32,
+    created_at: Value,
+    updated_at: String,
+    author_association: String,
+    active_lock_reason: Option<String>,
+    body: String,
+    reactions: GithubReactions,
+    timeline_url: String
+}
+
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[serde(rename_all = "snake_case", tag = "action")]
+#[allow(clippy::large_enum_variant)]
+pub enum GithubDiscussionEvent {
+    Created {
+        discussion: GithubDiscussion
+    },
+    Answered {
+        discussion: GithubDiscussion,
+        answer: GithubDiscussionComment
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[serde(rename_all = "snake_case", tag = "action")]
+#[allow(clippy::large_enum_variant)]
+pub enum DiscussionCommentEvent {
+    Created {
+        comment: GithubDiscussionComment,
+        discussion: GithubDiscussion
+    },
+    Deleted {},
+    Edited {}
+}
+
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct GithubMilestone {
+    url: String,
+    html_url: String,
+    labels_url: String,
+    id: u32,
+    node_id: String,
+    number: u32,
+    state: String,
+    title: String,
+    description: String,
+    creator: Option<GithubUser>,
+    open_issues: u32,
+    closed_issues: u32,
+    created_at: Value,
+    updated_at: String,
+    closed_at: Option<String>,
+    due_on: Option<String>
+}
+
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct GithubLinkedPullRequest {
+    merged_at: Option<String>,
+    diff_url: Option<String>,
+    html_url: Option<String>,
+    patch_url: Option<String>,
+    url: Option<String>,
+}
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct GithubAppPermissions {
+    issues: Option<String>,
+    checks: Option<String>,
+    metadata: Option<String>,
+    contents: Option<String>,
+    deployments: Option<String>
+}
+
+
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct GithubApp {
+    id: u32,
+    slug: String,
+    node_is: String,
+    owner: Option<GithubUser>,
+    name: String,
+    description: Option<String>,
+    external_url: String,
+    html_url: String,
+    created_at: Value,
+    updated_at: String,
+    permissions: GithubAppPermissions,
+    events: Vec<String>,
+    installations_count: Option<u32>,
+    client_id: Option<String>,
+    client_secret: Option<String>,
+    webhook_secret: Option<String>,
+    pem: Option<String>
+}
+
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct GithubIssue {
+    id: u32,
+    node_id: String,
+    url: String,
+    repository_url: String,
+    labels_url: String,
+    comments_url: String,
+    events_url: String,
+    html_url: String,
+    number: u32,
+    state: String,
+    state_reason: Option<String>,
+    user: Option<GithubUser>,
+    labels: Vec<String>,
+    assignee: Option<GithubUser>,
+    assignees: Option<Vec<GithubUser>>,
+    milestone: Option<GithubMilestone>,
+    locked: bool,
+    active_lock_reason: Option<String>,
+    comments: u32,
+    pull_request: Option<GithubLinkedPullRequest>,
+    closed_at: Option<String>,
+    created_at: Value,
+    updated_at: String,
+    draft: Option<bool>,
+    closed_by: Option<GithubUser>,
+    body_html: Option<String>,
+    body_text: Option<String>,
+    timeline_url: Option<String>,
+    repository: Option<GithubRepository>,
+    performed_via_github_app: Option<GithubApp>,
+    author_accociation: String,
+    reactions: Option<GithubReactions>,
+    title: String
+}
+
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[serde(rename_all = "snake_case", tag = "action")]
+#[allow(clippy::large_enum_variant)]
+pub enum IssueCommentEvent {
+    Created {
+        comment: GithubComment,
+        issue: GithubIssue
+    },
+    Deleted {},
+    Edited {}
+}
+
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[serde(rename_all = "snake_case", tag = "action")]
+#[allow(clippy::large_enum_variant)]
+pub enum IssuesEvent {
+    Assigned {},
+    Closed {
+        issue: GithubIssue
+    },
+    Deleted {},
+    Demilestoned {},
+    Edited {},
+    Labeled {},
+    Locked {},
+    Milestoned {},
+    Opened {
+        issue: GithubIssue
+    },
+    Pinned {},
+    Reopened {
+        issue: GithubIssue
+    },
+    Transferred {},
+    Unassigned {},
+    Unlabeled {},
+    Unlocked {},
+    Unpinned {}
+}
+
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[serde(rename_all = "snake_case", tag = "type")]
+#[allow(clippy::large_enum_variant)]
 pub enum BaseEvent {
     Star {
         starred_at: Option<String>,
@@ -201,7 +444,29 @@ pub enum BaseEvent {
         head_commit: Option<GithubCommit>,
         pusher: CommitAuthor,
         r#ref: String
-    }
+    },
+    CommitComment {
+        comment: GithubComment
+    },
+    Create {
+        master_branch: String,
+        pusher_type: String,
+        r#ref: String,
+        ref_type: String
+    },
+    Delete {
+        pusher_type: String,
+        r#ref: String,
+        ref_type: String
+    },
+    Discussion(GithubDiscussionEvent),
+    DiscussionComment(DiscussionCommentEvent),
+    Fork {
+        forkee: GithubRepository
+    },
+    IssueComment(IssueCommentEvent),
+    Issues(IssuesEvent)
+
 }
 
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
@@ -238,11 +503,11 @@ impl<'r> OpenApiFromRequest<'r> for EventHeader<'r> {
         _gen: &mut OpenApiGenerator,
         _name: String,
         _required: bool,
-    ) -> rocket_okapi::Result<RequestHeaderInput> {
+    ) -> revolt_rocket_okapi::Result<RequestHeaderInput> {
         let mut content = schemars::Map::new();
         content.insert("X-Github-Event".to_string(), MediaType {
             schema: Some(SchemaObject {
-                string: Some(Box::new(StringValidation::default())),
+                string: Some(Box::default()),
                 ..Default::default()
             }),
             example: None,
@@ -266,13 +531,21 @@ impl<'r> OpenApiFromRequest<'r> for EventHeader<'r> {
     }
 }
 
-const GREEN: &'static str = "#0f890f";
-const RED: &'static str = "#e73e3e";
-const GREY: &'static str = "#202224";
-const BLUE: &'static str = "#279adc";
-const ORANGE: &'static str = "#d76a34";
-const LIGHT_ORANGE: &'static str = "#d9916d";
-const WHITE: &'static str = "#c3e1c3";
+const GREEN: &str = "#0f890f";
+const RED: &str = "#e73e3e";
+const GREY: &str = "#202224";
+const BLUE: &str = "#279adc";
+const ORANGE: &str = "#d76a34";
+const LIGHT_ORANGE: &str = "#d9916d";
+const WHITE: &str = "#c3e1c3";
+
+fn shorten_text(text: &str, length: usize) -> String {
+    if text.len() < length {
+        text.to_string()
+    } else {
+        format!("{}...", &text[0..length])
+    }
+}
 
 /// # executes a webhook specific to github
 ///
@@ -304,22 +577,22 @@ pub async fn req(db: &Db, target: Ref, token: String, event: EventHeader<'_>, da
 
     let sendable_embed = match event.event {
         BaseEvent::Star { .. } => {
-            if !(event.action.as_deref() == Some("created")) { return Ok(()) };
+            if event.action.as_deref() != Some("created") { return Ok(()) };
 
             SendableEmbed {
                 title: Some(event.sender.login),
-                description: Some(format!("[[{}] New star added]({})", event.repository.full_name, event.repository.html_url)),
+                description: Some(format!("#### [[{}] New star added]({})", event.repository.full_name, event.repository.html_url)),
                 colour: Some(GREY.to_string()),
                 icon_url: Some(event.sender.avatar_url),
                 url: Some(event.sender.html_url),
                 ..Default::default()
             }
         },
-        BaseEvent::Push { after, base_ref, before, commits, compare, created, deleted, forced, head_commit, pusher, r#ref } => {
-            let branch = r#ref.split('/').nth(2).unwrap();
+        BaseEvent::Push { after, commits, compare, forced, r#ref, .. } => {
+            let Some(branch) = r#ref.split('/').nth(2) else { return Ok(()) };
 
             if forced {
-                let description = format!("[{}] Branch {} was force-pushed to {}\n[compare changes]({})", event.repository.full_name, branch, &after[0..=7], compare);
+                let description = format!("#### [{}] Branch {} was force-pushed to {}\n[compare changes]({})", event.repository.full_name, branch, &after[0..=7], compare);
 
                 SendableEmbed {
                     icon_url: Some(event.sender.avatar_url),
@@ -333,22 +606,151 @@ pub async fn req(db: &Db, target: Ref, token: String, event: EventHeader<'_>, da
                 let title = format!("[[{}:{}] {} new commit]({})", event.repository.full_name, branch, commits.len(), compare);
                 let commit_description = commits
                     .into_iter()
-                    .map(|commit| format!("[`{}`]({}) {} - {}", &commit.id[0..=7], commit.url, commit.message, commit.author.name))
+                    .map(|commit| format!("[`{}`]({}) {} - {}", &commit.id[0..=7], commit.url, shorten_text(&commit.message, 50), commit.author.name))
                     .collect::<Vec<String>>()
                     .join("\n");
 
                 SendableEmbed {
                     title: Some(event.sender.login),
-                    description: Some(format!("{title}\n{commit_description}")),
+                    description: Some(format!("#### {title}\n{commit_description}")),
                     colour: Some(BLUE.to_string()),
                     icon_url: Some(event.sender.avatar_url),
                     url: Some(event.sender.html_url),
                     ..Default::default()
                 }
             }
-        }
-        _ => {
+        },
+        BaseEvent::CommitComment { comment } => {
+            SendableEmbed {
+                icon_url: Some(event.sender.avatar_url),
+                url: Some(event.sender.html_url),
+                title: Some(event.sender.login),
+                description: Some(format!("#### [[{}] New comment on commit `{}`]({})\n{}", event.repository.full_name, &comment.commit_id[0..=7], comment.html_url, shorten_text(&comment.body, 450))),
+                colour: Some(GREY.to_string()),
+                ..Default::default()
+            }
+        },
+        BaseEvent::Ping {  } => {
             return Ok(())
+        },
+        BaseEvent::Create { r#ref, ref_type, .. } => {
+            SendableEmbed {
+                icon_url: Some(event.sender.avatar_url),
+                url: Some(event.sender.html_url),
+                title: Some(event.sender.login),
+                description: Some(format!("#### [{}] New {} created: {}", event.repository.full_name, ref_type, r#ref)),
+                colour: Some(GREY.to_string()),
+                ..Default::default()
+            }
+        },
+        BaseEvent::Delete { r#ref, ref_type, .. } => {
+            SendableEmbed {
+                icon_url: Some(event.sender.avatar_url),
+                url: Some(event.sender.html_url),
+                title: Some(event.sender.login),
+                description: Some(format!("#### [{}] {} deleted: {}", event.repository.full_name, ref_type, r#ref)),
+                colour: Some(GREY.to_string()),
+                ..Default::default()
+            }
+        },
+        BaseEvent::Discussion(discussion_event) => {
+            match discussion_event {
+                GithubDiscussionEvent::Created { discussion } => {
+                    SendableEmbed {
+                        icon_url: Some(event.sender.avatar_url),
+                        url: Some(event.sender.html_url),
+                        title: Some(event.sender.login),
+                        description: Some(format!("#### [{}] New discussion #{}: {}\n{}", event.repository.full_name, discussion.number, discussion.title, shorten_text(&discussion.body, 450))),
+                        colour: Some(LIGHT_ORANGE.to_string()),
+                        ..Default::default()
+                    }
+                },
+                GithubDiscussionEvent::Answered { discussion, answer } => {
+                    SendableEmbed {
+                        icon_url: Some(answer.comment.user.avatar_url),
+                        url: Some(answer.comment.user.html_url),
+                        title: Some(answer.comment.user.login),
+                        description: Some(format!("#### [{}] discussion #{} marked answered: {}\n{}", event.repository.full_name, discussion.number, discussion.title, shorten_text(&answer.comment.body, 450))),
+                        colour: Some(LIGHT_ORANGE.to_string()),
+                        ..Default::default()
+                    }
+                },
+            }
+        },
+        BaseEvent::DiscussionComment(comment_event) => {
+            match comment_event {
+                DiscussionCommentEvent::Created { comment, discussion } => {
+                    SendableEmbed {
+                        icon_url: Some(comment.comment.user.avatar_url),
+                        url: Some(comment.comment.user.html_url),
+                        title: Some(comment.comment.user.login),
+                        description: Some(format!("[{}] New comment on discussion #{}: {}\n{}", event.repository.full_name, discussion.number, discussion.title, shorten_text(&comment.comment.body, 450))),
+                        colour: Some(LIGHT_ORANGE.to_string()),
+                        ..Default::default()
+                    }
+                },
+                _ => { return Ok(()) }
+            }
+        },
+        BaseEvent::Fork { forkee } => {
+            SendableEmbed {
+                icon_url: Some(event.sender.avatar_url),
+                url: Some(event.sender.html_url),
+                title: Some(event.sender.login),
+                description: Some(format!("#### [[{}] Fork created: {}]({})", event.repository.full_name, forkee.full_name, forkee.html_url)),
+                colour: Some(GREY.to_string()),
+                ..Default::default()
+            }
+        },
+        BaseEvent::Issues(issue_event) => {
+            match issue_event {
+                IssuesEvent::Closed { issue } => {
+                    SendableEmbed {
+                        icon_url: Some(event.sender.avatar_url),
+                        url: Some(event.sender.html_url),
+                        title: Some(event.sender.login),
+                        description: Some(format!("#### [[{}] Issue Closed #{}: {}]({})", event.repository.full_name, issue.number, issue.title, issue.html_url)),
+                        colour: Some(GREY.to_string()),
+                        ..Default::default()
+                    }
+                },
+                IssuesEvent::Opened { issue } => {
+                    SendableEmbed {
+                        icon_url: Some(event.sender.avatar_url),
+                        url: Some(event.sender.html_url),
+                        title: Some(event.sender.login),
+                        description: Some(format!("#### [[{}] Issue Opened #{}: {}]({})\n{}", event.repository.full_name, issue.number, issue.title, issue.html_url, issue.body_text.unwrap_or_default())),
+                        colour: Some(ORANGE.to_string()),
+                        ..Default::default()
+                    }
+                },
+                IssuesEvent::Reopened { issue } => {
+                    SendableEmbed {
+                        icon_url: Some(event.sender.avatar_url),
+                        url: Some(event.sender.html_url),
+                        title: Some(event.sender.login),
+                        description: Some(format!("#### [[{}] Issue Reopened #{}: {}]({})", event.repository.full_name, issue.number, issue.html_url, issue.title)),
+                        colour: Some(GREEN.to_string()),
+                        ..Default::default()
+                    }
+                },
+                _ => { return Ok(()) }
+            }
+        },
+        BaseEvent::IssueComment(comment_event) => {
+            match comment_event {
+                IssueCommentEvent::Created { comment, issue } => {
+                    SendableEmbed {
+                        icon_url: Some(event.sender.avatar_url),
+                        url: Some(event.sender.html_url),
+                        title: Some(event.sender.login),
+                        description: Some(format!("#### [[{}] New comment on issue #{}: {}]({})\n{}", event.repository.full_name, issue.number, issue.title, issue.html_url, comment.body)),
+                        colour: Some(LIGHT_ORANGE.to_string()),
+                        ..Default::default()
+                    }
+                },
+                _ => { return Ok(()) }
+            }
         }
     };
 
