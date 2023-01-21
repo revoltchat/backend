@@ -139,9 +139,9 @@ pub struct GithubRepository {
     archived: Option<bool>,
     disabled: Option<bool>,
     visibility: Option<String>,
-    pushed_at: Option<String>,
+    pushed_at: Option<Value>,
     created_at: Value,
-    updated_at: Option<String>,
+    updated_at: Option<Value>,
     permissions: Option<GithubRepositoryPermissions>,
     role_name: Option<String>,
     temp_clone_token: Option<String>,
@@ -201,7 +201,7 @@ pub struct GithubReactions {
 pub struct GithubComment {
     author_association: String,
     body: String,
-    commit_id: String,
+    commit_id: Option<String>,
     created_at: Value,
     html_url: String,
     id: u32,
@@ -210,7 +210,7 @@ pub struct GithubComment {
     path: Option<String>,
     position: Option<u32>,
     reactions: Option<GithubReactions>,
-    updated_at: String,
+    updated_at: Value,
     url: String,
     user: GithubUser
 }
@@ -233,7 +233,7 @@ pub struct GithubDiscussionCategory {
     name: String,
     description: String,
     created_at: Value,
-    updated_at: String,
+    updated_at: Value,
     slug: String,
     is_answerable: bool
 }
@@ -255,7 +255,7 @@ pub struct GithubDiscussion {
     locked: bool,
     comments: u32,
     created_at: Value,
-    updated_at: String,
+    updated_at: Value,
     author_association: String,
     active_lock_reason: Option<String>,
     body: String,
@@ -303,14 +303,14 @@ pub struct GithubMilestone {
     open_issues: u32,
     closed_issues: u32,
     created_at: Value,
-    updated_at: String,
-    closed_at: Option<String>,
+    updated_at: Value,
+    closed_at: Option<Value>,
     due_on: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub struct GithubLinkedPullRequest {
-    merged_at: Option<String>,
+    merged_at: Option<Value>,
     diff_url: Option<String>,
     html_url: Option<String>,
     patch_url: Option<String>,
@@ -337,7 +337,7 @@ pub struct GithubApp {
     external_url: String,
     html_url: String,
     created_at: Value,
-    updated_at: String,
+    updated_at: Value,
     permissions: GithubAppPermissions,
     events: Vec<String>,
     installations_count: Option<u32>,
@@ -363,23 +363,22 @@ pub struct GithubIssue {
     user: Option<GithubUser>,
     labels: Vec<String>,
     assignee: Option<GithubUser>,
-    assignees: Option<Vec<GithubUser>>,
+    assignees: Vec<GithubUser>,
     milestone: Option<GithubMilestone>,
     locked: bool,
     active_lock_reason: Option<String>,
     comments: u32,
     pull_request: Option<GithubLinkedPullRequest>,
-    closed_at: Option<String>,
+    closed_at: Option<Value>,
     created_at: Value,
-    updated_at: String,
+    updated_at: Value,
     draft: Option<bool>,
     closed_by: Option<GithubUser>,
-    body_html: Option<String>,
-    body_text: Option<String>,
+    body: Option<String>,
     timeline_url: Option<String>,
     repository: Option<GithubRepository>,
     performed_via_github_app: Option<GithubApp>,
-    author_accociation: String,
+    author_association: String,
     reactions: Option<GithubReactions>,
     title: String
 }
@@ -424,65 +423,212 @@ pub enum IssuesEvent {
     Unpinned {}
 }
 
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
-#[serde(rename_all = "snake_case", tag = "type")]
-#[allow(clippy::large_enum_variant)]
-pub enum BaseEvent {
-    Star {
-        starred_at: Option<String>,
-    },
-    Ping {},
-    Push {
-        after: String,
-        base_ref: Option<String>,
-        before: String,
-        commits: Vec<GithubCommit>,
-        compare: String,
-        created: bool,
-        deleted: bool,
-        forced: bool,
-        head_commit: Option<GithubCommit>,
-        pusher: CommitAuthor,
-        r#ref: String
-    },
-    CommitComment {
-        comment: GithubComment
-    },
-    Create {
-        master_branch: String,
-        pusher_type: String,
-        r#ref: String,
-        ref_type: String
-    },
-    Delete {
-        pusher_type: String,
-        r#ref: String,
-        ref_type: String
-    },
-    Discussion(GithubDiscussionEvent),
-    DiscussionComment(DiscussionCommentEvent),
-    Fork {
-        forkee: GithubRepository
-    },
-    IssueComment(IssueCommentEvent),
-    Issues(IssuesEvent)
-
+#[derive(Serialize, Deserialize, Debug)]
+pub struct StarEvent {
+    starred_at: Option<Value>
 }
 
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub struct Event {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PushEvent {
+    after: String,
+    base_ref: Option<String>,
+    before: String,
+    commits: Vec<GithubCommit>,
+    compare: String,
+    created: bool,
+    deleted: bool,
+    forced: bool,
+    head_commit: Option<GithubCommit>,
+    pusher: CommitAuthor,
+    r#ref: String
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CommitCommentEvent {
+    comment: GithubComment
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CreateEvent {
+    master_branch: String,
+    pusher_type: String,
+    r#ref: String,
+    ref_type: String
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct DeleteEvent {
+    pusher_type: String,
+    r#ref: String,
+    ref_type: String
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ForkEvent {
+    forkee: GithubRepository
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GithubTeam {
+    id: u32,
+    node_id: String,
+    url: String,
+    hmtl_url: String,
+    name: String,
+    slug: String,
+    description: Option<String>,
+    privacy: String,
+    permission: String,
+    members_url: String,
+    repositories_url: String,
+    parent: Option<Box<GithubTeam>>
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GithubHead {
+    label: String,
+    r#ref: String,
+    repo: GithubRepository,
+    sha: String,
+    user: Option<GithubUser>
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GithubHref {
+    href: String
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GithubLinks {
+    #[serde(rename="self")]
+    _self: GithubHref,
+    html: GithubHref,
+    comments: GithubHref,
+    commits: GithubHref,
+    statuses: GithubHref,
+    issue: GithubHref,
+    review_comments: GithubHref,
+    review_comment: GithubHref
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GithubAutoMerge {
+    enabled_by: GithubUser,
+    merge_method: String,
+    commit_title: String,
+    commit_message: String
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GithubPullRequest {
+    url: String,
+    id: u32,
+    node_id: String,
+    html_url: String,
+    diff_url: String,
+    patch_url: String,
+    issue_url: String,
+    number: u32,
+    state: String,
+    locked: bool,
+    title: String,
+    user: GithubUser,
+    body: Option<String>,
+    created_at: Value,
+    updated_at: Value,
+    closed_at: Option<Value>,
+    merged_at: Option<Value>,
+    merge_commit_sha: Option<String>,
+    assignee: Option<GithubUser>,
+    assignees: Vec<GithubUser>,
+    requested_reviewers: Vec<GithubUser>,
+    requested_teams: Vec<GithubTeam>,
+    head: GithubHead,
+    base: GithubHead,
+    _links: GithubLinks,
+    author_association: String,
+    auto_merge: Option<GithubAutoMerge>,
+    draft: bool
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "snake_case", tag = "action")]
+pub enum PullRequestEvent {
+    Assigned {},
+    AutoMergeDisabled {},
+    AutoMergeEnabled {},
+    Closed {
+        number: u32,
+        pull_request: GithubPullRequest
+    },
+    ConvertedToDraft {},
+    Demilestoned {},
+    Dequeued {},
+    Edited {},
+    Enqueued {},
+    Labeled {},
+    Locked {},
+    Milestoned {},
+    Opened {
+        number: u32,
+        pull_request: GithubPullRequest
+    },
+    ReadyForReview {},
+    Reopened {
+        number: u32,
+        pull_request: GithubPullRequest
+
+    },
+    ReviewRequestRemoved {},
+    ReviewRequest {},
+    Synchronized {},
+    Unassigned {},
+    Unlabeled {},
+    Unlocked {}
+}
+
+#[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
+pub enum BaseEvent {
+    Star(StarEvent),
+    Ping,
+    Push(PushEvent),
+    CommitComment(CommitCommentEvent),
+    Create(CreateEvent),
+    Delete(DeleteEvent),
+    Discussion(GithubDiscussionEvent),
+    DiscussionComment(DiscussionCommentEvent),
+    Fork(ForkEvent),
+    IssueComment(IssueCommentEvent),
+    Issues(IssuesEvent),
+    PullRequest(PullRequestEvent)
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct _Event {
     action: Option<String>,
     sender: GithubUser,
-    repository: GithubRepository,
-    organization: Option<Value>,
-    installation: Option<Value>,
+    repository: GithubRepository
+}
 
-    #[serde(flatten)]
-    event: BaseEvent
+#[derive(Debug)]
+pub struct Event {
+    event: BaseEvent,
+    action: Option<String>,
+    sender: GithubUser,
+    repository: GithubRepository
 }
 
 #[derive(Debug, JsonSchema)]
 pub struct EventHeader<'r>(pub &'r str);
+
+impl<'r> std::ops::Deref for EventHeader<'r> {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        self.0
+    }
+}
 
 #[async_trait]
 impl<'r> FromRequest<'r> for EventHeader<'r> {
@@ -537,7 +683,8 @@ const GREY: &str = "#202224";
 const BLUE: &str = "#279adc";
 const ORANGE: &str = "#d76a34";
 const LIGHT_ORANGE: &str = "#d9916d";
-const WHITE: &str = "#c3e1c3";
+// for future use
+// const WHITE: &str = "#c3e1c3";
 
 fn shorten_text(text: &str, length: usize) -> String {
     if text.len() < length {
@@ -545,6 +692,49 @@ fn shorten_text(text: &str, length: usize) -> String {
     } else {
         format!("{}...", &text[0..length])
     }
+}
+
+fn safe_from_str<T: for<'de> Deserialize<'de>>(data: &str) -> Result<T> {
+    match serde_json::from_str(data) {
+        Ok(output) => Ok(output),
+        Err(err) => {
+            log::error!("{err:?}");
+            Err(Error::InvalidOperation)
+        }
+    }
+}
+
+// Because github gives the event name in the header, this requires us to manually parse the enum, i did try to manually edit the json to add the tag into it,
+// however it seems serde messes up with #[serde(flattern)] and enum handling.
+// If someone finds a better solution to this please make a PR.
+
+fn convert_event(data: &str, event_name: &str) -> Result<Event> {
+    let event = safe_from_str(data)?;
+
+    let base_event = match event_name {
+        "star" => BaseEvent::Star(safe_from_str(data)?),
+        "ping" => BaseEvent::Ping,
+        "push" => BaseEvent::Push(safe_from_str(data)?),
+        "commit_comment" => BaseEvent::CommitComment(safe_from_str(data)?),
+        "create" => BaseEvent::Create(safe_from_str(data)?),
+        "delete" => BaseEvent::Delete(safe_from_str(data)?),
+        "discussion" => BaseEvent::Discussion(safe_from_str(data)?),
+        "discussion_comment" => BaseEvent::DiscussionComment(safe_from_str(data)?),
+        "fork" => BaseEvent::Fork(safe_from_str(data)?),
+        "issue_comment" => BaseEvent::IssueComment(safe_from_str(data)?),
+        "issues" => BaseEvent::Issues(safe_from_str(data)?),
+        "pull_request" => BaseEvent::PullRequest(safe_from_str(data)?),
+        _ => return Err(Error::InvalidOperation)
+    };
+
+    let _Event { action, sender, repository } = event;
+
+    Ok(Event {
+        action,
+        sender,
+        repository,
+        event: base_event
+    })
 }
 
 /// # executes a webhook specific to github
@@ -561,22 +751,10 @@ pub async fn req(db: &Db, target: Ref, token: String, event: EventHeader<'_>, da
 
     let channel = db.fetch_channel(&webhook.channel).await?;
 
-    let body = format!(r#"{}, "type": "{}"}}"#, &data[0..data.len() - 1], &event.0);
-
-    log::info!("{body}");
-
-    let event = match serde_json::from_str::<Event>(&body) {
-        Ok(event) => event,
-        Err(err) => {
-            log::error!("{err:?}");
-            return Err(Error::InvalidOperation);
-        }
-    };
-
-    log::info!("{event:?}");
+    let event = convert_event(&data, &event)?;
 
     let sendable_embed = match event.event {
-        BaseEvent::Star { .. } => {
+        BaseEvent::Star(_) => {
             if event.action.as_deref() != Some("created") { return Ok(()) };
 
             SendableEmbed {
@@ -588,7 +766,7 @@ pub async fn req(db: &Db, target: Ref, token: String, event: EventHeader<'_>, da
                 ..Default::default()
             }
         },
-        BaseEvent::Push { after, commits, compare, forced, r#ref, .. } => {
+        BaseEvent::Push( PushEvent { after, commits, compare, forced, r#ref, .. }) => {
             let Some(branch) = r#ref.split('/').nth(2) else { return Ok(()) };
 
             if forced {
@@ -620,20 +798,25 @@ pub async fn req(db: &Db, target: Ref, token: String, event: EventHeader<'_>, da
                 }
             }
         },
-        BaseEvent::CommitComment { comment } => {
+        BaseEvent::CommitComment(CommitCommentEvent { comment }) => {
+            let commit_id = match comment.commit_id {
+                Some(id) => id[0..=7].to_string(),
+                None => "".to_string()
+            };
+
             SendableEmbed {
                 icon_url: Some(event.sender.avatar_url),
                 url: Some(event.sender.html_url),
                 title: Some(event.sender.login),
-                description: Some(format!("#### [[{}] New comment on commit `{}`]({})\n{}", event.repository.full_name, &comment.commit_id[0..=7], comment.html_url, shorten_text(&comment.body, 450))),
+                description: Some(format!("#### [[{}] New comment on commit `{}`]({})\n{}", event.repository.full_name, commit_id, comment.html_url, shorten_text(&comment.body, 450))),
                 colour: Some(GREY.to_string()),
                 ..Default::default()
             }
         },
-        BaseEvent::Ping {  } => {
+        BaseEvent::Ping => {
             return Ok(())
         },
-        BaseEvent::Create { r#ref, ref_type, .. } => {
+        BaseEvent::Create(CreateEvent { r#ref, ref_type, .. }) => {
             SendableEmbed {
                 icon_url: Some(event.sender.avatar_url),
                 url: Some(event.sender.html_url),
@@ -643,7 +826,7 @@ pub async fn req(db: &Db, target: Ref, token: String, event: EventHeader<'_>, da
                 ..Default::default()
             }
         },
-        BaseEvent::Delete { r#ref, ref_type, .. } => {
+        BaseEvent::Delete( DeleteEvent { r#ref, ref_type, .. }) => {
             SendableEmbed {
                 icon_url: Some(event.sender.avatar_url),
                 url: Some(event.sender.html_url),
@@ -692,7 +875,7 @@ pub async fn req(db: &Db, target: Ref, token: String, event: EventHeader<'_>, da
                 _ => { return Ok(()) }
             }
         },
-        BaseEvent::Fork { forkee } => {
+        BaseEvent::Fork(ForkEvent { forkee }) => {
             SendableEmbed {
                 icon_url: Some(event.sender.avatar_url),
                 url: Some(event.sender.html_url),
@@ -719,7 +902,7 @@ pub async fn req(db: &Db, target: Ref, token: String, event: EventHeader<'_>, da
                         icon_url: Some(event.sender.avatar_url),
                         url: Some(event.sender.html_url),
                         title: Some(event.sender.login),
-                        description: Some(format!("#### [[{}] Issue Opened #{}: {}]({})\n{}", event.repository.full_name, issue.number, issue.title, issue.html_url, issue.body_text.unwrap_or_default())),
+                        description: Some(format!("#### [[{}] Issue Opened #{}: {}]({})\n{}", event.repository.full_name, issue.number, issue.title, issue.html_url, shorten_text(&issue.body.unwrap_or_default(), 450))),
                         colour: Some(ORANGE.to_string()),
                         ..Default::default()
                     }
@@ -744,8 +927,43 @@ pub async fn req(db: &Db, target: Ref, token: String, event: EventHeader<'_>, da
                         icon_url: Some(event.sender.avatar_url),
                         url: Some(event.sender.html_url),
                         title: Some(event.sender.login),
-                        description: Some(format!("#### [[{}] New comment on issue #{}: {}]({})\n{}", event.repository.full_name, issue.number, issue.title, issue.html_url, comment.body)),
+                        description: Some(format!("#### [[{}] New comment on issue #{}: {}]({})\n{}", event.repository.full_name, issue.number, issue.title, issue.html_url, shorten_text(&comment.body, 450))),
                         colour: Some(LIGHT_ORANGE.to_string()),
+                        ..Default::default()
+                    }
+                },
+                _ => { return Ok(()) }
+            }
+        },
+        BaseEvent::PullRequest(pull_request_event) => {
+            match pull_request_event {
+                PullRequestEvent::Closed { number, pull_request } => {
+                    SendableEmbed {
+                        icon_url: Some(event.sender.avatar_url),
+                        url: Some(event.sender.html_url),
+                        title: Some(event.sender.login),
+                        description: Some(format!("#### [[{}] Pull Request Closed #{}: {}]({})", event.repository.full_name, number, pull_request.title, pull_request.html_url)),
+                        colour: Some(GREY.to_string()),
+                        ..Default::default()
+                    }
+                },
+                PullRequestEvent::Opened { number, pull_request } => {
+                    SendableEmbed {
+                        icon_url: Some(event.sender.avatar_url),
+                        url: Some(event.sender.html_url),
+                        title: Some(event.sender.login),
+                        description: Some(format!("#### [[{}] Pull Request Opened #{}: {}]({})\n{}", event.repository.full_name, number, pull_request.title, pull_request.html_url, shorten_text(&pull_request.body.unwrap_or_default(), 450))),
+                        colour: Some(ORANGE.to_string()),
+                        ..Default::default()
+                    }
+                },
+                PullRequestEvent::Reopened { number, pull_request } => {
+                    SendableEmbed {
+                        icon_url: Some(event.sender.avatar_url),
+                        url: Some(event.sender.html_url),
+                        title: Some(event.sender.login),
+                        description: Some(format!("#### [[{}] Pull Request Reopened #{}: {}]({})", event.repository.full_name, number, pull_request.html_url, pull_request.title)),
+                        colour: Some(GREEN.to_string()),
                         ..Default::default()
                     }
                 },
