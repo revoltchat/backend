@@ -1,6 +1,6 @@
 use async_lock::Semaphore;
 use async_std::task::spawn;
-use futures::{future::{join_all}};
+use futures::future::join_all;
 use linkify::{LinkFinder, LinkKind};
 use regex::Regex;
 use serde::{Deserialize, Serialize};

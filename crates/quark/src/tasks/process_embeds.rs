@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::util::variables::delta::{JANUARY_URL, MAX_EMBED_COUNT, JANUARY_CONCURRENT_CONNECTIONS};
 use crate::{
     models::{message::AppendMessage, Message},
@@ -10,6 +8,7 @@ use crate::{
 use async_lock::Semaphore;
 use async_std::task::spawn;
 use deadqueue::limited::Queue;
+use std::sync::Arc;
 
 /// Task information
 #[derive(Debug)]
