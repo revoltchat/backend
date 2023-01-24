@@ -1,12 +1,16 @@
+use std::collections::HashSet;
+
+use ulid::Ulid;
+
 use crate::{
     events::client::EventV1,
     models::{
         channel::{FieldsChannel, PartialChannel},
-        message::SystemMessage,
+        message::{SystemMessage, Message, DataMessageSend, Reply, RE_MENTION},
         Channel,
     },
-    tasks::ack::AckEvent,
-    Database, Error, OverrideField, Result,
+    tasks::{ack::AckEvent, process_embeds},
+    Database, Error, OverrideField, Result, types::push::MessageAuthor, web::idempotency::IdempotencyKey, Ref,
 };
 
 impl Channel {
@@ -393,5 +397,140 @@ impl Channel {
             }
             _ => Err(Error::InvalidOperation),
         }
+    }
+
+    /// Creates a message in a channel
+    pub async fn send_message(&self, db: &Database, data: DataMessageSend, author: MessageAuthor<'_>, mut idempotency: IdempotencyKey) -> Result<Message> {
+        Message::validate_sum(&data.content, &data.embeds)?;
+
+        idempotency.consume_nonce(data.nonce).await?;
+
+        // Check the message is not empty
+        if (data.content.as_ref().map_or(true, |v| v.is_empty()))
+            && (data.attachments.as_ref().map_or(true, |v| v.is_empty()))
+            && (data.embeds.as_ref().map_or(true, |v| v.is_empty()))
+        {
+            return Err(Error::EmptyMessage);
+        }
+
+        // Ensure restrict_reactions is not specified without reactions list
+        if let Some(interactions) = &data.interactions {
+            if interactions.restrict_reactions {
+                let disallowed = if let Some(list) = &interactions.reactions {
+                    list.is_empty()
+                } else {
+                    true
+                };
+
+                if disallowed {
+                    return Err(Error::InvalidProperty);
+                }
+            }
+        }
+
+        // Start constructing the message
+        let message_id = Ulid::new().to_string();
+        let mut message = Message {
+            id: message_id.clone(),
+            channel: self.id().to_string(),
+            masquerade: data.masquerade,
+            interactions: data.interactions.unwrap_or_default(),
+            ..Default::default()
+        };
+
+        match &author {
+            MessageAuthor::User(user) => message.author = Some(user.id.clone()),
+            MessageAuthor::Webhook(webhook) => message.webhook = Some(webhook.id.clone()),
+        }
+
+        // Parse mentions in message.
+        let mut mentions = HashSet::new();
+        if let Some(content) = &data.content {
+            for capture in RE_MENTION.captures_iter(content) {
+                if let Some(mention) = capture.get(1) {
+                    mentions.insert(mention.as_str().to_string());
+                }
+            }
+        }
+
+        // Verify replies are valid.
+        let mut replies = HashSet::new();
+        if let Some(entries) = data.replies {
+            if entries.len() > 5 {
+                return Err(Error::TooManyReplies);
+            }
+
+            for Reply { id, mention } in entries {
+                let message = Ref::from_unchecked(id).as_message(db).await?;
+
+                if mention {
+                    mentions.insert(message.author_id().to_owned());
+                }
+
+                replies.insert(message.id);
+            }
+        }
+
+        if !mentions.is_empty() {
+            message.mentions.replace(mentions.into_iter().collect());
+        }
+
+        if !replies.is_empty() {
+            message
+                .replies
+                .replace(replies.into_iter().collect::<Vec<String>>());
+        }
+
+        // Process included embeds.
+        let mut embeds = vec![];
+        if let Some(sendable_embeds) = data.embeds {
+            for sendable_embed in sendable_embeds {
+                embeds.push(sendable_embed.into_embed(db, message_id.clone()).await?)
+            }
+        }
+
+        if !embeds.is_empty() {
+            message.embeds.replace(embeds);
+        }
+
+        // Add attachments to message.
+        let mut attachments = vec![];
+        if let Some(ids) = &data.attachments {
+            // ! FIXME: move this to app config
+            if ids.len() > 5 {
+                return Err(Error::TooManyAttachments);
+            }
+
+            for attachment_id in ids {
+                attachments.push(
+                    db.find_and_use_attachment(attachment_id, "attachments", "message", &message_id)
+                        .await?,
+                );
+            }
+        }
+
+        if !attachments.is_empty() {
+            message.attachments.replace(attachments);
+        }
+
+        // Set content
+        message.content = data.content;
+
+        // Pass-through nonce value for clients
+        message.nonce = Some(idempotency.into_key());
+
+        message.create(db, self, Some(author)).await?;
+
+        // Queue up a task for processing embeds
+        if let Some(content) = &message.content {
+            process_embeds::queue(
+                self.id().to_string(),
+                message.id.to_string(),
+                content.clone(),
+            )
+            .await;
+        }
+
+        Ok(message)
     }
 }

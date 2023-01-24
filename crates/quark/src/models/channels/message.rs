@@ -2,6 +2,7 @@ use crate::util::regex::RE_COLOUR;
 
 use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -204,4 +205,37 @@ pub struct AppendMessage {
     /// Additional embeds to include in this message
     #[serde(skip_serializing_if = "Option::is_none")]
     pub embeds: Option<Vec<Embed>>,
+}
+
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataMessageSend {
+    /// Unique token to prevent duplicate message sending
+    ///
+    /// **This is deprecated and replaced by `Idempotency-Key`!**
+    #[validate(length(min = 1, max = 64))]
+    pub nonce: Option<String>,
+
+    /// Message content to send
+    #[validate(length(min = 0, max = 2000))]
+    pub content: Option<String>,
+    /// Attachments to include in message
+    #[validate(length(min = 1, max = 128))]
+    pub attachments: Option<Vec<String>>,
+    /// Messages to reply to
+    pub replies: Option<Vec<Reply>>,
+    /// Embeds to include in message
+    ///
+    /// Text embed content contributes to the content length cap
+    #[validate(length(min = 1, max = 10))]
+    pub embeds: Option<Vec<SendableEmbed>>,
+    /// Masquerade to apply to this message
+    #[validate]
+    pub masquerade: Option<Masquerade>,
+    /// Information about how this message should be interacted with
+    pub interactions: Option<Interactions>,
+}
+
+lazy_static! {
+    // ignoring I L O and U is intentional
+    pub static ref RE_MENTION: Regex = Regex::new(r"<@([0-9A-HJKMNP-TV-Z]{26})>").unwrap();
 }
