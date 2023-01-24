@@ -19,7 +19,7 @@ mod message_query;
 mod message_query_stale;
 mod message_react;
 mod message_search;
-pub mod message_send;
+mod message_send;
 mod message_unreact;
 mod permissions_set;
 mod permissions_set_default;
