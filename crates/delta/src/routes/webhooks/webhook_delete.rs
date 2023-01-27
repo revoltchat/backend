@@ -1,16 +1,19 @@
-use revolt_quark::{Db, Ref, Result, EmptyResponse, Error};
+use revolt_quark::{Db, Ref, Result, EmptyResponse, models::User, perms, Permission};
 
-/// # Deletes a webhook
+/// # Deletes a webhook with a token
 ///
-/// deletes a webhook
+/// deletes a webhook with a token
 #[openapi(tag = "Webhooks")]
-#[delete("/<target>/<token>")]
-pub async fn req(db: &Db, target: Ref, token: String) -> Result<EmptyResponse> {
+#[delete("/<target>")]
+pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
     let webhook = target.as_webhook(db).await?;
 
-    (webhook.token == token)
-        .then_some(())
-        .ok_or(Error::InvalidCredentials)?;
+    let channel = Ref::from_unchecked(webhook.channel.clone()).as_channel(db).await?;
+
+    perms(&user)
+        .channel(&channel)
+        .throw_permission(db, Permission::ManageWebhooks)
+        .await?;
 
     webhook.delete(db).await?;
 

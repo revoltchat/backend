@@ -1,4 +1,4 @@
-use revolt_quark::{Db, Ref, Result, Error, models::{webhook::{FieldsWebhook, Webhook, PartialWebhook}, File, User}, Permission, perms};
+use revolt_quark::{Db, Ref, Result, Error, models::{webhook::{FieldsWebhook, Webhook, PartialWebhook}, File}};
 use serde::{Serialize, Deserialize};
 use validator::Validate;
 use rocket::serde::json::Json;
@@ -15,24 +15,21 @@ pub struct WebhookEditBody {
     remove: Vec<FieldsWebhook>
 }
 
-/// # Edits a webhook
+/// # Edits a webhook with a token
 ///
-/// edits a webhook
+/// edits a webhook with a token
 #[openapi(tag = "Webhooks")]
-#[patch("/<target>", data="<data>")]
-pub async fn req(db: &Db, target: Ref, user: User, data: Json<WebhookEditBody>) -> Result<Json<Webhook>> {
+#[patch("/<target>/<token>", data="<data>")]
+pub async fn req(db: &Db, target: Ref, token: String, data: Json<WebhookEditBody>) -> Result<Json<Webhook>> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
     let mut webhook = target.as_webhook(db).await?;
 
-    let channel = Ref::from_unchecked(webhook.channel.clone()).as_channel(db).await?;
-
-    perms(&user)
-        .channel(&channel)
-        .throw_permission(db, Permission::ManageWebhooks)
-        .await?;
+    (webhook.token == token)
+        .then_some(())
+        .ok_or(Error::InvalidCredentials)?;
 
     if data.name.is_none()
         && data.avatar.is_none()
