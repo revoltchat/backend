@@ -13,6 +13,8 @@ lazy_static! {
         env::var("AUTUMN_PUBLIC_URL").unwrap_or_else(|_| "https://example.com".to_string());
     pub static ref JANUARY_URL: String =
         env::var("JANUARY_PUBLIC_URL").unwrap_or_else(|_| "https://example.com".to_string());
+    pub static ref JANUARY_CONCURRENT_CONNECTIONS: usize =
+        env::var("JANUARY_CONCURRENT_CONNECTIONS").map_or(50, |v| v.parse().unwrap());
     pub static ref VOSO_URL: String =
         env::var("VOSO_PUBLIC_URL").unwrap_or_else(|_| "https://example.com".to_string());
     pub static ref VOSO_WS_HOST: String =

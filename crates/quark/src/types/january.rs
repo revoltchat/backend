@@ -1,7 +1,10 @@
+use async_lock::Semaphore;
+use async_std::task::spawn;
+use futures::future::join_all;
 use linkify::{LinkFinder, LinkKind};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
 use crate::{models::attachment::File, Error, Result};
 
@@ -172,7 +175,7 @@ pub enum Embed {
 
 impl Embed {
     /// Generate embeds from given content
-    pub async fn generate(content: String, host: &str, max_embeds: usize) -> Result<Vec<Embed>> {
+    pub async fn generate(content: String, host: &str, max_embeds: usize, semaphore: Arc<Semaphore>) -> Result<Vec<Embed>> {
         lazy_static! {
             static ref RE_CODE: Regex = Regex::new("```(?:.|\n)+?```|`(?:.|\n)+?`").unwrap();
             static ref RE_IGNORED: Regex = Regex::new("(<http.+>)").unwrap();
@@ -223,25 +226,41 @@ impl Embed {
         }
 
         // ! FIXME: batch request to january?
-        let mut embeds: Vec<Embed> = Vec::new();
         let client = reqwest::Client::new();
+
+        let mut tasks = Vec::new();
+        let url = format!("{host}/embed");
+
         for link in links {
-            let result = client
-                .get(&format!("{}/embed", host))
-                .query(&[("url", link)])
-                .send()
-                .await;
+            let client = client.clone();
+            let url = url.clone();
+            let semaphore = semaphore.clone();
 
-            if result.is_err() {
-                continue;
-            }
+            tasks.push(spawn(async move {
+                let guard = semaphore.acquire().await;
 
-            let response = result.unwrap();
-            if response.status().is_success() {
-                let res: Embed = response.json().await.map_err(|_| Error::InvalidOperation)?;
-                embeds.push(res);
-            }
+                let response = client
+                    .get(url)
+                    .query(&[("url", link)])
+                    .send()
+                    .await
+                    .ok()?;
+
+                drop(guard);
+
+                if response.status().is_success() {
+                    response.json::<Embed>().await.ok()
+                } else {
+                    None
+                }
+            }));
         }
+
+        let embeds = join_all(tasks)
+            .await
+            .into_iter()
+            .flatten()
+            .collect::<Vec<Embed>>();
 
         // Prevent database update when no embeds are found.
         if !embeds.is_empty() {
