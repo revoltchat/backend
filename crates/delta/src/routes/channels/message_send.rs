@@ -90,7 +90,7 @@ pub async fn message_send(
     if let Some(interactions) = &data.interactions {
         if interactions.restrict_reactions {
             let disallowed = if let Some(list) = &interactions.reactions {
-                list.len() == 0
+                list.is_empty()
             } else {
                 true
             };
