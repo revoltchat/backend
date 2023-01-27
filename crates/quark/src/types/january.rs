@@ -98,6 +98,8 @@ pub enum Special {
         content_type: BandcampType,
         id: String,
     },
+    /// Streamable Video
+    Streamable { id: String },
 }
 
 /// Website metadata
@@ -175,7 +177,12 @@ pub enum Embed {
 
 impl Embed {
     /// Generate embeds from given content
-    pub async fn generate(content: String, host: &str, max_embeds: usize, semaphore: Arc<Semaphore>) -> Result<Vec<Embed>> {
+    pub async fn generate(
+        content: String,
+        host: &str,
+        max_embeds: usize,
+        semaphore: Arc<Semaphore>,
+    ) -> Result<Vec<Embed>> {
         lazy_static! {
             static ref RE_CODE: Regex = Regex::new("```(?:.|\n)+?```|`(?:.|\n)+?`").unwrap();
             static ref RE_IGNORED: Regex = Regex::new("(<http.+>)").unwrap();
@@ -239,12 +246,7 @@ impl Embed {
             tasks.push(spawn(async move {
                 let guard = semaphore.acquire().await;
 
-                let response = client
-                    .get(url)
-                    .query(&[("url", link)])
-                    .send()
-                    .await
-                    .ok()?;
+                let response = client.get(url).query(&[("url", link)]).send().await.ok()?;
 
                 drop(guard);
 
