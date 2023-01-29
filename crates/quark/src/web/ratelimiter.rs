@@ -8,7 +8,7 @@ use std::hash::Hasher;
 use std::ops::Add;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::rauth::models::Session;
+use crate::authifier::models::Session;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::uri::Origin;
 use rocket::http::{Method, Status};

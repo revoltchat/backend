@@ -1,4 +1,4 @@
-use rauth::RAuthEvent;
+use authifier::AuthifierEvent;
 use serde::{Deserialize, Serialize};
 
 use crate::models::channel::{FieldsChannel, PartialChannel};
@@ -214,5 +214,5 @@ pub enum EventV1 {
     EmojiDelete { id: String },
 
     /// Auth events
-    Auth(RAuthEvent),
+    Auth(AuthifierEvent),
 }

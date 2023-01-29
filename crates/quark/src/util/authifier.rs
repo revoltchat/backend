@@ -1,9 +1,11 @@
+use authifier::config::{ResolveIp, Shield};
+
 use super::variables::delta::{
-    APP_URL, HCAPTCHA_KEY, INVITE_ONLY, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD, SMTP_USERNAME,
-    USE_EMAIL, USE_HCAPTCHA,
+    APP_URL, AUTHIFIER_SHIELD_KEY, HCAPTCHA_KEY, INVITE_ONLY, SMTP_FROM, SMTP_HOST, SMTP_PASSWORD,
+    SMTP_USERNAME, USE_EMAIL, USE_HCAPTCHA,
 };
 
-use crate::rauth::config::{
+use crate::authifier::config::{
     Captcha, Config, EmailVerificationConfig, SMTPSettings, Template, Templates,
 };
 
@@ -57,6 +59,20 @@ pub fn config() -> Config {
         config.captcha = Captcha::HCaptcha {
             secret: HCAPTCHA_KEY.clone(),
         };
+    }
+
+    if let Some(api_key) = &*AUTHIFIER_SHIELD_KEY {
+        config.shield = Shield::Enabled {
+            api_key: api_key.to_string(),
+            strict: false,
+        };
+    }
+
+    if std::env::var("TRUST_CLOUDFLARE")
+        .map(|x| x == "1")
+        .unwrap_or_default()
+    {
+        config.resolve_ip = ResolveIp::Cloudflare;
     }
 
     config
