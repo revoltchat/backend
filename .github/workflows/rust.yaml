@@ -72,4 +72,4 @@ jobs:
           add: "*.json"
           message: "chore: generate OpenAPI specification"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT }}
