@@ -59,6 +59,7 @@ jobs:
         with:
           repository: revoltchat/api
           path: api
+          token: ${{ secrets.PAT }}
 
       - name: Download OpenAPI specification
         if: github.event_name != 'pull_request'
@@ -71,5 +72,3 @@ jobs:
           cwd: "api"
           add: "*.json"
           message: "chore: generate OpenAPI specification"
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
