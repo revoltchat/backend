@@ -119,12 +119,21 @@ pub async fn root() -> Result<Json<RevoltConfig>> {
         app: APP_URL.to_string(),
         vapid: VAPID_PUBLIC_KEY.to_string(),
         build: BuildInformation {
-            commit_sha: env!("VERGEN_GIT_SHA", "<failed to generate>").to_string(),
-            commit_timestamp: env!("VERGEN_GIT_COMMIT_TIMESTAMP", "<failed to generate>")
+            commit_sha: option_env!("VERGEN_GIT_SHA")
+                .unwrap_or_else(|| "<failed to generate>")
                 .to_string(),
-            semver: env!("VERGEN_GIT_SEMVER", "<failed to generate>").to_string(),
-            origin_url: env!("GIT_ORIGIN_URL", "<failed to generate>").to_string(),
-            timestamp: env!("VERGEN_BUILD_TIMESTAMP", "<failed to generate>").to_string(),
+            commit_timestamp: option_env!("VERGEN_GIT_COMMIT_TIMESTAMP")
+                .unwrap_or_else(|| "<failed to generate>")
+                .to_string(),
+            semver: option_env!("VERGEN_GIT_SEMVER")
+                .unwrap_or_else(|| "<failed to generate>")
+                .to_string(),
+            origin_url: option_env!("GIT_ORIGIN_URL")
+                .unwrap_or_else(|| "<failed to generate>")
+                .to_string(),
+            timestamp: option_env!("VERGEN_BUILD_TIMESTAMP")
+                .unwrap_or_else(|| "<failed to generate>")
+                .to_string(),
         },
     }))
 }
