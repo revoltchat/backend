@@ -1,11 +1,14 @@
-use crate::util::variables::delta::{JANUARY_URL, MAX_EMBED_COUNT};
+use crate::util::variables::delta::{JANUARY_URL, MAX_EMBED_COUNT, JANUARY_CONCURRENT_CONNECTIONS};
 use crate::{
     models::{message::AppendMessage, Message},
     types::january::Embed,
     Database,
 };
 
+use async_lock::Semaphore;
+use async_std::task::spawn;
 use deadqueue::limited::Queue;
+use std::sync::Arc;
 
 /// Task information
 #[derive(Debug)]
@@ -36,21 +39,30 @@ pub async fn queue(channel: String, id: String, content: String) {
 
 /// Start a new worker
 pub async fn worker(db: Database) {
+    let semaphore = Arc::new(Semaphore::new(*JANUARY_CONCURRENT_CONNECTIONS));
+
     loop {
         let task = Q.pop().await;
-        if let Ok(embeds) = Embed::generate(task.content, &*JANUARY_URL, *MAX_EMBED_COUNT).await {
-            if let Err(err) = Message::append(
-                &db,
-                task.id,
-                task.channel,
-                AppendMessage {
-                    embeds: Some(embeds),
-                },
-            )
-            .await
-            {
-                error!("Encountered an error appending to message: {:?}", err);
+        let db = db.clone();
+        let semaphore = semaphore.clone();
+
+        spawn(async move {
+            let embeds = Embed::generate(task.content, &JANUARY_URL, *MAX_EMBED_COUNT, semaphore).await;
+
+            if let Ok(embeds) = embeds {
+                if let Err(err) = Message::append(
+                    &db,
+                    task.id,
+                    task.channel,
+                    AppendMessage {
+                        embeds: Some(embeds),
+                    },
+                )
+                .await
+                {
+                    error!("Encountered an error appending to message: {:?}", err);
+                }
             }
-        }
+        });
     }
 }

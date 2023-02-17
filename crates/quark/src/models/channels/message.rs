@@ -81,7 +81,7 @@ pub struct Masquerade {
     pub name: Option<String>,
     /// Replace the avatar shown on this message (URL to image file)
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[validate(length(min = 1, max = 128))]
+    #[validate(length(min = 1, max = 256))]
     pub avatar: Option<String>,
     /// Replace the display role colour shown on this message
     ///
@@ -98,6 +98,8 @@ pub struct Interactions {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub reactions: Option<IndexSet<String>>,
     /// Whether reactions should be restricted to the given list
+    ///
+    /// Can only be set to true if reactions list is of at least length 1
     #[serde(skip_serializing_if = "if_false", default)]
     pub restrict_reactions: bool,
 }

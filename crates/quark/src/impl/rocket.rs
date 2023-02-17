@@ -1,7 +1,7 @@
-use okapi::openapi3::{SecurityScheme, SecuritySchemeData};
-use rauth::models::Session;
-use rocket_okapi::gen::OpenApiGenerator;
-use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
+use authifier::models::Session;
+use revolt_okapi::openapi3::{SecurityScheme, SecuritySchemeData};
+use revolt_rocket_okapi::gen::OpenApiGenerator;
+use revolt_rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 
 use rocket::http::Status;
 use rocket::request::{self, FromRequest, Outcome, Request};
@@ -12,7 +12,7 @@ use crate::Database;
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for User {
-    type Error = rauth::Error;
+    type Error = authifier::Error;
 
     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         let user: &Option<User> = request
@@ -43,7 +43,7 @@ impl<'r> FromRequest<'r> for User {
         if let Some(user) = user {
             Outcome::Success(user.clone())
         } else {
-            Outcome::Failure((Status::Unauthorized, rauth::Error::InvalidSession))
+            Outcome::Failure((Status::Unauthorized, authifier::Error::InvalidSession))
         }
     }
 }
@@ -53,7 +53,7 @@ impl<'r> OpenApiFromRequest<'r> for User {
         _gen: &mut OpenApiGenerator,
         _name: String,
         _required: bool,
-    ) -> rocket_okapi::Result<RequestHeaderInput> {
+    ) -> revolt_rocket_okapi::Result<RequestHeaderInput> {
         let mut requirements = schemars::Map::new();
         requirements.insert("Session Token".to_owned(), vec![]);
 

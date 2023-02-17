@@ -1,7 +1,7 @@
+pub mod authifier;
 pub mod log;
 pub mod manipulation;
 pub mod pfp;
-pub mod rauth;
 pub mod r#ref;
 pub mod regex;
 pub mod result;

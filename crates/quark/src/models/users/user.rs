@@ -105,6 +105,8 @@ pub enum Flags {
     Deleted = 2,
     /// User was banned off the platform
     Banned = 4,
+    /// User was marked as spam and removed from platform
+    Spam = 8,
 }
 
 /// Bot information for if the user is a bot

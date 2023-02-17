@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate rocket;
 #[macro_use]
-extern crate rocket_okapi;
+extern crate revolt_rocket_okapi;
 #[macro_use]
 extern crate serde_json;
 #[macro_use]
@@ -10,7 +10,9 @@ extern crate lazy_static;
 pub mod routes;
 pub mod util;
 
-use revolt_quark::rauth::RAuth;
+use async_std::channel::unbounded;
+use revolt_quark::authifier::{Authifier, AuthifierEvent};
+use revolt_quark::events::client::EventV1;
 use revolt_quark::DatabaseInfo;
 
 #[launch]
@@ -25,13 +27,33 @@ async fn rocket() -> _ {
     let db = DatabaseInfo::Auto.connect().await.unwrap();
     db.migrate_database().await.unwrap();
 
-    // Setup rAuth
-    let rauth = RAuth {
+    // Setup Authifier event channel
+    let (sender, receiver) = unbounded();
+
+    // Setup Authifier
+    let authifier = Authifier {
         database: db.clone().into(),
-        config: revolt_quark::util::rauth::config(),
+        config: revolt_quark::util::authifier::config(),
+        event_channel: Some(sender),
     };
 
-    // Launch background task workers.
+    // Launch a listener for Authifier events
+    async_std::task::spawn(async move {
+        while let Ok(event) = receiver.recv().await {
+            match &event {
+                AuthifierEvent::CreateSession { .. } | AuthifierEvent::CreateAccount { .. } => {
+                    EventV1::Auth(event).global().await
+                }
+                AuthifierEvent::DeleteSession { user_id, .. }
+                | AuthifierEvent::DeleteAllSessions { user_id, .. } => {
+                    let id = user_id.to_string();
+                    EventV1::Auth(event).private(id).await
+                }
+            }
+        }
+    });
+
+    // Launch background task workers
     async_std::task::spawn(revolt_quark::tasks::start_workers(db.clone()));
 
     // Configure CORS
@@ -43,7 +65,7 @@ async fn rocket() -> _ {
         .mount("/", revolt_quark::web::cors::catch_all_options_routes())
         .mount("/", revolt_quark::web::ratelimiter::routes())
         .mount("/swagger/", revolt_quark::web::swagger::routes())
-        .manage(rauth)
+        .manage(authifier)
         .manage(db)
         .manage(cors.clone())
         .attach(revolt_quark::web::ratelimiter::RatelimitFairing)

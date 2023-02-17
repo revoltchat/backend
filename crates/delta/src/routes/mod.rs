@@ -1,7 +1,7 @@
+use revolt_rocket_okapi::{revolt_okapi::openapi3::OpenApi, settings::OpenApiSettings};
 pub use rocket::http::Status;
 pub use rocket::response::Redirect;
 use rocket::{Build, Rocket};
-use rocket_okapi::{okapi::openapi3::OpenApi, settings::OpenApiSettings};
 
 mod bots;
 mod channels;
@@ -29,9 +29,9 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
         "/invites" => invites::routes(),
         "/custom" => customisation::routes(),
         "/safety" => safety::routes(),
-        "/auth/account" => rocket_rauth::routes::account::routes(),
-        "/auth/session" => rocket_rauth::routes::session::routes(),
-        "/auth/mfa" => rocket_rauth::routes::mfa::routes(),
+        "/auth/account" => rocket_authifier::routes::account::routes(),
+        "/auth/session" => rocket_authifier::routes::session::routes(),
+        "/auth/mfa" => rocket_authifier::routes::mfa::routes(),
         "/onboard" => onboard::routes(),
         "/push" => push::routes(),
         "/sync" => sync::routes(),
@@ -41,7 +41,7 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
 }
 
 fn custom_openapi_spec() -> OpenApi {
-    use rocket_okapi::okapi::openapi3::*;
+    use revolt_rocket_okapi::revolt_okapi::openapi3::*;
 
     let mut extensions = schemars::Map::new();
     extensions.insert(

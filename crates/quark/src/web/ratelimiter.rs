@@ -8,7 +8,7 @@ use std::hash::Hasher;
 use std::ops::Add;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::rauth::models::Session;
+use crate::authifier::models::Session;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::uri::Origin;
 use rocket::http::{Method, Status};
@@ -16,8 +16,8 @@ use rocket::request::{FromRequest, Outcome};
 use rocket::serde::json::Json;
 use rocket::{Data, Request, Response};
 
-use rocket_okapi::gen::OpenApiGenerator;
-use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
+use revolt_rocket_okapi::gen::OpenApiGenerator;
+use revolt_rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 
 use serde::Serialize;
 
@@ -51,7 +51,7 @@ impl Entry {
     }
 
     /// Deduct one unit from the bucket and save
-    pub fn deduct(mut self, key: u64) {
+    pub fn deduct(mut self) {
         let current_time = now().as_millis();
         if current_time > self.reset {
             self.used = 1;
@@ -59,7 +59,10 @@ impl Entry {
         } else {
             self.used += 1;
         }
+    }
 
+    /// Save information
+    pub fn save(self, key: u64) {
         MAP.insert(key, self);
     }
 
@@ -193,10 +196,12 @@ impl Ratelimiter {
         let entry = Entry::from(key);
 
         let remaining = entry.get_remaining(limit);
-        let reset = entry.left_until_reset();
-
         if remaining > 0 {
-            entry.deduct(key);
+            entry.deduct();
+
+            let reset = entry.left_until_reset();
+            entry.save(key);
+
             Ok(Ratelimiter {
                 key,
                 limit,
@@ -204,7 +209,7 @@ impl Ratelimiter {
                 reset,
             })
         } else {
-            Err(reset)
+            Err(entry.left_until_reset())
         }
     }
 }
@@ -240,7 +245,7 @@ impl<'r> OpenApiFromRequest<'r> for Ratelimiter {
         _gen: &mut OpenApiGenerator,
         _name: String,
         _required: bool,
-    ) -> rocket_okapi::Result<RequestHeaderInput> {
+    ) -> revolt_rocket_okapi::Result<RequestHeaderInput> {
         Ok(RequestHeaderInput::None)
     }
 }

@@ -1,8 +1,8 @@
 use crate::bson::doc;
 use crate::util::variables::delta::VAPID_PRIVATE_KEY;
 
+use authifier::Database;
 use deadqueue::limited::Queue;
-use rauth::Database;
 use web_push::{
     ContentEncoding, SubscriptionInfo, SubscriptionKeys, VapidSignatureBuilder, WebPushClient,
     WebPushMessageBuilder,

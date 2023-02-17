@@ -65,16 +65,20 @@ pub async fn message_send(
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
+    // Validate Message is within reasonable length limits
     Message::validate_sum(&data.content, &data.embeds)?;
 
+    // Ensure the request is unique
     idempotency.consume_nonce(data.nonce).await?;
 
+    // Ensure we have permissions to send a message
     let channel = target.as_channel(db).await?;
     let mut permissions = perms(&user).channel(&channel);
     permissions
         .throw_permission_and_view_channel(db, Permission::SendMessage)
         .await?;
 
+    // Check the message is not empty
     if (data.content.as_ref().map_or(true, |v| v.is_empty()))
         && (data.attachments.as_ref().map_or(true, |v| v.is_empty()))
         && (data.embeds.as_ref().map_or(true, |v| v.is_empty()))
@@ -82,6 +86,22 @@ pub async fn message_send(
         return Err(Error::EmptyMessage);
     }
 
+    // Ensure restrict_reactions is not specified without reactions list
+    if let Some(interactions) = &data.interactions {
+        if interactions.restrict_reactions {
+            let disallowed = if let Some(list) = &interactions.reactions {
+                list.is_empty()
+            } else {
+                true
+            };
+
+            if disallowed {
+                return Err(Error::InvalidProperty);
+            }
+        }
+    }
+
+    // Start constructing the message
     let message_id = Ulid::new().to_string();
     let mut message = Message {
         id: message_id.clone(),

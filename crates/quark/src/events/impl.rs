@@ -23,11 +23,7 @@ impl Cache {
     pub async fn can_view_channel(&self, db: &Database, channel: &Channel) -> bool {
         match &channel {
             Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => {
-                let member = self
-                    .members
-                    .iter()
-                    .map(|(_, x)| x)
-                    .find(|x| &x.id.server == server);
+                let member = self.members.values().find(|x| &x.id.server == server);
 
                 let server = self.servers.get(server);
                 let mut perms = perms(self.users.get(&self.user_id).unwrap()).channel(channel);
@@ -562,5 +558,10 @@ impl EventV1 {
     /// Publish private event
     pub async fn private(self, id: String) {
         self.p(format!("{}!", id)).await;
+    }
+
+    /// Publish internal global event
+    pub async fn global(self) {
+        self.p("global".to_string()).await;
     }
 }
