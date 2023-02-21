@@ -40,6 +40,11 @@ pub async fn report_content(db: &Db, user: User, data: Json<DataReportContent>) 
         ReportedContent::Message { id, .. } => {
             let message = db.fetch_message(id).await?;
 
+            // Users cannot report themselves
+            if message.author == user.id {
+                return Err(Error::CannotReportYourself);
+            }
+
             // Collect message attachments
             let files = message
                 .attachments
@@ -52,6 +57,11 @@ pub async fn report_content(db: &Db, user: User, data: Json<DataReportContent>) 
         ReportedContent::Server { id, .. } => {
             let server = db.fetch_server(id).await?;
 
+            // Users cannot report their own server
+            if server.owner == user.id {
+                return Err(Error::CannotReportYourself);
+            }
+
             // Collect server's icon and banner
             let files = [&server.icon, &server.banner]
                 .iter()
@@ -61,12 +71,18 @@ pub async fn report_content(db: &Db, user: User, data: Json<DataReportContent>) 
             (SnapshotContent::Server(server), files)
         }
         ReportedContent::User { id, .. } => {
-            let user = db.fetch_user(id).await?;
+            let reported_user = db.fetch_user(id).await?;
+
+            // Users cannot report themselves
+            if reported_user.id == user.id {
+                return Err(Error::CannotReportYourself);
+            }
 
             // Collect user's avatar and profile background
             let files = [
-                user.avatar.as_ref(),
-                user.profile
+                reported_user.avatar.as_ref(),
+                reported_user
+                    .profile
                     .as_ref()
                     .and_then(|profile| profile.background.as_ref()),
             ]
@@ -74,7 +90,7 @@ pub async fn report_content(db: &Db, user: User, data: Json<DataReportContent>) 
             .filter_map(|x| x.as_ref().map(|x| x.id.to_string()))
             .collect();
 
-            (SnapshotContent::User(user), files)
+            (SnapshotContent::User(reported_user), files)
         }
     };
 
