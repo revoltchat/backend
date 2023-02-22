@@ -71,4 +71,6 @@ jobs:
         with:
           cwd: "api"
           add: "*.json"
+          author_name: Revolt CI
+          author_email: revolt-ci@users.noreply.github.com
           message: "chore: generate OpenAPI specification"
