@@ -26,6 +26,11 @@ mod users {
     pub mod user_settings;
 }
 
+mod safety {
+    pub mod report;
+    pub mod snapshot;
+}
+
 pub use admin::migrations::AbstractMigrations;
 
 pub use media::attachment::AbstractAttachment;
@@ -44,6 +49,9 @@ pub use users::bot::AbstractBot;
 pub use users::user::AbstractUser;
 pub use users::user_settings::AbstractUserSettings;
 
+pub use safety::report::AbstractReport;
+pub use safety::snapshot::AbstractSnapshot;
+
 pub trait AbstractDatabase:
     Sync
     + Send
@@ -60,5 +68,7 @@ pub trait AbstractDatabase:
     + AbstractBot
     + AbstractUser
     + AbstractUserSettings
+    + AbstractReport
+    + AbstractSnapshot
 {
 }

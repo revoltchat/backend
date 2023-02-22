@@ -64,6 +64,9 @@ pub enum Error {
     IsBot,
     BotIsPrivate,
 
+    // ? User safety related errors
+    CannotReportYourself,
+
     // ? Permission errors
     MissingPermission {
         permission: Permission,
@@ -165,6 +168,8 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::ReachedMaximumBots => Status::BadRequest,
             Error::IsBot => Status::BadRequest,
             Error::BotIsPrivate => Status::Forbidden,
+
+            Error::CannotReportYourself => Status::BadRequest,
 
             Error::MissingPermission { .. } => Status::Forbidden,
             Error::MissingUserPermission { .. } => Status::Forbidden,
