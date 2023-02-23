@@ -53,7 +53,38 @@ pub async fn report_content(db: &Db, user: User, data: Json<DataReportContent>) 
                 .map(|attachments| attachments.iter().map(|x| x.id.to_string()).collect())
                 .unwrap_or_default();
 
-            (SnapshotContent::Message(message), files)
+            // Collect prior context
+            let prior_context = db
+                .fetch_messages(
+                    &message.channel,
+                    Some(15),
+                    Some(message.id.to_string()),
+                    None,
+                    None,
+                    None,
+                )
+                .await?;
+
+            // Collect leading context
+            let leading_context = db
+                .fetch_messages(
+                    &message.channel,
+                    Some(15),
+                    None,
+                    Some(message.id.to_string()),
+                    None,
+                    None,
+                )
+                .await?;
+
+            (
+                SnapshotContent::Message {
+                    message,
+                    prior_context,
+                    leading_context,
+                },
+                files,
+            )
         }
         ReportedContent::Server { id, .. } => {
             let server = db.fetch_server(id).await?;

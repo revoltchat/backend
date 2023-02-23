@@ -7,7 +7,19 @@ use crate::models::{Message, Server, User};
 #[derive(Serialize, Deserialize, JsonSchema, Debug)]
 #[serde(tag = "_type")]
 pub enum SnapshotContent {
-    Message(Message),
+    Message {
+        /// Context before the message
+        #[serde(rename = "_prior_context")]
+        prior_context: Vec<Message>,
+
+        /// Context after the message
+        #[serde(rename = "_leading_context")]
+        leading_context: Vec<Message>,
+
+        /// Message
+        #[serde(flatten)]
+        message: Message,
+    },
     Server(Server),
     User(User),
 }
