@@ -1,3 +1,4 @@
+use revolt_quark::events::client::EventV1;
 use revolt_quark::models::report::ReportedContent;
 use revolt_quark::models::snapshot::{Snapshot, SnapshotContent};
 use revolt_quark::models::{Report, User};
@@ -120,6 +121,8 @@ pub async fn report_content(db: &Db, user: User, data: Json<DataReportContent>) 
     };
 
     db.insert_report(&report).await?;
+
+    EventV1::ReportCreate(report).global().await;
 
     Ok(())
 }

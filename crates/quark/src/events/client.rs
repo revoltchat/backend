@@ -6,7 +6,7 @@ use crate::models::message::{AppendMessage, PartialMessage};
 use crate::models::server::{FieldsRole, FieldsServer, PartialRole, PartialServer};
 use crate::models::server_member::{FieldsMember, MemberCompositeKey, PartialMember};
 use crate::models::user::{FieldsUser, PartialUser, RelationshipStatus};
-use crate::models::{Channel, Emoji, Member, Message, Server, User, UserSettings};
+use crate::models::{Channel, Emoji, Member, Message, Report, Server, User, UserSettings};
 use crate::Error;
 
 /// WebSocket Client Errors
@@ -212,6 +212,9 @@ pub enum EventV1 {
 
     /// Delete emoji
     EmojiDelete { id: String },
+
+    /// New report
+    ReportCreate(Report),
 
     /// Auth events
     Auth(AuthifierEvent),

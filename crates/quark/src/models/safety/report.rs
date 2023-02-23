@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Reason for reporting content (message or server)
-#[derive(Serialize, Deserialize, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
 pub enum ContentReportReason {
     /// No reason has been specified
     NoneSpecified,
@@ -23,7 +23,7 @@ pub enum ContentReportReason {
 }
 
 /// Reason for reporting a user
-#[derive(Serialize, Deserialize, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
 pub enum UserReportReason {
     /// No reason has been specified
     NoneSpecified,
@@ -44,7 +44,7 @@ pub enum UserReportReason {
     Underage,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum ReportedContent {
     /// Report a message
@@ -71,7 +71,7 @@ pub enum ReportedContent {
 }
 
 /// User-generated platform moderation report.
-#[derive(Serialize, Deserialize, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
 pub struct Report {
     /// Unique Id
     #[serde(rename = "_id")]
