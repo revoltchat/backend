@@ -10,6 +10,7 @@ mod invites;
 mod onboard;
 mod push;
 mod root;
+mod safety;
 mod servers;
 mod sync;
 mod users;
@@ -28,9 +29,10 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
         "/servers" => servers::routes(),
         "/invites" => invites::routes(),
         "/custom" => customisation::routes(),
-        "/auth/account" => rocket_rauth::routes::account::routes(),
-        "/auth/session" => rocket_rauth::routes::session::routes(),
-        "/auth/mfa" => rocket_rauth::routes::mfa::routes(),
+        "/safety" => safety::routes(),
+        "/auth/account" => rocket_authifier::routes::account::routes(),
+        "/auth/session" => rocket_authifier::routes::session::routes(),
+        "/auth/mfa" => rocket_authifier::routes::mfa::routes(),
         "/onboard" => onboard::routes(),
         "/push" => push::routes(),
         "/sync" => sync::routes(),
@@ -106,6 +108,12 @@ fn custom_openapi_spec() -> OpenApi {
             "name": "Customisation",
             "tags": [
               "Emojis"
+            ]
+          },
+          {
+            "name": "Platform Moderation",
+            "tags": [
+              "User Safety"
             ]
           },
           {

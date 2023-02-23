@@ -28,9 +28,15 @@ mod users {
     pub mod user_settings;
 }
 
+mod safety {
+    pub mod report;
+    pub mod snapshot;
+}
+
 pub use admin::*;
 pub use channels::*;
 pub use media::*;
+pub use safety::*;
 pub use servers::*;
 pub use users::*;
 
@@ -42,10 +48,12 @@ pub use channel_unread::ChannelUnread;
 pub use emoji::Emoji;
 pub use message::Message;
 pub use migrations::MigrationInfo;
+pub use report::Report;
 pub use server::Server;
 pub use server_ban::ServerBan;
 pub use server_member::Member;
 pub use simple::SimpleModel;
+pub use snapshot::Snapshot;
 pub use user::User;
 pub use user_settings::UserSettings;
 pub use webhook::Webhook;

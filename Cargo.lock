@@ -331,6 +331,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "authifier"
+version = "1.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a84411393a4326726ead660991ce8047f1865fa89900fb6c18e1e6c513cf1f9b"
+dependencies = [
+ "async-std",
+ "async-trait",
+ "base32",
+ "bson",
+ "chrono",
+ "futures",
+ "handlebars",
+ "iso8601-timestamp",
+ "lazy_static",
+ "lettre",
+ "log",
+ "mongodb",
+ "nanoid",
+ "rand 0.8.5",
+ "regex",
+ "reqwest",
+ "revolt_okapi",
+ "revolt_rocket_okapi",
+ "rocket",
+ "rust-argon2",
+ "schemars",
+ "serde",
+ "serde_json",
+ "totp-lite",
+ "ulid 0.5.0",
+ "validator 0.15.0",
+]
+
+[[package]]
 name = "autocfg"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2580,39 +2614,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rauth"
-version = "1.0.4"
-source = "git+https://github.com/insertish/rauth?tag=1.0.4#2d3bc59623672e3ff57c49a90c4d3cd20780dbba"
-dependencies = [
- "async-std",
- "async-trait",
- "base32",
- "bson",
- "chrono",
- "futures",
- "handlebars",
- "iso8601-timestamp",
- "lazy_static",
- "lettre",
- "log",
- "mongodb",
- "nanoid",
- "rand 0.8.5",
- "regex",
- "reqwest",
- "revolt_okapi",
- "revolt_rocket_okapi",
- "rocket",
- "rust-argon2",
- "schemars",
- "serde",
- "serde_json",
- "totp-lite",
- "ulid 0.5.0",
- "validator 0.15.0",
-]
-
-[[package]]
 name = "rdrand"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2791,7 +2792,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-bonfire"
-version = "0.5.6"
+version = "0.5.9"
 dependencies = [
  "async-std",
  "async-tungstenite",
@@ -2807,7 +2808,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-delta"
-version = "0.5.6"
+version = "0.5.9"
 dependencies = [
  "async-channel",
  "async-std",
@@ -2834,8 +2835,8 @@ dependencies = [
  "revolt-quark",
  "revolt_rocket_okapi",
  "rocket",
+ "rocket_authifier",
  "rocket_empty",
- "rocket_rauth",
  "schemars",
  "serde",
  "serde_json",
@@ -2847,12 +2848,13 @@ dependencies = [
 
 [[package]]
 name = "revolt-quark"
-version = "0.5.6"
+version = "0.5.9"
 dependencies = [
  "async-lock",
  "async-recursion",
  "async-std",
  "async-trait",
+ "authifier",
  "base64 0.13.0",
  "bincode",
  "bitfield",
@@ -2874,7 +2876,6 @@ dependencies = [
  "once_cell",
  "optional_struct",
  "pretty_env_logger",
- "rauth",
  "redis-kiss",
  "regex",
  "reqwest",
@@ -3011,6 +3012,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "rocket_authifier"
+version = "1.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4554a81937341d8c3cd3e43431ac2d23624444dc3a88e7ffd3ff66593779293"
+dependencies = [
+ "authifier",
+ "iso8601-timestamp",
+ "revolt_okapi",
+ "revolt_rocket_okapi",
+ "rocket",
+ "rocket_empty",
+ "schemars",
+ "serde",
+]
+
+[[package]]
 name = "rocket_codegen"
 version = "0.5.0-rc.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3078,21 +3095,6 @@ dependencies = [
  "time 0.3.17",
  "tokio 1.18.2",
  "uncased",
-]
-
-[[package]]
-name = "rocket_rauth"
-version = "1.0.4"
-source = "git+https://github.com/insertish/rauth?tag=1.0.4#2d3bc59623672e3ff57c49a90c4d3cd20780dbba"
-dependencies = [
- "iso8601-timestamp",
- "rauth",
- "revolt_okapi",
- "revolt_rocket_okapi",
- "rocket",
- "rocket_empty",
- "schemars",
- "serde",
 ]
 
 [[package]]

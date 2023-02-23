@@ -215,7 +215,7 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
     }
 
     if revision <= 8 {
-        info!("Running migration [revision 8 / 2021-09-10]: Update to rAuth version 1.");
+        info!("Running migration [revision 8 / 2021-09-10]: Update to Authifier version 1.");
 
         db.db()
             .run_command(
@@ -603,20 +603,20 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
     }
 
     if revision <= 15 {
-        info!("Running migration [revision 15 / 04-06-2022]: Migrate rAuth to latest version.");
+        info!("Running migration [revision 15 / 04-06-2022]: Migrate Authifier to latest version.");
 
-        let db = rauth::Database::MongoDb(rauth::database::MongoDb(db.db()));
-        db.run_migration(rauth::Migration::M2022_06_03EnsureUpToSpec)
+        let db = authifier::Database::MongoDb(authifier::database::MongoDb(db.db()));
+        db.run_migration(authifier::Migration::M2022_06_03EnsureUpToSpec)
             .await
             .unwrap();
     }
 
     if revision <= 16 {
-        info!("Running migration [revision 16 / 07-07-2022]: Add `emojis` collection and rAuth migration.");
+        info!("Running migration [revision 16 / 07-07-2022]: Add `emojis` collection and Authifier migration.");
 
-        let rauth_db = rauth::Database::MongoDb(rauth::database::MongoDb(db.db()));
-        rauth_db
-            .run_migration(rauth::Migration::M2022_06_09AddIndexForDeletion)
+        let authifier_db = authifier::Database::MongoDb(authifier::database::MongoDb(db.db()));
+        authifier_db
+            .run_migration(authifier::Migration::M2022_06_09AddIndexForDeletion)
             .await
             .unwrap();
 

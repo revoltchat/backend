@@ -30,6 +30,8 @@ lazy_static! {
         env::var("REVOLT_VAPID_PRIVATE_KEY").expect("Missing REVOLT_VAPID_PRIVATE_KEY environment variable.");
     pub static ref VAPID_PUBLIC_KEY: String =
         env::var("REVOLT_VAPID_PUBLIC_KEY").expect("Missing REVOLT_VAPID_PUBLIC_KEY environment variable.");
+    pub static ref AUTHIFIER_SHIELD_KEY: Option<String> =
+        env::var("REVOLT_AUTHIFIER_SHIELD_KEY").ok();
 
     // Application Flags
     pub static ref INVITE_ONLY: bool = env::var("REVOLT_INVITE_ONLY").map_or(false, |v| v == "1");

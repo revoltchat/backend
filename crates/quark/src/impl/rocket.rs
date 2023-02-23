@@ -1,4 +1,4 @@
-use rauth::models::Session;
+use authifier::models::Session;
 use revolt_okapi::openapi3::{SecurityScheme, SecuritySchemeData};
 use revolt_rocket_okapi::gen::OpenApiGenerator;
 use revolt_rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
@@ -12,7 +12,7 @@ use crate::Database;
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for User {
-    type Error = rauth::Error;
+    type Error = authifier::Error;
 
     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         let user: &Option<User> = request
@@ -43,7 +43,7 @@ impl<'r> FromRequest<'r> for User {
         if let Some(user) = user {
             Outcome::Success(user.clone())
         } else {
-            Outcome::Failure((Status::Unauthorized, rauth::Error::InvalidSession))
+            Outcome::Failure((Status::Unauthorized, authifier::Error::InvalidSession))
         }
     }
 }

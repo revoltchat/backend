@@ -40,6 +40,11 @@ pub mod users {
     pub mod user_settings;
 }
 
+pub mod safety {
+    pub mod report;
+    pub mod snapshot;
+}
+
 #[derive(Debug, Clone)]
 pub struct MongoDb(pub mongodb::Client);
 

@@ -1,4 +1,4 @@
-use rauth::RAuthEvent;
+use authifier::AuthifierEvent;
 use serde::{Deserialize, Serialize};
 
 use crate::models::channel::{FieldsChannel, PartialChannel};
@@ -7,7 +7,7 @@ use crate::models::message::{AppendMessage, PartialMessage};
 use crate::models::server::{FieldsRole, FieldsServer, PartialRole, PartialServer};
 use crate::models::server_member::{FieldsMember, MemberCompositeKey, PartialMember};
 use crate::models::user::{FieldsUser, PartialUser, RelationshipStatus};
-use crate::models::{Channel, Emoji, Member, Message, Server, User, UserSettings, Webhook};
+use crate::models::{Channel, Emoji, Member, Message, Server, User, UserSettings, Webhook, Report};
 use crate::Error;
 
 /// WebSocket Client Errors
@@ -229,6 +229,9 @@ pub enum EventV1 {
         id: String
     },
 
+    /// New report
+    ReportCreate(Report),
+
     /// Auth events
-    Auth(RAuthEvent),
+    Auth(AuthifierEvent),
 }

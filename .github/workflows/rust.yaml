@@ -15,10 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Install latest nightly
+      - name: Install latest stable
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
           override: true
           components: rustfmt, clippy
 
@@ -59,6 +59,7 @@ jobs:
         with:
           repository: revoltchat/api
           path: api
+          token: ${{ secrets.PAT }}
 
       - name: Download OpenAPI specification
         if: github.event_name != 'pull_request'
@@ -70,6 +71,6 @@ jobs:
         with:
           cwd: "api"
           add: "*.json"
+          author_name: Revolt CI
+          author_email: revolt-ci@users.noreply.github.com
           message: "chore: generate OpenAPI specification"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

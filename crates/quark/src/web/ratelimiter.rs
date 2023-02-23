@@ -8,7 +8,7 @@ use std::hash::Hasher;
 use std::ops::Add;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::rauth::models::Session;
+use crate::authifier::models::Session;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::uri::Origin;
 use rocket::http::{Method, Status};
@@ -129,6 +129,8 @@ fn resolve_bucket<'r>(request: &'r rocket::Request<'_>) -> (&'r str, Option<&'r 
                 }
             }
             ("swagger", _) => ("swagger", None),
+            ("safety", Some("report")) => ("safety_report", Some("report")),
+            ("safety", _) => ("safety", None),
             _ => ("any", None),
         }
     } else {
@@ -148,6 +150,8 @@ fn resolve_bucket_limit(bucket: &str) -> u8 {
         "auth_delete" => 255,
         "default_avatar" => 255,
         "swagger" => 100,
+        "safety" => 15,
+        "safety_report" => 3,
         _ => 20,
     }
 }
