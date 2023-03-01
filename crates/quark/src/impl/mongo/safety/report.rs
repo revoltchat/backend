@@ -10,4 +10,8 @@ impl AbstractReport for MongoDb {
     async fn insert_report(&self, report: &Report) -> Result<()> {
         self.insert_one(COL, report).await.map(|_| ())
     }
+
+    async fn fetch_reports(&self) -> Result<Vec<Report>> {
+        self.find(COL, doc! {}).await
+    }
 }

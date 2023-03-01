@@ -9,11 +9,11 @@ use crate::models::{Message, Server, User};
 pub enum SnapshotContent {
     Message {
         /// Context before the message
-        #[serde(rename = "_prior_context")]
+        #[serde(rename = "_prior_context", default)]
         prior_context: Vec<Message>,
 
         /// Context after the message
-        #[serde(rename = "_leading_context")]
+        #[serde(rename = "_leading_context", default)]
         leading_context: Vec<Message>,
 
         /// Message

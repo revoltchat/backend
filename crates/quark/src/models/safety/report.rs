@@ -44,6 +44,7 @@ pub enum UserReportReason {
     Underage,
 }
 
+/// The content being reported
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum ReportedContent {
@@ -70,6 +71,20 @@ pub enum ReportedContent {
     },
 }
 
+/// Status of the report
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
+#[serde(tag = "status")]
+pub enum ReportStatus {
+    /// Report is waiting for triage / action
+    Created,
+
+    /// Report was rejected
+    Rejected { rejection_reason: String },
+
+    /// Report was actioned and resolved
+    Resolved,
+}
+
 /// User-generated platform moderation report.
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
 pub struct Report {
@@ -82,4 +97,7 @@ pub struct Report {
     pub content: ReportedContent,
     /// Additional report context
     pub additional_context: String,
+    /// Status of the report
+    #[serde(flatten)]
+    pub status: ReportStatus,
 }

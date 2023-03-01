@@ -1,5 +1,5 @@
 use revolt_quark::events::client::EventV1;
-use revolt_quark::models::report::ReportedContent;
+use revolt_quark::models::report::{ReportStatus, ReportedContent};
 use revolt_quark::models::snapshot::{Snapshot, SnapshotContent};
 use revolt_quark::models::{Report, User};
 use revolt_quark::{Db, Error, Result};
@@ -149,6 +149,7 @@ pub async fn report_content(db: &Db, user: User, data: Json<DataReportContent>) 
         author_id: user.id,
         content: data.content,
         additional_context: data.additional_context,
+        status: ReportStatus::Created,
     };
 
     db.insert_report(&report).await?;

@@ -9,4 +9,8 @@ impl AbstractReport for DummyDb {
         info!("Insert {:?}", report);
         Ok(())
     }
+
+    async fn fetch_reports(&self) -> Result<Vec<Report>> {
+        Ok(vec![])
+    }
 }

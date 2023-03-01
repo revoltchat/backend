@@ -9,4 +9,8 @@ impl AbstractSnapshot for DummyDb {
         info!("Insert {:?}", snapshot);
         Ok(())
     }
+
+    async fn fetch_snapshot(&self, _report_id: &str) -> Result<Snapshot> {
+        todo!()
+    }
 }

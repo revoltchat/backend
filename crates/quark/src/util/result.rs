@@ -75,6 +75,7 @@ pub enum Error {
         permission: UserPermission,
     },
     NotElevated,
+    NotPrivileged,
     CannotGiveMissingPermissions,
     NotOwner,
 
@@ -174,6 +175,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::MissingPermission { .. } => Status::Forbidden,
             Error::MissingUserPermission { .. } => Status::Forbidden,
             Error::NotElevated => Status::Forbidden,
+            Error::NotPrivileged => Status::Forbidden,
             Error::CannotGiveMissingPermissions => Status::Forbidden,
             Error::NotOwner => Status::Forbidden,
 
