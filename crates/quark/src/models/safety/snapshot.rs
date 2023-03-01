@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::models::{Message, Server, User};
+use crate::models::{Channel, Message, Server, User};
 
 /// Enum to map into different models
 /// that can be saved in a snapshot
@@ -34,4 +34,21 @@ pub struct Snapshot {
     pub report_id: String,
     /// Snapshot of content
     pub content: SnapshotContent,
+}
+
+/// Snapshot of some content with required data to render
+#[derive(Serialize, JsonSchema, Debug)]
+pub struct SnapshotWithContext {
+    /// Snapshot itself
+    #[serde(flatten)]
+    pub snapshot: Snapshot,
+    /// Users involved in snapshot
+    #[serde(rename = "_users", skip_serializing_if = "Vec::is_empty")]
+    pub users: Vec<User>,
+    /// Channels involved in snapshot
+    #[serde(rename = "_channels", skip_serializing_if = "Vec::is_empty")]
+    pub channels: Vec<Channel>,
+    /// Server involved in snapshot
+    #[serde(rename = "_server", skip_serializing_if = "Option::is_none")]
+    pub server: Option<Server>,
 }
