@@ -97,7 +97,14 @@ impl MongoDb {
                 operation: "find",
                 with: collection,
             })?
-            .filter_map(|s| async { s.ok() })
+            .filter_map(|s| async {
+                if cfg!(debug_assertions) {
+                    // Hard fail on invalid documents
+                    Some(s.unwrap())
+                } else {
+                    s.ok()
+                }
+            })
             .collect::<Vec<T>>()
             .await)
     }

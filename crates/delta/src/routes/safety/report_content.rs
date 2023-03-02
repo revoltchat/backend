@@ -149,7 +149,8 @@ pub async fn report_content(db: &Db, user: User, data: Json<DataReportContent>) 
         author_id: user.id,
         content: data.content,
         additional_context: data.additional_context,
-        status: ReportStatus::Created,
+        status: ReportStatus::Created {},
+        notes: String::new(),
     };
 
     db.insert_report(&report).await?;

@@ -27,3 +27,7 @@ pub mod users {
     pub mod user;
     pub mod user_settings;
 }
+
+pub mod safety {
+    pub mod report;
+}

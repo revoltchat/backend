@@ -76,17 +76,20 @@ pub enum ReportedContent {
 #[serde(tag = "status")]
 pub enum ReportStatus {
     /// Report is waiting for triage / action
-    Created,
+    Created {},
 
     /// Report was rejected
     Rejected { rejection_reason: String },
 
     /// Report was actioned and resolved
-    Resolved,
+    Resolved {},
 }
 
 /// User-generated platform moderation report.
-#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, OptionalStruct, Clone)]
+#[optional_derive(Serialize, Deserialize, JsonSchema, Debug, Default, Clone)]
+#[optional_name = "PartialReport"]
+#[opt_skip_serializing_none]
 pub struct Report {
     /// Unique Id
     #[serde(rename = "_id")]
@@ -98,6 +101,10 @@ pub struct Report {
     /// Additional report context
     pub additional_context: String,
     /// Status of the report
+    #[opt_passthrough]
     #[serde(flatten)]
     pub status: ReportStatus,
+    /// Additional notes included on the report
+    #[serde(default)]
+    pub notes: String,
 }
