@@ -44,8 +44,13 @@ pub async fn fetch_snapshot(
             user_ids.insert(&message.author);
             channel_ids.insert(&message.channel);
         }
-        _ => {
-            todo!()
+        SnapshotContent::User(user) => {
+            user_ids.insert(&user.id);
+        }
+        SnapshotContent::Server(server) => {
+            for channel in &server.channels {
+                channel_ids.insert(channel);
+            }
         }
     }
 
