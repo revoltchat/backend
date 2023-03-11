@@ -94,7 +94,10 @@ pub async fn req(
         permissions
             .throw_permission(db, Permission::ManageServer)
             .await?;
-    } else if data.flags.is_some() && !user.privileged {
+    }
+
+    // Check we are privileged if changing sensitive fields
+    if data.flags.is_some() && !user.privileged {
         return Err(Error::NotPrivileged);
     }
 
