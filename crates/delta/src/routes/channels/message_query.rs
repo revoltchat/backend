@@ -91,7 +91,7 @@ pub async fn req(
         })
         .await?;
 
-    BulkMessageResponse::transform(db, &channel, messages, include_users)
+    BulkMessageResponse::transform(db, Some(&channel), messages, include_users)
         .await
         .map(Json)
 }
