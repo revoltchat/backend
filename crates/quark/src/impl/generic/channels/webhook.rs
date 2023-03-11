@@ -10,7 +10,11 @@ impl Webhook {
     pub async fn create(&self, db: &Database) -> Result<()> {
         db.insert_webhook(self).await?;
 
-        EventV1::WebhookCreate(self.clone())
+        // Avoid leaking the token to people who receive the event
+        let mut webhook = self.clone();
+        webhook.token = None;
+
+        EventV1::WebhookCreate(webhook)
             .p(self.channel.clone()).await;
 
         Ok(())
@@ -28,7 +32,7 @@ impl Webhook {
     pub async fn update(
         &mut self,
         db: &Database,
-        partial: PartialWebhook,
+        mut partial: PartialWebhook,
         remove: Vec<FieldsWebhook>
     ) -> Result<()> {
         for field in &remove {
@@ -38,6 +42,8 @@ impl Webhook {
         self.apply_options(partial.clone());
 
         db.update_webook(&self.id, &partial, &remove).await?;
+
+        partial.token = None;  // Avoid leaking the token to people who receive the event
 
         EventV1::WebhookUpdate {
             id: self.id.clone(),
