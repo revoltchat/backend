@@ -90,24 +90,25 @@ impl MongoDb {
     where
         O: Into<Option<FindOptions>>,
     {
-        Ok(self
-            .col::<T>(collection)
-            .find(projection, options)
-            .await
-            .map_err(|_| Error::DatabaseError {
+        let result = self.col::<T>(collection).find(projection, options).await;
+        Ok(if cfg!(debug_assertions) {
+            result.unwrap()
+        } else {
+            result.map_err(|_| Error::DatabaseError {
                 operation: "find",
                 with: collection,
             })?
-            .filter_map(|s| async {
-                if cfg!(debug_assertions) {
-                    // Hard fail on invalid documents
-                    Some(s.unwrap())
-                } else {
-                    s.ok()
-                }
-            })
-            .collect::<Vec<T>>()
-            .await)
+        }
+        .filter_map(|s| async {
+            if cfg!(debug_assertions) {
+                // Hard fail on invalid documents
+                Some(s.unwrap())
+            } else {
+                s.ok()
+            }
+        })
+        .collect::<Vec<T>>()
+        .await)
     }
 
     async fn find<T: DeserializeOwned + Unpin + Send + Sync>(

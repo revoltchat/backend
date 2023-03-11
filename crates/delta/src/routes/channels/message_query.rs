@@ -1,6 +1,8 @@
 use revolt_quark::{
     models::{
-        message::{BulkMessageResponse, MessageSort},
+        message::{
+            BulkMessageResponse, MessageFilter, MessageQuery, MessageSort, MessageTimePeriod,
+        },
         User,
     },
     perms, Db, Error, Permission, Ref, Result,
@@ -68,11 +70,25 @@ pub async fn req(
         sort,
         nearby,
         include_users,
-        ..
     } = options;
 
     let messages = db
-        .fetch_messages(channel.id(), limit, before, after, sort, nearby)
+        .fetch_messages(MessageQuery {
+            filter: MessageFilter {
+                channel: Some(channel.id().to_string()),
+                ..Default::default()
+            },
+            time_period: if let Some(nearby) = nearby {
+                MessageTimePeriod::Relative { nearby }
+            } else {
+                MessageTimePeriod::Absolute {
+                    before,
+                    after,
+                    sort,
+                }
+            },
+            limit,
+        })
         .await?;
 
     BulkMessageResponse::transform(db, &channel, messages, include_users)

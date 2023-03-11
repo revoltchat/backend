@@ -1,4 +1,4 @@
-use crate::models::message::{AppendMessage, Message, MessageSort, PartialMessage};
+use crate::models::message::{AppendMessage, Message, MessageQuery, PartialMessage};
 use crate::Result;
 
 #[async_trait]
@@ -21,27 +21,8 @@ pub trait AbstractMessage: Sync + Send {
     /// Delete messages from a channel by their ids and corresponding channel id
     async fn delete_messages(&self, channel: &str, ids: Vec<String>) -> Result<()>;
 
-    /// Fetch multiple messages
-    async fn fetch_messages(
-        &self,
-        channel: &str,
-        limit: Option<i64>,
-        before: Option<String>,
-        after: Option<String>,
-        sort: Option<MessageSort>,
-        nearby: Option<String>,
-    ) -> Result<Vec<Message>>;
-
-    /// Search for messages
-    async fn search_messages(
-        &self,
-        channel: &str,
-        query: &str,
-        limit: Option<i64>,
-        before: Option<String>,
-        after: Option<String>,
-        sort: MessageSort,
-    ) -> Result<Vec<Message>>;
+    /// Fetch multiple messages by given query
+    async fn fetch_messages(&self, query: MessageQuery) -> Result<Vec<Message>>;
 
     /// Add a new reaction to a message
     async fn add_reaction(&self, id: &str, emoji: &str, user: &str) -> Result<()>;

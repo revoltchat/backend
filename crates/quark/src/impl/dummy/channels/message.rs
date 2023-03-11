@@ -1,4 +1,4 @@
-use crate::models::message::{AppendMessage, Message, MessageSort, PartialMessage};
+use crate::models::message::{AppendMessage, Message, MessageQuery, PartialMessage};
 use crate::{AbstractMessage, Result};
 
 use super::super::DummyDb;
@@ -41,28 +41,8 @@ impl AbstractMessage for DummyDb {
         Ok(())
     }
 
-    async fn fetch_messages(
-        &self,
-        channel: &str,
-        _limit: Option<i64>,
-        _before: Option<String>,
-        _after: Option<String>,
-        _sort: Option<MessageSort>,
-        _nearby: Option<String>,
-    ) -> Result<Vec<Message>> {
-        Ok(vec![self.fetch_message(channel).await.unwrap()])
-    }
-
-    async fn search_messages(
-        &self,
-        channel: &str,
-        _query: &str,
-        _limit: Option<i64>,
-        _before: Option<String>,
-        _after: Option<String>,
-        _sort: MessageSort,
-    ) -> Result<Vec<Message>> {
-        Ok(vec![self.fetch_message(channel).await.unwrap()])
+    async fn fetch_messages(&self, _query: MessageQuery) -> Result<Vec<Message>> {
+        Ok(vec![])
     }
 
     /// Add a new reaction to a message

@@ -157,7 +157,7 @@ pub struct Message {
 /// # Message Sort
 ///
 /// Sort used for retrieving messages
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug)]
 #[cfg_attr(feature = "rocket_impl", derive(FromFormField))]
 pub enum MessageSort {
     /// Sort by the most relevant messages
@@ -172,6 +172,56 @@ impl Default for MessageSort {
     fn default() -> MessageSort {
         MessageSort::Relevance
     }
+}
+
+/// # Message Time Period
+///
+/// Filter and sort messages by time
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
+pub enum MessageTimePeriod {
+    Relative {
+        /// Message id to search around
+        ///
+        /// Specifying 'nearby' ignores 'before', 'after' and 'sort'.
+        /// It will also take half of limit rounded as the limits to each side.
+        /// It also fetches the message ID specified.
+        nearby: String,
+    },
+    Absolute {
+        /// Message id before which messages should be fetched
+        before: Option<String>,
+        /// Message id after which messages should be fetched
+        after: Option<String>,
+        /// Message sort direction
+        sort: Option<MessageSort>,
+    },
+}
+
+/// # Message Filter
+#[derive(Serialize, Deserialize, JsonSchema, Default)]
+pub struct MessageFilter {
+    /// Parent channel ID
+    pub channel: Option<String>,
+    /// Message author ID
+    pub author: Option<String>,
+    /// Search query
+    pub query: Option<String>,
+}
+
+/// # Message Query
+#[derive(Serialize, Deserialize, JsonSchema)]
+pub struct MessageQuery {
+    /// Maximum number of messages to fetch
+    ///
+    /// For fetching nearby messages, this is \`(limit + 1)\`.
+    pub limit: Option<i64>,
+    /// Filter to apply
+    #[serde(flatten)]
+    pub filter: MessageFilter,
+    /// Time period to fetch
+    #[serde(flatten)]
+    pub time_period: MessageTimePeriod,
 }
 
 /// # Bulk Message Response

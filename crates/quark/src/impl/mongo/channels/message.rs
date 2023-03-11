@@ -2,7 +2,9 @@ use bson::{to_bson, Document};
 use futures::try_join;
 use mongodb::options::FindOptions;
 
-use crate::models::message::{AppendMessage, Message, MessageSort, PartialMessage};
+use crate::models::message::{
+    AppendMessage, Message, MessageQuery, MessageSort, MessageTimePeriod, PartialMessage,
+};
 use crate::r#impl::mongo::DocumentId;
 use crate::{AbstractMessage, Error, Result};
 
@@ -139,145 +141,138 @@ impl AbstractMessage for MongoDb {
         .await
     }
 
-    async fn fetch_messages(
-        &self,
-        channel: &str,
-        limit: Option<i64>,
-        before: Option<String>,
-        after: Option<String>,
-        sort: Option<MessageSort>,
-        nearby: Option<String>,
-    ) -> Result<Vec<Message>> {
-        let limit = limit.unwrap_or(50);
-        Ok(if let Some(nearby) = nearby {
-            let (a, b) = try_join!(
-                self.find_with_options::<_, Message>(
-                    COL,
+    async fn fetch_messages(&self, query: MessageQuery) -> Result<Vec<Message>> {
+        let mut filter = doc! {};
+
+        // 1. Apply message filters
+        if let Some(channel) = query.filter.channel {
+            filter.insert("channel", channel);
+        }
+
+        if let Some(author) = query.filter.author {
+            filter.insert("author", author);
+        }
+
+        let is_search_query = if let Some(query) = query.filter.query {
+            filter.insert(
+                "$text",
+                doc! {
+                    "$search": query
+                },
+            );
+
+            true
+        } else {
+            false
+        };
+
+        // 2. Find query limit
+        let limit = query.limit.unwrap_or(50);
+
+        // 3. Apply message time period
+        match query.time_period {
+            MessageTimePeriod::Relative { nearby } => {
+                // 3.1. Prepare filters
+                let mut older_message_filter = filter.clone();
+                let mut newer_message_filter = filter;
+
+                older_message_filter.insert(
+                    "_id",
                     doc! {
-                        "channel": channel,
-                        "_id": {
-                            "$gte": &nearby
-                        }
+                        "$lt": &nearby
                     },
-                    FindOptions::builder()
-                        .limit(limit / 2 + 1)
-                        .sort(doc! {
-                            "_id": 1_i32
-                        })
-                        .build(),
-                ),
-                self.find_with_options::<_, Message>(
-                    COL,
+                );
+
+                newer_message_filter.insert(
+                    "_id",
                     doc! {
-                        "channel": channel,
-                        "_id": {
-                            "$lt": &nearby
-                        }
+                        "$gte": &nearby
                     },
+                );
+
+                // 3.2. Execute in both directions
+                let (a, b) = try_join!(
+                    self.find_with_options::<_, Message>(
+                        COL,
+                        newer_message_filter,
+                        FindOptions::builder()
+                            .limit(limit / 2 + 1)
+                            .sort(doc! {
+                                "_id": 1_i32
+                            })
+                            .build(),
+                    ),
+                    self.find_with_options::<_, Message>(
+                        COL,
+                        older_message_filter,
+                        FindOptions::builder()
+                            .limit(limit / 2)
+                            .sort(doc! {
+                                "_id": -1_i32
+                            })
+                            .build(),
+                    )
+                )?;
+
+                Ok([a, b].concat())
+            }
+            MessageTimePeriod::Absolute {
+                before,
+                after,
+                sort,
+            } => {
+                // 3.1. Apply message ID filter
+                if let Some(doc) = match (before, after) {
+                    (Some(before), Some(after)) => Some(doc! {
+                        "$lt": before,
+                        "$gt": after
+                    }),
+                    (Some(before), _) => Some(doc! {
+                        "$lt": before
+                    }),
+                    (_, Some(after)) => Some(doc! {
+                        "$gt": after
+                    }),
+                    _ => None,
+                } {
+                    filter.insert("_id", doc);
+                }
+
+                // 3.2. Execute with given message sort
+                self.find_with_options(
+                    COL,
+                    filter,
                     FindOptions::builder()
-                        .limit(limit / 2)
-                        .sort(doc! {
-                            "_id": -1_i32
+                        .limit(limit)
+                        .sort(match sort.unwrap_or(MessageSort::Latest) {
+                            // Sort by relevance, fallback to latest
+                            MessageSort::Relevance => {
+                                if is_search_query {
+                                    doc! {
+                                        "score": {
+                                            "$meta": "textScore"
+                                        }
+                                    }
+                                } else {
+                                    doc! {
+                                        "_id": -1_i32
+                                    }
+                                }
+                            }
+                            // Sort by latest first
+                            MessageSort::Latest => doc! {
+                                "_id": -1_i32
+                            },
+                            // Sort by oldest first
+                            MessageSort::Oldest => doc! {
+                                "_id": 1_i32
+                            },
                         })
                         .build(),
                 )
-            )?;
-
-            [a, b].concat()
-        } else {
-            let mut query = doc! { "channel": channel };
-            if let Some(before) = before {
-                query.insert("_id", doc! { "$lt": before });
+                .await
             }
-
-            if let Some(after) = after {
-                query.insert("_id", doc! { "$gt": after });
-            }
-
-            let sort: i32 = if let MessageSort::Latest = sort.unwrap_or(MessageSort::Latest) {
-                -1
-            } else {
-                1
-            };
-
-            self.find_with_options::<_, Message>(
-                COL,
-                query,
-                FindOptions::builder()
-                    .limit(limit)
-                    .sort(doc! {
-                        "_id": sort
-                    })
-                    .build(),
-            )
-            .await?
-        })
-    }
-
-    async fn search_messages(
-        &self,
-        channel: &str,
-        query: &str,
-        limit: Option<i64>,
-        before: Option<String>,
-        after: Option<String>,
-        sort: MessageSort,
-    ) -> Result<Vec<Message>> {
-        let limit = limit.unwrap_or(50);
-
-        let mut filter = doc! {
-            "channel": channel,
-            "$text": {
-                "$search": query
-            }
-        };
-
-        if let Some(doc) = match (before, after) {
-            (Some(before), Some(after)) => Some(doc! {
-                "lt": before,
-                "gt": after
-            }),
-            (Some(before), _) => Some(doc! {
-                "lt": before
-            }),
-            (_, Some(after)) => Some(doc! {
-                "gt": after
-            }),
-            _ => None,
-        } {
-            filter.insert("_id", doc);
         }
-
-        self.find_with_options(
-            COL,
-            filter,
-            FindOptions::builder()
-                .projection(if let MessageSort::Relevance = &sort {
-                    doc! {
-                        "score": {
-                            "$meta": "textScore"
-                        }
-                    }
-                } else {
-                    doc! {}
-                })
-                .limit(limit)
-                .sort(match &sort {
-                    MessageSort::Relevance => doc! {
-                        "score": {
-                            "$meta": "textScore"
-                        }
-                    },
-                    MessageSort::Latest => doc! {
-                        "_id": -1_i32
-                    },
-                    MessageSort::Oldest => doc! {
-                        "_id": 1_i32
-                    },
-                })
-                .build(),
-        )
-        .await
     }
 
     /// Add a new reaction to a message
