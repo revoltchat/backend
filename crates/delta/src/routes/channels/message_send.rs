@@ -15,6 +15,7 @@ use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use validator::Validate;
+use once_cell::sync::Lazy;
 
 #[derive(Validate, Serialize, Deserialize, JsonSchema)]
 pub struct DataMessageSend {
@@ -44,10 +45,7 @@ pub struct DataMessageSend {
     interactions: Option<Interactions>,
 }
 
-lazy_static! {
-    // ignoring I L O and U is intentional
-    static ref RE_MENTION: Regex = Regex::new(r"<@([0-9A-HJKMNP-TV-Z]{26})>").unwrap();
-}
+static RE_MENTION: Lazy<Regex> = Lazy::new(|| Regex::new(r"<@([0-9A-HJKMNP-TV-Z]{26})>").unwrap());
 
 /// # Send Message
 ///

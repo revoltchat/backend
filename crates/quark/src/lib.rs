@@ -11,8 +11,6 @@ extern crate impl_ops;
 #[macro_use]
 extern crate optional_struct;
 #[macro_use]
-extern crate lazy_static;
-#[macro_use]
 extern crate bitfield;
 #[macro_use]
 extern crate bson;

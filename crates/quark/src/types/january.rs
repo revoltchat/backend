@@ -5,6 +5,7 @@ use linkify::{LinkFinder, LinkKind};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, sync::Arc};
+use once_cell::sync::Lazy;
 
 use crate::{models::attachment::File, Error, Result};
 
@@ -175,6 +176,9 @@ pub enum Embed {
     None,
 }
 
+static RE_CODE: Lazy<Regex> = Lazy::new(|| Regex::new("```(?:.|\n)+?```|`(?:.|\n)+?`").unwrap());
+static RE_IGNORED: Lazy<Regex> = Lazy::new(|| Regex::new("(<http.+>)").unwrap());
+
 impl Embed {
     /// Generate embeds from given content
     pub async fn generate(
@@ -183,10 +187,7 @@ impl Embed {
         max_embeds: usize,
         semaphore: Arc<Semaphore>,
     ) -> Result<Vec<Embed>> {
-        lazy_static! {
-            static ref RE_CODE: Regex = Regex::new("```(?:.|\n)+?```|`(?:.|\n)+?`").unwrap();
-            static ref RE_IGNORED: Regex = Regex::new("(<http.+>)").unwrap();
-        }
+
 
         // Ignore code blocks.
         let content = RE_CODE.replace_all(&content, "");

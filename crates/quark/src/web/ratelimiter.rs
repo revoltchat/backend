@@ -22,6 +22,7 @@ use revolt_rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 use serde::Serialize;
 
 use dashmap::DashMap;
+use once_cell::sync::Lazy;
 
 /// Ratelimit Bucket
 #[derive(Clone, Copy)]
@@ -30,9 +31,7 @@ struct Entry {
     reset: u128,
 }
 
-lazy_static! {
-    static ref MAP: DashMap<u64, Entry> = DashMap::new();
-}
+static MAP: Lazy<DashMap<u64, Entry>> = Lazy::new(|| DashMap::new());
 
 /// Get the current time from Unix Epoch as a Duration
 fn now() -> Duration {

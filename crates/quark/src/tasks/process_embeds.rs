@@ -9,6 +9,7 @@ use async_lock::Semaphore;
 use async_std::task::spawn;
 use deadqueue::limited::Queue;
 use std::sync::Arc;
+use once_cell::sync::Lazy;
 
 /// Task information
 #[derive(Debug)]
@@ -21,9 +22,8 @@ struct EmbedTask {
     content: String,
 }
 
-lazy_static! {
-    static ref Q: Queue<EmbedTask> = Queue::new(10_000);
-}
+static Q: Lazy<Queue<EmbedTask>> = Lazy::new(|| Queue::new(10_000));
+
 
 /// Queue a new task for a worker
 pub async fn queue(channel: String, id: String, content: String) {

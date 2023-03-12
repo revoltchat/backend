@@ -1,6 +1,7 @@
 use bson::Document;
 use futures::StreamExt;
 use mongodb::options::{Collation, CollationStrength, FindOneOptions, FindOptions};
+use once_cell::sync::Lazy;
 
 use crate::models::user::{FieldsUser, PartialUser, RelationshipStatus, User};
 use crate::r#impl::mongo::IntoDocumentPath;
@@ -8,16 +9,14 @@ use crate::{AbstractUser, Error, Result};
 
 use super::super::MongoDb;
 
-lazy_static! {
-    static ref FIND_USERNAME_OPTIONS: FindOneOptions = FindOneOptions::builder()
-        .collation(
-            Collation::builder()
-                .locale("en")
-                .strength(CollationStrength::Secondary)
-                .build()
-        )
-        .build();
-}
+static FIND_USERNAME_OPTIONS: Lazy<FindOneOptions> = Lazy::new(|| FindOneOptions::builder()
+    .collation(
+        Collation::builder()
+            .locale("en")
+            .strength(CollationStrength::Secondary)
+            .build()
+    )
+    .build());
 
 static COL: &str = "users";
 
