@@ -1,4 +1,5 @@
 use std::{collections::HashSet, str::FromStr};
+use once_cell::sync::Lazy;
 
 use ulid::Ulid;
 
@@ -8,13 +9,10 @@ use crate::{
     Database, Result,
 };
 
-lazy_static! {
-    /// Permissible emojis
-    static ref PERMISSIBLE_EMOJIS: HashSet<String> = include_str!(crate::asset!("emojis.txt"))
-        .split('\n')
-        .map(|x| x.into())
-        .collect();
-}
+static PERMISSIBLE_EMOJIS: Lazy<HashSet<String>> = Lazy::new(|| include_str!(crate::asset!("emojis.txt"))
+    .split('\n')
+    .map(|x| x.into())
+    .collect());
 
 impl Emoji {
     /// Get parent id

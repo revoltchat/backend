@@ -113,7 +113,7 @@ async fn calculate_channel_permission(
     let value: PermissionValue = match channel {
         Channel::SavedMessages { user, .. } => {
             if user == &data.perspective.id {
-                (*DEFAULT_PERMISSION_SAVED_MESSAGES).into()
+                DEFAULT_PERMISSION_SAVED_MESSAGES.into()
             } else {
                 0_u64.into()
             }

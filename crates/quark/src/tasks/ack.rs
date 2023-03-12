@@ -4,6 +4,7 @@ use crate::Database;
 use deadqueue::limited::Queue;
 use mongodb::bson::doc;
 use std::{collections::HashMap, time::Duration};
+use once_cell::sync::Lazy;
 
 use super::DelayedTask;
 
@@ -38,9 +39,7 @@ struct Task {
     event: AckEvent,
 }
 
-lazy_static! {
-    static ref Q: Queue<Data> = Queue::new(10_000);
-}
+static Q: Lazy<Queue<Data>> = Lazy::new(|| Queue::new(10_000));
 
 /// Queue a new task for a worker
 pub async fn queue(channel: String, user: String, event: AckEvent) {

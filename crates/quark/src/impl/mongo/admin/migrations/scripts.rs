@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{time::Duration, ops::BitXor};
 
 use bson::{Bson, DateTime};
 use futures::StreamExt;
@@ -503,13 +503,8 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
 
             update.insert(
                 "default_permissions",
-                (*DEFAULT_PERMISSION_SERVER
-                    // Remove Send Message permission if it wasn't originally granted
-                    ^ (if has_send {
-                        0
-                    } else {
-                        Permission::SendMessage as u64
-                    })) as i64,
+                // Remove Send Message permission if it wasn't originally granted
+                DEFAULT_PERMISSION_SERVER.bitxor(if has_send { 0 } else { Permission::SendMessage as u64}) as i64,
             );
 
             if let Some(Bson::Document(mut roles)) = document.remove("roles") {

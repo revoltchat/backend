@@ -5,13 +5,11 @@ use crate::{
     Database, Error, Result,
 };
 
-lazy_static! {
-    static ref ALPHABET: [char; 54] = [
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
-        'J', 'K', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd',
-        'e', 'f', 'g', 'h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'v', 'w', 'x', 'y', 'z'
-    ];
-}
+static ALPHABET: [char; 54] = [
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+    'J', 'K', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd',
+    'e', 'f', 'g', 'h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'v', 'w', 'x', 'y', 'z'
+];
 
 impl Invite {
     /// Get the invite code for this invite
@@ -30,7 +28,7 @@ impl Invite {
 
     /// Create a new invite from given information
     pub async fn create(db: &Database, creator: &User, target: &Channel) -> Result<Invite> {
-        let code = nanoid!(8, &*ALPHABET);
+        let code = nanoid!(8, &ALPHABET);
         let invite = match &target {
             Channel::Group { id, .. } => Ok(Invite::Group {
                 code,

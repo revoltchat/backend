@@ -9,6 +9,7 @@ use rocket::request::{FromRequest, Outcome};
 use schemars::schema::{InstanceType, SchemaObject, SingleOrVec};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
+use once_cell::sync::Lazy;
 
 #[derive(Validate, Serialize, Deserialize)]
 pub struct IdempotencyKey {
@@ -16,9 +17,7 @@ pub struct IdempotencyKey {
     key: String,
 }
 
-lazy_static! {
-    static ref TOKEN_CACHE: Mutex<lru::LruCache<String, ()>> = Mutex::new(lru::LruCache::new(100));
-}
+static TOKEN_CACHE: Lazy<Mutex<lru::LruCache<String, ()>>> = Lazy::new(|| Mutex::new(lru::LruCache::new(100)));
 
 impl IdempotencyKey {
     // Backwards compatibility.
