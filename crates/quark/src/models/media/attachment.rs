@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
 
 /// Metadata associated with file
-#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Default)]
 #[serde(tag = "type")]
 pub enum Metadata {
     /// File is just a generic uncategorised file
+    #[default]
     File,
     /// File contains textual data and should be displayed as such
     Text,
@@ -14,12 +15,6 @@ pub enum Metadata {
     Video { width: isize, height: isize },
     /// File is audio
     Audio,
-}
-
-impl Default for Metadata {
-    fn default() -> Metadata {
-        Metadata::File
-    }
 }
 
 /// Representation of a File on Revolt

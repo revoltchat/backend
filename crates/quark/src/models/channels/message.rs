@@ -157,21 +157,16 @@ pub struct Message {
 /// # Message Sort
 ///
 /// Sort used for retrieving messages
-#[derive(Serialize, Deserialize, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Default)]
 #[cfg_attr(feature = "rocket_impl", derive(FromFormField))]
 pub enum MessageSort {
     /// Sort by the most relevant messages
+    #[default]
     Relevance,
     /// Sort by the newest messages first
     Latest,
     /// Sort by the oldest messages first
     Oldest,
-}
-
-impl Default for MessageSort {
-    fn default() -> MessageSort {
-        MessageSort::Relevance
-    }
 }
 
 /// # Message Time Period

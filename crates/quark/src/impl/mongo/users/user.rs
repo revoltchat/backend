@@ -264,7 +264,7 @@ impl AbstractUser for MongoDb {
                                 [
                                     {
                                         "_id": target_id,
-                                        "status": format!("{:?}", relationship)
+                                        "status": format!("{relationship:?}")
                                     }
                                 ]
                             ]

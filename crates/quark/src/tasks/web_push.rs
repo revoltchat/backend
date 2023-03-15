@@ -1,4 +1,3 @@
-use crate::bson::doc;
 use crate::util::variables::delta::VAPID_PRIVATE_KEY;
 
 use authifier::Database;

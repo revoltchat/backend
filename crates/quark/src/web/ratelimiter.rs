@@ -31,7 +31,7 @@ struct Entry {
     reset: u128,
 }
 
-static MAP: Lazy<DashMap<u64, Entry>> = Lazy::new(|| DashMap::new());
+static MAP: Lazy<DashMap<u64, Entry>> = Lazy::new(DashMap::new);
 
 /// Get the current time from Unix Epoch as a Duration
 fn now() -> Duration {

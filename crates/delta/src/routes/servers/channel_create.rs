@@ -11,18 +11,13 @@ use ulid::Ulid;
 use validator::Validate;
 
 /// # Channel Type
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize, JsonSchema, Default)]
 enum ChannelType {
     /// Text Channel
+    #[default]
     Text,
     /// Voice Channel
     Voice,
-}
-
-impl Default for ChannelType {
-    fn default() -> Self {
-        ChannelType::Text
-    }
 }
 
 /// # Channel Data
