@@ -23,7 +23,7 @@ on:
 jobs:
   base:
     runs-on: ubuntu-latest
-    name: Build base image (amd64)
+    name: Build base image
     steps:
       # Configure build environment
       - name: Checkout
@@ -45,6 +45,7 @@ jobs:
         with:
           context: .
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: ghcr.io/revoltchat/base:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -56,7 +57,7 @@ jobs:
     strategy:
       matrix:
         project: [delta, bonfire]
-    name: Build ${{ matrix.project }} image (amd64)
+    name: Build ${{ matrix.project }} image
     steps:
       # Configure build environment
       - name: Checkout
@@ -108,7 +109,7 @@ jobs:
         with:
           context: .
           push: true
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           file: ${{ steps.export.outputs.path }}/Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
