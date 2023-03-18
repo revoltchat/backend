@@ -1,5 +1,6 @@
 use revolt_quark::{
-    models::{Channel, User},
+    get_relationship,
+    models::{user::RelationshipStatus, Channel, User},
     perms, Db, EmptyResponse, Error, Permission, Ref, Result,
 };
 
@@ -22,6 +23,13 @@ pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyR
     match &channel {
         Channel::Group { .. } => {
             let member = member.as_user(db).await?;
+            if !matches!(
+                get_relationship(&user, &member.id),
+                RelationshipStatus::Friend
+            ) {
+                return Err(Error::NotFriends);
+            }
+
             channel
                 .add_user_to_group(db, &member.id, &user.id)
                 .await
