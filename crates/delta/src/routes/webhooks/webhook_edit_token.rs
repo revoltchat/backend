@@ -27,7 +27,7 @@ pub async fn req(db: &Db, target: Ref, token: String, data: Json<WebhookEditBody
 
     let mut webhook = target.as_webhook(db).await?;
 
-    (webhook.token == token)
+    (webhook.token.as_deref() == Some(&token))
         .then_some(())
         .ok_or(Error::InvalidCredentials)?;
 

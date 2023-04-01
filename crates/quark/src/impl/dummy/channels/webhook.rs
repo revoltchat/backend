@@ -22,7 +22,7 @@ impl AbstractWebhook for DummyDb {
             name: "".to_string(),
             avatar: None,
             channel: "0".to_string(),
-            token: "".to_owned(),
+            token: Some("".to_owned()),
         })
     }
 

@@ -42,7 +42,7 @@ pub async fn report_content(db: &Db, user: User, data: Json<DataReportContent>) 
             let message = db.fetch_message(id).await?;
 
             // Users cannot report themselves
-            if message.author.as_ref() == Some(&user.id) {
+            if message.author == user.id {
                 return Err(Error::CannotReportYourself);
             }
 

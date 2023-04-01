@@ -24,7 +24,7 @@ pub struct Webhook {
     pub channel: String,
 
     /// The private token for the webhook
-    pub token: String
+    pub token: Option<String>
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]

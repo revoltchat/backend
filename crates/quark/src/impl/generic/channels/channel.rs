@@ -428,6 +428,11 @@ impl Channel {
             }
         }
 
+        let (author_id, webhook) = match &author {
+            MessageAuthor::User(user) => (user.id.clone(), None),
+            MessageAuthor::Webhook(webhook) => (webhook.id.clone(), Some((*webhook).clone()))
+        };
+
         // Start constructing the message
         let message_id = Ulid::new().to_string();
         let mut message = Message {
@@ -435,13 +440,10 @@ impl Channel {
             channel: self.id().to_string(),
             masquerade: data.masquerade,
             interactions: data.interactions.unwrap_or_default(),
+            author: author_id,
+            webhook,
             ..Default::default()
         };
-
-        match &author {
-            MessageAuthor::User(user) => message.author = Some(user.id.clone()),
-            MessageAuthor::Webhook(webhook) => message.webhook = Some(webhook.id.clone()),
-        }
 
         // Parse mentions in message.
         let mut mentions = HashSet::new();
@@ -464,7 +466,7 @@ impl Channel {
                 let message = Ref::from_unchecked(id).as_message(db).await?;
 
                 if mention {
-                    mentions.insert(message.author_id().to_owned());
+                    mentions.insert(message.author.to_owned());
                 }
 
                 replies.insert(message.id);

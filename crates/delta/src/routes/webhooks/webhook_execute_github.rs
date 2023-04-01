@@ -745,7 +745,7 @@ fn convert_event(data: &str, event_name: &str) -> Result<Event> {
 pub async fn req(db: &Db, target: Ref, token: String, event: EventHeader<'_>, data: String) -> Result<()> {
     let webhook = target.as_webhook(db).await?;
 
-    (webhook.token == token)
+    (webhook.token.as_deref() == Some(&token))
         .then_some(())
         .ok_or(Error::InvalidCredentials)?;
 
@@ -978,9 +978,10 @@ pub async fn req(db: &Db, target: Ref, token: String, event: EventHeader<'_>, da
 
     let mut message = Message {
         id: message_id,
+        author: webhook.id.clone(),
         channel: webhook.channel.clone(),
         embeds: Some(vec![embed]),
-        webhook: Some(webhook.id.clone()),
+        webhook: Some(webhook.clone()),
         ..Default::default()
     };
 

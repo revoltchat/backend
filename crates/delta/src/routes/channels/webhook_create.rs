@@ -41,7 +41,7 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<CreateWebhookBody>
         name: data.name,
         avatar,
         channel: channel.id().to_string(),
-        token: nanoid::nanoid!(64)
+        token: Some(nanoid::nanoid!(64))
     };
 
     webhook.create(db).await?;

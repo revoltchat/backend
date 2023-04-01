@@ -9,7 +9,7 @@ impl AbstractMessage for DummyDb {
         Ok(Message {
             id: id.into(),
             channel: "channel".into(),
-            author: Some("author".into()),
+            author: "author".into(),
             content: Some("message content".into()),
 
             ..Default::default()

@@ -272,12 +272,8 @@ impl Message {
         db.clear_reaction(&self.id, emoji).await
     }
 
-    /// Gets either the user or the webhook id which sent this message
-    pub fn author_id(&self) -> &str {
-        match &self.author {
-            Some(id) => id,
-            None => self.webhook.as_deref().unwrap()
-        }
+    pub fn is_webhook(&self) -> bool {
+        self.webhook.is_some()
     }
 }
 
@@ -289,8 +285,8 @@ impl IntoUsers for Message {
     fn get_user_ids(&self) -> Vec<String> {
         let mut ids = Vec::new();
 
-        if let Some(author) = &self.author {
-            ids.push(author.clone());
+        if !self.is_webhook() {
+            ids.push(self.author.clone());
         };
 
         if let Some(msg) = &self.system {
@@ -331,7 +327,7 @@ impl SystemMessage {
         Message {
             id: Ulid::new().to_string(),
             channel,
-            author: Some("00000000000000000000000000".to_string()),
+            author: "00000000000000000000000000".to_string(),
             system: Some(self),
 
             ..Default::default()
