@@ -1,7 +1,8 @@
-use crate::{util::regex::RE_COLOUR, models::Webhook};
+use crate::{models::Webhook, util::regex::RE_COLOUR};
 
 use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
+use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -18,6 +19,9 @@ use crate::{
 pub fn if_false(t: &bool) -> bool {
     !t
 }
+
+pub static RE_MENTION: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"<@([0-9A-HJKMNP-TV-Z]{26})>").unwrap());
 
 /// # Reply
 ///
@@ -277,9 +281,4 @@ pub struct DataMessageSend {
     pub masquerade: Option<Masquerade>,
     /// Information about how this message should be interacted with
     pub interactions: Option<Interactions>,
-}
-
-lazy_static! {
-    // ignoring I L O and U is intentional
-    pub static ref RE_MENTION: Regex = Regex::new(r"<@([0-9A-HJKMNP-TV-Z]{26})>").unwrap();
 }
