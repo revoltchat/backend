@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{time::Duration, ops::BitXor};
 
 use bson::{Bson, DateTime};
 use futures::StreamExt;
@@ -16,7 +16,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 18;
+pub const LATEST_REVISION: i32 = 21;
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -503,13 +503,8 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
 
             update.insert(
                 "default_permissions",
-                (*DEFAULT_PERMISSION_SERVER
-                    // Remove Send Message permission if it wasn't originally granted
-                    ^ (if has_send {
-                        0
-                    } else {
-                        Permission::SendMessage as u64
-                    })) as i64,
+                // Remove Send Message permission if it wasn't originally granted
+                DEFAULT_PERMISSION_SERVER.bitxor(if has_send { 0 } else { Permission::SendMessage as u64}) as i64,
             );
 
             if let Some(Bson::Document(mut roles)) = document.remove("roles") {
@@ -659,6 +654,103 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             )
             .await
             .expect("Failed to update server members.");
+    }
+
+    if revision <= 18 {
+        info!("Running migration [revision 18 / 27-02-2022]: Create author index on messages. Drop plain channel index if exists.");
+
+        if db
+            .db()
+            .run_command(
+                doc! {
+                    "dropIndexes": "messages",
+                    "index": ["channel"]
+                },
+                None,
+            )
+            .await
+            .is_err()
+        {
+            info!("Failed to drop `messages.channel` index but this is ok since that means it's probably gone.");
+        }
+
+        db.db()
+            .run_command(
+                doc! {
+                    "createIndexes": "messages",
+                    "indexes": [
+                        {
+                            "key": {
+                                "author": 1_i32,
+                            },
+                            "name": "author"
+                        }
+                    ]
+                },
+                None,
+            )
+            .await
+            .expect("Failed to create messages author index.");
+    }
+
+    if revision <= 19 {
+        info!("Running migration [revision 19 / 27-02-2023]: Create report / snapshot collections, migrate to new model if applicable.");
+
+        // TODO: make these fail once production is migrated
+        if db
+            .db()
+            .create_collection("safety_reports", None)
+            .await
+            .is_err()
+        {
+            info!("Failed to create safety_reports collection but this is expected in production.");
+        }
+
+        if db
+            .db()
+            .create_collection("safety_snapshots", None)
+            .await
+            .is_err()
+        {
+            info!(
+                "Failed to create safety_snapshots collection but this is expected in production."
+            );
+        }
+
+        db.col::<Document>("safety_reports")
+            .update_many(
+                doc! {},
+                doc! {
+                    "$set": {
+                        "status": "Created"
+                    }
+                },
+                None,
+            )
+            .await
+            .unwrap();
+    }
+
+    if revision <= 20 {
+        info!("Running migration [revision 20 / 28-02-2023]: Add index `snapshot.report_id`.");
+
+        db.db()
+            .run_command(
+                doc! {
+                    "createIndexes": "safety_snapshots",
+                    "indexes": [
+                        {
+                            "key": {
+                                "report_id": 1_i32
+                            },
+                            "name": "report_id"
+                        }
+                    ]
+                },
+                None,
+            )
+            .await
+            .expect("Failed to create safety snapshot index.");
     }
 
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.

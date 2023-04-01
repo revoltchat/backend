@@ -1,5 +1,6 @@
 use revolt_quark::events::client::EventV1;
-use revolt_quark::models::report::ReportedContent;
+use revolt_quark::models::message::{MessageFilter, MessageQuery, MessageSort, MessageTimePeriod};
+use revolt_quark::models::report::{ReportStatus, ReportedContent};
 use revolt_quark::models::snapshot::{Snapshot, SnapshotContent};
 use revolt_quark::models::{Report, User};
 use revolt_quark::{Db, Error, Result};
@@ -55,26 +56,34 @@ pub async fn report_content(db: &Db, user: User, data: Json<DataReportContent>) 
 
             // Collect prior context
             let prior_context = db
-                .fetch_messages(
-                    &message.channel,
-                    Some(15),
-                    Some(message.id.to_string()),
-                    None,
-                    None,
-                    None,
-                )
+                .fetch_messages(MessageQuery {
+                    filter: MessageFilter {
+                        channel: Some(message.channel.to_string()),
+                        ..Default::default()
+                    },
+                    limit: Some(15),
+                    time_period: MessageTimePeriod::Absolute {
+                        before: Some(message.id.to_string()),
+                        after: None,
+                        sort: Some(MessageSort::Latest),
+                    },
+                })
                 .await?;
 
             // Collect leading context
             let leading_context = db
-                .fetch_messages(
-                    &message.channel,
-                    Some(15),
-                    None,
-                    Some(message.id.to_string()),
-                    None,
-                    None,
-                )
+                .fetch_messages(MessageQuery {
+                    filter: MessageFilter {
+                        channel: Some(message.channel.to_string()),
+                        ..Default::default()
+                    },
+                    limit: Some(15),
+                    time_period: MessageTimePeriod::Absolute {
+                        before: None,
+                        after: Some(message.id.to_string()),
+                        sort: Some(MessageSort::Oldest),
+                    },
+                })
                 .await?;
 
             (
@@ -149,6 +158,8 @@ pub async fn report_content(db: &Db, user: User, data: Json<DataReportContent>) 
         author_id: user.id,
         content: data.content,
         additional_context: data.additional_context,
+        status: ReportStatus::Created {},
+        notes: String::new(),
     };
 
     db.insert_report(&report).await?;

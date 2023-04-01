@@ -118,7 +118,7 @@ pub struct Server {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub banner: Option<File>,
 
-    /// Enum of server flags
+    /// Bitfield of server flags
     #[serde(skip_serializing_if = "Option::is_none")]
     pub flags: Option<i32>,
 

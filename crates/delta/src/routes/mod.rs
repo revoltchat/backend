@@ -3,6 +3,7 @@ pub use rocket::http::Status;
 pub use rocket::response::Redirect;
 use rocket::{Build, Rocket};
 
+mod admin;
 mod bots;
 mod channels;
 mod customisation;
@@ -23,6 +24,7 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
         rocket, "/".to_owned(), settings,
         "/" => (vec![], custom_openapi_spec()),
         "" => openapi_get_routes_spec![root::root, root::ping],
+        "/admin" => admin::routes(),
         "/users" => users::routes(),
         "/bots" => bots::routes(),
         "/channels" => channels::routes(),
@@ -111,8 +113,9 @@ fn custom_openapi_spec() -> OpenApi {
             ]
           },
           {
-            "name": "Platform Moderation",
+            "name": "Platform Administration",
             "tags": [
+              "Admin",
               "User Safety"
             ]
           },

@@ -83,6 +83,11 @@ impl Ref {
     pub async fn as_webhook(&self, db: &Database) -> Result<Webhook> {
         db.fetch_webhook(&self.id).await
     }
+
+    /// Fetch report from Ref
+    pub async fn as_report(&self, db: &Database) -> Result<Report> {
+        db.fetch_report(&self.id).await
+    }
 }
 
 impl<'r> FromParam<'r> for Ref {

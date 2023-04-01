@@ -1,8 +1,9 @@
 use revolt_quark::{
     models::message::{PartialMessage, SendableEmbed},
     models::{Message, User},
+    perms,
     types::january::Embed,
-    Db, Error, Ref, Result, Timestamp,
+    Db, Error, Permission, Ref, Result, Timestamp,
 };
 
 use rocket::serde::json::Json;
@@ -28,7 +29,7 @@ pub struct DataEditMessage {
 pub async fn req(
     db: &Db,
     user: User,
-    target: String,
+    target: Ref,
     msg: Ref,
     edit: Json<DataEditMessage>,
 ) -> Result<Json<Message>> {
@@ -36,10 +37,17 @@ pub async fn req(
     edit.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
+    // Ensure we have permissions to send a message
+    let channel = target.as_channel(db).await?;
+    let mut permissions = perms(&user).channel(&channel);
+    permissions
+        .throw_permission_and_view_channel(db, Permission::SendMessage)
+        .await?;
+
     Message::validate_sum(&edit.content, &edit.embeds)?;
 
     let mut message = msg.as_message(db).await?;
-    if message.channel != target {
+    if message.channel != channel.id() {
         return Err(Error::NotFound);
     }
 

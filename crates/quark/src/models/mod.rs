@@ -1,6 +1,7 @@
 mod admin {
     pub mod migrations;
     pub mod simple;
+    pub mod stats;
 }
 
 mod media {

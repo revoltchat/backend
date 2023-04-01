@@ -22,17 +22,16 @@ use revolt_rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 use serde::Serialize;
 
 use dashmap::DashMap;
+use once_cell::sync::Lazy;
 
 /// Ratelimit Bucket
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct Entry {
     used: u8,
     reset: u128,
 }
 
-lazy_static! {
-    static ref MAP: DashMap<u64, Entry> = DashMap::new();
-}
+static MAP: Lazy<DashMap<u64, Entry>> = Lazy::new(DashMap::new);
 
 /// Get the current time from Unix Epoch as a Duration
 fn now() -> Duration {
@@ -51,7 +50,7 @@ impl Entry {
     }
 
     /// Deduct one unit from the bucket and save
-    pub fn deduct(mut self) {
+    pub fn deduct(&mut self) {
         let current_time = now().as_millis();
         if current_time > self.reset {
             self.used = 1;
@@ -193,7 +192,7 @@ impl Ratelimiter {
 
         let key = key.finish();
         let limit = resolve_bucket_limit(bucket);
-        let entry = Entry::from(key);
+        let mut entry = Entry::from(key);
 
         let remaining = entry.get_remaining(limit);
         if remaining > 0 {

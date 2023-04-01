@@ -37,7 +37,7 @@ impl AbstractAttachment for MongoDb {
         parent_type: &str,
         parent_id: &str,
     ) -> Result<File> {
-        let key = format!("{}_id", parent_type);
+        let key = format!("{parent_type}_id");
         match self
             .find_one::<File>(
                 COL,

@@ -557,7 +557,7 @@ impl EventV1 {
 
     /// Publish private event
     pub async fn private(self, id: String) {
-        self.p(format!("{}!", id)).await;
+        self.p(format!("{id}!")).await;
     }
 
     /// Publish internal global event

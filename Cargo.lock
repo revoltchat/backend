@@ -2106,9 +2106,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.13.0"
+version = "1.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18a6dbe30758c9f83eb00cbea4ac95966305f5a7772f3f42ebfc7fc7eddbd8e1"
+checksum = "b7e5500299e16ebb147ae15a00a942af264cf3688f47923b8fc2cd5858f23ad3"
 
 [[package]]
 name = "opaque-debug"
@@ -2170,7 +2170,7 @@ dependencies = [
 [[package]]
 name = "optional_struct"
 version = "0.2.0"
-source = "git+https://github.com/insertish/OptionalStruct?rev=e275d2726595474632485934aa0887fa52281f70#e275d2726595474632485934aa0887fa52281f70"
+source = "git+https://github.com/insertish/OptionalStruct?rev=ee56427cee1f007839825d93d07fffd5a5e038c7#ee56427cee1f007839825d93d07fffd5a5e038c7"
 dependencies = [
  "quote 0.3.15",
  "syn 0.11.11",
@@ -2792,7 +2792,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-bonfire"
-version = "0.5.9"
+version = "0.5.17"
 dependencies = [
  "async-std",
  "async-tungstenite",
@@ -2808,7 +2808,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-delta"
-version = "0.5.9"
+version = "0.5.17"
 dependencies = [
  "async-channel",
  "async-std",
@@ -2819,7 +2819,6 @@ dependencies = [
  "env_logger",
  "futures",
  "impl_ops",
- "lazy_static",
  "lettre",
  "linkify 0.6.0",
  "log",
@@ -2848,7 +2847,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-quark"
-version = "0.5.9"
+version = "0.5.17"
 dependencies = [
  "async-lock",
  "async-recursion",
@@ -2866,7 +2865,6 @@ dependencies = [
  "impl_ops",
  "indexmap",
  "iso8601-timestamp",
- "lazy_static",
  "linkify 0.8.1",
  "log",
  "lru",

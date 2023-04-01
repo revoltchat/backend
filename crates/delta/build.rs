@@ -8,7 +8,7 @@ fn main() {
         .output()
     {
         if let Ok(git_origin) = String::from_utf8(output.stdout) {
-            println!("cargo:rustc-env=GIT_ORIGIN_URL={}", git_origin);
+            println!("cargo:rustc-env=GIT_ORIGIN_URL={git_origin}");
         }
     }
 

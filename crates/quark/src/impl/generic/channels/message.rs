@@ -385,7 +385,7 @@ impl SendableEmbed {
 impl BulkMessageResponse {
     pub async fn transform(
         db: &Database,
-        channel: &Channel,
+        channel: Option<&Channel>,
         messages: Vec<Message>,
         include_users: Option<bool>,
     ) -> Result<BulkMessageResponse> {
@@ -394,7 +394,8 @@ impl BulkMessageResponse {
             let users = User::fetch_foreign_users(db, &user_ids).await?;
 
             Ok(match channel {
-                Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => {
+                Some(Channel::TextChannel { server, .. })
+                | Some(Channel::VoiceChannel { server, .. }) => {
                     BulkMessageResponse::MessagesAndUsers {
                         messages,
                         users,

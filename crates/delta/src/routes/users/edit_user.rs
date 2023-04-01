@@ -1,6 +1,6 @@
 use revolt_quark::models::user::{FieldsUser, PartialUser, User};
 use revolt_quark::models::File;
-use revolt_quark::{Database, Error, Result};
+use revolt_quark::{Database, Error, Ref, Result};
 
 use revolt_quark::models::user::UserStatus;
 use rocket::serde::json::Json;
@@ -24,6 +24,10 @@ pub struct UserProfileData {
 /// # User Data
 #[derive(Validate, Serialize, Deserialize, JsonSchema)]
 pub struct DataEditUser {
+    /// Attachment Id for avatar
+    #[validate(length(min = 1, max = 128))]
+    avatar: Option<String>,
+
     /// New user status
     #[validate]
     status: Option<UserStatus>,
@@ -32,9 +36,14 @@ pub struct DataEditUser {
     /// This is applied as a partial.
     #[validate]
     profile: Option<UserProfileData>,
-    /// Attachment Id for avatar
-    #[validate(length(min = 1, max = 128))]
-    avatar: Option<String>,
+
+    /// Bitfield of user badges
+    #[serde(skip_serializing_if = "Option::is_none")]
+    badges: Option<i32>,
+    /// Enum of user flags
+    #[serde(skip_serializing_if = "Option::is_none")]
+    flags: Option<i32>,
+
     /// Fields to remove from user object
     #[validate(length(min = 1))]
     remove: Option<Vec<FieldsUser>>,
@@ -44,19 +53,36 @@ pub struct DataEditUser {
 ///
 /// Edit currently authenticated user.
 #[openapi(tag = "User Information")]
-#[patch("/@me", data = "<data>")]
+#[patch("/<target>", data = "<data>")]
 pub async fn req(
     db: &State<Database>,
     mut user: User,
+    target: Ref,
     data: Json<DataEditUser>,
 ) -> Result<Json<User>> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
+    // If we want to edit a different user than self, ensure we have
+    // permissions and subsequently replace the user in question
+    if target.id != "@me" {
+        if !user.privileged {
+            return Err(Error::NotPrivileged);
+        }
+
+        user = target.as_user(db).await?;
+    // Otherwise, filter out invalid edit fields
+    } else if data.badges.is_some() || data.flags.is_some() {
+        return Err(Error::NotPrivileged);
+    }
+
+    // Exit out early if nothing is changed
     if data.status.is_none()
         && data.profile.is_none()
         && data.avatar.is_none()
+        && data.badges.is_none()
+        && data.flags.is_none()
         && data.remove.is_none()
     {
         return Ok(Json(user));
@@ -83,7 +109,11 @@ pub async fn req(
         }
     }
 
-    let mut partial: PartialUser = Default::default();
+    let mut partial: PartialUser = PartialUser {
+        badges: data.badges,
+        flags: data.flags,
+        ..Default::default()
+    };
 
     // 2. Apply new avatar
     if let Some(avatar) = data.avatar {

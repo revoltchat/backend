@@ -51,6 +51,10 @@ pub fn get_relationship(a: &User, b: &str) -> RelationshipStatus {
 async fn calculate_permission(data: &mut PermissionCalculator<'_>, db: &crate::Database) -> u32 {
     let user = data.user.get().unwrap();
 
+    if data.perspective.privileged {
+        return u32::MAX;
+    }
+
     if data.perspective.id == user.id {
         return u32::MAX;
     }

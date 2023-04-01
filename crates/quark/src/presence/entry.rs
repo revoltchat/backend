@@ -1,14 +1,14 @@
 use std::env;
 
 use serde::{Deserialize, Serialize};
+use once_cell::sync::Lazy;
 
-lazy_static! {
-    pub static ref REGION_ID: u16 = env::var("REGION_ID")
-        .unwrap_or_else(|_| "0".to_string())
-        .parse()
-        .unwrap();
-    pub static ref REGION_KEY: String = format!("region{}", &*REGION_ID);
-}
+pub static REGION_ID: Lazy<u16> = Lazy::new(|| env::var("REGION_ID")
+    .unwrap_or_else(|_| "0".to_string())
+    .parse()
+    .unwrap());
+
+pub static REGION_KEY: Lazy<String> = Lazy::new(|| format!("region{}", &*REGION_ID));
 
 /// Compact presence information for a user
 #[derive(Serialize, Deserialize, Debug)]

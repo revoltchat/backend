@@ -33,6 +33,10 @@ pub struct DataEditServer {
     /// System message configuration
     system_messages: Option<SystemMessageChannels>,
 
+    /// Bitfield of server flags
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub flags: Option<i32>,
+
     // Whether this server is age-restricted
     // nsfw: Option<bool>,
     /// Whether this server is public and should show up on [Revolt Discover](https://rvlt.gg)
@@ -92,6 +96,11 @@ pub async fn req(
             .await?;
     }
 
+    // Check we are privileged if changing sensitive fields
+    if data.flags.is_some() && !user.privileged {
+        return Err(Error::NotPrivileged);
+    }
+
     if data.categories.is_some() {
         permissions
             .throw_permission(db, Permission::ManageChannel)
@@ -105,6 +114,7 @@ pub async fn req(
         banner,
         categories,
         system_messages,
+        flags,
         // nsfw,
         discoverable,
         analytics,
@@ -116,6 +126,7 @@ pub async fn req(
         description,
         categories,
         system_messages,
+        flags,
         // nsfw,
         discoverable,
         analytics,

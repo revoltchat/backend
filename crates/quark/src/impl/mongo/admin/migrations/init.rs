@@ -57,6 +57,14 @@ pub async fn create_database(db: &MongoDb) {
         .await
         .expect("Failed to create user_settings collection.");
 
+    db.create_collection("safety_reports", None)
+        .await
+        .expect("Failed to create safety_reports collection.");
+
+    db.create_collection("safety_snapshots", None)
+        .await
+        .expect("Failed to create safety_snapshots collection.");
+
     db.create_collection("bots", None)
         .await
         .expect("Failed to create bots collection.");
@@ -105,16 +113,16 @@ pub async fn create_database(db: &MongoDb) {
                 },
                 {
                     "key": {
-                        "channel": 1_i32
-                    },
-                    "name": "channel"
-                },
-                {
-                    "key": {
                         "channel": 1_i32,
                         "_id": 1_i32
                     },
                     "name": "channel_id_compound"
+                },
+                {
+                    "key": {
+                        "author": 1_i32
+                    },
+                    "name": "author"
                 }
             ]
         },

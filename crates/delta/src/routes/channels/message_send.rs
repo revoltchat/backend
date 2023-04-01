@@ -10,6 +10,7 @@ use revolt_quark::{
 
 use rocket::serde::json::Json;
 use validator::Validate;
+use once_cell::sync::Lazy;
 
 /// # Send Message
 ///

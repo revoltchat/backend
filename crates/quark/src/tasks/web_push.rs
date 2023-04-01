@@ -1,8 +1,8 @@
-use crate::bson::doc;
 use crate::util::variables::delta::VAPID_PRIVATE_KEY;
 
 use authifier::Database;
 use deadqueue::limited::Queue;
+use once_cell::sync::Lazy;
 use web_push::{
     ContentEncoding, SubscriptionInfo, SubscriptionKeys, VapidSignatureBuilder, WebPushClient,
     WebPushMessageBuilder,
@@ -17,9 +17,8 @@ struct PushTask {
     payload: String,
 }
 
-lazy_static! {
-    static ref Q: Queue<PushTask> = Queue::new(10_000);
-}
+static Q: Lazy<Queue<PushTask>> = Lazy::new(|| Queue::new(10_000));
+
 
 /// Queue a new task for a worker
 pub async fn queue(recipients: Vec<String>, payload: String) {

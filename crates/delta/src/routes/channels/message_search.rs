@@ -1,6 +1,8 @@
 use revolt_quark::{
     models::{
-        message::{BulkMessageResponse, MessageSort},
+        message::{
+            BulkMessageResponse, MessageFilter, MessageQuery, MessageSort, MessageTimePeriod,
+        },
         User,
     },
     perms, Db, Error, Permission, Ref, Result,
@@ -30,7 +32,7 @@ pub struct OptionsMessageSearch {
     after: Option<String>,
     /// Message sort direction
     ///
-    /// By default, it will be sorted by relevance.
+    /// By default, it will be sorted by latest.
     #[serde(default = "MessageSort::default")]
     sort: MessageSort,
     /// Whether to include user (and member, if server channel) objects
@@ -73,10 +75,22 @@ pub async fn req(
     } = options;
 
     let messages = db
-        .search_messages(channel.id(), &query, limit, before, after, sort)
+        .fetch_messages(MessageQuery {
+            filter: MessageFilter {
+                channel: Some(channel.id().to_string()),
+                query: Some(query),
+                ..Default::default()
+            },
+            time_period: MessageTimePeriod::Absolute {
+                before,
+                after,
+                sort: Some(sort),
+            },
+            limit,
+        })
         .await?;
 
-    BulkMessageResponse::transform(db, &channel, messages, include_users)
+    BulkMessageResponse::transform(db, Some(&channel), messages, include_users)
         .await
         .map(Json)
 }

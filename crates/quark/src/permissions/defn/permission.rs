@@ -1,6 +1,7 @@
 use num_enum::TryFromPrimitive;
 use serde::{Deserialize, Serialize};
-use std::ops;
+use once_cell::sync::Lazy;
+use std::ops::{self, Add};
 
 /// Permission value on Revolt
 ///
@@ -97,24 +98,18 @@ pub enum Permission {
 impl_op_ex!(+ |a: &Permission, b: &Permission| -> u64 { *a as u64 | *b as u64 });
 impl_op_ex_commutative!(+ |a: &u64, b: &Permission| -> u64 { *a | *b as u64 });
 
-lazy_static! {
-    pub static ref ALLOW_IN_TIMEOUT: u64 = Permission::ViewChannel + Permission::ReadMessageHistory;
-    pub static ref DEFAULT_PERMISSION_VIEW_ONLY: u64 =
-        Permission::ViewChannel + Permission::ReadMessageHistory;
-    pub static ref DEFAULT_PERMISSION: u64 = *DEFAULT_PERMISSION_VIEW_ONLY
-        + Permission::SendMessage
-        + Permission::InviteOthers
-        + Permission::SendEmbeds
-        + Permission::UploadFiles
-        + Permission::Connect
-        + Permission::Speak;
-    pub static ref DEFAULT_PERMISSION_SAVED_MESSAGES: u64 = Permission::GrantAllSafe as u64;
-    pub static ref DEFAULT_PERMISSION_DIRECT_MESSAGE: u64 = *DEFAULT_PERMISSION 
-        + Permission::ManageChannel
-        + Permission::React;
-    pub static ref DEFAULT_PERMISSION_SERVER: u64 =
-        *DEFAULT_PERMISSION + Permission::React + Permission::ChangeNickname + Permission::ChangeAvatar;
-}
+pub static ALLOW_IN_TIMEOUT: Lazy<u64> = Lazy::new(|| Permission::ViewChannel + Permission::ReadMessageHistory);
+pub static DEFAULT_PERMISSION_VIEW_ONLY: Lazy<u64> = Lazy::new(|| Permission::ViewChannel + Permission::ReadMessageHistory);
+pub static DEFAULT_PERMISSION: Lazy<u64> = Lazy::new(|| DEFAULT_PERMISSION_VIEW_ONLY.add(
+    Permission::SendMessage
+    + Permission::InviteOthers
+    + Permission::SendEmbeds
+    + Permission::UploadFiles
+    + Permission::Connect
+    + Permission::Speak));
+pub static DEFAULT_PERMISSION_SAVED_MESSAGES: u64 = Permission::GrantAllSafe as u64;
+pub static DEFAULT_PERMISSION_DIRECT_MESSAGE: Lazy<u64> = Lazy::new(|| DEFAULT_PERMISSION.add(Permission::ManageChannel + Permission::React));
+pub static DEFAULT_PERMISSION_SERVER: Lazy<u64> = Lazy::new(|| DEFAULT_PERMISSION.add(Permission::React + Permission::ChangeNickname + Permission::ChangeAvatar));
 
 bitfield! {
     #[derive(Default)]
