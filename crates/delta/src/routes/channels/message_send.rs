@@ -7,7 +7,7 @@ use revolt_quark::{
     },
     perms,
     web::idempotency::IdempotencyKey,
-    Db, Error, Permission, Ref, Result,
+    Db, Error, Permission, Ref, Result, variables::delta::{MAX_ATTACHMENT_COUNT, MAX_REPLY_COUNT},
 };
 
 use regex::Regex;
@@ -139,8 +139,8 @@ pub async fn message_send(
     // 4. Verify replies are valid.
     let mut replies = HashSet::new();
     if let Some(entries) = data.replies {
-        if entries.len() > 5 {
-            return Err(Error::TooManyReplies);
+        if entries.len() > *MAX_REPLY_COUNT {
+            return Err(Error::TooManyReplies { max: *MAX_REPLY_COUNT });
         }
 
         for Reply { id, mention } in entries {
@@ -191,8 +191,8 @@ pub async fn message_send(
         }
 
         // ! FIXME: move this to app config
-        if ids.len() > 5 {
-            return Err(Error::TooManyAttachments);
+        if ids.len() > *MAX_ATTACHMENT_COUNT {
+            return Err(Error::TooManyAttachments { max: *MAX_ATTACHMENT_COUNT} );
         }
 
         for attachment_id in ids {

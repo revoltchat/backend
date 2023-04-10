@@ -1,6 +1,6 @@
 use revolt_quark::{
     models::{server::Role, User},
-    perms, Db, Error, Permission, Ref, Result,
+    perms, Db, Error, Permission, Ref, Result, variables::delta::MAX_ROLE_COUNT,
 };
 
 use rocket::serde::json::Json;
@@ -49,6 +49,10 @@ pub async fn req(
     permissions
         .throw_permission(db, Permission::ManageRole)
         .await?;
+
+    if server.roles.len() > *MAX_ROLE_COUNT {
+        return Err(Error::TooManyRoles { max: *MAX_ROLE_COUNT })
+    };
 
     let member_rank = permissions.get_member_rank();
     let rank = if let Some(given_rank) = data.rank {

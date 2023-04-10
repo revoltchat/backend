@@ -44,6 +44,12 @@ pub static MAX_GROUP_SIZE: Lazy<usize> = Lazy::new(|| env::var("REVOLT_MAX_GROUP
 pub static MAX_BOT_COUNT: Lazy<usize> = Lazy::new(|| env::var("REVOLT_MAX_BOT_COUNT").unwrap_or_else(|_| "5".to_string()).parse().unwrap());
 pub static MAX_EMBED_COUNT: Lazy<usize> = Lazy::new(|| env::var("REVOLT_MAX_EMBED_COUNT").unwrap_or_else(|_| "5".to_string()).parse().unwrap());
 pub static MAX_SERVER_COUNT: Lazy<usize> = Lazy::new(|| env::var("REVOLT_MAX_SERVER_COUNT").unwrap_or_else(|_| "100".to_string()).parse().unwrap());
+pub static MAX_CHANNEL_COUNT: Lazy<usize> = Lazy::new(|| env::var("REVOLT_MAX_CHANNEL_COUNT").unwrap_or_else(|_| "200".to_string()).parse().unwrap());
+pub static MAX_ROLE_COUNT: Lazy<usize> = Lazy::new(|| env::var("REVOLT_MAX_ROLE_COUNT").unwrap_or_else(|_| "200".to_string()).parse().unwrap());
+pub static MAX_EMOJI_COUNT: Lazy<usize> = Lazy::new(|| env::var("REVOLT_MAX_EMOJI_COUNT").unwrap_or_else(|_| "100".to_string()).parse().unwrap());
+pub static MAX_ATTACHMENT_COUNT: Lazy<usize> = Lazy::new(|| env::var("REVOLT_MAX_ATTACHMENT_COUNT").unwrap_or_else(|_| "5".to_string()).parse().unwrap());
+pub static MAX_REPLY_COUNT: Lazy<usize> = Lazy::new(|| env::var("REVOLT_MAX_REPLY_COUNT").unwrap_or_else(|_| "5".to_string()).parse().unwrap());
+
 pub static EARLY_ADOPTER_BADGE: Lazy<i64> = Lazy::new(|| env::var("REVOLT_EARLY_ADOPTER_BADGE").unwrap_or_else(|_| "0".to_string()).parse().unwrap());
 
 pub fn preflight_checks() {
