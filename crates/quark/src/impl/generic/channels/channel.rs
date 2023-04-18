@@ -441,7 +441,7 @@ impl Channel {
             masquerade: data.masquerade,
             interactions: data.interactions.unwrap_or_default(),
             author: author_id,
-            webhook,
+            webhook: webhook.map(|w| w.into_message_webhook()),
             ..Default::default()
         };
 

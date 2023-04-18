@@ -1,7 +1,8 @@
 use crate::{
     events::client::EventV1,
     models::{
-        webhook::{Webhook, PartialWebhook, FieldsWebhook}
+        webhook::{Webhook, PartialWebhook, FieldsWebhook},
+        message::MessageWebhook
     },
     Database, Result
 };
@@ -56,9 +57,17 @@ impl Webhook {
         Ok(())
     }
 
-    fn remove(&mut self, field: &FieldsWebhook) {
+    pub fn remove(&mut self, field: &FieldsWebhook) {
         match field {
             FieldsWebhook::Avatar => self.avatar = None
+        }
+    }
+
+    pub fn into_message_webhook(self) -> MessageWebhook {
+        MessageWebhook {
+            id: self.id,
+            name: self.name,
+            avatar: self.avatar.map(|f| f.id)
         }
     }
 }

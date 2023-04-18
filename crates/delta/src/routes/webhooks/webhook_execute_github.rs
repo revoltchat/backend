@@ -981,7 +981,7 @@ pub async fn req(db: &Db, target: Ref, token: String, event: EventHeader<'_>, da
         author: webhook.id.clone(),
         channel: webhook.channel.clone(),
         embeds: Some(vec![embed]),
-        webhook: Some(webhook.clone()),
+        webhook: Some(webhook.clone().into_message_webhook()),
         ..Default::default()
     };
 

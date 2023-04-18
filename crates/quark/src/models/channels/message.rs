@@ -1,4 +1,4 @@
-use crate::{models::Webhook, util::regex::RE_COLOUR};
+use crate::util::regex::RE_COLOUR;
 
 use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
@@ -109,6 +109,17 @@ pub struct Interactions {
     pub restrict_reactions: bool,
 }
 
+/// Information about the webhook which
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Validate, Default)]
+pub struct MessageWebhook {
+    // Id of Webhook
+    pub id: String,
+    // The name of the webhook - 1 to 32 chars
+    pub name: String,
+    // The id of the avatar of the webhook, if it has one
+    pub avatar: Option<String>
+}
+
 /// Representation of a Message on Revolt
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, OptionalStruct, Default)]
 #[optional_derive(Serialize, Deserialize, JsonSchema, Debug, Default, Clone)]
@@ -126,9 +137,9 @@ pub struct Message {
     pub channel: String,
     /// Id of the user or webhook that sent this message
     pub author: String,
-    /// Id of the webhook that sent this message, mutually exclusive with `author`
+    /// The webhook that sent this message, mutually exclusive with `author`
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub webhook: Option<Webhook>,
+    pub webhook: Option<MessageWebhook>,
     /// Message content
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<String>,
