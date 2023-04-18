@@ -3,7 +3,6 @@ use revolt_rocket_okapi::revolt_okapi::openapi3;
 use rocket::{
     http::{ContentType, Status},
     response::{self, Responder},
-    serde::json::serde_json::json,
     Request, Response,
 };
 use schemars::schema::Schema;
@@ -39,8 +38,15 @@ pub enum Error {
     UnknownMessage,
     CannotEditMessage,
     CannotJoinCall,
-    TooManyAttachments,
-    TooManyReplies,
+    TooManyAttachments {
+        max: usize
+    },
+    TooManyReplies {
+        max: usize
+    },
+    TooManyChannels {
+        max: usize
+    },
     EmptyMessage,
     PayloadTooLarge,
     CannotRemoveYourself,
@@ -57,7 +63,12 @@ pub enum Error {
     TooManyServers {
         max: usize,
     },
-    TooManyEmoji,
+    TooManyEmoji {
+        max: usize
+    },
+    TooManyRoles {
+        max: usize
+    },
 
     // ? Bot related errors
     ReachedMaximumBots,
@@ -151,8 +162,8 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::UnknownAttachment => Status::BadRequest,
             Error::CannotEditMessage => Status::Forbidden,
             Error::CannotJoinCall => Status::BadRequest,
-            Error::TooManyAttachments => Status::BadRequest,
-            Error::TooManyReplies => Status::BadRequest,
+            Error::TooManyAttachments { .. } => Status::BadRequest,
+            Error::TooManyReplies { .. } => Status::BadRequest,
             Error::EmptyMessage => Status::UnprocessableEntity,
             Error::PayloadTooLarge => Status::UnprocessableEntity,
             Error::CannotRemoveYourself => Status::BadRequest,
@@ -163,8 +174,11 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::UnknownServer => Status::NotFound,
             Error::InvalidRole => Status::NotFound,
             Error::Banned => Status::Forbidden,
-            Error::TooManyServers { .. } => Status::Forbidden,
-            Error::TooManyEmoji => Status::BadRequest,
+
+            Error::TooManyServers { .. } => Status::BadRequest,
+            Error::TooManyEmoji { .. } => Status::BadRequest,
+            Error::TooManyChannels { .. } => Status::BadRequest,
+            Error::TooManyRoles { .. } => Status::BadRequest,
 
             Error::ReachedMaximumBots => Status::BadRequest,
             Error::IsBot => Status::BadRequest,
@@ -193,7 +207,7 @@ impl<'r> Responder<'r, 'static> for Error {
         };
 
         // Serialize the error data structure into JSON.
-        let string = json!(self).to_string();
+        let string = serde_json::to_string(&self).unwrap();
 
         // Build and send the request.
         Response::build()

@@ -1,5 +1,6 @@
 use revolt_quark::models::emoji::EmojiParent;
 use revolt_quark::models::{Emoji, File, User};
+use revolt_quark::variables::delta::MAX_EMOJI_COUNT;
 use revolt_quark::{perms, Db, Error, Permission, Result};
 use serde::Deserialize;
 use validator::Validate;
@@ -55,8 +56,8 @@ pub async fn create_emoji(
             // Check that there are no more than 100 emoji
             // ! FIXME: hardcoded upper limit
             let emojis = db.fetch_emoji_by_parent_id(&server.id).await?;
-            if emojis.len() > 99 {
-                return Err(Error::TooManyEmoji);
+            if emojis.len() > *MAX_EMOJI_COUNT {
+                return Err(Error::TooManyEmoji { max: *MAX_EMOJI_COUNT });
             }
         }
         EmojiParent::Detached => return Err(Error::InvalidOperation),

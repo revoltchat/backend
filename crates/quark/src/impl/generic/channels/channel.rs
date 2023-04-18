@@ -10,7 +10,7 @@ use crate::{
         Channel,
     },
     tasks::{ack::AckEvent, process_embeds},
-    Database, Error, OverrideField, Result, types::push::MessageAuthor, web::idempotency::IdempotencyKey, Ref,
+    Database, Error, OverrideField, Result, types::push::MessageAuthor, web::idempotency::IdempotencyKey, Ref, variables::delta::{MAX_ATTACHMENT_COUNT, MAX_REPLY_COUNT},
 };
 
 impl Channel {
@@ -458,8 +458,8 @@ impl Channel {
         // Verify replies are valid.
         let mut replies = HashSet::new();
         if let Some(entries) = data.replies {
-            if entries.len() > 5 {
-                return Err(Error::TooManyReplies);
+            if entries.len() > *MAX_REPLY_COUNT {
+                return Err(Error::TooManyReplies { max: *MAX_REPLY_COUNT });
             }
 
             for Reply { id, mention } in entries {
@@ -498,9 +498,8 @@ impl Channel {
         // Add attachments to message.
         let mut attachments = vec![];
         if let Some(ids) = &data.attachments {
-            // ! FIXME: move this to app config
-            if ids.len() > 5 {
-                return Err(Error::TooManyAttachments);
+            if ids.len() > *MAX_ATTACHMENT_COUNT {
+                return Err(Error::TooManyAttachments { max: *MAX_ATTACHMENT_COUNT} );
             }
 
             for attachment_id in ids {
