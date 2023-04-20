@@ -737,7 +737,7 @@ fn convert_event(data: &str, event_name: &str) -> Result<Event> {
     })
 }
 
-/// # executes a webhook specific to github
+/// # Executes a webhook specific to github
 ///
 /// executes a webhook specific to github and sends a message containg the relavent info about the event
 #[openapi(tag = "Webhooks")]

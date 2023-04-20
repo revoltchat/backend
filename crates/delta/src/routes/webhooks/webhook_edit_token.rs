@@ -15,7 +15,7 @@ pub struct WebhookEditBody {
     remove: Vec<FieldsWebhook>
 }
 
-/// # Edits a webhook with a token
+/// # Edits a webhook
 ///
 /// edits a webhook with a token
 #[openapi(tag = "Webhooks")]

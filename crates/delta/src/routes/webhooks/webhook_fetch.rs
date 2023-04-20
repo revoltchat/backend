@@ -16,7 +16,7 @@ pub struct WebhookData {
     pub channel: String,
 }
 
-/// # gets a webhook
+/// # Gets a webhook
 ///
 /// gets a webhook
 #[openapi(tag = "Webhooks")]

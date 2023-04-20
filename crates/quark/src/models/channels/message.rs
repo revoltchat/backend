@@ -112,8 +112,6 @@ pub struct Interactions {
 /// Information about the webhook which
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Validate, Default)]
 pub struct MessageWebhook {
-    // Id of Webhook
-    pub id: String,
     // The name of the webhook - 1 to 32 chars
     pub name: String,
     // The id of the avatar of the webhook, if it has one

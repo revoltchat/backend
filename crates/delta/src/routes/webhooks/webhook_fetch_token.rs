@@ -1,9 +1,9 @@
 use revolt_quark::{Db, Ref, Result, Error, models::Webhook};
 use rocket::serde::json::Json;
 
-/// # gets a webhook
+/// # Gets a webhook
 ///
-/// gets a webhook
+/// gets a webhook with a token
 #[openapi(tag = "Webhooks")]
 #[get("/<target>/<token>")]
 pub async fn req(db: &Db, target: Ref, token: String) -> Result<Json<Webhook>> {

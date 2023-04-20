@@ -26,7 +26,7 @@ impl AbstractWebhook for MongoDb {
         Ok(())
     }
 
-    async fn update_webook(&self, webhook_id: &str, partial_webhook: &PartialWebhook, remove: &[FieldsWebhook]) -> Result<()> {
+    async fn update_webhook(&self, webhook_id: &str, partial_webhook: &PartialWebhook, remove: &[FieldsWebhook]) -> Result<()> {
         self.update_one_by_id(
             COL,
             webhook_id,

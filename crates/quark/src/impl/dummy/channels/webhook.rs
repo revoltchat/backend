@@ -26,7 +26,7 @@ impl AbstractWebhook for DummyDb {
         })
     }
 
-    async fn update_webook(&self, webhook_id: &str, partial_webhook: &PartialWebhook, remove: &[FieldsWebhook]) -> Result<()> {
+    async fn update_webhook(&self, webhook_id: &str, partial_webhook: &PartialWebhook, remove: &[FieldsWebhook]) -> Result<()> {
         info!("updating webhook {webhook_id}, {partial_webhook:?}, removing {remove:?}");
 
         Ok(())

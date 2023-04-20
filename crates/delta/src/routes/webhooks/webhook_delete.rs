@@ -1,8 +1,8 @@
 use revolt_quark::{Db, Ref, Result, EmptyResponse, models::User, perms, Permission};
 
-/// # Deletes a webhook with a token
+/// # Deletes a webhook
 ///
-/// deletes a webhook with a token
+/// deletes a webhook
 #[openapi(tag = "Webhooks")]
 #[delete("/<target>")]
 pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {

@@ -1,6 +1,6 @@
 use revolt_quark::{Db, Ref, Result, EmptyResponse, Error};
 
-/// # Deletes a webhook with a token
+/// # Deletes a webhook
 ///
 /// deletes a webhook with a token
 #[openapi(tag = "Webhooks")]

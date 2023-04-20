@@ -42,7 +42,7 @@ impl Webhook {
 
         self.apply_options(partial.clone());
 
-        db.update_webook(&self.id, &partial, &remove).await?;
+        db.update_webhook(&self.id, &partial, &remove).await?;
 
         partial.token = None;  // Avoid leaking the token to people who receive the event
 
@@ -65,7 +65,6 @@ impl Webhook {
 
     pub fn into_message_webhook(self) -> MessageWebhook {
         MessageWebhook {
-            id: self.id,
             name: self.name,
             avatar: self.avatar.map(|f| f.id)
         }
