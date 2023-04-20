@@ -11,10 +11,6 @@ use rocket::serde::json::Json;
 #[openapi(tag = "Server Members")]
 #[get("/<target>/invites")]
 pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<Vec<Invite>>> {
-    if user.bot.is_some() {
-        return Err(Error::IsBot);
-    }
-
     let server = target.as_server(db).await?;
     perms(&user)
         .server(&server)
