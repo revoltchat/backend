@@ -8,7 +8,7 @@ use validator::Validate;
 /// executes a webhook and sends a message
 #[openapi(tag = "Webhooks")]
 #[post("/<target>/<token>", data="<data>")]
-pub async fn req(db: &Db, target: Ref, token: String, data: Json<DataMessageSend>, idempotency: IdempotencyKey) -> Result<Json<Message>> {
+pub async fn webhook_execute(db: &Db, target: Ref, token: String, data: Json<DataMessageSend>, idempotency: IdempotencyKey) -> Result<Json<Message>> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;

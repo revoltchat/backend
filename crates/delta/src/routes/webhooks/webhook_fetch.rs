@@ -21,7 +21,7 @@ pub struct WebhookData {
 /// gets a webhook
 #[openapi(tag = "Webhooks")]
 #[get("/<target>")]
-pub async fn req(db: &Db, target: Ref) -> Result<Json<WebhookData>> {
+pub async fn webhook_fetch(db: &Db, target: Ref) -> Result<Json<WebhookData>> {
     let Webhook { id, name, avatar, channel, .. } = target.as_webhook(db).await?;
 
     Ok(Json(WebhookData { id, name, avatar, channel }))

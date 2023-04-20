@@ -20,7 +20,7 @@ pub struct WebhookEditBody {
 /// edits a webhook with a token
 #[openapi(tag = "Webhooks")]
 #[patch("/<target>/<token>", data="<data>")]
-pub async fn req(db: &Db, target: Ref, token: String, data: Json<WebhookEditBody>) -> Result<Json<Webhook>> {
+pub async fn webhook_edit_token(db: &Db, target: Ref, token: String, data: Json<WebhookEditBody>) -> Result<Json<Webhook>> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;

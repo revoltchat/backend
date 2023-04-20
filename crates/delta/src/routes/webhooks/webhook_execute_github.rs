@@ -742,7 +742,7 @@ fn convert_event(data: &str, event_name: &str) -> Result<Event> {
 /// executes a webhook specific to github and sends a message containg the relavent info about the event
 #[openapi(tag = "Webhooks")]
 #[post("/<target>/<token>/github", data="<data>")]
-pub async fn req(db: &Db, target: Ref, token: String, event: EventHeader<'_>, data: String) -> Result<()> {
+pub async fn webhook_execute_github(db: &Db, target: Ref, token: String, event: EventHeader<'_>, data: String) -> Result<()> {
     let webhook = target.as_webhook(db).await?;
 
     (webhook.token.as_deref() == Some(&token))

@@ -5,7 +5,7 @@ use revolt_quark::{Db, Ref, Result, EmptyResponse, models::User, perms, Permissi
 /// deletes a webhook
 #[openapi(tag = "Webhooks")]
 #[delete("/<target>")]
-pub async fn req(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
+pub async fn webhook_delete(db: &Db, user: User, target: Ref) -> Result<EmptyResponse> {
     let webhook = target.as_webhook(db).await?;
 
     let channel = Ref::from_unchecked(webhook.channel.clone()).as_channel(db).await?;

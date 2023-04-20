@@ -6,7 +6,7 @@ use rocket::serde::json::Json;
 /// gets a webhook with a token
 #[openapi(tag = "Webhooks")]
 #[get("/<target>/<token>")]
-pub async fn req(db: &Db, target: Ref, token: String) -> Result<Json<Webhook>> {
+pub async fn webhook_fetch_token(db: &Db, target: Ref, token: String) -> Result<Json<Webhook>> {
     let webhook = target.as_webhook(db).await?;
 
     (webhook.token.as_deref() == Some(&token))

@@ -12,13 +12,13 @@ mod webhook_execute_github;
 
 pub fn routes() -> (Vec<Route>, OpenApi) {
     openapi_get_routes_spec![
-        webhook_delete_token::req,
-        webhook_delete::req,
-        webhook_edit_token::req,
-        webhook_edit::req,
-        webhook_execute::req,
-        webhook_fetch_token::req,
-        webhook_fetch::req,
-        webhook_execute_github::req
+        webhook_delete_token::webhook_delete_token,
+        webhook_delete::webhook_delete,
+        webhook_edit_token::webhook_edit_token,
+        webhook_edit::webhook_edit,
+        webhook_execute_github::webhook_execute_github,
+        webhook_execute::webhook_execute,
+        webhook_fetch_token::webhook_fetch_token,
+        webhook_fetch::webhook_fetch,
     ]
 }
