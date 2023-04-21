@@ -305,12 +305,12 @@ impl IntoUsers for Message {
 
 impl IntoUsers for Vec<Message> {
     fn get_user_ids(&self) -> Vec<String> {
-        let mut ids = vec![];
+        let mut ids = HashSet::new();
         for message in self {
-            ids.append(&mut message.get_user_ids());
+            ids.extend(&mut message.get_user_ids().into_iter());
         }
 
-        ids
+        ids.into_iter().collect()
     }
 }
 

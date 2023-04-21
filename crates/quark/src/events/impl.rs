@@ -99,7 +99,7 @@ impl State {
         let mut user = self.clone_user();
 
         // Find all relationships to the user.
-        let mut user_ids: Vec<String> = user
+        let mut user_ids: HashSet<String> = user
             .relations
             .as_ref()
             .map(|arr| arr.iter().map(|x| x.id.to_string()).collect())
@@ -128,14 +128,15 @@ impl State {
         for channel in &channels {
             match channel {
                 Channel::DirectMessage { recipients, .. } | Channel::Group { recipients, .. } => {
-                    user_ids.append(&mut recipients.clone());
+                    user_ids.extend(&mut recipients.clone().into_iter());
                 }
                 _ => {}
             }
         }
 
         // Fetch presence data for known users.
-        let online_ids = presence_filter_online(&user_ids).await;
+        let online_ids =
+            presence_filter_online(&user_ids.iter().cloned().collect::<Vec<String>>()).await;
         user.online = Some(true);
 
         // Fetch user data.
