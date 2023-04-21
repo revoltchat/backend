@@ -2,87 +2,77 @@ use std::collections::HashSet;
 
 use redis_kiss::{get_connection, AsyncCommands};
 
+use rand::Rng;
 mod entry;
 mod operations;
 
-use entry::{PresenceEntry, PresenceOp};
 use operations::{
-    __add_to_set_sessions, __delete_key_presence_entry, __get_key_presence_entry,
-    __get_set_sessions, __remove_from_set_sessions, __set_key_presence_entry,
+    __add_to_set_string, __add_to_set_u32, __delete_key, __get_set_members_as_string,
+    __get_set_size, __remove_from_set_string, __remove_from_set_u32,
 };
-
-use crate::presence::operations::__delete_set_sessions;
 
 use self::entry::REGION_KEY;
 
 /// Create a new presence session, returns the ID of this session
-pub async fn presence_create_session(user_id: &str, flags: u8) -> (bool, u8) {
+pub async fn presence_create_session(user_id: &str, flags: u8) -> (bool, u32) {
     info!("Creating a presence session for {user_id} with flags {flags}");
 
-    // Try to find the presence entry for this user.
-    let mut conn = get_connection().await.unwrap();
-    let mut entry: Vec<PresenceEntry> = __get_key_presence_entry(&mut conn, user_id)
-        .await
-        .unwrap_or_default();
+    if let Ok(mut conn) = get_connection().await {
+        // Check whether this is the first session
+        let was_empty = __get_set_size(&mut conn, user_id).await == 0;
 
-    // Return whether this was the first session.
-    let was_empty = entry.is_empty();
-    info!("User ID {} just came online.", &user_id);
+        // A session ID is comprised of random data and any flags ORed to the end
+        let session_id = {
+            let mut rng = rand::thread_rng();
+            (rng.gen::<u32>() ^ 1) | (flags as u32 & 1)
+        };
 
-    // Generate session ID and push new entry.
-    let session_id = entry.find_next_id();
-    entry.push(PresenceEntry::from(session_id, flags));
-    __set_key_presence_entry(&mut conn, user_id, entry).await;
+        // Add session to user's sessions and to the region
+        __add_to_set_u32(&mut conn, user_id, session_id).await;
+        __add_to_set_string(&mut conn, &REGION_KEY, &format!("{user_id}:{session_id}")).await;
+        info!("Created session for {user_id}, assigned them a session ID of {session_id}.");
 
-    // Add to region set in case of failure.
-    __add_to_set_sessions(&mut conn, &REGION_KEY, user_id, session_id).await;
-    (was_empty, session_id)
+        (was_empty, session_id)
+    } else {
+        // Fail through
+        (false, 0)
+    }
 }
 
 /// Delete existing presence session
-pub async fn presence_delete_session(user_id: &str, session_id: u8) -> bool {
+pub async fn presence_delete_session(user_id: &str, session_id: u32) -> bool {
     presence_delete_session_internal(user_id, session_id, false).await
 }
 
 /// Delete existing presence session (but also choose whether to skip region)
 async fn presence_delete_session_internal(
     user_id: &str,
-    session_id: u8,
+    session_id: u32,
     skip_region: bool,
 ) -> bool {
     info!("Deleting presence session for {user_id} with id {session_id}");
 
-    // Return whether this was the last session.
-    let mut is_empty = false;
+    if let Ok(mut conn) = get_connection().await {
+        // Remove the session
+        __remove_from_set_u32(&mut conn, user_id, session_id).await;
 
-    // Only continue if we can actually find one.
-    let mut conn = get_connection().await.unwrap();
-    let entry: Option<Vec<PresenceEntry>> = __get_key_presence_entry(&mut conn, user_id).await;
-    if let Some(entry) = entry {
-        let entries = entry
-            .into_iter()
-            .filter(|x| x.session_id != session_id)
-            .collect::<Vec<PresenceEntry>>();
-
-        // If entry is empty, then just delete it.
-        if entries.is_empty() {
-            __delete_key_presence_entry(&mut conn, user_id).await;
-            is_empty = true;
-        } else {
-            __set_key_presence_entry(&mut conn, user_id, entries).await;
-        }
-
-        // Remove from region set.
+        // Remove from the region
         if !skip_region {
-            __remove_from_set_sessions(&mut conn, &REGION_KEY, user_id, session_id).await;
+            __remove_from_set_string(&mut conn, &REGION_KEY, &format!("{user_id}:{session_id}"))
+                .await;
         }
-    }
 
-    if is_empty {
-        info!("User ID {} just went offline.", &user_id);
-    }
+        // Return whether this was the last session
+        let is_empty = __get_set_size(&mut conn, user_id).await == 0;
+        if is_empty {
+            info!("User ID {} just went offline.", &user_id);
+        }
 
-    is_empty
+        is_empty
+    } else {
+        // Fail through
+        false
+    }
 }
 
 /// Check whether a given user ID is online
@@ -101,6 +91,10 @@ pub async fn presence_filter_online(user_ids: &'_ [String]) -> HashSet<String> {
     if user_ids.is_empty() {
         return set;
     }
+
+    // NOTE: at the point that we need mobile indicators
+    // you can interpret the data here and return a new data
+    // structure like HashMap<String /* id */, u8 /* flags */>
 
     // We need to handle a special case where only one is present
     // as for some reason or another, Redis does not like us sending
@@ -136,7 +130,7 @@ pub async fn presence_clear_region(region_id: Option<&str>) {
     let region_id = region_id.unwrap_or(&*REGION_KEY);
     let mut conn = get_connection().await.expect("Redis connection");
 
-    let sessions = __get_set_sessions(&mut conn, region_id).await;
+    let sessions = __get_set_members_as_string(&mut conn, region_id).await;
     if !sessions.is_empty() {
         info!(
             "Cleaning up {} sessions, this may take a while...",
@@ -155,7 +149,7 @@ pub async fn presence_clear_region(region_id: Option<&str>) {
         }
 
         // Then clear the set in Redis.
-        __delete_set_sessions(&mut conn, region_id).await;
+        __delete_key(&mut conn, region_id).await;
 
         info!("Clean up complete.");
     }

@@ -2792,7 +2792,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-bonfire"
-version = "0.5.17"
+version = "0.5.18"
 dependencies = [
  "async-std",
  "async-tungstenite",
@@ -2808,7 +2808,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-delta"
-version = "0.5.17"
+version = "0.5.18"
 dependencies = [
  "async-channel",
  "async-std",
@@ -2847,7 +2847,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-quark"
-version = "0.5.17"
+version = "0.5.18"
 dependencies = [
  "async-lock",
  "async-recursion",
@@ -2874,6 +2874,7 @@ dependencies = [
  "once_cell",
  "optional_struct",
  "pretty_env_logger",
+ "rand 0.8.5",
  "redis-kiss",
  "regex",
  "reqwest",

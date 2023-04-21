@@ -1,6 +1,6 @@
 [package]
 name = "revolt-quark"
-version = "0.5.17"
+version = "0.5.18"
 license = "AGPL-3.0-or-later"
 edition = "2021"
 
@@ -57,6 +57,7 @@ log = "0.4.14"
 pretty_env_logger = "0.4.0"
 
 # Util
+rand = "0.8.5"
 ulid = "0.5.0"
 regex = "1.5.5"
 nanoid = "0.4.0"
