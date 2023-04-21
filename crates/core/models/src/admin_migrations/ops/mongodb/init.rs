@@ -1,9 +1,8 @@
-use crate::r#impl::mongo::MongoDb;
-
 use super::scripts::LATEST_REVISION;
 
-use mongodb::bson::doc;
-use mongodb::options::CreateCollectionOptions;
+use revolt_database::mongodb::bson::doc;
+use revolt_database::mongodb::options::CreateCollectionOptions;
+use revolt_database::MongoDb;
 
 pub async fn create_database(db: &MongoDb) {
     info!("Creating database.");

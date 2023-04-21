@@ -1,13 +1,14 @@
-use crate::{AbstractMigrations, Result};
+use revolt_database::MongoDb;
 
-use super::super::MongoDb;
+use super::AbstractMigrations;
 
 mod init;
 mod scripts;
 
 #[async_trait]
 impl AbstractMigrations for MongoDb {
-    async fn migrate_database(&self) -> Result<()> {
+    /// Migrate the database
+    async fn migrate_database(&self) -> Result<(), ()> {
         info!("Migrating the database.");
 
         let list = self

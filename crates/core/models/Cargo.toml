@@ -1,0 +1,33 @@
+[package]
+name = "revolt-models"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+serde = [ "dep:serde" ]
+async-std-runtime = [ "async-std" ]
+database = [ "revolt-database", "revolt-database/default", "authifier/database-mongodb" ]
+
+default = [ "serde", "async-std-runtime", "database" ]
+
+[dependencies]
+# Utility
+log = "*"
+
+# Serialisation
+serde = { version = "1", features = ["derive"], optional = true }
+
+# Async Language Features
+futures = "0.3.19"
+async-trait = "0.1.51"
+
+# Async
+async-std = { version = "1.8.0", features = ["attributes"], optional = true }
+
+# Peer dependencies
+revolt-database = { path = "../database", optional = true, default-features = false }
+
+# Authifier
+authifier = { version = "1.0", default-features = false }

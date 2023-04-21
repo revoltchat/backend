@@ -1,14 +1,14 @@
-use std::{time::Duration, ops::BitXor};
+use std::{ops::BitXor, time::Duration};
 
-use bson::{Bson, DateTime};
 use futures::StreamExt;
-use mongodb::{
-    bson::{doc, from_bson, from_document, to_document, Document},
-    options::FindOptions,
+use revolt_database::{
+    mongodb::{
+        bson::{doc, from_bson, from_document, to_document, Bson, DateTime, Document},
+        options::FindOptions,
+    },
+    MongoDb,
 };
 use serde::{Deserialize, Serialize};
-
-use crate::{r#impl::mongo::MongoDb, Permission, DEFAULT_PERMISSION_SERVER};
 
 #[derive(Serialize, Deserialize)]
 struct MigrationInfo {
@@ -504,7 +504,7 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             update.insert(
                 "default_permissions",
                 // Remove Send Message permission if it wasn't originally granted
-                DEFAULT_PERMISSION_SERVER.bitxor(if has_send { 0 } else { Permission::SendMessage as u64}) as i64,
+                (4000323584).bitxor(if has_send { 0 } else { (1 << 22) as u64 }) as i64,
             );
 
             if let Some(Bson::Document(mut roles)) = document.remove("roles") {
@@ -563,7 +563,7 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
                     doc! {
                         "default_permissions": {
                             "a": 0_i64,
-                            "d": Permission::SendMessage as i64
+                            "d": (1 << 22) as i64
                         }
                     },
                 );

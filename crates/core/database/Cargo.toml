@@ -1,0 +1,22 @@
+[package]
+name = "revolt-database"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+mongodb = [ "dep:mongodb" ]
+default = [ "mongodb" ]
+
+[dependencies]
+# Serialisation
+serde_json = "1"
+serde = { version = "1", features = ["derive"] }
+
+# Database
+mongodb = { optional = true, version = "2.1.0", default-features = false }
+
+# Async Language Features
+futures = "0.3.19"
+async-recursion = "1.0.4"
