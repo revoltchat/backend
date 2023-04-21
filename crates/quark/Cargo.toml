@@ -1,6 +1,6 @@
 [package]
 name = "revolt-quark"
-version = "0.5.18"
+version = "0.5.19"
 license = "AGPL-3.0-or-later"
 edition = "2021"
 
@@ -42,7 +42,7 @@ revolt_okapi = "0.9.1"
 revolt_rocket_okapi = { version = "0.9.1", features = [ "swagger" ] }
 
 # Databases
-redis-kiss = { version = "0.1.3" }
+redis-kiss = { version = "0.1.4" }
 mongodb = { optional = true, version = "2.1.0", default-features = false }
 
 # Async
