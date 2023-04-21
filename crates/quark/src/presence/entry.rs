@@ -10,3 +10,4 @@ pub static REGION_ID: Lazy<u16> = Lazy::new(|| {
 });
 
 pub static REGION_KEY: Lazy<String> = Lazy::new(|| format!("region{}", &*REGION_ID));
+pub static ONLINE_SET: &str = "online";

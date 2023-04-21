@@ -11,7 +11,7 @@ use operations::{
     __get_set_size, __remove_from_set_string, __remove_from_set_u32,
 };
 
-use self::entry::REGION_KEY;
+use self::entry::{ONLINE_SET, REGION_KEY};
 
 /// Create a new presence session, returns the ID of this session
 pub async fn presence_create_session(user_id: &str, flags: u8) -> (bool, u32) {
@@ -29,6 +29,7 @@ pub async fn presence_create_session(user_id: &str, flags: u8) -> (bool, u32) {
 
         // Add session to user's sessions and to the region
         __add_to_set_u32(&mut conn, user_id, session_id).await;
+        __add_to_set_string(&mut conn, ONLINE_SET, user_id).await;
         __add_to_set_string(&mut conn, &REGION_KEY, &format!("{user_id}:{session_id}")).await;
         info!("Created session for {user_id}, assigned them a session ID of {session_id}.");
 
@@ -65,6 +66,7 @@ async fn presence_delete_session_internal(
         // Return whether this was the last session
         let is_empty = __get_set_size(&mut conn, user_id).await == 0;
         if is_empty {
+            __remove_from_set_string(&mut conn, ONLINE_SET, user_id).await;
             info!("User ID {} just went offline.", &user_id);
         }
 
@@ -109,14 +111,19 @@ pub async fn presence_filter_online(user_ids: &'_ [String]) -> HashSet<String> {
 
     // Otherwise, go ahead as normal.
     if let Ok(mut conn) = get_connection().await {
-        let data: Vec<Option<Vec<u8>>> = conn.get(user_ids).await.unwrap_or_default();
+        // Ok so, if this breaks, that means we've lost the Redis patch which adds SMISMEMBER
+        // Currently it's patched in through a forked repository, investigate what happen to it
+        let data: Vec<bool> = conn
+            .sismember("online", user_ids)
+            .await
+            .expect("this shouldn't happen, please read this code! presence/mod.rs");
         if data.is_empty() {
             return set;
         }
 
         // We filter known values to figure out who is online.
         for i in 0..user_ids.len() {
-            if data[i].is_some() {
+            if data[i] {
                 set.insert(user_ids[i].to_string());
             }
         }
