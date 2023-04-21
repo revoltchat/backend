@@ -1,6 +1,6 @@
 use revolt_quark::{
     models::{Invite, User},
-    perms, Db, Error, Permission, Ref, Result,
+    perms, Db, Permission, Ref, Result,
 };
 
 use rocket::serde::json::Json;
