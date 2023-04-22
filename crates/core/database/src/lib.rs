@@ -63,13 +63,12 @@ macro_rules! database_test {
         .await
         .expect("Database connection failed.");
 
+        db.drop_database().await;
+
         #[allow(clippy::redundant_closure_call)]
         (|$db: $crate::Database| $test)(db.clone()).await;
 
-        match db {
-            $crate::Database::Reference(_) => {}
-            $crate::Database::MongoDb(db) => db.0.database(&db.1).drop(None).await.unwrap(),
-        }
+        db.drop_database().await
     };
 }
 
