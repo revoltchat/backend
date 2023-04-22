@@ -13,6 +13,9 @@ extern crate log;
 #[macro_use]
 extern crate optional_struct;
 
+#[macro_use]
+extern crate revolt_result;
+
 #[cfg(feature = "mongodb")]
 pub use mongodb;
 
@@ -28,7 +31,7 @@ macro_rules! database_derived {
 macro_rules! auto_derived {
     ( $( $item:item )+ ) => {
         $(
-            #[derive(Serialize, Deserialize, Debug, Clone)]
+            #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
             $item
         )+
     };
@@ -36,8 +39,8 @@ macro_rules! auto_derived {
 
 macro_rules! auto_derived_partial {
     ( $item:item, $name:expr ) => {
-        #[derive(OptionalStruct, Serialize, Deserialize, Debug, Clone)]
-        #[optional_derive(Serialize, Deserialize, Debug, Clone)]
+        #[derive(OptionalStruct, Serialize, Deserialize, Debug, Clone, Default, Eq, PartialEq)]
+        #[optional_derive(Serialize, Deserialize, Debug, Clone, Default, Eq, PartialEq)]
         #[optional_name = $name]
         #[opt_skip_serializing_none]
         #[opt_some_priority]
@@ -47,6 +50,15 @@ macro_rules! auto_derived_partial {
 
 mod drivers;
 pub use drivers::*;
+
+macro_rules! database_test {
+    ( $name: expr ) => {
+        $crate::DatabaseInfo::Reference
+            .connect()
+            .await
+            .expect("Database connection failed.")
+    };
+}
 
 mod models;
 pub use models::*;

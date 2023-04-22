@@ -16,6 +16,9 @@ async-std-runtime = [ "async-std" ]
 default = [ "mongodb", "async-std-runtime" ]
 
 [dependencies]
+# Repo
+revolt-result = { path = "../result" }
+
 # Utility
 log = "*"
 nanoid = "0.4.0"
@@ -37,4 +40,4 @@ async-recursion = "1.0.4"
 async-std = { version = "1.8.0", features = ["attributes"], optional = true }
 
 # Authifier
-authifier = { version = "1.0", default-features = false }
+authifier = { version = "1.0" }

@@ -1,5 +1,9 @@
-mod dummy;
+use revolt_result::Result;
+
+use crate::{Bot, FieldsBot, PartialBot};
+
 mod mongodb;
+mod reference;
 
 #[async_trait]
 pub trait AbstractBots: Sync + Send {
@@ -13,7 +17,12 @@ pub trait AbstractBots: Sync + Send {
     async fn insert_bot(&self, bot: &Bot) -> Result<()>;
 
     /// Update bot with new information
-    async fn update_bot(&self, id: &str, bot: &PartialBot, remove: Vec<FieldsBot>) -> Result<()>;
+    async fn update_bot(
+        &self,
+        id: &str,
+        partial: &PartialBot,
+        remove: Vec<FieldsBot>,
+    ) -> Result<()>;
 
     /// Delete a bot from the database
     async fn delete_bot(&self, id: &str) -> Result<()>;

@@ -2836,6 +2836,7 @@ dependencies = [
  "mongodb",
  "nanoid",
  "optional_struct",
+ "revolt-result",
  "serde",
  "serde_json",
 ]

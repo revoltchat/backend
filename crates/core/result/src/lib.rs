@@ -99,7 +99,7 @@ pub enum ErrorType {
     // ? General errors
     DatabaseError {
         operation: String,
-        with: String,
+        collection: String,
     },
     InternalError,
     InvalidOperation,
@@ -119,11 +119,21 @@ pub enum ErrorType {
 
 #[macro_export]
 macro_rules! create_error {
-    ( $error:ident ) => {
+    ( $error:ident $( $tt:tt )? ) => {
         $crate::Error {
-            error_type: $crate::ErrorType::$error,
+            error_type: $crate::ErrorType::$error $( $tt )?,
             location: format!("{}:{}:{}", file!(), line!(), column!()),
         }
+    };
+}
+
+#[macro_export]
+macro_rules! create_database_error {
+    ( $operation:expr, $collection:expr ) => {
+        create_error!(DatabaseError {
+            operation: $operation.to_string(),
+            collection: $collection.to_string()
+        })
     };
 }
 
@@ -133,6 +143,12 @@ mod tests {
 
     #[test]
     fn use_macro_to_construct_error() {
+        let error = create_error!(LabelMe);
+        assert!(matches!(error.error_type, ErrorType::LabelMe));
+    }
+
+    #[test]
+    fn use_macro_to_construct_complex_error() {
         let error = create_error!(LabelMe);
         assert!(matches!(error.error_type, ErrorType::LabelMe));
     }

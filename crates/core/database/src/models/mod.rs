@@ -6,7 +6,11 @@ pub use bots::*;
 
 use crate::{Database, MongoDb, ReferenceDb};
 
-pub trait AbstractDatabase: Sync + Send + admin_migrations::AbstractMigrations {}
+pub trait AbstractDatabase:
+    Sync + Send + admin_migrations::AbstractMigrations + bots::AbstractBots
+{
+}
+
 impl AbstractDatabase for ReferenceDb {}
 impl AbstractDatabase for MongoDb {}
 

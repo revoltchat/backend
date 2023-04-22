@@ -36,7 +36,7 @@ impl MongoDb {
     }
 
     /// Insert one document into a collection
-    async fn insert_one<T: Serialize>(
+    pub async fn insert_one<T: Serialize>(
         &self,
         collection: &'static str,
         document: T,
@@ -44,8 +44,19 @@ impl MongoDb {
         self.col::<T>(collection).insert_one(document, None).await
     }
 
+    /// Count documents by projection
+    pub async fn count_documents(
+        &self,
+        collection: &'static str,
+        projection: Document,
+    ) -> Result<u64> {
+        self.col::<Document>(collection)
+            .count_documents(projection, None)
+            .await
+    }
+
     /// Find multiple documents in a collection with options
-    async fn find_with_options<O, T: DeserializeOwned + Unpin + Send + Sync>(
+    pub async fn find_with_options<O, T: DeserializeOwned + Unpin + Send + Sync>(
         &self,
         collection: &'static str,
         projection: Document,
@@ -71,7 +82,7 @@ impl MongoDb {
     }
 
     /// Find multiple documents in a collection
-    async fn find<T: DeserializeOwned + Unpin + Send + Sync>(
+    pub async fn find<T: DeserializeOwned + Unpin + Send + Sync>(
         &self,
         collection: &'static str,
         projection: Document,
@@ -80,7 +91,7 @@ impl MongoDb {
     }
 
     /// Find one document with options
-    async fn find_one_with_options<O, T: DeserializeOwned + Unpin + Send + Sync>(
+    pub async fn find_one_with_options<O, T: DeserializeOwned + Unpin + Send + Sync>(
         &self,
         collection: &'static str,
         projection: Document,
@@ -95,7 +106,7 @@ impl MongoDb {
     }
 
     /// Find one document
-    async fn find_one<T: DeserializeOwned + Unpin + Send + Sync>(
+    pub async fn find_one<T: DeserializeOwned + Unpin + Send + Sync>(
         &self,
         collection: &'static str,
         projection: Document,
@@ -105,7 +116,7 @@ impl MongoDb {
     }
 
     /// Find one document by its ID
-    async fn find_one_by_id<T: DeserializeOwned + Unpin + Send + Sync>(
+    pub async fn find_one_by_id<T: DeserializeOwned + Unpin + Send + Sync>(
         &self,
         collection: &'static str,
         id: &str,
@@ -120,7 +131,7 @@ impl MongoDb {
     }
 
     /// Update one document given a projection, partial document, and list of paths to unset
-    async fn update_one<P, T: Serialize>(
+    pub async fn update_one<P, T: Serialize>(
         &self,
         collection: &'static str,
         projection: Document,
@@ -159,7 +170,7 @@ impl MongoDb {
     }
 
     /// Update one document given an ID, partial document, and list of paths to unset
-    async fn update_one_by_id<P, T: Serialize>(
+    pub async fn update_one_by_id<P, T: Serialize>(
         &self,
         collection: &'static str,
         id: &str,
@@ -183,7 +194,7 @@ impl MongoDb {
     }
 
     /// Delete one document by the given projection
-    async fn delete_one(
+    pub async fn delete_one(
         &self,
         collection: &'static str,
         projection: Document,
@@ -194,7 +205,11 @@ impl MongoDb {
     }
 
     /// Delete one document by the given ID
-    async fn delete_one_by_id(&self, collection: &'static str, id: &str) -> Result<DeleteResult> {
+    pub async fn delete_one_by_id(
+        &self,
+        collection: &'static str,
+        id: &str,
+    ) -> Result<DeleteResult> {
         self.delete_one(
             collection,
             doc! {
