@@ -26,14 +26,14 @@ jobs:
         with:
           command: build
 
+      - name: Run services in background
+        run: |
+          docker-compose -f docker-compose.db.yml up -d
+
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         with:
           command: test
-
-      - name: Run services in background
-        run: |
-          docker-compose -f docker-compose.db.yml up -d
 
       - name: Run cargo test (with MongoDB)
         uses: actions-rs/cargo@v1
