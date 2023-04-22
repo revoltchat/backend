@@ -19,6 +19,12 @@ pub enum Error {
     /// This error was not labeled :(
     LabelMe,
 
+    /// Core crate error
+    Core {
+        #[serde(flatten)]
+        error: revolt_result::Error,
+    },
+
     // ? Onboarding related errors
     AlreadyOnboarded,
 
@@ -39,13 +45,13 @@ pub enum Error {
     CannotEditMessage,
     CannotJoinCall,
     TooManyAttachments {
-        max: usize
+        max: usize,
     },
     TooManyReplies {
-        max: usize
+        max: usize,
     },
     TooManyChannels {
-        max: usize
+        max: usize,
     },
     EmptyMessage,
     PayloadTooLarge,
@@ -64,10 +70,10 @@ pub enum Error {
         max: usize,
     },
     TooManyEmoji {
-        max: usize
+        max: usize,
     },
     TooManyRoles {
-        max: usize
+        max: usize,
     },
 
     // ? Bot related errors
@@ -135,6 +141,11 @@ impl Error {
             error: validation_error,
         })
     }
+
+    /// Create a error from core error
+    pub fn from_core(error: revolt_result::Error) -> Error {
+        Error::Core { error }
+    }
 }
 
 /// Result type with custom Error
@@ -145,6 +156,7 @@ impl<'r> Responder<'r, 'static> for Error {
     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         let status = match self {
             Error::LabelMe => Status::InternalServerError,
+            Error::Core { .. } => Status::InternalServerError,
 
             Error::AlreadyOnboarded => Status::Forbidden,
 
