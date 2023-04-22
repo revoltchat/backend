@@ -114,7 +114,7 @@ pub async fn presence_filter_online(user_ids: &'_ [String]) -> HashSet<String> {
         // Ok so, if this breaks, that means we've lost the Redis patch which adds SMISMEMBER
         // Currently it's patched in through a forked repository, investigate what happen to it
         let data: Vec<bool> = conn
-            .sismember("online", user_ids)
+            .smismember("online", user_ids)
             .await
             .expect("this shouldn't happen, please read this code! presence/mod.rs");
         if data.is_empty() {
