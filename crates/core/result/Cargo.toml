@@ -7,8 +7,13 @@ edition = "2021"
 
 [features]
 serde = [ "dep:serde" ]
+schemas = [ "dep:schemars" ]
+
 default = [ "serde" ]
 
 [dependencies]
 # Serialisation
 serde = { version = "1", features = ["derive"], optional = true }
+
+# Spec Generation
+schemars = { version = "0.8.8", optional = true }

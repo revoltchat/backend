@@ -2,11 +2,16 @@
 #[macro_use]
 extern crate serde;
 
+#[cfg(feature = "schemas")]
+#[macro_use]
+extern crate schemars;
+
 /// Result type with custom Error
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 /// Error information
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
 #[derive(Debug, Clone)]
 pub struct Error {
     /// Type of error and additional information
@@ -20,6 +25,7 @@ pub struct Error {
 /// Possible error types
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
 #[derive(Debug, Clone)]
 pub enum ErrorType {
     /// This error was not labeled :(
