@@ -12,7 +12,7 @@ use serde::Serialize;
 database_derived!(
     #[cfg(feature = "mongodb")]
     /// MongoDB implementation
-    pub struct MongoDb(pub ::mongodb::Client);
+    pub struct MongoDb(pub ::mongodb::Client, pub String);
 );
 
 impl Deref for MongoDb {
@@ -27,7 +27,7 @@ impl Deref for MongoDb {
 impl MongoDb {
     /// Get the Revolt database
     pub fn db(&self) -> mongodb::Database {
-        self.database("revolt")
+        self.database(&self.1)
     }
 
     /// Get a collection by its name

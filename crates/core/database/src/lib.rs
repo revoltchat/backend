@@ -51,12 +51,21 @@ macro_rules! auto_derived_partial {
 mod drivers;
 pub use drivers::*;
 
+#[cfg(test)]
 macro_rules! database_test {
-    ( $name: expr ) => {
-        $crate::DatabaseInfo::Reference
+    ( | $db: ident | $test:expr ) => {
+        let db = $crate::DatabaseInfo::Test(format!("{}:{}", file!().replace('/', "_"), line!()))
             .connect()
             .await
-            .expect("Database connection failed.")
+            .expect("Database connection failed.");
+
+        #[allow(clippy::redundant_closure_call)]
+        (|$db: $crate::Database| $test)(db.clone()).await;
+
+        match db {
+            $crate::Database::Reference(_) => {}
+            $crate::Database::MongoDb(db) => db.0.database(&db.1).drop(None).await.unwrap(),
+        }
     };
 }
 

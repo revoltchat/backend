@@ -80,47 +80,47 @@ mod tests {
 
     #[async_std::test]
     async fn crud() {
-        let db = database_test!("bot_crud");
+        database_test!(|db| async move {
+            let bot_id = "bot";
+            let user_id = "user";
+            let token = "my_token";
 
-        let bot_id = "bot";
-        let user_id = "user";
-        let token = "my_token";
-
-        let bot = Bot {
-            id: bot_id.to_string(),
-            owner: user_id.to_string(),
-            token: token.to_string(),
-            interactions_url: Some("some url".to_string()),
-            ..Default::default()
-        };
-
-        db.insert_bot(&bot).await.unwrap();
-        db.update_bot(
-            bot_id,
-            &crate::PartialBot {
-                public: Some(true),
+            let bot = Bot {
+                id: bot_id.to_string(),
+                owner: user_id.to_string(),
+                token: token.to_string(),
+                interactions_url: Some("some url".to_string()),
                 ..Default::default()
-            },
-            vec![FieldsBot::Token, FieldsBot::InteractionsURL],
-        )
-        .await
-        .unwrap();
+            };
 
-        let fetched_bot1 = db.fetch_bot(bot_id).await.unwrap();
-        let fetched_bot2 = db.fetch_bot_by_token(&fetched_bot1.token).await.unwrap();
-        let fetched_bots = db.fetch_bots_by_user(user_id).await.unwrap();
+            db.insert_bot(&bot).await.unwrap();
+            db.update_bot(
+                bot_id,
+                &crate::PartialBot {
+                    public: Some(true),
+                    ..Default::default()
+                },
+                vec![FieldsBot::Token, FieldsBot::InteractionsURL],
+            )
+            .await
+            .unwrap();
 
-        assert!(!bot.public);
-        assert!(fetched_bot1.public);
-        assert!(bot.interactions_url.is_some());
-        assert!(fetched_bot1.interactions_url.is_none());
-        assert_ne!(bot.token, fetched_bot1.token);
-        assert_eq!(fetched_bot1, fetched_bot2);
-        assert_eq!(fetched_bot1, fetched_bots[0]);
-        assert_eq!(1, db.get_number_of_bots_by_user(user_id).await.unwrap());
+            let fetched_bot1 = db.fetch_bot(bot_id).await.unwrap();
+            let fetched_bot2 = db.fetch_bot_by_token(&fetched_bot1.token).await.unwrap();
+            let fetched_bots = db.fetch_bots_by_user(user_id).await.unwrap();
 
-        bot.delete(&db).await.unwrap();
-        assert!(db.fetch_bot(bot_id).await.is_err());
-        assert_eq!(0, db.get_number_of_bots_by_user(user_id).await.unwrap());
+            assert!(!bot.public);
+            assert!(fetched_bot1.public);
+            assert!(bot.interactions_url.is_some());
+            assert!(fetched_bot1.interactions_url.is_none());
+            assert_ne!(bot.token, fetched_bot1.token);
+            assert_eq!(fetched_bot1, fetched_bot2);
+            assert_eq!(fetched_bot1, fetched_bots[0]);
+            assert_eq!(1, db.get_number_of_bots_by_user(user_id).await.unwrap());
+
+            bot.delete(&db).await.unwrap();
+            assert!(db.fetch_bot(bot_id).await.is_err());
+            assert_eq!(0, db.get_number_of_bots_by_user(user_id).await.unwrap())
+        });
     }
 }

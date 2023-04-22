@@ -8,12 +8,14 @@ pub use self::reference::*;
 pub enum DatabaseInfo {
     /// Auto-detect the database in use
     Auto,
+    /// Auto-detect the database in use and create an empty testing database
+    Test(String),
     /// Use the mock database
     Reference,
     /// Connect to MongoDB
-    MongoDb(String),
+    MongoDb { uri: String, database_name: String },
     /// Use existing MongoDB connection
-    MongoDbFromClient(::mongodb::Client),
+    MongoDbFromClient(::mongodb::Client, String),
 }
 
 /// Database
@@ -32,20 +34,34 @@ impl DatabaseInfo {
         Ok(match self {
             DatabaseInfo::Auto => {
                 if let Ok(uri) = std::env::var("MONGODB") {
-                    return DatabaseInfo::MongoDb(uri).connect().await;
+                    return DatabaseInfo::MongoDb {
+                        uri,
+                        database_name: "revolt".to_string(),
+                    }
+                    .connect()
+                    .await;
+                }
+
+                DatabaseInfo::Reference.connect().await?
+            }
+            DatabaseInfo::Test(database_name) => {
+                if let Ok(uri) = std::env::var("MONGODB") {
+                    return DatabaseInfo::MongoDb { uri, database_name }.connect().await;
                 }
 
                 DatabaseInfo::Reference.connect().await?
             }
             DatabaseInfo::Reference => Database::Reference(Default::default()),
-            DatabaseInfo::MongoDb(uri) => {
+            DatabaseInfo::MongoDb { uri, database_name } => {
                 let client = ::mongodb::Client::with_uri_str(uri)
                     .await
                     .map_err(|_| "Failed to init db connection.".to_string())?;
 
-                Database::MongoDb(MongoDb(client))
+                Database::MongoDb(MongoDb(client, database_name))
             }
-            DatabaseInfo::MongoDbFromClient(client) => Database::MongoDb(MongoDb(client)),
+            DatabaseInfo::MongoDbFromClient(client, database_name) => {
+                Database::MongoDb(MongoDb(client, database_name))
+            }
         })
     }
 }
