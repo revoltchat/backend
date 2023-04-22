@@ -23,7 +23,7 @@ default = [ "mongodb", "async-std-runtime" ]
 revolt-result = { version = "0.0.1", path = "../result" }
 
 # Utility
-log = "*"
+log = "0.4"
 nanoid = "0.4.0"
 
 # Serialisation
