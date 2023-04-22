@@ -2187,15 +2187,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "optional_struct"
-version = "0.2.0"
-source = "git+https://github.com/insertish/OptionalStruct?rev=ee56427cee1f007839825d93d07fffd5a5e038c7#ee56427cee1f007839825d93d07fffd5a5e038c7"
-dependencies = [
- "quote 0.3.15",
- "syn 0.11.11",
-]
-
-[[package]]
 name = "os_info"
 version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2835,8 +2826,8 @@ dependencies = [
  "log",
  "mongodb",
  "nanoid",
- "optional_struct",
  "revolt-result",
+ "revolt_optional_struct",
  "serde",
  "serde_json",
 ]
@@ -2864,6 +2855,7 @@ dependencies = [
  "regex",
  "reqwest",
  "revolt-database",
+ "revolt-models",
  "revolt-quark",
  "revolt_rocket_okapi",
  "rocket",
@@ -2881,6 +2873,11 @@ dependencies = [
 [[package]]
 name = "revolt-models"
 version = "0.1.0"
+dependencies = [
+ "revolt-database",
+ "schemars",
+ "serde",
+]
 
 [[package]]
 name = "revolt-quark"
@@ -2909,13 +2906,14 @@ dependencies = [
  "nanoid",
  "num_enum",
  "once_cell",
- "optional_struct",
  "pretty_env_logger",
  "rand 0.8.5",
  "redis-kiss",
  "regex",
  "reqwest",
+ "revolt-result",
  "revolt_okapi",
+ "revolt_optional_struct",
  "revolt_rocket_okapi",
  "rocket",
  "rocket_cors",
@@ -2934,6 +2932,7 @@ dependencies = [
 name = "revolt-result"
 version = "0.1.0"
 dependencies = [
+ "schemars",
  "serde",
 ]
 
@@ -2947,6 +2946,16 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "revolt_optional_struct"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d342739658623fe9d72b42f7a36ba19094d1d9bf9b423c3e337ab203c15d53e"
+dependencies = [
+ "quote 0.3.15",
+ "syn 0.11.11",
 ]
 
 [[package]]
@@ -3408,9 +3417,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.152"
+version = "1.0.160"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb7d1f0d3021d347a83e556fc4683dea2ea09d87bccdf88ff5c12545d89d5efb"
+checksum = "bb2f3770c8bce3bcda7e149193a069a0f4365bda1fa5cd88e03bca26afc1216c"
 dependencies = [
  "serde_derive",
 ]
@@ -3426,13 +3435,13 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.152"
+version = "1.0.160"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af487d118eecd09402d70a5d72551860e788df87b464af30e5ea6a38c75c541e"
+checksum = "291a097c63d8497e00160b166a967a4a79c64f3facdd01cbd7502231688d77df"
 dependencies = [
  "proc-macro2",
  "quote 1.0.26",
- "syn 1.0.107",
+ "syn 2.0.15",
 ]
 
 [[package]]

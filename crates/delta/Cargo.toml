@@ -57,6 +57,7 @@ revolt-quark = { path = "../quark" }
 
 # core
 revolt-database = { path = "../core/database" }
+revolt-models = { path = "../core/models", features = [ "schemas" ] }
 
 [build-dependencies]
 vergen = "7.5.0"
