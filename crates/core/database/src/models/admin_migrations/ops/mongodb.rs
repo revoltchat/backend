@@ -7,6 +7,12 @@ mod scripts;
 
 #[async_trait]
 impl AbstractMigrations for MongoDb {
+    #[cfg(test)]
+    /// Drop the database
+    async fn drop_database(&self) {
+        self.db().drop(None).await.ok();
+    }
+
     /// Migrate the database
     async fn migrate_database(&self) -> Result<(), ()> {
         info!("Migrating the database.");
