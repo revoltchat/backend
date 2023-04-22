@@ -27,7 +27,11 @@ deps() {
     tee crates/bonfire/src/main.rs |
     tee crates/delta/src/main.rs
   echo '' |
-    tee crates/quark/src/lib.rs
+    tee crates/quark/src/lib.rs |
+    tee crates/core/database/src/lib.rs |
+    tee crates/core/models/src/lib.rs |
+    tee crates/core/presence/src/lib.rs |
+    tee crates/core/result/src/lib.rs
   cargo build --locked --release --target "${BUILD_TARGET}"
 }
 
@@ -35,7 +39,11 @@ apps() {
   touch -am \
     crates/bonfire/src/main.rs \
     crates/delta/src/main.rs \
-    crates/quark/src/lib.rs
+    crates/quark/src/lib.rs \
+    crates/core/database/src/lib.rs \
+    crates/core/models/src/lib.rs \
+    crates/core/presence/src/lib.rs \
+    crates/core/result/src/lib.rs
   cargo build --locked --release --target "${BUILD_TARGET}"
   mv target _target && mv _target/"${BUILD_TARGET}" target
 }
