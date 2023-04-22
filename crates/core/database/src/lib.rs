@@ -54,10 +54,14 @@ pub use drivers::*;
 #[cfg(test)]
 macro_rules! database_test {
     ( | $db: ident | $test:expr ) => {
-        let db = $crate::DatabaseInfo::Test(format!("{}:{}", file!().replace('/', "_"), line!()))
-            .connect()
-            .await
-            .expect("Database connection failed.");
+        let db = $crate::DatabaseInfo::Test(format!(
+            "{}:{}",
+            file!().replace('/', "_").replace(".rs", ""),
+            line!()
+        ))
+        .connect()
+        .await
+        .expect("Database connection failed.");
 
         #[allow(clippy::redundant_closure_call)]
         (|$db: $crate::Database| $test)(db.clone()).await;
