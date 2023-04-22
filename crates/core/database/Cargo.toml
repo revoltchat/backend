@@ -19,8 +19,8 @@ async-std-runtime = [ "async-std" ]
 default = [ "mongodb", "async-std-runtime" ]
 
 [dependencies]
-# Repo
-revolt-result = { path = "../result" }
+# Core
+revolt-result = { version = "0.0.1", path = "../result" }
 
 # Utility
 log = "*"
