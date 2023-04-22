@@ -1,0 +1,46 @@
+[package]
+name = "revolt-database"
+version = "0.0.1"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+authors = [ "Paul Makles <me@insrt.uk>" ]
+description = "Revolt Backend: Database Implementation"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+# Databases
+mongodb = [ "dep:mongodb" ]
+
+# ... Other
+async-std-runtime = [ "async-std" ]
+
+# Default Features
+default = [ "mongodb", "async-std-runtime" ]
+
+[dependencies]
+# Core
+revolt-result = { version = "0.0.1", path = "../result" }
+
+# Utility
+log = "0.4"
+nanoid = "0.4.0"
+
+# Serialisation
+serde_json = "1"
+revolt_optional_struct = "0.2.0"
+serde = { version = "1", features = ["derive"] }
+
+# Database
+mongodb = { optional = true, version = "2.1.0", default-features = false }
+
+# Async Language Features
+futures = "0.3.19"
+async-trait = "0.1.51"
+async-recursion = "1.0.4"
+
+# Async
+async-std = { version = "1.8.0", features = ["attributes"], optional = true }
+
+# Authifier
+authifier = { version = "1.0" }

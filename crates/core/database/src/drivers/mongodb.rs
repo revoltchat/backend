@@ -1,53 +1,19 @@
+use std::collections::HashMap;
 use std::ops::Deref;
 
-use bson::{to_document, Document};
 use futures::StreamExt;
-use mongodb::{
-    options::{FindOneOptions, FindOptions},
-    results::{DeleteResult, InsertOneResult, UpdateResult},
-};
-use rocket::serde::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use mongodb::bson::{doc, to_document, Document};
+use mongodb::error::Result;
+use mongodb::options::{FindOneOptions, FindOptions};
+use mongodb::results::{DeleteResult, InsertOneResult, UpdateResult};
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 
-use crate::{util::manipulation::prefix_keys, AbstractDatabase, Error, Result};
-
-pub mod admin {
-    pub mod stats;
-}
-
-pub mod media {
-    pub mod attachment;
-    pub mod emoji;
-}
-
-pub mod channels {
-    pub mod channel;
-    pub mod channel_invite;
-    pub mod channel_unread;
-    pub mod message;
-}
-
-pub mod servers {
-    pub mod server;
-    pub mod server_ban;
-    pub mod server_member;
-}
-
-pub mod users {
-    pub mod bot;
-    pub mod user;
-    pub mod user_settings;
-}
-
-pub mod safety {
-    pub mod report;
-    pub mod snapshot;
-}
-
-#[derive(Debug, Clone)]
-pub struct MongoDb(pub mongodb::Client);
-
-impl AbstractDatabase for MongoDb {}
+database_derived!(
+    #[cfg(feature = "mongodb")]
+    /// MongoDB implementation
+    pub struct MongoDb(pub ::mongodb::Client, pub String);
+);
 
 impl Deref for MongoDb {
     type Target = mongodb::Client;
@@ -57,30 +23,40 @@ impl Deref for MongoDb {
     }
 }
 
+#[allow(dead_code)]
 impl MongoDb {
+    /// Get the Revolt database
     pub fn db(&self) -> mongodb::Database {
-        self.database("revolt")
+        self.database(&self.1)
     }
 
+    /// Get a collection by its name
     pub fn col<T>(&self, collection: &str) -> mongodb::Collection<T> {
         self.db().collection(collection)
     }
 
-    async fn insert_one<T: Serialize>(
+    /// Insert one document into a collection
+    pub async fn insert_one<T: Serialize>(
         &self,
         collection: &'static str,
         document: T,
     ) -> Result<InsertOneResult> {
-        self.col::<T>(collection)
-            .insert_one(document, None)
-            .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "insert_one",
-                with: collection,
-            })
+        self.col::<T>(collection).insert_one(document, None).await
     }
 
-    async fn find_with_options<O, T: DeserializeOwned + Unpin + Send + Sync>(
+    /// Count documents by projection
+    pub async fn count_documents(
+        &self,
+        collection: &'static str,
+        projection: Document,
+    ) -> Result<u64> {
+        self.col::<Document>(collection)
+            .count_documents(projection, None)
+            .await
+    }
+
+    /// Find multiple documents in a collection with options
+    pub async fn find_with_options<O, T: DeserializeOwned + Unpin + Send + Sync>(
         &self,
         collection: &'static str,
         projection: Document,
@@ -89,28 +65,24 @@ impl MongoDb {
     where
         O: Into<Option<FindOptions>>,
     {
-        let result = self.col::<T>(collection).find(projection, options).await;
-        Ok(if cfg!(debug_assertions) {
-            result.unwrap()
-        } else {
-            result.map_err(|_| Error::DatabaseError {
-                operation: "find",
-                with: collection,
-            })?
-        }
-        .filter_map(|s| async {
-            if cfg!(debug_assertions) {
-                // Hard fail on invalid documents
-                Some(s.unwrap())
-            } else {
-                s.ok()
-            }
-        })
-        .collect::<Vec<T>>()
-        .await)
+        Ok(self
+            .col::<T>(collection)
+            .find(projection, options)
+            .await?
+            .filter_map(|s| async {
+                if cfg!(debug_assertions) {
+                    // Hard fail on invalid documents
+                    Some(s.unwrap())
+                } else {
+                    s.ok()
+                }
+            })
+            .collect::<Vec<T>>()
+            .await)
     }
 
-    async fn find<T: DeserializeOwned + Unpin + Send + Sync>(
+    /// Find multiple documents in a collection
+    pub async fn find<T: DeserializeOwned + Unpin + Send + Sync>(
         &self,
         collection: &'static str,
         projection: Document,
@@ -118,39 +90,37 @@ impl MongoDb {
         self.find_with_options(collection, projection, None).await
     }
 
-    async fn find_one_with_options<O, T: DeserializeOwned + Unpin + Send + Sync>(
+    /// Find one document with options
+    pub async fn find_one_with_options<O, T: DeserializeOwned + Unpin + Send + Sync>(
         &self,
         collection: &'static str,
         projection: Document,
         options: O,
-    ) -> Result<T>
+    ) -> Result<Option<T>>
     where
         O: Into<Option<FindOneOptions>>,
     {
         self.col::<T>(collection)
             .find_one(projection, options)
             .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "find_one",
-                with: collection,
-            })?
-            .ok_or(Error::NotFound)
     }
 
-    async fn find_one<T: DeserializeOwned + Unpin + Send + Sync>(
+    /// Find one document
+    pub async fn find_one<T: DeserializeOwned + Unpin + Send + Sync>(
         &self,
         collection: &'static str,
         projection: Document,
-    ) -> Result<T> {
+    ) -> Result<Option<T>> {
         self.find_one_with_options(collection, projection, None)
             .await
     }
 
-    async fn find_one_by_id<T: DeserializeOwned + Unpin + Send + Sync>(
+    /// Find one document by its ID
+    pub async fn find_one_by_id<T: DeserializeOwned + Unpin + Send + Sync>(
         &self,
         collection: &'static str,
         id: &str,
-    ) -> Result<T> {
+    ) -> Result<Option<T>> {
         self.find_one(
             collection,
             doc! {
@@ -160,7 +130,8 @@ impl MongoDb {
         .await
     }
 
-    async fn update_one<P, T: Serialize>(
+    /// Update one document given a projection, partial document, and list of paths to unset
+    pub async fn update_one<P, T: Serialize>(
         &self,
         collection: &'static str,
         projection: Document,
@@ -190,22 +161,16 @@ impl MongoDb {
                 to_document(&prefix_keys(&partial, prefix))
             } else {
                 to_document(&partial)
-            }.map_err(|_| Error::DatabaseError {
-                operation: "to_document",
-                with: collection
-            })?
+            }?
         };
 
         self.col::<Document>(collection)
             .update_one(projection, query, None)
             .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "update_one",
-                with: collection,
-            })
     }
 
-    async fn update_one_by_id<P, T: Serialize>(
+    /// Update one document given an ID, partial document, and list of paths to unset
+    pub async fn update_one_by_id<P, T: Serialize>(
         &self,
         collection: &'static str,
         id: &str,
@@ -228,7 +193,8 @@ impl MongoDb {
         .await
     }
 
-    async fn delete_one(
+    /// Delete one document by the given projection
+    pub async fn delete_one(
         &self,
         collection: &'static str,
         projection: Document,
@@ -236,13 +202,14 @@ impl MongoDb {
         self.col::<Document>(collection)
             .delete_one(projection, None)
             .await
-            .map_err(|_| Error::DatabaseError {
-                operation: "delete_one",
-                with: collection,
-            })
     }
 
-    async fn delete_one_by_id(&self, collection: &'static str, id: &str) -> Result<DeleteResult> {
+    /// Delete one document by the given ID
+    pub async fn delete_one_by_id(
+        &self,
+        collection: &'static str,
+        id: &str,
+    ) -> Result<DeleteResult> {
         self.delete_one(
             collection,
             doc! {
@@ -253,6 +220,7 @@ impl MongoDb {
     }
 }
 
+/// Just a string ID struct
 #[derive(Deserialize)]
 pub struct DocumentId {
     #[serde(rename = "_id")]
@@ -260,5 +228,16 @@ pub struct DocumentId {
 }
 
 pub trait IntoDocumentPath: Send + Sync {
+    /// Create JSON key path
     fn as_path(&self) -> Option<&'static str>;
+}
+
+/// Prefix keys on an arbitrary object
+pub fn prefix_keys<T: Serialize>(t: &T, prefix: &str) -> HashMap<String, serde_json::Value> {
+    let v: String = serde_json::to_string(t).unwrap();
+    let v: HashMap<String, serde_json::Value> = serde_json::from_str(&v).unwrap();
+    v.into_iter()
+        .filter(|(_k, v)| !v.is_null())
+        .map(|(k, v)| (prefix.to_owned() + &k, v))
+        .collect()
 }

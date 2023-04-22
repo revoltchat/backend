@@ -22,15 +22,18 @@ async fn rocket() -> _ {
     revolt_quark::variables::delta::preflight_checks();
 
     // Setup database
-    let db = DatabaseInfo::Auto.connect().await.unwrap();
+    let db = revolt_database::DatabaseInfo::Auto.connect().await.unwrap();
     db.migrate_database().await.unwrap();
+
+    // Legacy database setup from quark
+    let legacy_db = DatabaseInfo::Auto.connect().await.unwrap();
 
     // Setup Authifier event channel
     let (sender, receiver) = unbounded();
 
     // Setup Authifier
     let authifier = Authifier {
-        database: db.clone().into(),
+        database: legacy_db.clone().into(),
         config: revolt_quark::util::authifier::config(),
         event_channel: Some(sender),
     };
@@ -52,7 +55,7 @@ async fn rocket() -> _ {
     });
 
     // Launch background task workers
-    async_std::task::spawn(revolt_quark::tasks::start_workers(db.clone()));
+    async_std::task::spawn(revolt_quark::tasks::start_workers(legacy_db.clone()));
 
     // Configure CORS
     let cors = revolt_quark::web::cors::new();
@@ -65,6 +68,7 @@ async fn rocket() -> _ {
         .mount("/swagger/", revolt_quark::web::swagger::routes())
         .manage(authifier)
         .manage(db)
+        .manage(legacy_db)
         .manage(cors.clone())
         .attach(revolt_quark::web::ratelimiter::RatelimitFairing)
         .attach(cors)

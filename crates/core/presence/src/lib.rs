@@ -1,20 +1,31 @@
+#[macro_use]
+extern crate log;
+
+use once_cell::sync::Lazy;
+use rand::Rng;
+use redis_kiss::{get_connection, AsyncCommands};
 use std::collections::HashSet;
 
-use redis_kiss::{get_connection, AsyncCommands};
-
-use rand::Rng;
-mod entry;
 mod operations;
-
 use operations::{
     __add_to_set_string, __add_to_set_u32, __delete_key, __get_set_members_as_string,
     __get_set_size, __remove_from_set_string, __remove_from_set_u32,
 };
 
-use self::entry::{ONLINE_SET, REGION_KEY};
+pub static REGION_ID: Lazy<u16> = Lazy::new(|| {
+    std::env::var("REGION_ID")
+        .unwrap_or_else(|_| "0".to_string())
+        .parse()
+        .unwrap()
+});
+
+pub static REGION_KEY: Lazy<String> = Lazy::new(|| format!("region{}", &*REGION_ID));
+pub static ONLINE_SET: &str = "online";
+
+pub static FLAG_BITS: u32 = 0b1;
 
 /// Create a new presence session, returns the ID of this session
-pub async fn presence_create_session(user_id: &str, flags: u8) -> (bool, u32) {
+pub async fn create_session(user_id: &str, flags: u8) -> (bool, u32) {
     info!("Creating a presence session for {user_id} with flags {flags}");
 
     if let Ok(mut conn) = get_connection().await {
@@ -24,7 +35,7 @@ pub async fn presence_create_session(user_id: &str, flags: u8) -> (bool, u32) {
         // A session ID is comprised of random data and any flags ORed to the end
         let session_id = {
             let mut rng = rand::thread_rng();
-            (rng.gen::<u32>() ^ 1) | (flags as u32 & 1)
+            (rng.gen::<u32>() & !FLAG_BITS) | (flags as u32 & FLAG_BITS)
         };
 
         // Add session to user's sessions and to the region
@@ -41,16 +52,12 @@ pub async fn presence_create_session(user_id: &str, flags: u8) -> (bool, u32) {
 }
 
 /// Delete existing presence session
-pub async fn presence_delete_session(user_id: &str, session_id: u32) -> bool {
-    presence_delete_session_internal(user_id, session_id, false).await
+pub async fn delete_session(user_id: &str, session_id: u32) -> bool {
+    delete_session_internal(user_id, session_id, false).await
 }
 
 /// Delete existing presence session (but also choose whether to skip region)
-async fn presence_delete_session_internal(
-    user_id: &str,
-    session_id: u32,
-    skip_region: bool,
-) -> bool {
+async fn delete_session_internal(user_id: &str, session_id: u32, skip_region: bool) -> bool {
     info!("Deleting presence session for {user_id} with id {session_id}");
 
     if let Ok(mut conn) = get_connection().await {
@@ -78,7 +85,7 @@ async fn presence_delete_session_internal(
 }
 
 /// Check whether a given user ID is online
-pub async fn presence_is_online(user_id: &str) -> bool {
+pub async fn is_online(user_id: &str) -> bool {
     if let Ok(mut conn) = get_connection().await {
         conn.exists(user_id).await.unwrap_or(false)
     } else {
@@ -87,7 +94,7 @@ pub async fn presence_is_online(user_id: &str) -> bool {
 }
 
 /// Check whether a set of users is online, returns a set of the online user IDs
-pub async fn presence_filter_online(user_ids: &'_ [String]) -> HashSet<String> {
+pub async fn filter_online(user_ids: &'_ [String]) -> HashSet<String> {
     // Ignore empty list immediately, to save time.
     let mut set = HashSet::new();
     if user_ids.is_empty() {
@@ -102,7 +109,7 @@ pub async fn presence_filter_online(user_ids: &'_ [String]) -> HashSet<String> {
     // as for some reason or another, Redis does not like us sending
     // a list of just one ID to the server.
     if user_ids.len() == 1 {
-        if presence_is_online(&user_ids[0]).await {
+        if is_online(&user_ids[0]).await {
             set.insert(user_ids[0].to_string());
         }
 
@@ -133,7 +140,7 @@ pub async fn presence_filter_online(user_ids: &'_ [String]) -> HashSet<String> {
 }
 
 /// Reset any stale presence data
-pub async fn presence_clear_region(region_id: Option<&str>) {
+pub async fn clear_region(region_id: Option<&str>) {
     let region_id = region_id.unwrap_or(&*REGION_KEY);
     let mut conn = get_connection().await.expect("Redis connection");
 
@@ -150,7 +157,7 @@ pub async fn presence_clear_region(region_id: Option<&str>) {
             let parts = session.split(':').collect::<Vec<&str>>();
             if let (Some(user_id), Some(session_id)) = (parts.first(), parts.get(1)) {
                 if let Ok(session_id) = session_id.parse() {
-                    presence_delete_session_internal(user_id, session_id, true).await;
+                    delete_session_internal(user_id, session_id, true).await;
                 }
             }
         }
@@ -159,5 +166,61 @@ pub async fn presence_clear_region(region_id: Option<&str>) {
         __delete_key(&mut conn, region_id).await;
 
         info!("Clean up complete.");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{clear_region, create_session, delete_session, filter_online, is_online};
+    use rand::Rng;
+
+    #[async_std::test]
+    async fn it_works() {
+        // Clear the region before we start the tests:
+        clear_region(None).await;
+
+        // Generate some data we'll use:
+        let user_id = rand::thread_rng().gen::<u32>().to_string();
+        let other_id = rand::thread_rng().gen::<u32>().to_string();
+        let flags = 1;
+
+        // Create a session
+        let (first_session, session_id) = create_session(&user_id, flags).await;
+        assert!(first_session);
+        assert_ne!(session_id, 0);
+        assert_eq!(session_id as u8 & flags, flags);
+
+        // Check if the user is online
+        assert!(is_online(&user_id).await);
+
+        let user_ids = filter_online(&[user_id.to_string()]).await;
+        assert_eq!(user_ids.len(), 1);
+        assert!(user_ids.contains(&user_id));
+
+        // Create a few more sessions
+        let (first_session, second_session_id) = create_session(&user_id, 0).await;
+        assert!(!first_session);
+        dbg!(second_session_id);
+        assert_eq!(second_session_id as u8 & 1, 0);
+
+        let (first_session, other_session_id) = create_session(&other_id, 0).await;
+        assert!(first_session);
+
+        let user_ids = filter_online(&[user_id.to_string(), other_id.to_string()]).await;
+        assert_eq!(user_ids.len(), 2);
+        assert!(user_ids.contains(&user_id));
+        assert!(user_ids.contains(&other_id));
+
+        // Remove sessions
+        delete_session(&user_id, session_id).await;
+        delete_session(&other_id, other_session_id).await;
+        assert!(!is_online(&other_id).await);
+
+        // Check if we can wipe everything too
+        clear_region(None).await;
+        assert!(!is_online(&user_id).await);
+
+        let user_ids = filter_online(&[user_id.to_string(), other_id.to_string()]).await;
+        assert!(user_ids.is_empty())
     }
 }

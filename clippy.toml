@@ -1,0 +1,7 @@
+disallowed-methods = [
+    # Shouldn't need to access these directly
+    "revolt_database::models::bots::model::Bot::remove_field",
+
+    # Prefer to use Object::delete()
+    "revolt_database::models::bots::ops::AbstractBots::update_bot",
+]

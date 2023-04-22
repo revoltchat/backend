@@ -1,8 +1,8 @@
 [package]
 name = "revolt-quark"
 version = "0.5.19"
-license = "AGPL-3.0-or-later"
 edition = "2021"
+license = "AGPL-3.0-or-later"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -26,10 +26,10 @@ default = [ "test" ]
 
 [dependencies]
 # Serialisation
+revolt_optional_struct = "0.2.0"
 serde = { version = "1", features = ["derive"] }
 validator = { version = "0.14", features = ["derive"] }
 iso8601-timestamp = { version = "0.1.8", features = ["schema", "bson"] }
-optional_struct = { git = "https://github.com/insertish/OptionalStruct", rev = "ee56427cee1f007839825d93d07fffd5a5e038c7" }
 
 # Formats
 bincode = "1.3.3"
@@ -89,3 +89,7 @@ authifier = { version = "1.0.7", features = [ "async-std-runtime" ] }
 
 # Sentry
 sentry = "0.25.0"
+
+# Core
+revolt-result = { path = "../core/result", features = [ "serde", "schemas" ] }
+revolt-presence = { path = "../core/presence" }

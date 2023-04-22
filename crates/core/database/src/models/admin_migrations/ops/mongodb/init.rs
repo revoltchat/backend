@@ -1,9 +1,8 @@
-use crate::r#impl::mongo::MongoDb;
-
 use super::scripts::LATEST_REVISION;
 
-use mongodb::bson::doc;
-use mongodb::options::CreateCollectionOptions;
+use crate::mongodb::bson::doc;
+use crate::mongodb::options::CreateCollectionOptions;
+use crate::MongoDb;
 
 pub async fn create_database(db: &MongoDb) {
     info!("Creating database.");

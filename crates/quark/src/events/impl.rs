@@ -7,10 +7,10 @@ use crate::{
         user::{PartialUser, Presence, RelationshipStatus},
         Channel, Member, User,
     },
-    perms,
-    presence::presence_filter_online,
-    Database, Permission, Result,
+    perms, Database, Permission, Result,
 };
+
+use revolt_presence::filter_online;
 
 use super::{
     client::EventV1,
@@ -135,8 +135,7 @@ impl State {
         }
 
         // Fetch presence data for known users.
-        let online_ids =
-            presence_filter_online(&user_ids.iter().cloned().collect::<Vec<String>>()).await;
+        let online_ids = filter_online(&user_ids.iter().cloned().collect::<Vec<String>>()).await;
         user.online = Some(true);
 
         // Fetch user data.

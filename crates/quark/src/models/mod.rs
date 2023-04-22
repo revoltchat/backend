@@ -1,5 +1,4 @@
 mod admin {
-    pub mod migrations;
     pub mod simple;
     pub mod stats;
 }
@@ -47,7 +46,6 @@ pub use channel_invite::Invite;
 pub use channel_unread::ChannelUnread;
 pub use emoji::Emoji;
 pub use message::Message;
-pub use migrations::MigrationInfo;
 pub use report::Report;
 pub use server::Server;
 pub use server_ban::ServerBan;

@@ -1,0 +1,26 @@
+[package]
+name = "revolt-models"
+version = "0.0.1"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+authors = [ "Paul Makles <me@insrt.uk>" ]
+description = "Revolt Backend: API Models"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+serde = [ "dep:serde" ]
+schemas = [ "dep:schemars" ]
+from_database = [ "revolt-database" ]
+
+default = [ "serde", "from_database" ]
+
+[dependencies]
+# Repo
+revolt-database = { version = "0.0.1", path = "../database", optional = true }
+
+# Serialisation
+serde = { version = "1", features = ["derive"], optional = true }
+
+# Spec Generation
+schemars = { version = "0.8.8", optional = true }
