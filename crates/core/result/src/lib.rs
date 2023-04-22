@@ -119,7 +119,7 @@ pub enum ErrorType {
 
 #[macro_export]
 macro_rules! create_error {
-    ( $error:ident $( $tt:tt )? ) => {
+    ( $error: ident $( $tt:tt )? ) => {
         $crate::Error {
             error_type: $crate::ErrorType::$error $( $tt )?,
             location: format!("{}:{}:{}", file!(), line!(), column!()),
@@ -129,11 +129,28 @@ macro_rules! create_error {
 
 #[macro_export]
 macro_rules! create_database_error {
-    ( $operation:expr, $collection:expr ) => {
+    ( $operation: expr, $collection: expr ) => {
         create_error!(DatabaseError {
             operation: $operation.to_string(),
             collection: $collection.to_string()
         })
+    };
+}
+
+#[macro_export]
+#[cfg(debug_assertions)]
+macro_rules! query {
+    ( $self: ident, $type: ident, $collection: expr, $($rest:expr),+ ) => {
+        Ok($self.$type($collection, $($rest),+).await.unwrap())
+    };
+}
+
+#[macro_export]
+#[cfg(not(debug_assertions))]
+macro_rules! query {
+    ( $self: ident, $type: ident, $collection: expr, $($rest:expr),+ ) => {
+        $self.$type($collection, $($rest),+).await
+            .map_err(|_| create_database_error!(stringify!($type), $collection))
     };
 }
 

@@ -12,31 +12,25 @@ static COL: &str = "bots";
 impl AbstractBots for MongoDb {
     /// Fetch a bot by its id
     async fn fetch_bot(&self, id: &str) -> Result<Bot> {
-        self.find_one_by_id(COL, id)
-            .await
-            .map_err(|_| create_database_error!("find_one", COL))?
-            .ok_or_else(|| create_error!(NotFound))
+        query!(self, find_one_by_id, COL, id)?.ok_or_else(|| create_error!(NotFound))
     }
 
     /// Fetch a bot by its token
     async fn fetch_bot_by_token(&self, token: &str) -> Result<Bot> {
-        self.find_one(
+        query!(
+            self,
+            find_one,
             COL,
             doc! {
                 "token": token
-            },
-        )
-        .await
-        .map_err(|_| create_database_error!("find_one", COL))?
+            }
+        )?
         .ok_or_else(|| create_error!(NotFound))
     }
 
     /// Insert new bot into the database
     async fn insert_bot(&self, bot: &Bot) -> Result<()> {
-        self.insert_one(COL, &bot)
-            .await
-            .map(|_| ())
-            .map_err(|_| create_database_error!("insert_one", COL))
+        query!(self, insert_one, COL, &bot).map(|_| ())
     }
 
     /// Update bot with new information
@@ -46,49 +40,46 @@ impl AbstractBots for MongoDb {
         partial: &PartialBot,
         remove: Vec<FieldsBot>,
     ) -> Result<()> {
-        self.update_one_by_id(
+        query!(
+            self,
+            update_one_by_id,
             COL,
             id,
             partial,
             remove.iter().map(|x| x as &dyn IntoDocumentPath).collect(),
-            None,
+            None
         )
-        .await
         .map(|_| ())
-        .map_err(|_| create_database_error!("update_one", COL))
     }
 
     /// Delete a bot from the database
     async fn delete_bot(&self, id: &str) -> Result<()> {
-        self.delete_one_by_id(COL, id)
-            .await
-            .map(|_| ())
-            .map_err(|_| create_database_error!("delete_one", COL))
+        query!(self, delete_one_by_id, COL, id).map(|_| ())
     }
 
     /// Fetch bots owned by a user
     async fn fetch_bots_by_user(&self, user_id: &str) -> Result<Vec<Bot>> {
-        self.find(
+        query!(
+            self,
+            find,
             COL,
             doc! {
                 "owner": user_id
-            },
+            }
         )
-        .await
-        .map_err(|_| create_database_error!("find", COL))
     }
 
     /// Get the number of bots owned by a user
     async fn get_number_of_bots_by_user(&self, user_id: &str) -> Result<usize> {
-        self.count_documents(
+        query!(
+            self,
+            count_documents,
             COL,
             doc! {
                 "owner": user_id
-            },
+            }
         )
-        .await
         .map(|v| v as usize)
-        .map_err(|_| create_database_error!("count", COL))
     }
 }
 
