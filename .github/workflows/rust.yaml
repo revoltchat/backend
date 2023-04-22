@@ -2,7 +2,6 @@ name: Rust build, test, and generate specification
 
 on:
   push:
-    branches: [master]
   pull_request:
     branches: [master]
 
@@ -33,7 +32,6 @@ jobs:
           command: test
 
       - name: Run services in background
-        if: github.event_name != 'pull_request'
         run: |
           docker-compose -f docker-compose.db.yml up -d
 
@@ -45,23 +43,23 @@ jobs:
           command: test
 
       - name: Copy .env.example
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.ref_name == 'master'
         run: |
           cp .env.example .env
 
       - name: Start API in background
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.ref_name == 'master'
         run: |
           cargo run --bin revolt-delta &
 
       - name: Wait for API to go up
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.ref_name == 'master'
         uses: nev7n/wait_for_response@v1
         with:
           url: "http://localhost:8000/"
 
       - name: Checkout API repository
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.ref_name == 'master'
         uses: actions/checkout@v3
         with:
           repository: revoltchat/api
@@ -69,11 +67,11 @@ jobs:
           token: ${{ secrets.PAT }}
 
       - name: Download OpenAPI specification
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.ref_name == 'master'
         run: curl http://localhost:8000/openapi.json -o api/OpenAPI.json
 
       - name: Commit changes
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.ref_name == 'master'
         uses: EndBug/add-and-commit@v4
         with:
           cwd: "api"
