@@ -1,6 +1,7 @@
 use std::net::SocketAddr;
 
 use futures::{channel::oneshot, pin_mut, select, FutureExt, SinkExt, StreamExt, TryStreamExt};
+use revolt_presence::{create_session, delete_session};
 use revolt_quark::{
     events::{
         client::EventV1,
@@ -8,7 +9,6 @@ use revolt_quark::{
         state::{State, SubscriptionStateChange},
     },
     models::{user::UserHint, User},
-    presence::{presence_create_session, presence_delete_session},
     redis_kiss, Database,
 };
 
@@ -69,8 +69,7 @@ pub fn spawn_client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
                             let user_id = state.cache.user_id.clone();
 
                             // Create presence session.
-                            let (first_session, session_id) =
-                                presence_create_session(&user_id, 0).await;
+                            let (first_session, session_id) = create_session(&user_id, 0).await;
 
                             // Notify socket we have authenticated.
                             write
@@ -225,7 +224,7 @@ pub fn spawn_client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
                             }
 
                             // Clean up presence session.
-                            let last_session = presence_delete_session(&user_id, session_id).await;
+                            let last_session = delete_session(&user_id, session_id).await;
 
                             // If this was the last session, notify other users that we just went offline.
                             if last_session {

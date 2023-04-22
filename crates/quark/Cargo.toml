@@ -92,3 +92,4 @@ sentry = "0.25.0"
 
 # Core
 revolt-result = { path = "../core/result", features = [ "serde", "schemas" ] }
+revolt-presence = { path = "../core/presence" }

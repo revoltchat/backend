@@ -4,11 +4,11 @@ use crate::models::user::{
 };
 use crate::permissions::defn::UserPerms;
 use crate::permissions::r#impl::user::get_relationship;
-use crate::presence::presence_filter_online;
 use crate::{perms, Database, Error, Result};
 
 use futures::try_join;
 use impl_ops::impl_op_ex_commutative;
+use revolt_presence::filter_online;
 use std::ops;
 
 impl_op_ex_commutative!(+ |a: &i32, b: &Badges| -> i32 { *a | *b as i32 });
@@ -98,7 +98,7 @@ impl User {
 
     /// Fetch foreign users by a list of IDs
     pub async fn fetch_foreign_users(db: &Database, user_ids: &[String]) -> Result<Vec<User>> {
-        let online_ids = presence_filter_online(user_ids).await;
+        let online_ids = filter_online(user_ids).await;
 
         Ok(db
             .fetch_users(user_ids)
