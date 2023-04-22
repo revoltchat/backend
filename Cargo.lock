@@ -2634,7 +2634,7 @@ dependencies = [
 [[package]]
 name = "redis"
 version = "0.22.3"
-source = "git+https://github.com/insertish/redis-rs?rev=6575a6b1c09eb8c9cc7f0082d95fe6b8f903c4d7#6575a6b1c09eb8c9cc7f0082d95fe6b8f903c4d7"
+source = "git+https://github.com/insertish/redis-rs?rev=1a41faf356fd21aebba71cea7eb7eb2653e5f0ef#1a41faf356fd21aebba71cea7eb7eb2653e5f0ef"
 dependencies = [
  "async-std",
  "async-trait",
