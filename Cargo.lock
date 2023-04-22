@@ -2816,7 +2816,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-database"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "async-recursion",
  "async-std",
@@ -2872,7 +2872,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-models"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "revolt-database",
  "schemars",
@@ -2930,7 +2930,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-result"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "schemars",
  "serde",
