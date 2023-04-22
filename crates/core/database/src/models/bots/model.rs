@@ -25,14 +25,14 @@ auto_derived_partial!(
         #[serde(skip_serializing_if = "crate::if_false", default)]
         pub discoverable: bool,
         /// Reserved; URL for handling interactions
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub interactions_url: Option<String>,
+        #[serde(skip_serializing_if = "String::is_empty", default)]
+        pub interactions_url: String,
         /// URL for terms of service
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub terms_of_service_url: Option<String>,
+        #[serde(skip_serializing_if = "String::is_empty", default)]
+        pub terms_of_service_url: String,
         /// URL for privacy policy
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub privacy_policy_url: Option<String>,
+        #[serde(skip_serializing_if = "String::is_empty", default)]
+        pub privacy_policy_url: String,
 
         /// Enum of bot flags
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -63,7 +63,7 @@ impl Bot {
         match field {
             FieldsBot::Token => self.token = nanoid::nanoid!(64),
             FieldsBot::InteractionsURL => {
-                self.interactions_url.take();
+                self.interactions_url = String::new();
             }
         }
     }
@@ -111,7 +111,7 @@ mod tests {
                 id: bot_id.to_string(),
                 owner: user_id.to_string(),
                 token: token.to_string(),
-                interactions_url: Some("some url".to_string()),
+                interactions_url: "some url".to_string(),
                 ..Default::default()
             };
 
@@ -136,8 +136,8 @@ mod tests {
 
             assert!(!bot.public);
             assert!(fetched_bot1.public);
-            assert!(bot.interactions_url.is_some());
-            assert!(fetched_bot1.interactions_url.is_none());
+            assert!(!bot.interactions_url.is_empty());
+            assert!(fetched_bot1.interactions_url.is_empty());
             assert_ne!(bot.token, fetched_bot1.token);
             assert_eq!(updated_bot, fetched_bot1);
             assert_eq!(fetched_bot1, fetched_bot2);
