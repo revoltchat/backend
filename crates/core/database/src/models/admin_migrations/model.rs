@@ -8,3 +8,17 @@ auto_derived!(
         pub revision: i32,
     }
 );
+
+#[cfg(test)]
+mod tests {
+    #[async_std::test]
+    async fn migrate() {
+        database_test!(|db| async move {
+            // Initialise the database
+            db.migrate_database().await.unwrap();
+
+            // Migrate the existing database
+            db.migrate_database().await.unwrap()
+        });
+    }
+}
