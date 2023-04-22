@@ -11,7 +11,7 @@ extern crate async_trait;
 extern crate log;
 
 #[macro_use]
-extern crate optional_struct;
+extern crate revolt_optional_struct;
 
 #[macro_use]
 extern crate revolt_result;

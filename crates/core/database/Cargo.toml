@@ -25,8 +25,8 @@ nanoid = "0.4.0"
 
 # Serialisation
 serde_json = "1"
+revolt_optional_struct = "0.2.0"
 serde = { version = "1", features = ["derive"] }
-optional_struct = { git = "https://github.com/insertish/OptionalStruct", rev = "ee56427cee1f007839825d93d07fffd5a5e038c7" }
 
 # Database
 mongodb = { optional = true, version = "2.1.0", default-features = false }
