@@ -56,15 +56,37 @@ auto_derived!(
     }
 );
 
+#[allow(clippy::disallowed_methods)]
 impl Bot {
     /// Remove a field from this object
-    pub fn remove(&mut self, field: &FieldsBot) {
+    pub fn remove_field(&mut self, field: &FieldsBot) {
         match field {
             FieldsBot::Token => self.token = nanoid::nanoid!(64),
             FieldsBot::InteractionsURL => {
                 self.interactions_url.take();
             }
         }
+    }
+
+    /// Update this bot
+    pub async fn update(
+        &mut self,
+        db: &Database,
+        mut partial: PartialBot,
+        remove: Vec<FieldsBot>,
+    ) -> Result<()> {
+        if remove.contains(&FieldsBot::Token) {
+            partial.token = Some(nanoid::nanoid!(64));
+        }
+
+        for field in &remove {
+            self.remove_field(field);
+        }
+
+        db.update_bot(&self.id, &partial, remove).await?;
+
+        self.apply_options(partial);
+        Ok(())
     }
 
     /// Delete this bot
@@ -76,7 +98,7 @@ impl Bot {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Bot, FieldsBot};
+    use crate::{Bot, FieldsBot, PartialBot};
 
     #[async_std::test]
     async fn crud() {
@@ -94,16 +116,19 @@ mod tests {
             };
 
             db.insert_bot(&bot).await.unwrap();
-            db.update_bot(
-                bot_id,
-                &crate::PartialBot {
-                    public: Some(true),
-                    ..Default::default()
-                },
-                vec![FieldsBot::Token, FieldsBot::InteractionsURL],
-            )
-            .await
-            .unwrap();
+
+            let mut updated_bot = bot.clone();
+            updated_bot
+                .update(
+                    &db,
+                    PartialBot {
+                        public: Some(true),
+                        ..Default::default()
+                    },
+                    vec![FieldsBot::Token, FieldsBot::InteractionsURL],
+                )
+                .await
+                .unwrap();
 
             let fetched_bot1 = db.fetch_bot(bot_id).await.unwrap();
             let fetched_bot2 = db.fetch_bot_by_token(&fetched_bot1.token).await.unwrap();
@@ -114,6 +139,7 @@ mod tests {
             assert!(bot.interactions_url.is_some());
             assert!(fetched_bot1.interactions_url.is_none());
             assert_ne!(bot.token, fetched_bot1.token);
+            assert_eq!(updated_bot, fetched_bot1);
             assert_eq!(fetched_bot1, fetched_bot2);
             assert_eq!(fetched_bot1, fetched_bots[0]);
             assert_eq!(1, db.get_number_of_bots_by_user(user_id).await.unwrap());

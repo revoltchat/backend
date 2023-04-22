@@ -43,7 +43,8 @@ impl AbstractBots for ReferenceDb {
         let mut bots = self.bots.lock().await;
         if let Some(bot) = bots.get_mut(id) {
             for field in remove {
-                bot.remove(&field);
+                #[allow(clippy::disallowed_methods)]
+                bot.remove_field(&field);
             }
 
             bot.apply_options(partial.clone());
