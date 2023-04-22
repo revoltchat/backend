@@ -23,7 +23,6 @@ async fn rocket() -> _ {
 
     // Setup database
     let db = revolt_database::DatabaseInfo::Auto.connect().await.unwrap();
-    let db = revolt_models::Database(db);
     db.migrate_database().await.unwrap();
 
     // Legacy database setup from quark

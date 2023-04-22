@@ -1,5 +1,5 @@
-mod dummy;
 mod mongodb;
+mod reference;
 
 #[async_trait]
 pub trait AbstractMigrations: Sync + Send {

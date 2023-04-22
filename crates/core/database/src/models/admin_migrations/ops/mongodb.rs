@@ -1,4 +1,4 @@
-use revolt_database::MongoDb;
+use crate::MongoDb;
 
 use super::AbstractMigrations;
 

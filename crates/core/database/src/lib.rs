@@ -4,6 +4,18 @@ extern crate serde;
 #[macro_use]
 extern crate async_recursion;
 
+#[macro_use]
+extern crate async_trait;
+
+#[macro_use]
+extern crate log;
+
+#[macro_use]
+extern crate optional_struct;
+
+#[cfg(feature = "mongodb")]
+pub use mongodb;
+
 macro_rules! database_derived {
     ( $( $item:item )+ ) => {
         $(
@@ -13,54 +25,33 @@ macro_rules! database_derived {
     };
 }
 
-#[cfg(feature = "mongodb")]
-pub use mongodb;
+macro_rules! auto_derived {
+    ( $( $item:item )+ ) => {
+        $(
+            #[derive(Serialize, Deserialize, Debug, Clone)]
+            $item
+        )+
+    };
+}
+
+macro_rules! auto_derived_partial {
+    ( $item:item, $name:expr ) => {
+        #[derive(OptionalStruct, Serialize, Deserialize, Debug, Clone)]
+        #[optional_derive(Serialize, Deserialize, Debug, Clone)]
+        #[optional_name = $name]
+        #[opt_skip_serializing_none]
+        #[opt_some_priority]
+        $item
+    };
+}
 
 mod drivers;
 pub use drivers::*;
 
-/// Database information to use to create a client
-pub enum DatabaseInfo {
-    /// Auto-detect the database in use
-    Auto,
-    /// Use the mock database
-    Dummy,
-    /// Connect to MongoDB
-    MongoDb(String),
-    /// Use existing MongoDB connection
-    MongoDbFromClient(::mongodb::Client),
-}
+mod models;
+pub use models::*;
 
-/// Database
-#[derive(Clone)]
-pub enum Database {
-    /// Mock database
-    Dummy(DummyDb),
-    /// MongoDB database
-    MongoDb(MongoDb),
-}
-
-impl DatabaseInfo {
-    /// Create a database client from the given database information
-    #[async_recursion]
-    pub async fn connect(self) -> Result<Database, String> {
-        Ok(match self {
-            DatabaseInfo::Auto => {
-                if let Ok(uri) = std::env::var("MONGODB") {
-                    return DatabaseInfo::MongoDb(uri).connect().await;
-                }
-
-                DatabaseInfo::Dummy.connect().await?
-            }
-            DatabaseInfo::Dummy => Database::Dummy(DummyDb {}),
-            DatabaseInfo::MongoDb(uri) => {
-                let client = mongodb::Client::with_uri_str(uri)
-                    .await
-                    .map_err(|_| "Failed to init db connection.".to_string())?;
-
-                Database::MongoDb(MongoDb(client))
-            }
-            DatabaseInfo::MongoDbFromClient(client) => Database::MongoDb(MongoDb(client)),
-        })
-    }
+/// Utility function to check if a boolean value is false
+pub fn if_false(t: &bool) -> bool {
+    !t
 }

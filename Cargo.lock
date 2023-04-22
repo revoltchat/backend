@@ -2828,8 +2828,14 @@ name = "revolt-database"
 version = "0.1.0"
 dependencies = [
  "async-recursion",
+ "async-std",
+ "async-trait",
+ "authifier",
  "futures",
+ "log",
  "mongodb",
+ "nanoid",
+ "optional_struct",
  "serde",
  "serde_json",
 ]
@@ -2857,7 +2863,6 @@ dependencies = [
  "regex",
  "reqwest",
  "revolt-database",
- "revolt-models",
  "revolt-quark",
  "revolt_rocket_okapi",
  "rocket",
@@ -2875,15 +2880,6 @@ dependencies = [
 [[package]]
 name = "revolt-models"
 version = "0.1.0"
-dependencies = [
- "async-std",
- "async-trait",
- "authifier",
- "futures",
- "log",
- "revolt-database",
- "serde",
-]
 
 [[package]]
 name = "revolt-quark"
@@ -2932,6 +2928,10 @@ dependencies = [
  "validator 0.14.0",
  "web-push",
 ]
+
+[[package]]
+name = "revolt-result"
+version = "0.1.0"
 
 [[package]]
 name = "revolt_okapi"
