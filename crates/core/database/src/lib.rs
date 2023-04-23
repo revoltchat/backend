@@ -73,6 +73,7 @@ macro_rules! database_test {
 }
 
 mod models;
+pub mod util;
 pub use models::*;
 
 /// Utility function to check if a boolean value is false

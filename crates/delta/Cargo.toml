@@ -56,7 +56,7 @@ revolt_rocket_okapi = { version = "0.9.1", features = [ "swagger" ] }
 revolt-quark = { path = "../quark" }
 
 # core
-revolt-database = { path = "../core/database" }
+revolt-database = { path = "../core/database", features = [ "rocket-impl" ] }
 revolt-models = { path = "../core/models", features = [ "schemas" ] }
 
 [build-dependencies]

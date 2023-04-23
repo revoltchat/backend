@@ -2828,6 +2828,8 @@ dependencies = [
  "nanoid",
  "revolt-result",
  "revolt_optional_struct",
+ "rocket",
+ "schemars",
  "serde",
  "serde_json",
 ]

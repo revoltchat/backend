@@ -14,6 +14,7 @@ mongodb = [ "dep:mongodb" ]
 
 # ... Other
 async-std-runtime = [ "async-std" ]
+rocket-impl = [ "rocket", "schemars" ]
 
 # Default Features
 default = [ "mongodb", "async-std-runtime" ]
@@ -41,6 +42,10 @@ async-recursion = "1.0.4"
 
 # Async
 async-std = { version = "1.8.0", features = ["attributes"], optional = true }
+
+# Rocket Impl
+schemars = { version = "0.8.8", optional = true }
+rocket = { version = "0.5.0-rc.2", default-features = false, features = ["json"], optional = true }
 
 # Authifier
 authifier = { version = "1.0" }

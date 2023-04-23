@@ -1,6 +1,6 @@
-use revolt_database::Database;
+use revolt_database::{util::reference::Reference, Database};
 use revolt_models::Bot;
-use revolt_quark::{models::User, Db, Error, Ref, Result};
+use revolt_quark::{models::User, Db, Error, Result};
 use rocket::{serde::json::Json, State};
 use serde::Serialize;
 
@@ -18,18 +18,18 @@ pub struct BotResponse {
 ///
 /// Fetch details of a bot you own by its id.
 #[openapi(tag = "Bots")]
-#[get("/<target>")]
+#[get("/<bot>")]
 pub async fn fetch_bot(
     legacy_db: &Db,
     db: &State<Database>,
     user: User,
-    target: Ref,
+    bot: Reference,
 ) -> Result<Json<BotResponse>> {
     if user.bot.is_some() {
         return Err(Error::IsBot);
     }
 
-    let bot = db.fetch_bot(&target.id).await.map_err(Error::from_core)?;
+    let bot = bot.as_bot(db).await.map_err(Error::from_core)?;
     if bot.owner != user.id {
         return Err(Error::NotFound);
     }
