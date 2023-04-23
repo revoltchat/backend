@@ -42,13 +42,6 @@ auto_derived_partial!(
 );
 
 auto_derived!(
-    /// Flags that may be attributed to a bot
-    #[repr(i32)]
-    pub enum BotFlags {
-        Verified = 1,
-        Official = 2,
-    }
-
     /// Optional fields on bot object
     pub enum FieldsBot {
         Token,

@@ -1,5 +1,7 @@
+use crate::User;
+
 auto_derived!(
-    /// # Bot
+    /// Bot
     pub struct Bot {
         /// Bot Id
         #[serde(rename = "_id")]
@@ -46,11 +48,21 @@ auto_derived!(
         pub privacy_policy_url: String,
 
         /// Enum of bot flags
-        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-        pub flags: Option<i32>,
+        #[cfg_attr(
+            feature = "serde",
+            serde(skip_serializing_if = "crate::if_zero_u32", default)
+        )]
+        pub flags: u32,
     }
 
-    /// # Public Bot
+    /// Flags that may be attributed to a bot
+    #[repr(u32)]
+    pub enum BotFlags {
+        Verified = 1,
+        Official = 2,
+    }
+
+    /// Public Bot
     pub struct PublicBot {
         /// Bot Id
         #[serde(rename = "_id")]
@@ -65,21 +77,30 @@ auto_derived!(
         #[serde(skip_serializing_if = "String::is_empty")]
         description: String,
     }
+
+    /// Bot Response
+    pub struct FetchBotResponse {
+        /// Bot object
+        pub bot: Bot,
+        /// User object
+        pub user: User,
+    }
 );
 
 #[cfg(feature = "from_database")]
 impl PublicBot {
-    pub fn from(
-        bot: revolt_database::Bot,
-        username: String,
-        avatar: Option<String>,
-        description: Option<String>,
-    ) -> Self {
+    pub fn from(bot: revolt_database::Bot, user: revolt_database::User) -> Self {
+        #[cfg(debug_assertions)]
+        assert_eq!(bot.id, user.id);
+
         PublicBot {
             id: bot.id,
-            username,
-            avatar: avatar.unwrap_or_default(),
-            description: description.unwrap_or_default(),
+            username: user.username,
+            avatar: user.avatar.map(|x| x.id).unwrap_or_default(),
+            description: user
+                .profile
+                .map(|profile| profile.content)
+                .unwrap_or_default(),
         }
     }
 }
@@ -97,7 +118,7 @@ impl From<revolt_database::Bot> for Bot {
             interactions_url: value.interactions_url,
             terms_of_service_url: value.terms_of_service_url,
             privacy_policy_url: value.privacy_policy_url,
-            flags: value.flags,
+            flags: value.flags.unwrap_or_default() as u32,
         }
     }
 }

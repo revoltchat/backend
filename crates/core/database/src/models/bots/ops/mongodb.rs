@@ -1,4 +1,3 @@
-use ::mongodb::bson::doc;
 use revolt_result::Result;
 
 use crate::{Bot, FieldsBot, PartialBot};

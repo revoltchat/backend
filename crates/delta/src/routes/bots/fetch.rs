@@ -1,18 +1,7 @@
 use revolt_database::{util::reference::Reference, Database};
-use revolt_models::Bot;
-use revolt_quark::{models::User, Db, Error, Result};
+use revolt_models::FetchBotResponse;
+use revolt_quark::{models::User, Error, Result};
 use rocket::{serde::json::Json, State};
-use serde::Serialize;
-
-/// # Bot Response
-/// TODO: move to revolt-models
-#[derive(Serialize, JsonSchema)]
-pub struct BotResponse {
-    /// Bot object
-    bot: Bot,
-    /// User object
-    user: User,
-}
 
 /// # Fetch Bot
 ///
@@ -20,11 +9,10 @@ pub struct BotResponse {
 #[openapi(tag = "Bots")]
 #[get("/<bot>")]
 pub async fn fetch_bot(
-    legacy_db: &Db,
     db: &State<Database>,
     user: User,
     bot: Reference,
-) -> Result<Json<BotResponse>> {
+) -> Result<Json<FetchBotResponse>> {
     if user.bot.is_some() {
         return Err(Error::IsBot);
     }
@@ -34,8 +22,12 @@ pub async fn fetch_bot(
         return Err(Error::NotFound);
     }
 
-    Ok(Json(BotResponse {
-        user: legacy_db.fetch_user(&bot.id).await?.foreign(),
+    Ok(Json(FetchBotResponse {
+        user: revolt_models::User::from(
+            db.fetch_user(&bot.id).await.map_err(Error::from_core)?,
+            None,
+        )
+        .await,
         bot: bot.into(),
     }))
 }

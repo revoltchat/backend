@@ -1,6 +1,6 @@
 use revolt_database::Database;
 use revolt_models::PublicBot;
-use revolt_quark::{models::User, Db, Error, Ref, Result};
+use revolt_quark::{models::User, Error, Ref, Result};
 
 use rocket::serde::json::Json;
 use rocket::State;
@@ -11,7 +11,6 @@ use rocket::State;
 #[openapi(tag = "Bots")]
 #[get("/<target>/invite")]
 pub async fn fetch_public_bot(
-    legacy_db: &Db,
     db: &State<Database>,
     user: Option<User>,
     target: Ref,
@@ -21,12 +20,6 @@ pub async fn fetch_public_bot(
         return Err(Error::NotFound);
     }
 
-    let user = legacy_db.fetch_user(&bot.id).await?;
-
-    Ok(Json(PublicBot::from(
-        bot,
-        user.username,
-        user.avatar.map(|f| f.id),
-        user.profile.and_then(|p| p.content),
-    )))
+    let user = db.fetch_user(&bot.id).await.map_err(Error::from_core)?;
+    Ok(Json(PublicBot::from(bot, user)))
 }
