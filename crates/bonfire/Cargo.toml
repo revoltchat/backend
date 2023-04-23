@@ -28,4 +28,4 @@ async-tungstenite = { version = "0.17.0", features = ["async-std-runtime"] }
 async-std = { version = "1.8.0", features = ["tokio1", "tokio02", "attributes"] }
 
 # core
-revolt-presence = { path = "../core/presence" }
+revolt-presence = { path = "../core/presence", features = [ "redis-is-patched" ] }

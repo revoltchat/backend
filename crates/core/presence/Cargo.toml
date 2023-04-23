@@ -8,6 +8,9 @@ description = "Revolt Backend: User Presence"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+redis-is-patched = []
+
 [dev-dependencies]
 # Async
 async-std = { version = "1.8.0", features = ["attributes"] }

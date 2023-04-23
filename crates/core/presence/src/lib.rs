@@ -94,6 +94,7 @@ pub async fn is_online(user_id: &str) -> bool {
 }
 
 /// Check whether a set of users is online, returns a set of the online user IDs
+#[cfg(feature = "redis-is-patched")]
 pub async fn filter_online(user_ids: &'_ [String]) -> HashSet<String> {
     // Ignore empty list immediately, to save time.
     let mut set = HashSet::new();
@@ -121,9 +122,10 @@ pub async fn filter_online(user_ids: &'_ [String]) -> HashSet<String> {
         // Ok so, if this breaks, that means we've lost the Redis patch which adds SMISMEMBER
         // Currently it's patched in through a forked repository, investigate what happen to it
         let data: Vec<bool> = conn
-            .smismember("online", user_ids)
+            .smismember(ONLINE_SET, user_ids)
             .await
             .expect("this shouldn't happen, please read this code! presence/mod.rs");
+
         if data.is_empty() {
             return set;
         }
@@ -137,6 +139,25 @@ pub async fn filter_online(user_ids: &'_ [String]) -> HashSet<String> {
     }
 
     set
+}
+
+/// Check whether a set of users is online, returns a set of the online user IDs
+#[cfg(not(feature = "redis-is-patched"))]
+pub async fn filter_online(user_ids: &'_ [String]) -> HashSet<String> {
+    if user_ids.is_empty() {
+        HashSet::new()
+    } else if let Ok(mut conn) = get_connection().await {
+        let members: Vec<String> = conn.smembers(ONLINE_SET).await.unwrap_or_default();
+        let members: HashSet<&String> = members.iter().collect();
+        let user_ids: HashSet<&String> = user_ids.iter().collect();
+
+        members
+            .intersection(&user_ids)
+            .map(|x| x.to_string())
+            .collect()
+    } else {
+        HashSet::new()
+    }
 }
 
 /// Reset any stale presence data
