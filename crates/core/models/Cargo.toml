@@ -1,6 +1,6 @@
 [package]
 name = "revolt-models"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 license = "AGPL-3.0-or-later"
 authors = [ "Paul Makles <me@insrt.uk>" ]
@@ -17,8 +17,8 @@ default = [ "serde", "from_database" ]
 
 [dependencies]
 # Repo
-revolt-database = { version = "0.0.1", path = "../database", optional = true }
-revolt-presence = { version = "0.0.1", path = "../presence", optional = true }
+revolt-database = { version = "0.0.2", path = "../database", optional = true }
+revolt-presence = { version = "0.0.2", path = "../presence", optional = true }
 
 # Serialisation
 serde = { version = "1", features = ["derive"], optional = true }

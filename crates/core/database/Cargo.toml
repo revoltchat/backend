@@ -1,6 +1,6 @@
 [package]
 name = "revolt-database"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 license = "AGPL-3.0-or-later"
 authors = [ "Paul Makles <me@insrt.uk>" ]
@@ -21,8 +21,8 @@ default = [ "mongodb", "async-std-runtime" ]
 
 [dependencies]
 # Core
-revolt-result = { version = "0.0.1", path = "../result" }
-revolt-permissions = { version = "0.0.1", path = "../permissions" }
+revolt-result = { version = "0.0.2", path = "../result" }
+revolt-permissions = { version = "0.0.2", path = "../permissions" }
 
 # Utility
 log = "0.4"
