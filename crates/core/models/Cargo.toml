@@ -13,12 +13,14 @@ serde = [ "dep:serde" ]
 schemas = [ "dep:schemars" ]
 from_database = [ "revolt-database", "revolt-presence" ]
 
+redis-is-patched = [ "revolt-presence/redis-is-patched" ]
+
 default = [ "serde", "from_database" ]
 
 [dependencies]
 # Repo
 revolt-database = { version = "0.0.2", path = "../database", optional = true }
-revolt-presence = { version = "0.0.2", path = "../presence", optional = true, features = [ "redis-is-patched" ] }
+revolt-presence = { version = "0.0.2", path = "../presence", optional = true }
 
 # Serialisation
 serde = { version = "1", features = ["derive"], optional = true }
