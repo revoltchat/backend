@@ -22,6 +22,7 @@ default = [ "mongodb", "async-std-runtime" ]
 [dependencies]
 # Core
 revolt-result = { version = "0.0.1", path = "../result" }
+revolt-permissions = { version = "0.0.1", path = "../permissions" }
 
 # Utility
 log = "0.4"
