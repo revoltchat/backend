@@ -199,10 +199,16 @@ impl User {
 }
 
 #[cfg(feature = "from_database")]
-impl From<revolt_database::BotInformation> for BotInformation {
-    fn from(value: revolt_database::BotInformation) -> Self {
-        BotInformation {
-            owner_id: value.owner,
+impl From<revolt_database::RelationshipStatus> for RelationshipStatus {
+    fn from(value: revolt_database::RelationshipStatus) -> Self {
+        match value {
+            revolt_database::RelationshipStatus::None => RelationshipStatus::None,
+            revolt_database::RelationshipStatus::User => RelationshipStatus::User,
+            revolt_database::RelationshipStatus::Friend => RelationshipStatus::Friend,
+            revolt_database::RelationshipStatus::Outgoing => RelationshipStatus::Outgoing,
+            revolt_database::RelationshipStatus::Incoming => RelationshipStatus::Incoming,
+            revolt_database::RelationshipStatus::Blocked => RelationshipStatus::Blocked,
+            revolt_database::RelationshipStatus::BlockedOther => RelationshipStatus::BlockedOther,
         }
     }
 }
@@ -218,16 +224,43 @@ impl From<revolt_database::Relationship> for Relationship {
 }
 
 #[cfg(feature = "from_database")]
-impl From<revolt_database::RelationshipStatus> for RelationshipStatus {
-    fn from(value: revolt_database::RelationshipStatus) -> Self {
+impl From<revolt_database::Presence> for Presence {
+    fn from(value: revolt_database::Presence) -> Self {
         match value {
-            revolt_database::RelationshipStatus::None => RelationshipStatus::None,
-            revolt_database::RelationshipStatus::User => RelationshipStatus::User,
-            revolt_database::RelationshipStatus::Friend => RelationshipStatus::Friend,
-            revolt_database::RelationshipStatus::Outgoing => RelationshipStatus::Outgoing,
-            revolt_database::RelationshipStatus::Incoming => RelationshipStatus::Incoming,
-            revolt_database::RelationshipStatus::Blocked => RelationshipStatus::Blocked,
-            revolt_database::RelationshipStatus::BlockedOther => RelationshipStatus::BlockedOther,
+            revolt_database::Presence::Online => Presence::Online,
+            revolt_database::Presence::Idle => Presence::Idle,
+            revolt_database::Presence::Focus => Presence::Focus,
+            revolt_database::Presence::Busy => Presence::Busy,
+            revolt_database::Presence::Invisible => Presence::Invisible,
+        }
+    }
+}
+
+#[cfg(feature = "from_database")]
+impl From<revolt_database::UserStatus> for UserStatus {
+    fn from(value: revolt_database::UserStatus) -> Self {
+        UserStatus {
+            text: value.text,
+            presence: value.presence.map(|presence| presence.into()),
+        }
+    }
+}
+
+#[cfg(feature = "from_database")]
+impl From<revolt_database::UserProfile> for UserProfile {
+    fn from(value: revolt_database::UserProfile) -> Self {
+        UserProfile {
+            content: value.content,
+            background: value.background.map(|file| file.into()),
+        }
+    }
+}
+
+#[cfg(feature = "from_database")]
+impl From<revolt_database::BotInformation> for BotInformation {
+    fn from(value: revolt_database::BotInformation) -> Self {
+        BotInformation {
+            owner_id: value.owner,
         }
     }
 }
