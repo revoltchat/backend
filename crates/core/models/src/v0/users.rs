@@ -1,4 +1,4 @@
-use crate::File;
+use super::File;
 
 auto_derived!(
     /// User

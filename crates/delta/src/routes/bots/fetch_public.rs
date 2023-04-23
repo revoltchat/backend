@@ -1,5 +1,5 @@
 use revolt_database::Database;
-use revolt_models::PublicBot;
+use revolt_models::v0::PublicBot;
 use revolt_quark::{models::User, Error, Ref, Result};
 
 use rocket::serde::json::Json;

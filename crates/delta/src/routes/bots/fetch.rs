@@ -1,5 +1,5 @@
 use revolt_database::{util::reference::Reference, Database};
-use revolt_models::FetchBotResponse;
+use revolt_models::v0::FetchBotResponse;
 use revolt_quark::{models::User, Error, Result};
 use rocket::{serde::json::Json, State};
 
@@ -23,7 +23,7 @@ pub async fn fetch_bot(
     }
 
     Ok(Json(FetchBotResponse {
-        user: revolt_models::User::from(
+        user: revolt_models::v0::User::from(
             db.fetch_user(&bot.id).await.map_err(Error::from_core)?,
             None,
         )

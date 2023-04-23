@@ -17,13 +17,7 @@ macro_rules! auto_derived {
     };
 }
 
-mod bots;
-mod files;
-mod users;
-
-pub use bots::*;
-pub use files::*;
-pub use users::*;
+pub mod v0;
 
 /// Utility function to check if a boolean value is false
 pub fn if_false(t: &bool) -> bool {

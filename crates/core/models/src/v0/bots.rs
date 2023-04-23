@@ -1,4 +1,4 @@
-use crate::User;
+use super::User;
 
 auto_derived!(
     /// Bot
