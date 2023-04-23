@@ -10,7 +10,7 @@ description = "Revolt Backend: Database Implementation"
 
 [features]
 # Databases
-mongodb = [ "dep:mongodb" ]
+mongodb = [ "dep:mongodb", "bson" ]
 
 # ... Other
 async-std-runtime = [ "async-std" ]
@@ -33,6 +33,7 @@ revolt_optional_struct = "0.2.0"
 serde = { version = "1", features = ["derive"] }
 
 # Database
+bson = { optional = true, version = "2.1.0" }
 mongodb = { optional = true, version = "2.1.0", default-features = false }
 
 # Async Language Features

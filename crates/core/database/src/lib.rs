@@ -19,6 +19,10 @@ extern crate revolt_result;
 #[cfg(feature = "mongodb")]
 pub use mongodb;
 
+#[cfg(feature = "mongodb")]
+#[macro_use]
+extern crate bson;
+
 macro_rules! database_derived {
     ( $( $item:item )+ ) => {
         $(

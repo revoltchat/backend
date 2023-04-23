@@ -1,13 +1,17 @@
 mod admin_migrations;
 mod bots;
+mod files;
+mod users;
 
 pub use admin_migrations::*;
 pub use bots::*;
+pub use files::*;
+pub use users::*;
 
 use crate::{Database, MongoDb, ReferenceDb};
 
 pub trait AbstractDatabase:
-    Sync + Send + admin_migrations::AbstractMigrations + bots::AbstractBots
+    Sync + Send + admin_migrations::AbstractMigrations + bots::AbstractBots + users::AbstractUsers
 {
 }
 
