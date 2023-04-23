@@ -22,7 +22,11 @@ deps() {
   mkdir -p \
     crates/bonfire/src \
     crates/delta/src \
-    crates/quark/src
+    crates/quark/src \
+    crates/core/database/src \
+    crates/core/models/src \
+    crates/core/presence/src \
+    crates/core/result/src
   echo 'fn main() { panic!("stub"); }' |
     tee crates/bonfire/src/main.rs |
     tee crates/delta/src/main.rs
