@@ -1,23 +1,10 @@
 use rocket::serde::json::Json;
-use serde::Deserialize;
 
 use revolt_quark::{
+    delta::DataPermissionsField,
     models::{Channel, User},
     perms, Db, Error, Override, Permission, Ref, Result,
 };
-
-/// # Permission Value
-#[derive(Deserialize, JsonSchema)]
-pub struct Data {
-    /// Allow / deny values to set for this role
-    permissions: Override,
-}
-
-/// # Set Role Permission
-///
-/// Sets permissions for the specified role in this channel.
-///
-/// Channel must be a `TextChannel` or `VoiceChannel`.
 #[openapi(tag = "Channel Permissions")]
 #[put("/<target>/permissions/<role_id>", data = "<data>", rank = 2)]
 pub async fn req(
@@ -25,7 +12,7 @@ pub async fn req(
     user: User,
     target: Ref,
     role_id: String,
-    data: Json<Data>,
+    data: Json<DataPermissionsField>,
 ) -> Result<Json<Channel>> {
     let mut channel = target.as_channel(db).await?;
     let mut permissions = perms(&user).channel(&channel);

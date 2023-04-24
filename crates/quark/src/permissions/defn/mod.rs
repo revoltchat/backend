@@ -1,3 +1,4 @@
+pub mod delta;
 mod permission;
 mod user;
 
@@ -12,7 +13,7 @@ use serde::{Deserialize, Serialize};
 pub struct PermissionValue(u64);
 
 /// Representation of a single permission override
-#[derive(Deserialize, JsonSchema, Debug, Clone, Copy)]
+#[derive(Deserialize, Serialize, JsonSchema, Debug, Clone, Copy)]
 pub struct Override {
     /// Allow bit flags
     allow: u64,

@@ -1,17 +1,10 @@
 use rocket::serde::json::Json;
-use serde::Deserialize;
 
 use revolt_quark::{
+    delta::DataPermissionsField,
     models::{Server, User},
     perms, Db, Error, Override, Permission, Ref, Result,
 };
-
-/// # Permission Value
-#[derive(Deserialize, JsonSchema)]
-pub struct DataSetServerRolePermission {
-    /// Allow / deny values for the role in this server.
-    permissions: Override,
-}
 
 /// # Set Role Permission
 ///
@@ -23,7 +16,7 @@ pub async fn req(
     user: User,
     target: Ref,
     role_id: String,
-    data: Json<DataSetServerRolePermission>,
+    data: Json<DataPermissionsField>,
 ) -> Result<Json<Server>> {
     let data = data.into_inner();
 

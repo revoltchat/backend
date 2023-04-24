@@ -1,25 +1,9 @@
-use rocket::serde::json::Json;
-use serde::Deserialize;
-
 use revolt_quark::{
+    delta::DataPermissionPoly,
     models::{channel::PartialChannel, Channel, User},
-    perms, Db, Error, Override, Permission, Ref, Result,
+    perms, Db, Error, Permission, Ref, Result,
 };
-
-/// # Permission Value
-#[derive(Deserialize, JsonSchema)]
-#[serde(untagged)]
-pub enum DataDefaultChannelPermissions {
-    Value {
-        /// Permission values to set for members in a `Group`
-        permissions: u64,
-    },
-    Field {
-        /// Allow / deny values to set for members in this `TextChannel` or `VoiceChannel`
-        permissions: Override,
-    },
-}
-
+use rocket::serde::json::Json;
 /// # Set Default Permission
 ///
 /// Sets permissions for the default role in this channel.
@@ -31,7 +15,7 @@ pub async fn req(
     db: &Db,
     user: User,
     target: Ref,
-    data: Json<DataDefaultChannelPermissions>,
+    data: Json<DataPermissionPoly>,
 ) -> Result<Json<Channel>> {
     let data = data.into_inner();
 
@@ -43,7 +27,7 @@ pub async fn req(
 
     match &channel {
         Channel::Group { .. } => {
-            if let DataDefaultChannelPermissions::Value { permissions } = data {
+            if let DataPermissionPoly::Value { permissions } = data {
                 channel
                     .update(
                         db,
@@ -66,7 +50,7 @@ pub async fn req(
             default_permissions,
             ..
         } => {
-            if let DataDefaultChannelPermissions::Field { permissions } = data {
+            if let DataPermissionPoly::Field { permissions } = data {
                 perm.throw_permission_override(
                     db,
                     default_permissions.map(|x| x.into()),
