@@ -25,6 +25,7 @@ deps() {
     crates/quark/src \
     crates/core/database/src \
     crates/core/models/src \
+    crates/core/permissions/src \
     crates/core/presence/src \
     crates/core/result/src
   echo 'fn main() { panic!("stub"); }' |
@@ -34,6 +35,7 @@ deps() {
     tee crates/quark/src/lib.rs |
     tee crates/core/database/src/lib.rs |
     tee crates/core/models/src/lib.rs |
+    tee crates/core/permissions/src/lib.rs |
     tee crates/core/presence/src/lib.rs |
     tee crates/core/result/src/lib.rs
   cargo build --locked --release --target "${BUILD_TARGET}"
@@ -46,6 +48,7 @@ apps() {
     crates/quark/src/lib.rs \
     crates/core/database/src/lib.rs \
     crates/core/models/src/lib.rs \
+    crates/core/permissions/src/lib.rs \
     crates/core/presence/src/lib.rs \
     crates/core/result/src/lib.rs
   cargo build --locked --release --target "${BUILD_TARGET}"
