@@ -1,4 +1,4 @@
-use revolt_quark::{models::{User, Webhook, File}, perms, Db, Error, Permission, Ref, Result};
+use revolt_quark::{models::{User, Webhook, File, Channel}, perms, Db, Error, Permission, Ref, Result};
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
@@ -24,6 +24,11 @@ pub async fn req(db: &Db, user: User, target: Ref, data: Json<CreateWebhookBody>
         .map_err(|error| Error::FailedValidation { error })?;
 
     let channel = target.as_channel(db).await?;
+
+    if !matches!(channel, Channel::TextChannel { .. } | Channel::Group { .. }) {
+        return Err(Error::InvalidOperation)
+    }
+
     let mut permissions = perms(&user).channel(&channel);
     permissions
         .has_permission(db, Permission::ManageWebhooks)
