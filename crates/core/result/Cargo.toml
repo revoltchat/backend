@@ -1,0 +1,22 @@
+[package]
+name = "revolt-result"
+version = "0.0.2"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+authors = [ "Paul Makles <me@insrt.uk>" ]
+description = "Revolt Backend: Result and Error types"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+serde = [ "dep:serde" ]
+schemas = [ "dep:schemars" ]
+
+default = [ "serde" ]
+
+[dependencies]
+# Serialisation
+serde = { version = "1", features = ["derive"], optional = true }
+
+# Spec Generation
+schemars = { version = "0.8.8", optional = true }

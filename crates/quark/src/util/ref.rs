@@ -1,11 +1,13 @@
 use futures::future::join;
+use revolt_presence::is_online;
 use rocket::request::FromParam;
 use schemars::schema::{InstanceType, Schema, SchemaObject, SingleOrVec};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::models::{Bot, Channel, Emoji, Invite, Member, Message, Server, ServerBan, User, Webhook, Report};
-use crate::presence::presence_is_online;
+use crate::models::{
+    Bot, Channel, Emoji, Invite, Member, Message, Report, Server, ServerBan, User, Webhook
+};
 use crate::{Database, Error, Result};
 
 /// Reference to some object in the database
@@ -23,7 +25,7 @@ impl Ref {
 
     /// Fetch user from Ref
     pub async fn as_user(&self, db: &Database) -> Result<User> {
-        let (user, online) = join(db.fetch_user(&self.id), presence_is_online(&self.id)).await;
+        let (user, online) = join(db.fetch_user(&self.id), is_online(&self.id)).await;
         let mut user = user?;
         user.online = Some(online);
         Ok(user)

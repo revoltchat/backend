@@ -14,7 +14,7 @@ pub fn setup_logging(release: &'static str) -> sentry::ClientInitGuard {
     info!("Starting {release}");
 
     sentry::init((
-        "https://62fd0e02c5354905b4e286757f4beb16@sentry.insert.moe/4",
+        "https://d1d2a6f15c6245a987c532bbbcb30a04@glitchtip.insert.moe/2",
         sentry::ClientOptions {
             release: Some(release.into()),
             ..Default::default()

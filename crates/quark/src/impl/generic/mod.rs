@@ -1,9 +1,5 @@
 //! Database agnostic implementations.
 
-pub mod admin {
-    pub mod migrations;
-}
-
 pub mod media {
     pub mod attachment;
     pub mod emoji;

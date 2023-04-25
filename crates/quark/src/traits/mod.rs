@@ -1,5 +1,4 @@
 mod admin {
-    pub mod migrations;
     pub mod stats;
 }
 
@@ -33,7 +32,6 @@ mod safety {
     pub mod snapshot;
 }
 
-pub use admin::migrations::AbstractMigrations;
 pub use admin::stats::AbstractStats;
 
 pub use media::attachment::AbstractAttachment;
@@ -59,7 +57,6 @@ pub use safety::snapshot::AbstractSnapshot;
 pub trait AbstractDatabase:
     Sync
     + Send
-    + AbstractMigrations
     + AbstractStats
     + AbstractAttachment
     + AbstractEmoji

@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use revolt_presence::filter_online;
 use serde_json::json;
 use ulid::Ulid;
 use validator::Validate;
@@ -14,7 +15,6 @@ use crate::{
         Channel, Emoji, Message, User,
     },
     permissions::PermissionCalculator,
-    presence::presence_filter_online,
     tasks::ack::AckEvent,
     types::{
         january::{Embed, Text},
@@ -79,7 +79,7 @@ impl Message {
                     Channel::DirectMessage { recipients, .. }
                     | Channel::Group { recipients, .. } => {
                         target_ids = (&recipients.iter().cloned().collect::<HashSet<String>>()
-                            - &presence_filter_online(recipients).await)
+                            - &filter_online(recipients).await)
                             .into_iter()
                             .collect::<Vec<String>>();
                     }
@@ -313,12 +313,12 @@ impl IntoUsers for Message {
 
 impl IntoUsers for Vec<Message> {
     fn get_user_ids(&self) -> Vec<String> {
-        let mut ids = vec![];
+        let mut ids = HashSet::new();
         for message in self {
-            ids.append(&mut message.get_user_ids());
+            ids.extend(&mut message.get_user_ids().into_iter());
         }
 
-        ids
+        ids.into_iter().collect()
     }
 }
 

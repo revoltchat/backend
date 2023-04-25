@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 use crate::{util::manipulation::prefix_keys, AbstractDatabase, Error, Result};
 
 pub mod admin {
-    pub mod migrations;
     pub mod stats;
 }
 

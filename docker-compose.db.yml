@@ -1,5 +1,11 @@
 version: "3.3"
 services:
+  # Redis
+  redis:
+    image: eqalpha/keydb
+    ports:
+      - "6379:6379"
+
   # MongoDB
   database:
     image: mongo

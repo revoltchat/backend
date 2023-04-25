@@ -1,6 +1,6 @@
 [package]
 name = "revolt-delta"
-version = "0.5.17"
+version = "0.5.19"
 license = "AGPL-3.0-or-later"
 authors = ["Paul Makles <paulmakles@gmail.com>"]
 edition = "2018"
@@ -43,11 +43,6 @@ async-std = { version = "1.8.0", features = ["tokio1", "tokio02", "attributes"] 
 # internal util
 lettre = "0.10.0-alpha.4"
 
-# redis
-redis = { version = "0.21.2", features = ["async-std-comp"] }
-mobc = { version = "0.7.3" }
-mobc-redis = { version = "0.7.0", default-features = false, features = ["async-std-comp"] }
-
 # web
 rocket = { version = "0.5.0-rc.2", default-features = false, features = ["json"] }
 rocket_empty = { version = "0.1.1", features = ["schema"] }
@@ -59,6 +54,10 @@ revolt_rocket_okapi = { version = "0.9.1", features = [ "swagger" ] }
 
 # quark
 revolt-quark = { path = "../quark" }
+
+# core
+revolt-database = { path = "../core/database", features = [ "rocket-impl" ] }
+revolt-models = { path = "../core/models", features = [ "schemas", "redis-is-patched" ] }
 
 [build-dependencies]
 vergen = "7.5.0"

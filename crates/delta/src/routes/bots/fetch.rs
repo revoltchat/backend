@@ -1,36 +1,33 @@
-use revolt_quark::{
-    models::{Bot, User},
-    Db, Error, Ref, Result,
-};
-use rocket::serde::json::Json;
-use serde::Serialize;
-
-/// # Bot Response
-#[derive(Serialize, JsonSchema)]
-pub struct BotResponse {
-    /// Bot object
-    bot: Bot,
-    /// User object
-    user: User,
-}
+use revolt_database::{util::reference::Reference, Database};
+use revolt_models::v0::FetchBotResponse;
+use revolt_quark::{models::User, Error, Result};
+use rocket::{serde::json::Json, State};
 
 /// # Fetch Bot
 ///
 /// Fetch details of a bot you own by its id.
 #[openapi(tag = "Bots")]
-#[get("/<target>")]
-pub async fn fetch_bot(db: &Db, user: User, target: Ref) -> Result<Json<BotResponse>> {
+#[get("/<bot>")]
+pub async fn fetch_bot(
+    db: &State<Database>,
+    user: User,
+    bot: Reference,
+) -> Result<Json<FetchBotResponse>> {
     if user.bot.is_some() {
         return Err(Error::IsBot);
     }
 
-    let bot = target.as_bot(db).await?;
+    let bot = bot.as_bot(db).await.map_err(Error::from_core)?;
     if bot.owner != user.id {
         return Err(Error::NotFound);
     }
 
-    Ok(Json(BotResponse {
-        user: db.fetch_user(&bot.id).await?.foreign(),
-        bot,
+    Ok(Json(FetchBotResponse {
+        user: revolt_models::v0::User::from(
+            db.fetch_user(&bot.id).await.map_err(Error::from_core)?,
+            None,
+        )
+        .await,
+        bot: bot.into(),
     }))
 }
