@@ -84,7 +84,7 @@ impl Bot {
 
     /// Delete this bot
     pub async fn delete(&self, db: &Database) -> Result<()> {
-        // db.fetch_user(&self.id).await?.mark_deleted(db).await?;
+        db.fetch_user(&self.id).await?.mark_deleted(db).await?;
         db.delete_bot(&self.id).await
     }
 }

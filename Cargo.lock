@@ -2854,6 +2854,7 @@ dependencies = [
  "log",
  "mongodb",
  "nanoid",
+ "once_cell",
  "revolt-permissions",
  "revolt-result",
  "revolt_optional_struct",
