@@ -1,5 +1,5 @@
 /// Representation of a single permission override
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Override {
     /// Allow bit flags
@@ -10,7 +10,7 @@ pub struct Override {
 
 /// Representation of a single permission override
 /// as it appears on models and in the database
-#[derive(/*JsonSchema, */ Debug, Clone, Copy, Default)]
+#[derive(/*JsonSchema, */ Debug, Clone, Copy, Default, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct OverrideField {
     /// Allow bit flags

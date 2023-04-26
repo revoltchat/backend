@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use futures::lock::Mutex;
 
-use crate::{Bot, File, User, UserSettings};
+use crate::{Bot, File, Server, User, UserSettings};
 
 database_derived!(
     /// Reference implementation
@@ -11,9 +11,9 @@ database_derived!(
         pub bots: Arc<Mutex<HashMap<String, Bot>>>,
         pub user_settings: Arc<Mutex<HashMap<String, UserSettings>>>,
         pub users: Arc<Mutex<HashMap<String, User>>>,
+        pub servers: Arc<Mutex<HashMap<String, Server>>>,
         pub files: Arc<Mutex<HashMap<String, File>>>,
 
-        pub servers: Arc<Mutex<HashMap<String, ()>>>,
         pub server_bans: Arc<Mutex<HashMap<String, ()>>>,
         pub server_members: Arc<Mutex<HashMap<String, ()>>>,
         pub safety_reports: Arc<Mutex<HashMap<String, ()>>>,

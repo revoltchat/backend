@@ -22,10 +22,11 @@ default = [ "mongodb", "async-std-runtime" ]
 [dependencies]
 # Core
 revolt-result = { version = "0.0.2", path = "../result" }
-revolt-permissions = { version = "0.0.2", path = "../permissions" }
+revolt-permissions = { version = "0.0.2", path = "../permissions", features = [ "serde" ] }
 
 # Utility
 log = "0.4"
+ulid = "1.0.0"
 nanoid = "0.4.0"
 once_cell = "1.17"
 

@@ -2862,6 +2862,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "ulid 1.0.0",
 ]
 
 [[package]]
@@ -4231,6 +4232,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "220b18413e1fe5e85a5580b22f44241f82404a66c792c9f3c9eda74c52d9a22e"
 dependencies = [
  "chrono",
+ "rand 0.8.5",
+]
+
+[[package]]
+name = "ulid"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13a3aaa69b04e5b66cc27309710a569ea23593612387d67daaf102e73aa974fd"
+dependencies = [
  "rand 0.8.5",
 ]
 
