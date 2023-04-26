@@ -3,10 +3,10 @@ use revolt_result::Result;
 use crate::File;
 use crate::ReferenceDb;
 
-use super::AbstractAttachment;
+use super::AbstractAttachments;
 
 #[async_trait]
-impl AbstractAttachment for ReferenceDb {
+impl AbstractAttachments for ReferenceDb {
     /// Insert attachment into database.
     async fn insert_attachment(&self, attachment: &File) -> Result<()> {
         let mut attachments = self.files.lock().await;

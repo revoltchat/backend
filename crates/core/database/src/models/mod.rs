@@ -15,7 +15,7 @@ pub trait AbstractDatabase:
     + Send
     + admin_migrations::AbstractMigrations
     + bots::AbstractBots
-    + files::AbstractAttachment
+    + files::AbstractAttachments
     + users::AbstractUsers
 {
 }

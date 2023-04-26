@@ -6,7 +6,7 @@ mod mongodb;
 mod reference;
 
 #[async_trait]
-pub trait AbstractAttachment: Sync + Send {
+pub trait AbstractAttachments: Sync + Send {
     /// Insert attachment into database.
     async fn insert_attachment(&self, attachment: &File) -> Result<()>;
 

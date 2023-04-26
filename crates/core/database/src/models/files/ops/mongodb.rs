@@ -4,12 +4,12 @@ use revolt_result::Result;
 use crate::File;
 use crate::MongoDb;
 
-use super::AbstractAttachment;
+use super::AbstractAttachments;
 
 static COL: &str = "bots";
 
 #[async_trait]
-impl AbstractAttachment for MongoDb {
+impl AbstractAttachments for MongoDb {
     /// Insert attachment into database.
     async fn insert_attachment(&self, attachment: &File) -> Result<()> {
         query!(self, insert_one, COL, &attachment).map(|_| ())
