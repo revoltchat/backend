@@ -1,3 +1,7 @@
+use crate::Database;
+
+use revolt_result::Result;
+
 auto_derived_partial!(
     /// File
     pub struct File {
@@ -57,3 +61,47 @@ auto_derived!(
         Audio,
     }
 );
+
+impl File {
+    /// Use a file for a message attachment
+    pub async fn use_attachment(db: &Database, id: &str, parent: &str) -> Result<File> {
+        db.find_and_use_attachment(id, "attachments", "message", parent)
+            .await
+    }
+
+    /// Use a file for a user profile background
+    pub async fn use_background(db: &Database, id: &str, parent: &str) -> Result<File> {
+        db.find_and_use_attachment(id, "backgrounds", "user", parent)
+            .await
+    }
+
+    /// Use a file for a user avatar
+    pub async fn use_avatar(db: &Database, id: &str, parent: &str) -> Result<File> {
+        db.find_and_use_attachment(id, "avatars", "user", parent)
+            .await
+    }
+
+    /// Use a file for an icon
+    pub async fn use_icon(db: &Database, id: &str, parent: &str) -> Result<File> {
+        db.find_and_use_attachment(id, "icons", "object", parent)
+            .await
+    }
+
+    /// Use a file for a server icon
+    pub async fn use_server_icon(db: &Database, id: &str, parent: &str) -> Result<File> {
+        db.find_and_use_attachment(id, "icons", "object", parent)
+            .await
+    }
+
+    /// Use a file for a server banner
+    pub async fn use_banner(db: &Database, id: &str, parent: &str) -> Result<File> {
+        db.find_and_use_attachment(id, "banners", "server", parent)
+            .await
+    }
+
+    /// Use a file for an emoji
+    pub async fn use_emoji(db: &Database, id: &str, parent: &str) -> Result<File> {
+        db.find_and_use_attachment(id, "emojis", "object", parent)
+            .await
+    }
+}

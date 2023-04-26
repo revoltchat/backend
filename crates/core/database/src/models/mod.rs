@@ -11,7 +11,12 @@ pub use users::*;
 use crate::{Database, MongoDb, ReferenceDb};
 
 pub trait AbstractDatabase:
-    Sync + Send + admin_migrations::AbstractMigrations + bots::AbstractBots + users::AbstractUsers
+    Sync
+    + Send
+    + admin_migrations::AbstractMigrations
+    + bots::AbstractBots
+    + files::AbstractAttachment
+    + users::AbstractUsers
 {
 }
 
