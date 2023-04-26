@@ -406,6 +406,13 @@ impl Role {
         Ok(())
     }
 
+    /// Remove field from Role
+    pub fn remove_field(&mut self, field: &FieldsRole) {
+        match field {
+            FieldsRole::Colour => self.colour = None,
+        }
+    }
+
     /// Delete a role
     pub async fn delete(self, db: &Database, server_id: &str, role_id: &str) -> Result<()> {
         /* // TODO: EventV1::ServerRoleDelete {
@@ -416,13 +423,6 @@ impl Role {
         .await; */
 
         db.delete_role(server_id, role_id).await
-    }
-
-    /// Remove field from Role
-    pub fn remove_field(&mut self, field: &FieldsRole) {
-        match field {
-            FieldsRole::Colour => self.colour = None,
-        }
     }
 }
 

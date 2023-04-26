@@ -75,7 +75,7 @@ impl AbstractUsers for MongoDb {
                 None,
             )
             .await
-            .map_err(|_| create_database_error!("find", "users"))?
+            .map_err(|_| create_database_error!("find", COL))?
             .filter_map(|s| async {
                 if cfg!(debug_assertions) {
                     Some(s.unwrap())
@@ -101,7 +101,7 @@ impl AbstractUsers for MongoDb {
                 FindOptions::builder().projection(doc! { "_id": 1 }).build(),
             )
             .await
-            .map_err(|_| create_database_error!("find", "users"))?
+            .map_err(|_| create_database_error!("find", COL))?
             .filter_map(|s| async { s.ok() })
             .map(|user| user.id)
             .collect()
@@ -278,7 +278,7 @@ impl AbstractUsers for MongoDb {
             )
             .await
             .map(|_| ())
-            .map_err(|_| create_database_error!("update_one", "user"))
+            .map_err(|_| create_database_error!("update_one", COL))
     }
 
     /// Delete a user by their id
