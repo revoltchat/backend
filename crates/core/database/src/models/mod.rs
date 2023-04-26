@@ -1,11 +1,13 @@
 mod admin_migrations;
 mod bots;
 mod files;
+mod user_settings;
 mod users;
 
 pub use admin_migrations::*;
 pub use bots::*;
 pub use files::*;
+pub use user_settings::*;
 pub use users::*;
 
 use crate::{Database, MongoDb, ReferenceDb};
@@ -16,6 +18,7 @@ pub trait AbstractDatabase:
     + admin_migrations::AbstractMigrations
     + bots::AbstractBots
     + files::AbstractAttachments
+    + user_settings::AbstractUserSettings
     + users::AbstractUsers
 {
 }
