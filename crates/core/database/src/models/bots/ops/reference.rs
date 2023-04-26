@@ -7,6 +7,17 @@ use super::AbstractBots;
 
 #[async_trait]
 impl AbstractBots for ReferenceDb {
+    /// Insert new bot into the database
+    async fn insert_bot(&self, bot: &Bot) -> Result<()> {
+        let mut bots = self.bots.lock().await;
+        if bots.contains_key(&bot.id) {
+            Err(create_database_error!("insert", "bot"))
+        } else {
+            bots.insert(bot.id.to_string(), bot.clone());
+            Ok(())
+        }
+    }
+
     /// Fetch a bot by its id
     async fn fetch_bot(&self, id: &str) -> Result<Bot> {
         let bots = self.bots.lock().await;
@@ -22,15 +33,20 @@ impl AbstractBots for ReferenceDb {
             .ok_or_else(|| create_error!(NotFound))
     }
 
-    /// Insert new bot into the database
-    async fn insert_bot(&self, bot: &Bot) -> Result<()> {
-        let mut bots = self.bots.lock().await;
-        if bots.contains_key(&bot.id) {
-            Err(create_database_error!("insert", "bot"))
-        } else {
-            bots.insert(bot.id.to_string(), bot.clone());
-            Ok(())
-        }
+    /// Fetch bots owned by a user
+    async fn fetch_bots_by_user(&self, user_id: &str) -> Result<Vec<Bot>> {
+        let bots = self.bots.lock().await;
+        Ok(bots
+            .values()
+            .filter(|bot| bot.owner == user_id)
+            .cloned()
+            .collect())
+    }
+
+    /// Get the number of bots owned by a user
+    async fn get_number_of_bots_by_user(&self, user_id: &str) -> Result<usize> {
+        let bots = self.bots.lock().await;
+        Ok(bots.values().filter(|bot| bot.owner == user_id).count())
     }
 
     /// Update bot with new information
@@ -62,21 +78,5 @@ impl AbstractBots for ReferenceDb {
         } else {
             Err(create_error!(NotFound))
         }
-    }
-
-    /// Fetch bots owned by a user
-    async fn fetch_bots_by_user(&self, user_id: &str) -> Result<Vec<Bot>> {
-        let bots = self.bots.lock().await;
-        Ok(bots
-            .values()
-            .filter(|bot| bot.owner == user_id)
-            .cloned()
-            .collect())
-    }
-
-    /// Get the number of bots owned by a user
-    async fn get_number_of_bots_by_user(&self, user_id: &str) -> Result<usize> {
-        let bots = self.bots.lock().await;
-        Ok(bots.values().filter(|bot| bot.owner == user_id).count())
     }
 }
