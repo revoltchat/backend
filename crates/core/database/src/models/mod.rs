@@ -1,5 +1,6 @@
 mod admin_migrations;
 mod bots;
+mod channels;
 mod files;
 mod server_members;
 mod servers;
@@ -8,6 +9,7 @@ mod users;
 
 pub use admin_migrations::*;
 pub use bots::*;
+pub use channels::*;
 pub use files::*;
 pub use server_members::*;
 pub use servers::*;
@@ -26,6 +28,7 @@ pub trait AbstractDatabase:
     + servers::AbstractServers
     + user_settings::AbstractUserSettings
     + users::AbstractUsers
+    + channels::AbstractChannels
 {
 }
 
