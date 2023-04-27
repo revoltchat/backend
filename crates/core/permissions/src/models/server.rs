@@ -1,5 +1,7 @@
+use revolt_rocket_okapi::{revolt_okapi::schemars, JsonSchema};
+
 /// Representation of a single permission override
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, JsonSchema)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Override {
     /// Allow bit flags
@@ -8,9 +10,38 @@ pub struct Override {
     pub deny: u64,
 }
 
+/// Data permissions Field - contains both allow and deny
+#[derive(Debug, Clone, Copy, Eq, PartialEq, JsonSchema)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct DataPermissionsField {
+    pub permissions: Override,
+}
+
+/// Data permissions Value - contains allow
+#[derive(Debug, Clone, Copy, Eq, PartialEq, JsonSchema)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct DataPermissionsValue {
+    pub permissions: u64,
+}
+
+/// Data permissions Poly - can contain either Value or Field
+#[derive(Debug, Clone, Copy, Eq, PartialEq, JsonSchema)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[serde(untagged)]
+pub enum DataPermissionPoly {
+    Value {
+        /// Permission values to set for members in a `Group`
+        permissions: u64,
+    },
+    Field {
+        /// Allow / deny values to set for members in this `TextChannel` or `VoiceChannel`
+        permissions: Override,
+    },
+}
+
 /// Representation of a single permission override
 /// as it appears on models and in the database
-#[derive(/*JsonSchema, */ Debug, Clone, Copy, Default, Eq, PartialEq)]
+#[derive(JsonSchema, Debug, Clone, Copy, Default, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct OverrideField {
     /// Allow bit flags
@@ -54,3 +85,4 @@ impl From<OverrideField> for Override {
         Self::Document(bson::to_document(&v).unwrap())
     }
 }*/
+
