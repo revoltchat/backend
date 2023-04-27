@@ -11,6 +11,7 @@ impl AbstractChannels for ReferenceDb {
     async fn fetch_channel(&self, id: &str) -> Result<Channel> {
         todo!()
     }
+
     async fn fetch_channels<'a>(&self, ids: &'a [String]) -> Result<Vec<Channel>> {
         todo!()
     }

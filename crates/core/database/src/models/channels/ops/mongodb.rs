@@ -1,33 +1,58 @@
 use super::AbstractChannels;
-use crate::{Channel, FieldsChannel, IntoDocumentPath, MongoDb, PartialChannel};
-use bson::Bson;
-use bson::Document;
+use crate::{Channel, FieldsChannel, MongoDb, PartialChannel};
 use futures::StreamExt;
 use revolt_permissions::OverrideField;
-use revolt_result::Error;
 use revolt_result::Result;
 static COL: &str = "channels";
+
 #[async_trait]
 impl AbstractChannels for MongoDb {
     async fn fetch_channel(&self, id: &str) -> Result<Channel> {
-        todo!()
+        query!(self, find_one_by_id, COL, id)?.ok_or_else(|| create_error!(NotFound))
     }
     async fn fetch_channels<'a>(&self, ids: &'a [String]) -> Result<Vec<Channel>> {
-        todo!()
+        Ok(self
+            .col::<Channel>(COL)
+            .find(
+                doc! {
+                    "_id": {
+                        "$in": ids
+                    }
+                },
+                None,
+            )
+            .await
+            .map_err(|_| create_database_error!("find", "servers"))?
+            .filter_map(|s| async {
+                if cfg!(debug_assertions) {
+                    Some(s.unwrap())
+                } else {
+                    s.ok()
+                }
+            })
+            .collect()
+            .await)
     }
     async fn insert_channel(&self, channel: &Channel) -> Result<()> {
-        todo!()
+        query!(self, insert_one, COL, &channel).map(|_| ())
     }
     async fn update_channel(
         &self,
         id: &str,
-        channel: &PartialChannel,
+        partial: &PartialChannel,
         remove: Vec<FieldsChannel>,
     ) -> Result<()> {
         todo!()
     }
     async fn delete_channel(&self, channel: &Channel) -> Result<()> {
-        todo!()
+        let channel_id = match channel {
+            Channel::SavedMessages { id, .. } => id,
+            Channel::DirectMessage { id, .. } => id,
+            Channel::Group { id, .. } => id,
+            Channel::TextChannel { id, .. } => id,
+            Channel::VoiceChannel { id, .. } => id,
+        };
+        query!(self, delete_one_by_id, COL, channel_id).map(|_| ())
     }
     async fn find_direct_messages(&self, user_id: &str) -> Result<Vec<Channel>> {
         todo!()
