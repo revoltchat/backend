@@ -2,8 +2,8 @@
 use crate::Database;
 
 use deadqueue::limited::Queue;
-use std::{collections::HashMap, time::Duration};
 use once_cell::sync::Lazy;
+use std::{collections::HashMap, time::Duration};
 
 use super::DelayedTask;
 

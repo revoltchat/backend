@@ -1,4 +1,4 @@
-use crate::util::variables::delta::{JANUARY_URL, MAX_EMBED_COUNT, JANUARY_CONCURRENT_CONNECTIONS};
+use crate::util::variables::delta::{JANUARY_CONCURRENT_CONNECTIONS, JANUARY_URL, MAX_EMBED_COUNT};
 use crate::{
     models::{message::AppendMessage, Message},
     types::january::Embed,
@@ -8,8 +8,8 @@ use crate::{
 use async_lock::Semaphore;
 use async_std::task::spawn;
 use deadqueue::limited::Queue;
-use std::sync::Arc;
 use once_cell::sync::Lazy;
+use std::sync::Arc;
 
 /// Task information
 #[derive(Debug)]
@@ -23,7 +23,6 @@ struct EmbedTask {
 }
 
 static Q: Lazy<Queue<EmbedTask>> = Lazy::new(|| Queue::new(10_000));
-
 
 /// Queue a new task for a worker
 pub async fn queue(channel: String, id: String, content: String) {
@@ -47,7 +46,8 @@ pub async fn worker(db: Database) {
         let semaphore = semaphore.clone();
 
         spawn(async move {
-            let embeds = Embed::generate(task.content, &JANUARY_URL, *MAX_EMBED_COUNT, semaphore).await;
+            let embeds =
+                Embed::generate(task.content, &JANUARY_URL, *MAX_EMBED_COUNT, semaphore).await;
 
             if let Ok(embeds) = embeds {
                 if let Err(err) = Message::append(

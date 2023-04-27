@@ -19,7 +19,6 @@ struct PushTask {
 
 static Q: Lazy<Queue<PushTask>> = Lazy::new(|| Queue::new(10_000));
 
-
 /// Queue a new task for a worker
 pub async fn queue(recipients: Vec<String>, payload: String) {
     if recipients.is_empty() {
