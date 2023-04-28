@@ -34,6 +34,7 @@ pub trait AbstractChannels: Sync + Send {
     // Fetch direct message channel (PMs)
     async fn find_direct_message_channel(&self, user_a: &str, user_b: &str) -> Result<Channel>;
 
+    // Update channel
     async fn update_channel(
         &self,
         id: &str,
@@ -41,5 +42,9 @@ pub trait AbstractChannels: Sync + Send {
         remove: Vec<FieldsChannel>,
     ) -> Result<()>;
 
+    // Remove a user from a group
     async fn remove_user_from_group(&self, channel: &str, user: &str) -> Result<()>;
+
+    // Delete a channel
+    async fn delete_channel(&self, channel: &Channel) -> Result<()>;
 }
