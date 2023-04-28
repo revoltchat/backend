@@ -1,3 +1,4 @@
+#![allow(warnings)]
 use super::AbstractChannels;
 use crate::{Channel, FieldsChannel, MongoDb, PartialChannel, ReferenceDb};
 use futures::StreamExt;
