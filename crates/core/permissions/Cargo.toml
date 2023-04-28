@@ -30,5 +30,8 @@ async-trait = "0.1.51"
 serde = { version = "1", features = ["derive"], optional = true }
 revolt_rocket_okapi = { version = "0.9.1", features = [ "swagger" ] }
 rocket = { version = "0.5.0-rc.2", default-features = false, features = ["json"] }
+
+bson = { version = "2.1.0" }
+
 # Spec Generation
 schemars = { version = "0.8.8", optional = true }
