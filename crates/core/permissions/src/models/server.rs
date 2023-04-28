@@ -1,3 +1,4 @@
+use bson::Bson;
 use revolt_rocket_okapi::{revolt_okapi::schemars, JsonSchema};
 
 /// Representation of a single permission override
@@ -80,9 +81,8 @@ impl From<OverrideField> for Override {
     }
 }
 
-/*impl From<OverrideField> for Bson {
+impl From<OverrideField> for Bson {
     fn from(v: OverrideField) -> Self {
         Self::Document(bson::to_document(&v).unwrap())
     }
-}*/
-
+}
