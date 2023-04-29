@@ -1,7 +1,8 @@
 #![allow(warnings)]
 use super::AbstractChannels;
-use crate::{Channel, FieldsChannel, MongoDb, PartialChannel, ReferenceDb};
-use futures::StreamExt;
+use crate::ReferenceDb;
+use crate::{Channel, FieldsChannel, MongoDb, PartialChannel};
+use futures::{FutureExt, StreamExt};
 use revolt_permissions::OverrideField;
 use revolt_result::Result;
 static COL: &str = "channels";
@@ -10,12 +11,24 @@ static COL: &str = "channels";
 impl AbstractChannels for ReferenceDb {
     /// Insert a new channel in the database
     async fn insert_channel(&self, channel: &Channel) -> Result<()> {
-        todo!()
+        let mut channels = self.channels.lock().await;
+        if channels.contains_key(&channel.get_id()) {
+            Err(create_database_error!("insert", "channel"))
+        } else {
+            channels.insert(channel.get_id(), channel.clone());
+            Ok(())
+        }
     }
-
-    /// Insert a a user to a group
+    /// Insert a user to a group
     async fn add_user_to_group(&self, channel: &str, user: &str) -> Result<()> {
-        todo!()
+        let mut channels = self.channels.lock().await;
+
+        if let Some(Channel::Group { recipients, .. }) = channels.get_mut(channel) {
+            recipients.push(String::from(user));
+            Ok(())
+        } else {
+            Err(create_error!(InvalidOperation))
+        }
     }
 
     /// Insert channel role permissions
@@ -25,7 +38,30 @@ impl AbstractChannels for ReferenceDb {
         role: &str,
         permissions: OverrideField,
     ) -> Result<()> {
-        todo!()
+        let mut channels = self.channels.lock().await;
+
+        // find role id
+        if let Some(mut channel) = channels.get_mut(channel) {
+            match channel.clone() {
+                Channel::TextChannel {
+                    role_permissions, ..
+                }
+                | Channel::VoiceChannel {
+                    role_permissions, ..
+                } => {
+                    let role = role_permissions.get(role);
+                    if let Some(mut role_perm) = role {
+                        role_perm = &permissions;
+                    }
+
+                    // todo create method for role editing
+                    Ok(())
+                }
+                _ => Err(create_error!(InvalidOperation)),
+            }
+        } else {
+            Err(create_error!(NotFound))
+        }
     }
 
     /// Fetch a channel from the database
