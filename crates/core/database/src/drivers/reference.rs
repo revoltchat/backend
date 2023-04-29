@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use futures::lock::Mutex;
 
-use crate::{Bot, File, Member, MemberCompositeKey, Server, User, UserSettings};
+use crate::{Bot, Channel, File, Member, MemberCompositeKey, Server, User, UserSettings};
 
 database_derived!(
     /// Reference implementation
@@ -14,13 +14,12 @@ database_derived!(
         pub server_members: Arc<Mutex<HashMap<MemberCompositeKey, Member>>>,
         pub servers: Arc<Mutex<HashMap<String, Server>>>,
         pub files: Arc<Mutex<HashMap<String, File>>>,
-
         pub server_bans: Arc<Mutex<HashMap<String, ()>>>,
         pub safety_reports: Arc<Mutex<HashMap<String, ()>>>,
         pub safety_snapshots: Arc<Mutex<HashMap<String, ()>>>,
         pub emoji: Arc<Mutex<HashMap<String, ()>>>,
         pub messages: Arc<Mutex<HashMap<String, ()>>>,
-        pub channels: Arc<Mutex<HashMap<String, ()>>>,
+        pub channels: Arc<Mutex<HashMap<String, Channel>>>,
         pub channel_invites: Arc<Mutex<HashMap<String, ()>>>,
         pub channel_unreads: Arc<Mutex<HashMap<String, ()>>>,
     }
