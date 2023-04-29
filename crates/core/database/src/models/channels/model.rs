@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
 use revolt_permissions::OverrideField;
+use revolt_result::Result;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::File;
+use crate::{Database, File};
 
 /// Utility function to check if a boolean value is false
 pub fn if_false(t: &bool) -> bool {
@@ -136,8 +137,8 @@ auto_derived!(
     }
 );
 
-auto_derived!(
-    pub struct PartialChannel {
+auto_derived_partial!(
+    pub struct NullName {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub name: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -158,7 +159,8 @@ auto_derived!(
         pub default_permissions: Option<OverrideField>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub last_message_id: Option<String>,
-    }
+    },
+    "PartialChannel"
 );
 
 /// Optional fields on channel object
@@ -167,4 +169,52 @@ pub enum FieldsChannel {
     Description,
     Icon,
     DefaultPermissions,
+}
+
+impl Channel {
+    pub async fn create(&self, db: &Database) -> Result<()> {
+        db.insert_channel(self).await
+        // todo finish
+    }
+
+    /// Remove a field from Channel
+    pub fn remove_field(&mut self, field: &FieldsChannel) {
+        match field {
+            FieldsChannel::Description => match self {
+                Channel::Group { description, .. }
+                | Channel::TextChannel { description, .. }
+                | Channel::VoiceChannel { description, .. } => *description = None,
+                _ => {}
+            },
+            FieldsChannel::Icon => match self {
+                Channel::Group { icon, .. }
+                | Channel::TextChannel { icon, .. }
+                | Channel::VoiceChannel { icon, .. } => *icon = None,
+                _ => {}
+            },
+            FieldsChannel::DefaultPermissions => match self {
+                Channel::TextChannel {
+                    default_permissions,
+                    ..
+                }
+                | Channel::VoiceChannel {
+                    default_permissions,
+                    ..
+                } => *default_permissions = None,
+
+                _ => {}
+            },
+        }
+    }
+
+    /// Fetch ID for any given channel type
+    pub fn get_id(&self) -> String {
+        match self {
+            Self::SavedMessages { id, .. } => id.to_owned(),
+            Self::DirectMessage { id, .. } => id.to_owned(),
+            Self::Group { id, .. } => id.to_owned(),
+            Self::TextChannel { id, .. } => id.to_owned(),
+            Self::VoiceChannel { id, .. } => id.to_owned(),
+        }
+    }
 }
