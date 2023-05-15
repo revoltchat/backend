@@ -2837,7 +2837,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-bonfire"
-version = "0.5.19"
+version = "0.5.20"
 dependencies = [
  "async-std",
  "async-tungstenite",
@@ -2879,7 +2879,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-delta"
-version = "0.5.19"
+version = "0.5.20"
 dependencies = [
  "async-channel",
  "async-std",
@@ -2951,7 +2951,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-quark"
-version = "0.5.19"
+version = "0.5.20"
 dependencies = [
  "async-lock",
  "async-recursion",
