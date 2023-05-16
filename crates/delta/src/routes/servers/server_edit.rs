@@ -78,7 +78,9 @@ pub async fn req(
         && data.system_messages.is_none()
         && data.categories.is_none()
         // && data.nsfw.is_none()
+        && data.flags.is_none()
         && data.analytics.is_none()
+        && data.discoverable.is_none()
         && data.remove.is_none()
     {
         return Ok(Json(server));
@@ -87,7 +89,6 @@ pub async fn req(
         || data.icon.is_some()
         || data.banner.is_some()
         || data.system_messages.is_some()
-        // || data.nsfw.is_some()
         || data.analytics.is_some()
         || data.remove.is_some()
     {
@@ -97,10 +98,13 @@ pub async fn req(
     }
 
     // Check we are privileged if changing sensitive fields
-    if data.flags.is_some() && !user.privileged {
+    if (data.flags.is_some() /*|| data.nsfw.is_some()*/ || data.discoverable.is_some())
+        && !user.privileged
+    {
         return Err(Error::NotPrivileged);
     }
 
+    // Changing categories requires manage channel
     if data.categories.is_some() {
         permissions
             .throw_permission(db, Permission::ManageChannel)
