@@ -174,10 +174,8 @@ impl AbstractChannels for MongoDb {
             .map_err(|_| create_database_error!("update_one", "channels"))
     }
 
-    async fn delete_channel(&self, _channel: &Channel) -> Result<()> {
-        // todo this one will take time, WIP
-
-        todo!()
+    async fn delete_channel(&self, channel: &Channel) -> Result<()> {
+        query!(self, delete_one_by_id, COL, &channel.id()).map(|_| ())
     }
 }
 

@@ -466,4 +466,18 @@ impl Channel {
             _ => None,
         }
     }
+
+    pub fn contains_user(&self, user_id: &str) -> bool {
+        match self {
+            Channel::Group { recipients, .. } => recipients.contains(&String::from(user_id)),
+            _ => false,
+        }
+    }
+
+    pub fn users(&self) -> Result<Vec<String>> {
+        match self {
+            Channel::Group { recipients, .. } => Ok(recipients.to_owned()),
+            _ => Err(create_error!(NotFound)),
+        }
+    }
 }

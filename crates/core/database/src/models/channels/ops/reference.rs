@@ -105,11 +105,25 @@ impl AbstractChannels for ReferenceDb {
 
     // Remove a user from a group
     async fn remove_user_from_group(&self, channel: &str, user: &str) -> Result<()> {
-        todo!()
+        let mut channels = self.channels.lock().await;
+        if let Some(channel_data) = channels.get_mut(channel) {
+            if channel_data.users()?.contains(&String::from(user)) {
+                channel_data.users()?.retain(|x| x != user);
+                return Ok(());
+            } else {
+                return Err(create_error!(NotFound));
+            }
+        }
+        Err(create_error!(NotFound))
     }
 
     // Delete a channel
     async fn delete_channel(&self, channel: &Channel) -> Result<()> {
-        todo!()
+        let mut channels = self.channels.lock().await;
+        if channels.remove(&channel.id()).is_some() {
+            Ok(())
+        } else {
+            Err(create_error!(NotFound))
+        }
     }
 }
