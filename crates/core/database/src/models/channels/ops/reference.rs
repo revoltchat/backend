@@ -12,10 +12,10 @@ impl AbstractChannels for ReferenceDb {
     /// Insert a new channel in the database
     async fn insert_channel(&self, channel: &Channel) -> Result<()> {
         let mut channels = self.channels.lock().await;
-        if channels.contains_key(&channel.get_id()) {
+        if channels.contains_key(&channel.id()) {
             Err(create_database_error!("insert", "channel"))
         } else {
-            channels.insert(channel.get_id(), channel.clone());
+            channels.insert(channel.id(), channel.clone());
             Ok(())
         }
     }
@@ -40,24 +40,12 @@ impl AbstractChannels for ReferenceDb {
     ) -> Result<()> {
         let mut channels = self.channels.lock().await;
 
-        // find role id
         if let Some(mut channel) = channels.get_mut(channel) {
-            match channel.clone() {
-                Channel::TextChannel {
-                    role_permissions, ..
-                }
-                | Channel::VoiceChannel {
-                    role_permissions, ..
-                } => {
-                    let role = role_permissions.get(role);
-                    if let Some(mut role_perm) = role {
-                        role_perm = &permissions;
-                    }
-
-                    // todo create method for role editing
-                    Ok(())
-                }
-                _ => Err(create_error!(InvalidOperation)),
+            // check for non override
+            if let Some(mut role_data) = channel.find_role(role) {
+                channel.set_role_permission(role, permissions).await
+            } else {
+                Err(create_error!(NotFound))
             }
         } else {
             Err(create_error!(NotFound))
@@ -66,12 +54,24 @@ impl AbstractChannels for ReferenceDb {
 
     /// Fetch a channel from the database
     async fn fetch_channel(&self, id: &str) -> Result<Channel> {
-        todo!()
+        let mut channels = self.channels.lock().await;
+        channels
+            .get(id)
+            .cloned()
+            .ok_or_else(|| create_error!(NotFound))
     }
 
     /// Fetch all channels from the database
     async fn fetch_channels<'a>(&self, ids: &'a [String]) -> Result<Vec<Channel>> {
-        todo!()
+        let mut channels = self.channels.lock().await;
+        ids.iter()
+            .map(|id| {
+                channels
+                    .get(id)
+                    .cloned()
+                    .ok_or_else(|| create_error!(NotFound))
+            })
+            .collect()
     }
 
     /// Fetch all direct messages for a user
@@ -81,7 +81,11 @@ impl AbstractChannels for ReferenceDb {
 
     // Fetch saved messages channel
     async fn find_saved_messages_channel(&self, user_id: &str) -> Result<Channel> {
-        todo!()
+        let mut channels = self.channels.lock().await;
+        channels
+            .get(user_id)
+            .cloned()
+            .ok_or_else(|| create_database_error!("fetch", "channel"))
     }
 
     // Fetch direct message channel (PMs)
@@ -93,7 +97,7 @@ impl AbstractChannels for ReferenceDb {
     async fn update_channel(
         &self,
         id: &str,
-        channel: &Channel,
+        channel: &PartialChannel,
         remove: Vec<FieldsChannel>,
     ) -> Result<()> {
         todo!()

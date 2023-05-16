@@ -140,7 +140,7 @@ impl AbstractChannels for MongoDb {
     async fn update_channel(
         &self,
         id: &str,
-        channel: &Channel,
+        channel: &PartialChannel,
         remove: Vec<FieldsChannel>,
     ) -> Result<()> {
         query!(

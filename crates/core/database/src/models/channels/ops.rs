@@ -1,4 +1,4 @@
-use crate::{revolt_result::Result, Channel, FieldsChannel};
+use crate::{revolt_result::Result, Channel, FieldsChannel, PartialChannel};
 use revolt_permissions::OverrideField;
 mod mongodb;
 mod reference;
@@ -38,7 +38,7 @@ pub trait AbstractChannels: Sync + Send {
     async fn update_channel(
         &self,
         id: &str,
-        channel: &Channel,
+        channel: &PartialChannel,
         remove: Vec<FieldsChannel>,
     ) -> Result<()>;
 

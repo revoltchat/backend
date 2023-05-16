@@ -172,49 +172,298 @@ pub enum FieldsChannel {
 }
 
 impl Channel {
-    pub async fn create(&self, db: &Database) -> Result<()> {
-        db.insert_channel(self).await
-        // todo finish
+    /// Get a reference to this channel's id
+    pub fn id(&self) -> String {
+        match self {
+            Channel::DirectMessage { id, .. }
+            | Channel::Group { id, .. }
+            | Channel::SavedMessages { id, .. }
+            | Channel::TextChannel { id, .. }
+            | Channel::VoiceChannel { id, .. } => id.clone(),
+        }
     }
 
-    /// Remove a field from Channel
+    /// Map out whether it is a direct DM
+    pub fn is_direct_dm(&self) -> bool {
+        matches!(self, Channel::DirectMessage { .. })
+    }
+
+    /// Create a channel
+    pub async fn create(&self, db: &Database) -> Result<()> {
+        db.insert_channel(self).await?;
+
+        Ok(())
+    }
+
+    /// Update channel data
+    pub async fn update<'a>(
+        &mut self,
+        db: &Database,
+        partial: PartialChannel,
+        remove: Vec<FieldsChannel>,
+    ) -> Result<()> {
+        for field in &remove {
+            self.remove_field(field);
+        }
+
+        self.apply_options(partial.clone());
+
+        db.update_channel(&self.id(), &partial, remove.clone())
+            .await?;
+
+        Ok(())
+    }
+
+    /// Delete a channel
+    pub async fn delete(&self, db: &Database) -> Result<()> {
+        db.delete_channel(&self).await
+    }
+
+    /// Remove a field from Channel object
     pub fn remove_field(&mut self, field: &FieldsChannel) {
         match field {
             FieldsChannel::Description => match self {
-                Channel::Group { description, .. }
-                | Channel::TextChannel { description, .. }
-                | Channel::VoiceChannel { description, .. } => *description = None,
+                Self::Group { description, .. }
+                | Self::TextChannel { description, .. }
+                | Self::VoiceChannel { description, .. } => {
+                    description.take();
+                }
                 _ => {}
             },
             FieldsChannel::Icon => match self {
-                Channel::Group { icon, .. }
-                | Channel::TextChannel { icon, .. }
-                | Channel::VoiceChannel { icon, .. } => *icon = None,
+                Self::Group { icon, .. }
+                | Self::TextChannel { icon, .. }
+                | Self::VoiceChannel { icon, .. } => {
+                    icon.take();
+                }
                 _ => {}
             },
             FieldsChannel::DefaultPermissions => match self {
-                Channel::TextChannel {
+                Self::TextChannel {
                     default_permissions,
                     ..
                 }
-                | Channel::VoiceChannel {
+                | Self::VoiceChannel {
                     default_permissions,
                     ..
-                } => *default_permissions = None,
-
+                } => {
+                    default_permissions.take();
+                }
                 _ => {}
             },
         }
     }
 
-    /// Fetch ID for any given channel type
-    pub fn get_id(&self) -> String {
+    /// Apply partial channel to channel
+    pub fn apply_options(&mut self, partial: PartialChannel) {
+        // ! FIXME: maybe flatten channel object?
         match self {
-            Self::SavedMessages { id, .. } => id.to_owned(),
-            Self::DirectMessage { id, .. } => id.to_owned(),
-            Self::Group { id, .. } => id.to_owned(),
-            Self::TextChannel { id, .. } => id.to_owned(),
-            Self::VoiceChannel { id, .. } => id.to_owned(),
+            Self::DirectMessage { active, .. } => {
+                if let Some(v) = partial.active {
+                    *active = v;
+                }
+            }
+            Self::Group {
+                name,
+                owner,
+                description,
+                icon,
+                nsfw,
+                permissions,
+                ..
+            } => {
+                if let Some(v) = partial.name {
+                    *name = v;
+                }
+
+                if let Some(v) = partial.owner {
+                    *owner = v;
+                }
+
+                if let Some(v) = partial.description {
+                    description.replace(v);
+                }
+
+                if let Some(v) = partial.icon {
+                    icon.replace(v);
+                }
+
+                if let Some(v) = partial.nsfw {
+                    *nsfw = v;
+                }
+
+                if let Some(v) = partial.permissions {
+                    permissions.replace(v);
+                }
+            }
+            Self::TextChannel {
+                name,
+                description,
+                icon,
+                nsfw,
+                default_permissions,
+                role_permissions,
+                ..
+            }
+            | Self::VoiceChannel {
+                name,
+                description,
+                icon,
+                nsfw,
+                default_permissions,
+                role_permissions,
+                ..
+            } => {
+                if let Some(v) = partial.name {
+                    *name = v;
+                }
+
+                if let Some(v) = partial.description {
+                    description.replace(v);
+                }
+
+                if let Some(v) = partial.icon {
+                    icon.replace(v);
+                }
+
+                if let Some(v) = partial.nsfw {
+                    *nsfw = v;
+                }
+
+                if let Some(v) = partial.role_permissions {
+                    *role_permissions = v;
+                }
+
+                if let Some(v) = partial.default_permissions {
+                    default_permissions.replace(v);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Acknowledge a message
+    pub async fn ack(&self, user: &str, message: &str) -> Result<()> {
+        //todo
+        Ok(())
+    }
+
+    /// Add user to a group
+    pub async fn add_user_to_group(&mut self, db: &Database, user: &str, by: &str) -> Result<()> {
+        if let Channel::Group { recipients, .. } = self {
+            if recipients.contains(&String::from(user)) {
+                return Err(create_error!(AlreadyInGroup));
+            }
+
+            recipients.push(String::from(user));
+        }
+
+        match &self {
+            Channel::Group { id, .. } => {
+                db.add_user_to_group(id, user).await?;
+
+                Ok(())
+            }
+            _ => Err(create_error!(InvalidOperation)),
+        }
+    }
+
+    /// Remove user from a group
+    pub async fn remove_user_from_group(
+        &self,
+        db: &Database,
+        user: &str,
+        by: Option<&str>,
+        silent: bool,
+    ) -> Result<()> {
+        match &self {
+            Channel::Group {
+                id,
+                owner,
+                recipients,
+                ..
+            } => {
+                if user == owner {
+                    if let Some(new_owner) = recipients.iter().find(|x| *x != user) {
+                        db.update_channel(
+                            id,
+                            &PartialChannel {
+                                owner: Some(new_owner.into()),
+                                ..Default::default()
+                            },
+                            vec![],
+                        )
+                        .await?;
+                    } else {
+                        db.delete_channel(self).await?;
+                        return Ok(());
+                    }
+                }
+
+                //todo send system message
+                // afaik system messages are no longer supported by the Channel::Group type
+                let example_remove_msg = match (silent, by) {
+                    (true, _) => None,
+                    (_, Some(remover)) => {
+                        Some(format!("User {user} has been removed by {remover}"))
+                    }
+                    (_, None) => Some(format!("User {user} has been removed")),
+                };
+
+                if let Some(message) = example_remove_msg {
+                    // send system message
+                }
+
+                db.remove_user_from_group(id, user).await?;
+
+                Ok(())
+            }
+
+            _ => Err(create_error!(InvalidOperation)),
+        }
+    }
+
+    /// Set role permission on a channel
+    pub async fn set_role_permission(
+        &mut self,
+        role: &str,
+        permissions: OverrideField,
+    ) -> Result<()> {
+        match self {
+            Channel::TextChannel {
+                role_permissions, ..
+            }
+            | Channel::VoiceChannel {
+                role_permissions, ..
+            } => {
+                if let Some(_) = role_permissions.get(role) {
+                    role_permissions.remove(role);
+                    role_permissions.insert(String::from(role), permissions);
+
+                    let mut partial = PartialChannel::empty();
+                    partial.role_permissions = Some(role_permissions.to_owned());
+
+                    self.apply_options(partial);
+
+                    Ok(())
+                } else {
+                    Err(create_error!(NotFound))
+                }
+            }
+            _ => Err(create_error!(InvalidOperation)),
+        }
+    }
+
+    // return an override role
+    pub fn find_role(&self, role_id: &str) -> Option<&OverrideField> {
+        match self {
+            Channel::TextChannel {
+                role_permissions, ..
+            }
+            | Channel::VoiceChannel {
+                role_permissions, ..
+            } => role_permissions.get(role_id),
+            _ => None,
         }
     }
 }
