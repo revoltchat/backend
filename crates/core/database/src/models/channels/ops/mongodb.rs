@@ -23,11 +23,11 @@ impl AbstractChannels for MongoDb {
                 "recipients": user
             }
         };
-        Ok(self
-            .col::<Document>(COL)
+        self.col::<Document>(COL)
             .update_one(user_doc, group_doc, None)
             .map(|_| ())
-            .await)
+            .await;
+        Ok(())
     }
 
     /// Insert channel role permissions

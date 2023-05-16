@@ -73,7 +73,7 @@ pub async fn worker(db: Database) {
 
         // Queue incoming tasks.
         while let Some(Data { channel, id, is_dm }) = Q.try_pop() {
-            if let Some(mut task) = tasks.get_mut(&channel) {
+            if let Some(task) = tasks.get_mut(&channel) {
                 task.data.id = id;
                 task.delay();
             } else {
