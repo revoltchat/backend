@@ -57,9 +57,7 @@ pub async fn create_emoji(
             // ! FIXME: hardcoded upper limit
             let emojis = db.fetch_emoji_by_parent_id(&server.id).await?;
             if emojis.len() > *MAX_EMOJI_COUNT {
-                return Err(Error::TooManyEmoji {
-                    max: *MAX_EMOJI_COUNT,
-                });
+                return Err(Error::TooManyEmoji { max: *MAX_EMOJI_COUNT });
             }
         }
         EmojiParent::Detached => return Err(Error::InvalidOperation),

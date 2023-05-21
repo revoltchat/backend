@@ -1,7 +1,6 @@
 use crate::{Error, Result};
 
 use async_std::sync::Mutex;
-use once_cell::sync::Lazy;
 use revolt_rocket_okapi::gen::OpenApiGenerator;
 use revolt_rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 use revolt_rocket_okapi::revolt_okapi::openapi3::{Parameter, ParameterValue};
@@ -10,6 +9,7 @@ use rocket::request::{FromRequest, Outcome};
 use schemars::schema::{InstanceType, SchemaObject, SingleOrVec};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
+use once_cell::sync::Lazy;
 
 #[derive(Validate, Serialize, Deserialize)]
 pub struct IdempotencyKey {
@@ -17,8 +17,7 @@ pub struct IdempotencyKey {
     key: String,
 }
 
-static TOKEN_CACHE: Lazy<Mutex<lru::LruCache<String, ()>>> =
-    Lazy::new(|| Mutex::new(lru::LruCache::new(100)));
+static TOKEN_CACHE: Lazy<Mutex<lru::LruCache<String, ()>>> = Lazy::new(|| Mutex::new(lru::LruCache::new(100)));
 
 impl IdempotencyKey {
     // Backwards compatibility.

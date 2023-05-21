@@ -6,17 +6,16 @@ use revolt_quark::{
         Message, User,
     },
     perms,
-    variables::delta::{MAX_ATTACHMENT_COUNT, MAX_REPLY_COUNT},
     web::idempotency::IdempotencyKey,
-    Db, Error, Permission, Ref, Result,
+    Db, Error, Permission, Ref, Result, variables::delta::{MAX_ATTACHMENT_COUNT, MAX_REPLY_COUNT},
 };
 
-use once_cell::sync::Lazy;
 use regex::Regex;
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use validator::Validate;
+use once_cell::sync::Lazy;
 
 #[derive(Validate, Serialize, Deserialize, JsonSchema)]
 pub struct DataMessageSend {
@@ -141,9 +140,7 @@ pub async fn message_send(
     let mut replies = HashSet::new();
     if let Some(entries) = data.replies {
         if entries.len() > *MAX_REPLY_COUNT {
-            return Err(Error::TooManyReplies {
-                max: *MAX_REPLY_COUNT,
-            });
+            return Err(Error::TooManyReplies { max: *MAX_REPLY_COUNT });
         }
 
         for Reply { id, mention } in entries {
@@ -195,9 +192,7 @@ pub async fn message_send(
 
         // ! FIXME: move this to app config
         if ids.len() > *MAX_ATTACHMENT_COUNT {
-            return Err(Error::TooManyAttachments {
-                max: *MAX_ATTACHMENT_COUNT,
-            });
+            return Err(Error::TooManyAttachments { max: *MAX_ATTACHMENT_COUNT} );
         }
 
         for attachment_id in ids {

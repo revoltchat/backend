@@ -9,16 +9,14 @@ use crate::{AbstractUser, Error, Result};
 
 use super::super::MongoDb;
 
-static FIND_USERNAME_OPTIONS: Lazy<FindOneOptions> = Lazy::new(|| {
-    FindOneOptions::builder()
-        .collation(
-            Collation::builder()
-                .locale("en")
-                .strength(CollationStrength::Secondary)
-                .build(),
-        )
-        .build()
-});
+static FIND_USERNAME_OPTIONS: Lazy<FindOneOptions> = Lazy::new(|| FindOneOptions::builder()
+    .collation(
+        Collation::builder()
+            .locale("en")
+            .strength(CollationStrength::Secondary)
+            .build()
+    )
+    .build());
 
 static COL: &str = "users";
 
