@@ -95,7 +95,7 @@ pub async fn worker(db: Database) {
         }) = Q.try_pop()
         {
             let key = (user, channel);
-            if let Some(task) = tasks.get_mut(&key) {
+            if let Some(mut task) = tasks.get_mut(&key) {
                 task.delay();
 
                 match &mut event {

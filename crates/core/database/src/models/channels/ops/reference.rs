@@ -109,13 +109,12 @@ impl AbstractChannels for ReferenceDb {
         if let Some(channel_data) = channels.get_mut(channel) {
             if channel_data.users()?.contains(&String::from(user)) {
                 channel_data.users()?.retain(|x| x != user);
-                Ok(())
+                return Ok(());
             } else {
-                Err(create_error!(NotFound))
+                return Err(create_error!(NotFound));
             }
-        } else {
-            Err(create_error!(NotFound))
         }
+        Err(create_error!(NotFound))
     }
 
     // Delete a channel

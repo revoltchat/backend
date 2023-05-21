@@ -216,7 +216,7 @@ impl Channel {
 
     /// Delete a channel
     pub async fn delete(&self, db: &Database) -> Result<()> {
-        db.delete_channel(self).await
+        db.delete_channel(&self).await
     }
 
     /// Remove a field from Channel object
@@ -343,13 +343,13 @@ impl Channel {
     }
 
     /// Acknowledge a message
-    pub async fn ack(&self, _user: &str, _message: &str) -> Result<()> {
+    pub async fn ack(&self, user: &str, message: &str) -> Result<()> {
         //todo
         Ok(())
     }
 
     /// Add user to a group
-    pub async fn add_user_to_group(&mut self, db: &Database, user: &str, _by: &str) -> Result<()> {
+    pub async fn add_user_to_group(&mut self, db: &Database, user: &str, by: &str) -> Result<()> {
         if let Channel::Group { recipients, .. } = self {
             if recipients.contains(&String::from(user)) {
                 return Err(create_error!(AlreadyInGroup));
@@ -373,8 +373,8 @@ impl Channel {
         &self,
         db: &Database,
         user: &str,
-        _by: Option<&str>,
-        _silent: bool,
+        by: Option<&str>,
+        silent: bool,
     ) -> Result<()> {
         match &self {
             Channel::Group {
@@ -401,6 +401,18 @@ impl Channel {
                 }
 
                 //todo send system message
+                // afaik system messages are no longer supported by the Channel::Group type
+                let example_remove_msg = match (silent, by) {
+                    (true, _) => None,
+                    (_, Some(remover)) => {
+                        Some(format!("User {user} has been removed by {remover}"))
+                    }
+                    (_, None) => Some(format!("User {user} has been removed")),
+                };
+
+                if let Some(message) = example_remove_msg {
+                    // send system message
+                }
 
                 db.remove_user_from_group(id, user).await?;
 
@@ -424,7 +436,7 @@ impl Channel {
             | Channel::VoiceChannel {
                 role_permissions, ..
             } => {
-                if role_permissions.get(role).is_some() {
+                if let Some(_) = role_permissions.get(role) {
                     role_permissions.remove(role);
                     role_permissions.insert(String::from(role), permissions);
 
