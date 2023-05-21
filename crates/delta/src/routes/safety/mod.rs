@@ -6,7 +6,7 @@ mod fetch_report;
 mod fetch_reports;
 mod report_content;
 
-mod fetch_snapshot;
+mod fetch_snapshots;
 
 pub fn routes() -> (Vec<Route>, OpenApi) {
     openapi_get_routes_spec![
@@ -16,6 +16,6 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         fetch_reports::fetch_reports,
         report_content::report_content,
         // Snapshots
-        fetch_snapshot::fetch_snapshot
+        fetch_snapshots::fetch_snapshots
     ]
 }
