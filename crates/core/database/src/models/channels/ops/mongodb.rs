@@ -128,15 +128,16 @@ impl AbstractChannels for MongoDb {
         role: &str,
         permissions: OverrideField,
     ) -> Result<()> {
-        let channel_doc = doc! { "_id": channel };
-        let role_doc = doc! {
-            "$set": {
-                "role_permissions.".to_owned() + role: permissions
-            }
-        };
-
         self.col::<Document>(COL)
-            .update_one(channel_doc, role_doc, None)
+            .update_one(
+                doc! { "_id": channel },
+                doc! {
+                "$set": {
+                    "role_permissions.".to_owned() + role: permissions
+                }
+                },
+                None,
+            )
             .await
             .map(|_| ())
             .map_err(|_| create_database_error!("update_one", "channel"))
