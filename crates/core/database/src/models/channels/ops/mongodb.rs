@@ -115,7 +115,9 @@ impl AbstractChannels for MongoDb {
             .await)
     }
 
+
     /// Insert channel role permissions
+    
     async fn set_channel_role_permission(
         &self,
         channel: &str,

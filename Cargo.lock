@@ -2936,8 +2936,6 @@ dependencies = [
  "bson",
  "num_enum 0.6.1",
  "once_cell",
- "revolt_rocket_okapi",
- "rocket",
  "schemars",
  "serde",
 ]
