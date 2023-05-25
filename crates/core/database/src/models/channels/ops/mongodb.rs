@@ -45,27 +45,30 @@ impl AbstractChannels for MongoDb {
 
     /// Fetch all direct messages for a user
     async fn find_direct_messages(&self, user_id: &str) -> Result<Vec<Channel>> {
-        let doc = doc! {
-            "$or": [
-                    {
-                        "$or": [
-                            {
-                                "channel_type": "DirectMessage"
-                            },
-                            {
-                                "channel_type": "Group"
-                            }
-                        ],
-                        "recipients": user_id
-                    },
-                    {
-                        "channel_type": "SavedMessages",
-                        "user": user_id
-                    }
-                ]
-        };
-
-        query!(self, find, COL, doc)
+        query!(
+            self,
+            find,
+            COL,
+            doc! {
+                "$or": [
+                        {
+                            "$or": [
+                                {
+                                    "channel_type": "DirectMessage"
+                                },
+                                {
+                                    "channel_type": "Group"
+                                }
+                            ],
+                            "recipients": user_id
+                        },
+                        {
+                            "channel_type": "SavedMessages",
+                            "user": user_id
+                        }
+                    ]
+            }
+        )
     }
 
     // Fetch saved messages channel
@@ -100,24 +103,25 @@ impl AbstractChannels for MongoDb {
 
     /// Insert a a user to a group
     async fn add_user_to_group(&self, channel: &str, user: &str) -> Result<()> {
-        let user_doc = doc! {
-            "_id": channel
-        };
-        let group_doc = doc! {
-            "$push": {
-                "recipients": user
-            }
-        };
         Ok(self
             .col::<Document>(COL)
-            .update_one(user_doc, group_doc, None)
+            .update_one(
+                doc! {
+                    "_id": channel
+                },
+                doc! {
+                    "$push": {
+                        "recipients": user
+                    }
+                },
+                None,
+            )
             .map(|_| ())
             .await)
     }
 
-
     /// Insert channel role permissions
-    
+
     async fn set_channel_role_permission(
         &self,
         channel: &str,
