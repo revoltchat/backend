@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+use lru::LruCache;
+
 use crate::models::{Channel, Member, Server, User};
 
 /// Enumeration representing some change in subscriptions
@@ -26,7 +28,7 @@ pub enum SubscriptionStateChange {
 /// ------------------------------------------------
 /// We can strip these objects to core information!!
 /// ------------------------------------------------
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Cache {
     pub user_id: String,
 
@@ -34,6 +36,23 @@ pub struct Cache {
     pub channels: HashMap<String, Channel>,
     pub members: HashMap<String, Member>,
     pub servers: HashMap<String, Server>,
+
+    pub seen_events: LruCache<String, ()>,
+}
+
+impl Default for Cache {
+    fn default() -> Self {
+        Cache {
+            user_id: Default::default(),
+
+            users: Default::default(),
+            channels: Default::default(),
+            members: Default::default(),
+            servers: Default::default(),
+
+            seen_events: LruCache::new(20),
+        }
+    }
 }
 
 /// Client state

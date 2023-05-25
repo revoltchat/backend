@@ -11,8 +11,8 @@ impl AbstractSnapshot for MongoDb {
         self.insert_one(COL, snapshot).await.map(|_| ())
     }
 
-    async fn fetch_snapshot(&self, report_id: &str) -> Result<Snapshot> {
-        self.find_one(
+    async fn fetch_snapshots(&self, report_id: &str) -> Result<Vec<Snapshot>> {
+        self.find(
             COL,
             doc! {
                 "report_id": report_id

@@ -10,7 +10,7 @@ impl AbstractSnapshot for DummyDb {
         Ok(())
     }
 
-    async fn fetch_snapshot(&self, _report_id: &str) -> Result<Snapshot> {
+    async fn fetch_snapshots(&self, _report_id: &str) -> Result<Vec<Snapshot>> {
         todo!()
     }
 }
