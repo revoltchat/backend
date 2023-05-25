@@ -19,38 +19,6 @@ impl AbstractChannels for ReferenceDb {
             Ok(())
         }
     }
-    /// Insert a user to a group
-    async fn add_user_to_group(&self, channel: &str, user: &str) -> Result<()> {
-        let mut channels = self.channels.lock().await;
-
-        if let Some(Channel::Group { recipients, .. }) = channels.get_mut(channel) {
-            recipients.push(String::from(user));
-            Ok(())
-        } else {
-            Err(create_error!(InvalidOperation))
-        }
-    }
-
-    /// Insert channel role permissions
-    async fn set_channel_role_permission(
-        &self,
-        channel: &str,
-        role: &str,
-        permissions: OverrideField,
-    ) -> Result<()> {
-        let mut channels = self.channels.lock().await;
-
-        if let Some(mut channel) = channels.get_mut(channel) {
-            // check for non override
-            if let Some(mut role_data) = channel.find_role(role) {
-                channel.set_role_permission(role, permissions).await
-            } else {
-                Err(create_error!(NotFound))
-            }
-        } else {
-            Err(create_error!(NotFound))
-        }
-    }
 
     /// Fetch a channel from the database
     async fn fetch_channel(&self, id: &str) -> Result<Channel> {
@@ -91,6 +59,37 @@ impl AbstractChannels for ReferenceDb {
     // Fetch direct message channel (PMs)
     async fn find_direct_message_channel(&self, user_a: &str, user_b: &str) -> Result<Channel> {
         todo!()
+    }
+    /// Insert a user to a group
+    async fn add_user_to_group(&self, channel: &str, user: &str) -> Result<()> {
+        let mut channels = self.channels.lock().await;
+
+        if let Some(Channel::Group { recipients, .. }) = channels.get_mut(channel) {
+            recipients.push(String::from(user));
+            Ok(())
+        } else {
+            Err(create_error!(InvalidOperation))
+        }
+    }
+    /// Insert channel role permissions
+    async fn set_channel_role_permission(
+        &self,
+        channel: &str,
+        role: &str,
+        permissions: OverrideField,
+    ) -> Result<()> {
+        let mut channels = self.channels.lock().await;
+
+        if let Some(mut channel) = channels.get_mut(channel) {
+            // check for non override
+            if let Some(mut role_data) = channel.find_role(role) {
+                channel.set_role_permission(role, permissions).await
+            } else {
+                Err(create_error!(NotFound))
+            }
+        } else {
+            Err(create_error!(NotFound))
+        }
     }
 
     // Update channel

@@ -13,44 +13,6 @@ impl AbstractChannels for MongoDb {
         query!(self, insert_one, COL, &channel).map(|_| ())
     }
 
-    /// Insert a a user to a group
-    async fn add_user_to_group(&self, channel: &str, user: &str) -> Result<()> {
-        let user_doc = doc! {
-            "_id": channel
-        };
-        let group_doc = doc! {
-            "$push": {
-                "recipients": user
-            }
-        };
-        Ok(self
-            .col::<Document>(COL)
-            .update_one(user_doc, group_doc, None)
-            .map(|_| ())
-            .await)
-    }
-
-    /// Insert channel role permissions
-    async fn set_channel_role_permission(
-        &self,
-        channel: &str,
-        role: &str,
-        permissions: OverrideField,
-    ) -> Result<()> {
-        let channel_doc = doc! { "_id": channel };
-        let role_doc = doc! {
-            "$set": {
-                "role_permissions.".to_owned() + role: permissions
-            }
-        };
-
-        self.col::<Document>(COL)
-            .update_one(channel_doc, role_doc, None)
-            .await
-            .map(|_| ())
-            .map_err(|_| create_database_error!("update_one", "channel"))
-    }
-
     /// Fetch a channel from the database
     async fn fetch_channel(&self, id: &str) -> Result<Channel> {
         query!(self, find_one_by_id, COL, id)?.ok_or_else(|| create_error!(NotFound))
@@ -83,27 +45,30 @@ impl AbstractChannels for MongoDb {
 
     /// Fetch all direct messages for a user
     async fn find_direct_messages(&self, user_id: &str) -> Result<Vec<Channel>> {
-        let doc = doc! {
-            "$or": [
-                    {
-                        "$or": [
-                            {
-                                "channel_type": "DirectMessage"
-                            },
-                            {
-                                "channel_type": "Group"
-                            }
-                        ],
-                        "recipients": user_id
-                    },
-                    {
-                        "channel_type": "SavedMessages",
-                        "user": user_id
-                    }
-                ]
-        };
-
-        query!(self, find, COL, doc)
+        query!(
+            self,
+            find,
+            COL,
+            doc! {
+                "$or": [
+                        {
+                            "$or": [
+                                {
+                                    "channel_type": "DirectMessage"
+                                },
+                                {
+                                    "channel_type": "Group"
+                                }
+                            ],
+                            "recipients": user_id
+                        },
+                        {
+                            "channel_type": "SavedMessages",
+                            "user": user_id
+                        }
+                    ]
+            }
+        )
     }
 
     // Fetch saved messages channel
@@ -134,6 +99,48 @@ impl AbstractChannels for MongoDb {
             }
         };
         query!(self, find_one, COL, doc)?.ok_or_else(|| create_error!(NotFound))
+    }
+
+    /// Insert a a user to a group
+    async fn add_user_to_group(&self, channel: &str, user: &str) -> Result<()> {
+        Ok(self
+            .col::<Document>(COL)
+            .update_one(
+                doc! {
+                    "_id": channel
+                },
+                doc! {
+                    "$push": {
+                        "recipients": user
+                    }
+                },
+                None,
+            )
+            .map(|_| ())
+            .await)
+    }
+
+    /// Insert channel role permissions
+
+    async fn set_channel_role_permission(
+        &self,
+        channel: &str,
+        role: &str,
+        permissions: OverrideField,
+    ) -> Result<()> {
+        self.col::<Document>(COL)
+            .update_one(
+                doc! { "_id": channel },
+                doc! {
+                "$set": {
+                    "role_permissions.".to_owned() + role: permissions
+                }
+                },
+                None,
+            )
+            .await
+            .map(|_| ())
+            .map_err(|_| create_database_error!("update_one", "channel"))
     }
 
     // Update channel
@@ -176,15 +183,5 @@ impl AbstractChannels for MongoDb {
 
     async fn delete_channel(&self, channel: &Channel) -> Result<()> {
         query!(self, delete_one_by_id, COL, &channel.id()).map(|_| ())
-    }
-}
-
-impl IntoDocumentPath for FieldsChannel {
-    fn as_path(&self) -> Option<&'static str> {
-        Some(match self {
-            FieldsChannel::Description => "description",
-            FieldsChannel::Icon => "icon",
-            FieldsChannel::DefaultPermissions => "default_permissions",
-        })
     }
 }

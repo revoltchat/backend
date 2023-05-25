@@ -1,9 +1,10 @@
-use bson::Bson;
-use revolt_rocket_okapi::{revolt_okapi::schemars, JsonSchema};
+#[cfg(feature = "schemas")]
+use schemars::JsonSchema;
 
 /// Representation of a single permission override
-#[derive(Debug, Clone, Copy, Eq, PartialEq, JsonSchema)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
 pub struct Override {
     /// Allow bit flags
     pub allow: u64,
@@ -12,22 +13,25 @@ pub struct Override {
 }
 
 /// Data permissions Field - contains both allow and deny
-#[derive(Debug, Clone, Copy, Eq, PartialEq, JsonSchema)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
 pub struct DataPermissionsField {
     pub permissions: Override,
 }
 
 /// Data permissions Value - contains allow
-#[derive(Debug, Clone, Copy, Eq, PartialEq, JsonSchema)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
 pub struct DataPermissionsValue {
     pub permissions: u64,
 }
 
 /// Data permissions Poly - can contain either Value or Field
-#[derive(Debug, Clone, Copy, Eq, PartialEq, JsonSchema)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
 #[serde(untagged)]
 pub enum DataPermissionPoly {
     Value {
@@ -42,8 +46,9 @@ pub enum DataPermissionPoly {
 
 /// Representation of a single permission override
 /// as it appears on models and in the database
-#[derive(JsonSchema, Debug, Clone, Copy, Default, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
 pub struct OverrideField {
     /// Allow bit flags
     a: i64,
@@ -81,6 +86,8 @@ impl From<OverrideField> for Override {
     }
 }
 
+#[cfg(feature = "bson")]
+use bson::Bson;
 impl From<OverrideField> for Bson {
     fn from(v: OverrideField) -> Self {
         Self::Document(bson::to_document(&v).unwrap())
