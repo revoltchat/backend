@@ -5,7 +5,7 @@ use revolt_result::Result;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{Database, File};
+use crate::{Database, File, IntoDocumentPath};
 
 /// Utility function to check if a boolean value is false
 pub fn if_false(t: &bool) -> bool {
@@ -466,5 +466,15 @@ impl Channel {
     /// Delete a channel
     pub async fn delete(&self, db: &Database) -> Result<()> {
         db.delete_channel(&self).await
+    }
+}
+
+impl IntoDocumentPath for FieldsChannel {
+    fn as_path(&self) -> Option<&'static str> {
+        Some(match self {
+            FieldsChannel::Description => "description",
+            FieldsChannel::Icon => "icon",
+            FieldsChannel::DefaultPermissions => "default_permissions",
+        })
     }
 }
