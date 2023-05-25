@@ -302,6 +302,7 @@ impl State {
                     ..Default::default()
                 },
                 clear: vec![],
+                event_id: Some(ulid::Ulid::new().to_string()),
             };
 
             for server in self.cache.servers.keys() {
@@ -499,6 +500,17 @@ impl State {
                 }
             }
 
+            EventV1::UserUpdate { event_id, .. } => {
+                if let Some(id) = event_id {
+                    if self.cache.seen_events.contains(id) {
+                        return false;
+                    }
+
+                    self.cache.seen_events.put(id.to_string(), ());
+                }
+
+                *event_id = None;
+            }
             EventV1::UserRelationship { id, user, .. } => {
                 self.cache.users.insert(id.clone(), user.clone());
 
@@ -508,6 +520,7 @@ impl State {
                     self.remove_subscription(id);
                 }
             }
+
             _ => {}
         }
 

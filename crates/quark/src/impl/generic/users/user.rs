@@ -33,6 +33,7 @@ impl User {
             id: self.id.clone(),
             data: partial,
             clear: remove,
+            event_id: Some(ulid::Ulid::new().to_string()),
         }
         .p_user(self.id.clone(), db)
         .await;

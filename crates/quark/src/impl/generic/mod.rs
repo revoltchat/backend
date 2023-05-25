@@ -26,4 +26,5 @@ pub mod users {
 
 pub mod safety {
     pub mod report;
+    pub mod snapshot;
 }

@@ -8,6 +8,7 @@ mod channel_create;
 mod emoji_list;
 mod invites_fetch;
 mod member_edit;
+mod member_experimental_query;
 mod member_fetch;
 mod member_fetch_all;
 mod member_remove;
@@ -34,6 +35,7 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         member_remove::req,
         member_fetch::req,
         member_edit::req,
+        member_experimental_query::member_experimental_query,
         ban_create::req,
         ban_remove::req,
         ban_list::req,

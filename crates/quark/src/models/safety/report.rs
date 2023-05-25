@@ -1,3 +1,4 @@
+use iso8601_timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 
 /// Reason for reporting content (message or server)
@@ -6,16 +7,41 @@ pub enum ContentReportReason {
     /// No reason has been specified
     NoneSpecified,
 
-    /// Blatantly illegal content
+    /// Illegal content catch-all reason
     Illegal,
+
+    /// Selling or facilitating use of drugs or other illegal goods
+    IllegalGoods,
+
+    /// Extortion or blackmail
+    IllegalExtortion,
+
+    /// Revenge or child pornography
+    IllegalPornography,
+
+    /// Illegal hacking activity
+    IllegalHacking,
+
+    /// Extreme violence, gore, or animal cruelty
+    /// With exception to violence potrayed in media / creative arts
+    ExtremeViolence,
 
     /// Content that promotes harm to others / self
     PromotesHarm,
 
+    /// Unsolicited advertisements
+    UnsolicitedSpam,
+
+    /// This is a raid
+    Raid,
+
     /// Spam or platform abuse
     SpamAbuse,
 
-    /// Distribution of malware
+    /// Scams or fraud
+    ScamsFraud,
+
+    /// Distribution of malware or malicious links
     Malware,
 
     /// Harassment or abuse targeted at another user
@@ -27,6 +53,9 @@ pub enum ContentReportReason {
 pub enum UserReportReason {
     /// No reason has been specified
     NoneSpecified,
+
+    /// Unsolicited advertisements
+    UnsolicitedSpam,
 
     /// User is sending spam or otherwise abusing the platform
     SpamAbuse,
@@ -68,6 +97,8 @@ pub enum ReportedContent {
         id: String,
         /// Reason for reporting a user
         report_reason: UserReportReason,
+        /// Message context
+        message_id: Option<String>,
     },
 }
 
@@ -79,10 +110,13 @@ pub enum ReportStatus {
     Created {},
 
     /// Report was rejected
-    Rejected { rejection_reason: String },
+    Rejected {
+        rejection_reason: String,
+        closed_at: Option<Timestamp>,
+    },
 
     /// Report was actioned and resolved
-    Resolved {},
+    Resolved { closed_at: Option<Timestamp> },
 }
 
 /// User-generated platform moderation report.
