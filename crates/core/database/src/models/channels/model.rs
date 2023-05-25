@@ -138,7 +138,7 @@ auto_derived!(
 );
 
 auto_derived_partial!(
-    pub struct NullName {
+    struct NullName {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub name: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -172,6 +172,65 @@ pub enum FieldsChannel {
 }
 
 impl Channel {
+    /// Create a channel
+    pub async fn create(&self, db: &Database) -> Result<()> {
+        db.insert_channel(self).await?;
+
+        Ok(())
+    }
+
+    /// Add user to a group
+    pub async fn add_user_to_group(&mut self, db: &Database, user: &str, by: &str) -> Result<()> {
+        if let Channel::Group { recipients, .. } = self {
+            if recipients.contains(&String::from(user)) {
+                return Err(create_error!(AlreadyInGroup));
+            }
+
+            recipients.push(String::from(user));
+        }
+
+        match &self {
+            Channel::Group { id, .. } => {
+                db.add_user_to_group(id, user).await?;
+
+                Ok(())
+            }
+            _ => Err(create_error!(InvalidOperation)),
+        }
+    }
+
+    /// Map out whether it is a direct DM
+    pub fn is_direct_dm(&self) -> bool {
+        matches!(self, Channel::DirectMessage { .. })
+    }
+
+    // return an override role
+    pub fn find_role(&self, role_id: &str) -> Option<&OverrideField> {
+        match self {
+            Channel::TextChannel {
+                role_permissions, ..
+            }
+            | Channel::VoiceChannel {
+                role_permissions, ..
+            } => role_permissions.get(role_id),
+            _ => None,
+        }
+    }
+
+    pub fn contains_user(&self, user_id: &str) -> bool {
+        match self {
+            Channel::Group { recipients, .. } => recipients.contains(&String::from(user_id)),
+            _ => false,
+        }
+    }
+
+    pub fn users(&self) -> Result<Vec<String>> {
+        match self {
+            Channel::Group { recipients, .. } => Ok(recipients.to_owned()),
+            _ => Err(create_error!(NotFound)),
+        }
+    }
+
     /// Get a reference to this channel's id
     pub fn id(&self) -> String {
         match self {
@@ -183,16 +242,35 @@ impl Channel {
         }
     }
 
-    /// Map out whether it is a direct DM
-    pub fn is_direct_dm(&self) -> bool {
-        matches!(self, Channel::DirectMessage { .. })
-    }
+    /// Set role permission on a channel
+    pub async fn set_role_permission(
+        &mut self,
+        role: &str,
+        permissions: OverrideField,
+    ) -> Result<()> {
+        match self {
+            Channel::TextChannel {
+                role_permissions, ..
+            }
+            | Channel::VoiceChannel {
+                role_permissions, ..
+            } => {
+                if let Some(_) = role_permissions.get(role) {
+                    role_permissions.remove(role);
+                    role_permissions.insert(String::from(role), permissions);
 
-    /// Create a channel
-    pub async fn create(&self, db: &Database) -> Result<()> {
-        db.insert_channel(self).await?;
+                    let mut partial = PartialChannel::empty();
+                    partial.role_permissions = Some(role_permissions.to_owned());
 
-        Ok(())
+                    self.apply_options(partial);
+
+                    Ok(())
+                } else {
+                    Err(create_error!(NotFound))
+                }
+            }
+            _ => Err(create_error!(InvalidOperation)),
+        }
     }
 
     /// Update channel data
@@ -212,11 +290,6 @@ impl Channel {
             .await?;
 
         Ok(())
-    }
-
-    /// Delete a channel
-    pub async fn delete(&self, db: &Database) -> Result<()> {
-        db.delete_channel(&self).await
     }
 
     /// Remove a field from Channel object
@@ -348,26 +421,6 @@ impl Channel {
         Ok(())
     }
 
-    /// Add user to a group
-    pub async fn add_user_to_group(&mut self, db: &Database, user: &str, by: &str) -> Result<()> {
-        if let Channel::Group { recipients, .. } = self {
-            if recipients.contains(&String::from(user)) {
-                return Err(create_error!(AlreadyInGroup));
-            }
-
-            recipients.push(String::from(user));
-        }
-
-        match &self {
-            Channel::Group { id, .. } => {
-                db.add_user_to_group(id, user).await?;
-
-                Ok(())
-            }
-            _ => Err(create_error!(InvalidOperation)),
-        }
-    }
-
     /// Remove user from a group
     pub async fn remove_user_from_group(
         &self,
@@ -402,19 +455,6 @@ impl Channel {
 
                 //todo send system message
                 // afaik system messages are no longer supported by the Channel::Group type
-                let example_remove_msg = match (silent, by) {
-                    (true, _) => None,
-                    (_, Some(remover)) => {
-                        Some(format!("User {user} has been removed by {remover}"))
-                    }
-                    (_, None) => Some(format!("User {user} has been removed")),
-                };
-
-                if let Some(message) = example_remove_msg {
-                    // send system message
-                }
-
-                db.remove_user_from_group(id, user).await?;
 
                 Ok(())
             }
@@ -423,61 +463,8 @@ impl Channel {
         }
     }
 
-    /// Set role permission on a channel
-    pub async fn set_role_permission(
-        &mut self,
-        role: &str,
-        permissions: OverrideField,
-    ) -> Result<()> {
-        match self {
-            Channel::TextChannel {
-                role_permissions, ..
-            }
-            | Channel::VoiceChannel {
-                role_permissions, ..
-            } => {
-                if let Some(_) = role_permissions.get(role) {
-                    role_permissions.remove(role);
-                    role_permissions.insert(String::from(role), permissions);
-
-                    let mut partial = PartialChannel::empty();
-                    partial.role_permissions = Some(role_permissions.to_owned());
-
-                    self.apply_options(partial);
-
-                    Ok(())
-                } else {
-                    Err(create_error!(NotFound))
-                }
-            }
-            _ => Err(create_error!(InvalidOperation)),
-        }
-    }
-
-    // return an override role
-    pub fn find_role(&self, role_id: &str) -> Option<&OverrideField> {
-        match self {
-            Channel::TextChannel {
-                role_permissions, ..
-            }
-            | Channel::VoiceChannel {
-                role_permissions, ..
-            } => role_permissions.get(role_id),
-            _ => None,
-        }
-    }
-
-    pub fn contains_user(&self, user_id: &str) -> bool {
-        match self {
-            Channel::Group { recipients, .. } => recipients.contains(&String::from(user_id)),
-            _ => false,
-        }
-    }
-
-    pub fn users(&self) -> Result<Vec<String>> {
-        match self {
-            Channel::Group { recipients, .. } => Ok(recipients.to_owned()),
-            _ => Err(create_error!(NotFound)),
-        }
+    /// Delete a channel
+    pub async fn delete(&self, db: &Database) -> Result<()> {
+        db.delete_channel(&self).await
     }
 }
