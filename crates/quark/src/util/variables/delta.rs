@@ -41,7 +41,7 @@ pub static SMTP_FROM: Lazy<String> = Lazy::new(|| env::var("REVOLT_SMTP_FROM").u
 
 // Application Logic Settings
 pub static MAX_GROUP_SIZE: Lazy<usize> = Lazy::new(|| env::var("REVOLT_MAX_GROUP_SIZE").unwrap_or_else(|_| "50".to_string()).parse().unwrap());
-pub static MAX_BOT_COUNT: Lazy<usize> = Lazy::new(|| env::var("REVOLT_MAX_BOT_COUNT").unwrap_or_else(|_| "5".to_string()).parse().unwrap());
+pub static MAX_BOT_COUNT: Lazy<usize> = Lazy::new(|| env::var("REVOLT_MAX_BOT_COUNT").unwrap_or_else(|_| "10".to_string()).parse().unwrap());
 pub static MAX_EMBED_COUNT: Lazy<usize> = Lazy::new(|| env::var("REVOLT_MAX_EMBED_COUNT").unwrap_or_else(|_| "5".to_string()).parse().unwrap());
 pub static MAX_SERVER_COUNT: Lazy<usize> = Lazy::new(|| env::var("REVOLT_MAX_SERVER_COUNT").unwrap_or_else(|_| "100".to_string()).parse().unwrap());
 pub static MAX_CHANNEL_COUNT: Lazy<usize> = Lazy::new(|| env::var("REVOLT_MAX_CHANNEL_COUNT").unwrap_or_else(|_| "200".to_string()).parse().unwrap());
