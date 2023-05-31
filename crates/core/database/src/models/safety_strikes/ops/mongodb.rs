@@ -6,7 +6,7 @@ use crate::{AccountStrike, PartialAccountStrike};
 
 use super::AbstractAccountStrikes;
 
-static COL: &str = "bots";
+static COL: &str = "safety_strikes";
 
 #[async_trait]
 impl AbstractAccountStrikes for MongoDb {

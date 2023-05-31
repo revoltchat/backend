@@ -4,14 +4,23 @@ auto_derived!(
         /// Strike Id
         #[serde(rename = "_id")]
         pub id: String,
-        /// User Id of reported user
+        /// Id of reported user
         pub user_id: String,
 
         /// Attached reason
         pub reason: String,
     }
 
-    /// # Strike Data
+    /// New strike information
+    pub struct DataCreateStrike {
+        /// Id of reported user
+        pub user_id: String,
+
+        /// Attached reason
+        pub reason: String,
+    }
+
+    /// New strike information
     pub struct DataEditAccountStrike {
         /// New attached reason
         pub reason: String,

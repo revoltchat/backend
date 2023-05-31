@@ -8,6 +8,7 @@ mod report_content;
 
 mod fetch_snapshots;
 
+mod create_strike;
 mod delete_strike;
 mod edit_strike;
 mod fetch_strikes;
@@ -22,6 +23,7 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         // Snapshots
         fetch_snapshots::fetch_snapshots,
         // Strikes
+        create_strike::create_strike,
         fetch_strikes::fetch_strikes,
         edit_strike::edit_strike,
         delete_strike::delete_strike

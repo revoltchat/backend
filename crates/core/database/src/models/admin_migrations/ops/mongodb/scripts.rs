@@ -16,7 +16,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 22;
+pub const LATEST_REVISION: i32 = 23;
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -749,6 +749,23 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             .create_collection("safety_strikes", None)
             .await
             .unwrap();
+    }
+
+    if revision <= 22 {
+        info!("Running migration [revision 22 / 31-05-2023]: Add moderator_id to account strikes.");
+
+        db.col::<Document>("safety_strikes")
+            .update_many(
+                doc! {},
+                doc! {
+                    "$set": {
+                        "moderator_id": "01EX2NCWQ0CHS3QJF0FEQS1GR4"
+                    }
+                },
+                None,
+            )
+            .await
+            .expect("Failed to update server members.");
     }
 
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.

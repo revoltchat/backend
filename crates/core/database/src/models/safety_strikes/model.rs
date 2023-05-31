@@ -8,8 +8,10 @@ auto_derived_partial!(
         /// Strike Id
         #[serde(rename = "_id")]
         pub id: String,
-        /// User Id of reported user
+        /// Id of reported user
         pub user_id: String,
+        /// Id of moderator
+        pub moderator_id: String,
 
         /// Attached reason
         pub reason: String,
@@ -19,6 +21,23 @@ auto_derived_partial!(
 
 #[allow(clippy::disallowed_methods)]
 impl AccountStrike {
+    pub async fn create(
+        db: &Database,
+        user_id: String,
+        reason: String,
+        moderator_id: String,
+    ) -> Result<AccountStrike> {
+        let strike = AccountStrike {
+            id: ulid::Ulid::new().to_string(),
+            user_id,
+            moderator_id,
+            reason,
+        };
+
+        db.insert_account_strike(&strike).await?;
+        Ok(strike)
+    }
+
     /// Update this strike
     pub async fn update(&mut self, db: &Database, partial: PartialAccountStrike) -> Result<()> {
         db.update_account_strike(&self.id, &partial).await?;
@@ -42,16 +61,15 @@ mod tests {
     async fn crud() {
         database_test!(|db| async move {
             let user_id = "user";
-            let strike_a = "a";
-            let strike_b = "b";
 
-            let strike = AccountStrike {
-                id: strike_a.to_string(),
-                user_id: user_id.to_string(),
-                reason: "reason 1".to_string(),
-            };
-
-            db.insert_account_strike(&strike).await.unwrap();
+            let strike = AccountStrike::create(
+                &db,
+                user_id.to_string(),
+                "reason 1".to_string(),
+                "moderator_id".to_string(),
+            )
+            .await
+            .unwrap();
 
             let mut updated_strike = strike.clone();
             updated_strike
@@ -65,11 +83,12 @@ mod tests {
                 .await
                 .unwrap();
 
-            db.insert_account_strike(&AccountStrike {
-                id: strike_b.to_string(),
-                user_id: user_id.to_string(),
-                reason: "reason 2".to_string(),
-            })
+            let strike2 = AccountStrike::create(
+                &db,
+                user_id.to_string(),
+                "reason 2".to_string(),
+                "moderator_id".to_string(),
+            )
             .await
             .unwrap();
 
@@ -81,12 +100,12 @@ mod tests {
                 .map(|strike| strike.id)
                 .collect::<HashSet<String>>();
 
-            assert!(ids.contains(strike_a));
-            assert!(ids.contains(strike_b));
+            assert!(ids.contains(&strike.id));
+            assert!(ids.contains(&strike2.id));
 
             let fetched_strike = strikes
                 .into_iter()
-                .find(|strike| strike.id == strike_a)
+                .find(|strike| strike.id == strike.id)
                 .unwrap();
 
             assert_eq!(fetched_strike, updated_strike);
