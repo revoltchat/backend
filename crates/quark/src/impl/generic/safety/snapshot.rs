@@ -61,10 +61,7 @@ impl SnapshotContent {
         ))
     }
 
-    pub fn generate_from_server(
-        db: &Database,
-        server: Server,
-    ) -> Result<(SnapshotContent, Vec<String>)> {
+    pub fn generate_from_server(server: Server) -> Result<(SnapshotContent, Vec<String>)> {
         // Collect server's icon and banner
         let files = [&server.icon, &server.banner]
             .iter()
@@ -74,7 +71,7 @@ impl SnapshotContent {
         Ok((SnapshotContent::Server(server), files))
     }
 
-    pub fn generate_from_user(db: &Database, user: User) -> Result<(SnapshotContent, Vec<String>)> {
+    pub fn generate_from_user(user: User) -> Result<(SnapshotContent, Vec<String>)> {
         // Collect user's avatar and profile background
         let files = [
             user.avatar.as_ref(),

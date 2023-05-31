@@ -111,6 +111,7 @@ auto_derived!(
 
 impl User {
     /// Check whether a username is already in use by another user
+    #[allow(dead_code)]
     async fn is_username_taken(db: &Database, username: &str) -> Result<bool> {
         match db.fetch_user_by_username(username).await {
             Ok(_) => Ok(true),

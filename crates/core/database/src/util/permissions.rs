@@ -8,6 +8,7 @@ use crate::{Database, User};
 
 /// Permissions calculator
 pub struct PermissionCalculator<'a> {
+    #[allow(dead_code)]
     database: &'a Database,
 
     perspective: &'a User,
