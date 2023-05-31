@@ -1,4 +1,5 @@
 use iso8601_timestamp::Timestamp;
+use rocket::FromFormField;
 use serde::{Deserialize, Serialize};
 
 /// Reason for reporting content (message or server)
@@ -117,6 +118,19 @@ pub enum ReportStatus {
 
     /// Report was actioned and resolved
     Resolved { closed_at: Option<Timestamp> },
+}
+
+/// Just the status of the report
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, FromFormField)]
+pub enum ReportStatusString {
+    /// Report is waiting for triage / action
+    Created,
+
+    /// Report was rejected
+    Rejected,
+
+    /// Report was actioned and resolved
+    Resolved,
 }
 
 /// User-generated platform moderation report.
