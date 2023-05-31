@@ -10,6 +10,9 @@ pub trait AbstractAccountStrikes: Sync + Send {
     /// Insert new strike into the database
     async fn insert_account_strike(&self, strike: &AccountStrike) -> Result<()>;
 
+    /// Fetch strike by id
+    async fn fetch_account_strike(&self, id: &str) -> Result<AccountStrike>;
+
     /// Fetch strikes by user id
     async fn fetch_account_strikes_by_user(&self, user_id: &str) -> Result<Vec<AccountStrike>>;
 

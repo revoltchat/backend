@@ -15,6 +15,11 @@ impl AbstractAccountStrikes for MongoDb {
         query!(self, insert_one, COL, &strike).map(|_| ())
     }
 
+    /// Fetch strike by id
+    async fn fetch_account_strike(&self, id: &str) -> Result<AccountStrike> {
+        query!(self, find_one_by_id, COL, id)?.ok_or_else(|| create_error!(NotFound))
+    }
+
     /// Fetch strikes by user id
     async fn fetch_account_strikes_by_user(&self, user_id: &str) -> Result<Vec<AccountStrike>> {
         Ok(self

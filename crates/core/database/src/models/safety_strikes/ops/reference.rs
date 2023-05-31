@@ -18,6 +18,15 @@ impl AbstractAccountStrikes for ReferenceDb {
         }
     }
 
+    /// Fetch strike by id
+    async fn fetch_account_strike(&self, id: &str) -> Result<AccountStrike> {
+        let strikes = self.account_strikes.lock().await;
+        strikes
+            .get(id)
+            .cloned()
+            .ok_or_else(|| create_error!(NotFound))
+    }
+
     /// Fetch strikes by user id
     async fn fetch_account_strikes_by_user(&self, user_id: &str) -> Result<Vec<AccountStrike>> {
         let strikes = self.account_strikes.lock().await;

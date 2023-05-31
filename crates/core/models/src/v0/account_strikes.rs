@@ -10,6 +10,12 @@ auto_derived!(
         /// Attached reason
         pub reason: String,
     }
+
+    /// # Strike Data
+    pub struct DataEditAccountStrike {
+        /// New attached reason
+        pub reason: String,
+    }
 );
 
 #[cfg(feature = "from_database")]

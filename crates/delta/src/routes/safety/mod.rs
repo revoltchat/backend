@@ -8,6 +8,10 @@ mod report_content;
 
 mod fetch_snapshots;
 
+mod delete_strike;
+mod edit_strike;
+mod fetch_strikes;
+
 pub fn routes() -> (Vec<Route>, OpenApi) {
     openapi_get_routes_spec![
         // Reports
@@ -16,6 +20,10 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         fetch_reports::fetch_reports,
         report_content::report_content,
         // Snapshots
-        fetch_snapshots::fetch_snapshots
+        fetch_snapshots::fetch_snapshots,
+        // Strikes
+        fetch_strikes::fetch_strikes,
+        edit_strike::edit_strike,
+        delete_strike::delete_strike
     ]
 }

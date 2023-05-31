@@ -17,6 +17,7 @@ auto_derived_partial!(
     "PartialAccountStrike"
 );
 
+#[allow(clippy::disallowed_methods)]
 impl AccountStrike {
     /// Update this strike
     pub async fn update(&mut self, db: &Database, partial: PartialAccountStrike) -> Result<()> {
