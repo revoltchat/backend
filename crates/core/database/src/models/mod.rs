@@ -1,6 +1,7 @@
 mod admin_migrations;
 mod bots;
 mod files;
+mod safety_strikes;
 mod server_members;
 mod servers;
 mod user_settings;
@@ -9,6 +10,7 @@ mod users;
 pub use admin_migrations::*;
 pub use bots::*;
 pub use files::*;
+pub use safety_strikes::*;
 pub use server_members::*;
 pub use servers::*;
 pub use user_settings::*;
@@ -22,6 +24,7 @@ pub trait AbstractDatabase:
     + admin_migrations::AbstractMigrations
     + bots::AbstractBots
     + files::AbstractAttachments
+    + safety_strikes::AbstractAccountStrikes
     + server_members::AbstractServerMembers
     + servers::AbstractServers
     + user_settings::AbstractUserSettings

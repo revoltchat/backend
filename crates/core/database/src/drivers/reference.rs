@@ -2,12 +2,13 @@ use std::{collections::HashMap, sync::Arc};
 
 use futures::lock::Mutex;
 
-use crate::{Bot, File, Member, MemberCompositeKey, Server, User, UserSettings};
+use crate::{AccountStrike, Bot, File, Member, MemberCompositeKey, Server, User, UserSettings};
 
 database_derived!(
     /// Reference implementation
     #[derive(Default)]
     pub struct ReferenceDb {
+        pub account_strikes: Arc<Mutex<HashMap<String, AccountStrike>>>,
         pub bots: Arc<Mutex<HashMap<String, Bot>>>,
         pub user_settings: Arc<Mutex<HashMap<String, UserSettings>>>,
         pub users: Arc<Mutex<HashMap<String, User>>>,
