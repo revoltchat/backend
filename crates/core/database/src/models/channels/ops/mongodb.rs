@@ -121,7 +121,6 @@ impl AbstractChannels for MongoDb {
     }
 
     /// Insert channel role permissions
-
     async fn set_channel_role_permission(
         &self,
         channel: &str,
@@ -181,6 +180,7 @@ impl AbstractChannels for MongoDb {
             .map_err(|_| create_database_error!("update_one", "channels"))
     }
 
+    // Delete a channel
     async fn delete_channel(&self, channel: &Channel) -> Result<()> {
         query!(self, delete_one_by_id, COL, &channel.id()).map(|_| ())
     }
