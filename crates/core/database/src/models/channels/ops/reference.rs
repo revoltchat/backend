@@ -1,4 +1,3 @@
-#![allow(warnings)]
 use super::AbstractChannels;
 use crate::ReferenceDb;
 use crate::{Channel, FieldsChannel, MongoDb, PartialChannel};
