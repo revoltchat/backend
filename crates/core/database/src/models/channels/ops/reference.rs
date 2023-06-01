@@ -98,7 +98,14 @@ impl AbstractChannels for ReferenceDb {
         channel: &PartialChannel,
         remove: Vec<FieldsChannel>,
     ) -> Result<()> {
-        todo!()
+        let mut channels = self.channels.lock().await;
+        if let Some(channel_data) = channels.get_mut(id) {
+            channel_data.apply_options(channel.to_owned());
+            channel_data.remove_fields(remove);
+            Ok(())
+        } else {
+            Err(create_error!(NotFound))
+        }
     }
 
     // Remove a user from a group
