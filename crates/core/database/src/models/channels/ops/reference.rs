@@ -43,7 +43,20 @@ impl AbstractChannels for ReferenceDb {
 
     /// Fetch all direct messages for a user
     async fn find_direct_messages(&self, user_id: &str) -> Result<Vec<Channel>> {
-        todo!()
+        // todo this method does not use the isnerd style of iterating over a data set but it is functional
+        let mut result_channels = Vec::new();
+        let channels = self.channels.lock().await;
+        for (_, data) in channels.iter() {
+            if data.is_direct_dm() {
+                if let Ok(users) = data.users() {
+                    if users.contains(&String::from(user_id)) {
+                        result_channels.push(data.to_owned())
+                    }
+                }
+            }
+        }
+
+        Ok(result_channels)
     }
 
     // Fetch saved messages channel
