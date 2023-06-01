@@ -21,7 +21,7 @@ impl AbstractChannels for ReferenceDb {
 
     /// Fetch a channel from the database
     async fn fetch_channel(&self, id: &str) -> Result<Channel> {
-        let mut channels = self.channels.lock().await;
+        let channels = self.channels.lock().await;
         channels
             .get(id)
             .cloned()
@@ -30,7 +30,7 @@ impl AbstractChannels for ReferenceDb {
 
     /// Fetch all channels from the database
     async fn fetch_channels<'a>(&self, ids: &'a [String]) -> Result<Vec<Channel>> {
-        let mut channels = self.channels.lock().await;
+        let channels = self.channels.lock().await;
         ids.iter()
             .map(|id| {
                 channels
@@ -48,7 +48,7 @@ impl AbstractChannels for ReferenceDb {
 
     // Fetch saved messages channel
     async fn find_saved_messages_channel(&self, user_id: &str) -> Result<Channel> {
-        let mut channels = self.channels.lock().await;
+        let channels = self.channels.lock().await;
         channels
             .get(user_id)
             .cloned()
@@ -79,9 +79,9 @@ impl AbstractChannels for ReferenceDb {
     ) -> Result<()> {
         let mut channels = self.channels.lock().await;
 
-        if let Some(mut channel) = channels.get_mut(channel) {
+        if let Some(channel) = channels.get_mut(channel) {
             // check for non override
-            if let Some(mut role_data) = channel.find_role(role) {
+            if channel.find_role(role).is_some() {
                 channel.set_role_permission(role, permissions).await
             } else {
                 Err(create_error!(NotFound))
