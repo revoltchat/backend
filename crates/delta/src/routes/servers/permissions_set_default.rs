@@ -4,7 +4,9 @@ use revolt_quark::{
     perms, Db, Permission, Ref, Result,
 };
 use rocket::serde::json::Json;
-
+/// # Set Default Permission
+///
+/// Sets permissions for the default role in this server.
 #[openapi(tag = "Server Permissions")]
 #[put("/<target>/permissions/default", data = "<data>", rank = 1)]
 pub async fn req(
