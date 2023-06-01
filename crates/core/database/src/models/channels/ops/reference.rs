@@ -55,7 +55,6 @@ impl AbstractChannels for ReferenceDb {
                 }
             }
         }
-
         Ok(result_channels)
     }
 
@@ -70,7 +69,13 @@ impl AbstractChannels for ReferenceDb {
 
     // Fetch direct message channel (PMs)
     async fn find_direct_message_channel(&self, user_a: &str, user_b: &str) -> Result<Channel> {
-        todo!()
+        let channels = self.channels.lock().await;
+        for (_, data) in channels.iter() {
+            if data.contains_user(user_a) && data.contains_user(user_b) {
+                return Ok(data.to_owned());
+            }
+        }
+        Err(create_error!(NotFound))
     }
     /// Insert a user to a group
     async fn add_user_to_group(&self, channel: &str, user: &str) -> Result<()> {
