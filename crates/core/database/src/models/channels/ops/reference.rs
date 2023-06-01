@@ -1,10 +1,8 @@
 use super::AbstractChannels;
 use crate::ReferenceDb;
-use crate::{Channel, FieldsChannel, MongoDb, PartialChannel};
-use futures::{FutureExt, StreamExt};
+use crate::{Channel, FieldsChannel, PartialChannel};
 use revolt_permissions::OverrideField;
 use revolt_result::Result;
-static COL: &str = "channels";
 
 #[async_trait]
 impl AbstractChannels for ReferenceDb {
