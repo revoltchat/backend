@@ -47,12 +47,8 @@ impl AbstractChannels for ReferenceDb {
         let mut result_channels = Vec::new();
         let channels = self.channels.lock().await;
         for (_, data) in channels.iter() {
-            if data.is_direct_dm() {
-                if let Ok(users) = data.users() {
-                    if users.contains(&String::from(user_id)) {
-                        result_channels.push(data.to_owned())
-                    }
-                }
+            if data.contains_user(user_id) {
+                result_channels.push(data.to_owned());
             }
         }
         Ok(result_channels)
