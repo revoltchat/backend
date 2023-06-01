@@ -327,6 +327,12 @@ impl Channel {
         }
     }
 
+    /// Remove multiple fields from Channel object
+    pub fn remove_fields(&mut self, partial: Vec<FieldsChannel>) {
+        for field in partial {
+            self.remove_field(&field)
+        }
+    }
     /// Apply partial channel to channel
     pub fn apply_options(&mut self, partial: PartialChannel) {
         // ! FIXME: maybe flatten channel object?
