@@ -342,7 +342,7 @@ dependencies = [
  "chrono",
  "futures",
  "handlebars",
- "iso8601-timestamp",
+ "iso8601-timestamp 0.1.10",
  "lazy_static",
  "lettre",
  "log",
@@ -1606,6 +1606,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "iso8601-timestamp"
+version = "0.2.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "368d05885f276773b79b4578869a60ab91e880415d17fb2a8d193aea74188a29"
+dependencies = [
+ "generic-array 0.14.5",
+ "serde",
+ "time 0.3.17",
+]
+
+[[package]]
 name = "itoa"
 version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2826,7 +2837,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-bonfire"
-version = "0.5.19"
+version = "0.5.21"
 dependencies = [
  "async-std",
  "async-tungstenite",
@@ -2851,9 +2862,11 @@ dependencies = [
  "authifier",
  "bson",
  "futures",
+ "iso8601-timestamp 0.2.10",
  "log",
  "mongodb",
  "nanoid",
+ "once_cell",
  "revolt-permissions",
  "revolt-result",
  "revolt_optional_struct",
@@ -2861,11 +2874,12 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "ulid 1.0.0",
 ]
 
 [[package]]
 name = "revolt-delta"
-version = "0.5.19"
+version = "0.5.21"
 dependencies = [
  "async-channel",
  "async-std",
@@ -2937,7 +2951,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-quark"
-version = "0.5.19"
+version = "0.5.21"
 dependencies = [
  "async-lock",
  "async-recursion",
@@ -2954,7 +2968,7 @@ dependencies = [
  "futures",
  "impl_ops",
  "indexmap",
- "iso8601-timestamp",
+ "iso8601-timestamp 0.1.10",
  "linkify 0.8.1",
  "log",
  "lru",
@@ -3127,7 +3141,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4554a81937341d8c3cd3e43431ac2d23624444dc3a88e7ffd3ff66593779293"
 dependencies = [
  "authifier",
- "iso8601-timestamp",
+ "iso8601-timestamp 0.1.10",
  "revolt_okapi",
  "revolt_rocket_okapi",
  "rocket",
@@ -4230,6 +4244,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "220b18413e1fe5e85a5580b22f44241f82404a66c792c9f3c9eda74c52d9a22e"
 dependencies = [
  "chrono",
+ "rand 0.8.5",
+]
+
+[[package]]
+name = "ulid"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13a3aaa69b04e5b66cc27309710a569ea23593612387d67daaf102e73aa974fd"
+dependencies = [
  "rand 0.8.5",
 ]
 

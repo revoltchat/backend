@@ -9,6 +9,11 @@ static COL: &str = "bots";
 
 #[async_trait]
 impl AbstractBots for MongoDb {
+    /// Insert new bot into the database
+    async fn insert_bot(&self, bot: &Bot) -> Result<()> {
+        query!(self, insert_one, COL, &bot).map(|_| ())
+    }
+
     /// Fetch a bot by its id
     async fn fetch_bot(&self, id: &str) -> Result<Bot> {
         query!(self, find_one_by_id, COL, id)?.ok_or_else(|| create_error!(NotFound))
@@ -25,35 +30,6 @@ impl AbstractBots for MongoDb {
             }
         )?
         .ok_or_else(|| create_error!(NotFound))
-    }
-
-    /// Insert new bot into the database
-    async fn insert_bot(&self, bot: &Bot) -> Result<()> {
-        query!(self, insert_one, COL, &bot).map(|_| ())
-    }
-
-    /// Update bot with new information
-    async fn update_bot(
-        &self,
-        id: &str,
-        partial: &PartialBot,
-        remove: Vec<FieldsBot>,
-    ) -> Result<()> {
-        query!(
-            self,
-            update_one_by_id,
-            COL,
-            id,
-            partial,
-            remove.iter().map(|x| x as &dyn IntoDocumentPath).collect(),
-            None
-        )
-        .map(|_| ())
-    }
-
-    /// Delete a bot from the database
-    async fn delete_bot(&self, id: &str) -> Result<()> {
-        query!(self, delete_one_by_id, COL, id).map(|_| ())
     }
 
     /// Fetch bots owned by a user
@@ -79,6 +55,30 @@ impl AbstractBots for MongoDb {
             }
         )
         .map(|v| v as usize)
+    }
+
+    /// Update bot with new information
+    async fn update_bot(
+        &self,
+        id: &str,
+        partial: &PartialBot,
+        remove: Vec<FieldsBot>,
+    ) -> Result<()> {
+        query!(
+            self,
+            update_one_by_id,
+            COL,
+            id,
+            partial,
+            remove.iter().map(|x| x as &dyn IntoDocumentPath).collect(),
+            None
+        )
+        .map(|_| ())
+    }
+
+    /// Delete a bot from the database
+    async fn delete_bot(&self, id: &str) -> Result<()> {
+        query!(self, delete_one_by_id, COL, id).map(|_| ())
     }
 }
 

@@ -1,4 +1,6 @@
-use crate::File;
+use crate::{Database, File};
+
+use revolt_result::{Error, ErrorType, Result};
 
 auto_derived_partial!(
     /// # User
@@ -74,7 +76,7 @@ auto_derived!(
     /// User's active status
     pub struct UserStatus {
         /// Custom status text
-        #[serde(skip_serializing_if = "String::is_empty")]
+        #[serde(skip_serializing_if = "String::is_empty", default)]
         pub text: String,
         /// Current presence option
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -84,7 +86,7 @@ auto_derived!(
     /// User's profile
     pub struct UserProfile {
         /// Text content on user's profile
-        #[serde(skip_serializing_if = "String::is_empty")]
+        #[serde(skip_serializing_if = "String::is_empty", default)]
         pub content: String,
         /// Background visible on user's profile
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -96,4 +98,100 @@ auto_derived!(
         /// Id of the owner of this bot
         pub owner: String,
     }
+
+    /// Optional fields on user object
+    pub enum FieldsUser {
+        Avatar,
+        StatusText,
+        StatusPresence,
+        ProfileContent,
+        ProfileBackground,
+    }
 );
+
+impl User {
+    /// Check whether a username is already in use by another user
+    #[allow(dead_code)]
+    async fn is_username_taken(db: &Database, username: &str) -> Result<bool> {
+        match db.fetch_user_by_username(username).await {
+            Ok(_) => Ok(true),
+            Err(Error {
+                error_type: ErrorType::NotFound,
+                ..
+            }) => Ok(false),
+            Err(error) => Err(error),
+        }
+    }
+
+    /// Update user data
+    pub async fn update<'a>(
+        &mut self,
+        db: &Database,
+        partial: PartialUser,
+        remove: Vec<FieldsUser>,
+    ) -> Result<()> {
+        for field in &remove {
+            self.remove_field(field);
+        }
+
+        self.apply_options(partial.clone());
+        db.update_user(&self.id, &partial, remove.clone()).await?;
+
+        /* // TODO: EventV1::UserUpdate {
+            id: self.id.clone(),
+            data: partial,
+            clear: remove,
+        }
+        .p_user(self.id.clone(), db)
+        .await; */
+
+        Ok(())
+    }
+
+    /// Remove a field from User object
+    pub fn remove_field(&mut self, field: &FieldsUser) {
+        match field {
+            FieldsUser::Avatar => self.avatar = None,
+            FieldsUser::StatusText => {
+                if let Some(x) = self.status.as_mut() {
+                    x.text = String::new();
+                }
+            }
+            FieldsUser::StatusPresence => {
+                if let Some(x) = self.status.as_mut() {
+                    x.presence = None;
+                }
+            }
+            FieldsUser::ProfileContent => {
+                if let Some(x) = self.profile.as_mut() {
+                    x.content = String::new();
+                }
+            }
+            FieldsUser::ProfileBackground => {
+                if let Some(x) = self.profile.as_mut() {
+                    x.background = None;
+                }
+            }
+        }
+    }
+
+    /// Mark as deleted
+    pub async fn mark_deleted(&mut self, db: &Database) -> Result<()> {
+        self.update(
+            db,
+            PartialUser {
+                username: Some(format!("Deleted User {}", self.id)),
+                flags: Some(2),
+                ..Default::default()
+            },
+            vec![
+                FieldsUser::Avatar,
+                FieldsUser::StatusText,
+                FieldsUser::StatusPresence,
+                FieldsUser::ProfileContent,
+                FieldsUser::ProfileBackground,
+            ],
+        )
+        .await
+    }
+}

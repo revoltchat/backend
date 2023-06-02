@@ -2,8 +2,8 @@
 use crate::Database;
 
 use deadqueue::limited::Queue;
-use std::{collections::HashMap, time::Duration};
 use once_cell::sync::Lazy;
+use std::{collections::HashMap, time::Duration};
 
 use super::DelayedTask;
 
@@ -95,7 +95,7 @@ pub async fn worker(db: Database) {
         }) = Q.try_pop()
         {
             let key = (user, channel);
-            if let Some(mut task) = tasks.get_mut(&key) {
+            if let Some(task) = tasks.get_mut(&key) {
                 task.delay();
 
                 match &mut event {

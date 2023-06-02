@@ -1,5 +1,4 @@
 use revolt_quark::events::client::EventV1;
-use revolt_quark::models::message::{MessageFilter, MessageQuery, MessageSort, MessageTimePeriod};
 use revolt_quark::models::report::{ReportStatus, ReportedContent};
 use revolt_quark::models::snapshot::{Snapshot, SnapshotContent};
 use revolt_quark::models::{Report, User};
@@ -38,7 +37,7 @@ pub async fn report_content(db: &Db, user: User, data: Json<DataReportContent>) 
 
     // Find the content and create a snapshot of it
     // Also retrieve any references to Files
-    let (content, files): (SnapshotContent, Vec<String>) = match &data.content {
+    let (snapshots, files): (Vec<SnapshotContent>, Vec<String>) = match &data.content {
         ReportedContent::Message { id, .. } => {
             let message = db.fetch_message(id).await?;
 
@@ -47,53 +46,8 @@ pub async fn report_content(db: &Db, user: User, data: Json<DataReportContent>) 
                 return Err(Error::CannotReportYourself);
             }
 
-            // Collect message attachments
-            let files = message
-                .attachments
-                .as_ref()
-                .map(|attachments| attachments.iter().map(|x| x.id.to_string()).collect())
-                .unwrap_or_default();
-
-            // Collect prior context
-            let prior_context = db
-                .fetch_messages(MessageQuery {
-                    filter: MessageFilter {
-                        channel: Some(message.channel.to_string()),
-                        ..Default::default()
-                    },
-                    limit: Some(15),
-                    time_period: MessageTimePeriod::Absolute {
-                        before: Some(message.id.to_string()),
-                        after: None,
-                        sort: Some(MessageSort::Latest),
-                    },
-                })
-                .await?;
-
-            // Collect leading context
-            let leading_context = db
-                .fetch_messages(MessageQuery {
-                    filter: MessageFilter {
-                        channel: Some(message.channel.to_string()),
-                        ..Default::default()
-                    },
-                    limit: Some(15),
-                    time_period: MessageTimePeriod::Absolute {
-                        before: None,
-                        after: Some(message.id.to_string()),
-                        sort: Some(MessageSort::Oldest),
-                    },
-                })
-                .await?;
-
-            (
-                SnapshotContent::Message {
-                    message,
-                    prior_context,
-                    leading_context,
-                },
-                files,
-            )
+            let (snapshot, files) = SnapshotContent::generate_from_message(db, message).await?;
+            (vec![snapshot], files)
         }
         ReportedContent::Server { id, .. } => {
             let server = db.fetch_server(id).await?;
@@ -103,15 +57,10 @@ pub async fn report_content(db: &Db, user: User, data: Json<DataReportContent>) 
                 return Err(Error::CannotReportYourself);
             }
 
-            // Collect server's icon and banner
-            let files = [&server.icon, &server.banner]
-                .iter()
-                .filter_map(|x| x.as_ref().map(|x| x.id.to_string()))
-                .collect();
-
-            (SnapshotContent::Server(server), files)
+            let (snapshot, files) = SnapshotContent::generate_from_server(server)?;
+            (vec![snapshot], files)
         }
-        ReportedContent::User { id, .. } => {
+        ReportedContent::User { id, message_id, .. } => {
             let reported_user = db.fetch_user(id).await?;
 
             // Users cannot report themselves
@@ -119,19 +68,25 @@ pub async fn report_content(db: &Db, user: User, data: Json<DataReportContent>) 
                 return Err(Error::CannotReportYourself);
             }
 
-            // Collect user's avatar and profile background
-            let files = [
-                reported_user.avatar.as_ref(),
-                reported_user
-                    .profile
-                    .as_ref()
-                    .and_then(|profile| profile.background.as_ref()),
-            ]
-            .iter()
-            .filter_map(|x| x.as_ref().map(|x| x.id.to_string()))
-            .collect();
+            // Determine if there is a message provided as context
+            let message = if let Some(id) = message_id {
+                db.fetch_message(id).await.ok()
+            } else {
+                None
+            };
 
-            (SnapshotContent::User(reported_user), files)
+            let (snapshot, files) = SnapshotContent::generate_from_user(reported_user)?;
+
+            if let Some(message) = message {
+                let (message_snapshot, message_files) =
+                    SnapshotContent::generate_from_message(db, message).await?;
+                (
+                    vec![snapshot, message_snapshot],
+                    [files, message_files].concat(),
+                )
+            } else {
+                (vec![snapshot], files)
+            }
         }
     };
 
@@ -143,14 +98,17 @@ pub async fn report_content(db: &Db, user: User, data: Json<DataReportContent>) 
     // Generate an id for the report
     let id = Ulid::new().to_string();
 
-    // Save a snapshot of the content
-    let snapshot = Snapshot {
-        id: Ulid::new().to_string(),
-        report_id: id.to_string(),
-        content,
-    };
+    // Insert all new generated snapshots
+    for content in snapshots {
+        // Save a snapshot of the content
+        let snapshot = Snapshot {
+            id: Ulid::new().to_string(),
+            report_id: id.to_string(),
+            content,
+        };
 
-    db.insert_snapshot(&snapshot).await?;
+        db.insert_snapshot(&snapshot).await?;
+    }
 
     // Save the report
     let report = Report {

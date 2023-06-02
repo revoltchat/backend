@@ -184,6 +184,7 @@ pub enum EventV1 {
         id: String,
         data: PartialUser,
         clear: Vec<FieldsUser>,
+        event_id: Option<String>,
     },
 
     /// Relationship with another user changed

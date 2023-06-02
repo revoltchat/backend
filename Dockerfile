@@ -1,5 +1,5 @@
 # Build Stage
-FROM --platform="${BUILDPLATFORM}" rustlang/rust:nightly-slim
+FROM --platform="${BUILDPLATFORM}" rust:slim
 USER 0:0
 WORKDIR /home/rust/src
 

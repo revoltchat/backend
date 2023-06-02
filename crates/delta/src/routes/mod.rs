@@ -161,7 +161,12 @@ fn custom_openapi_spec() -> OpenApi {
         servers: vec![
             Server {
                 url: "https://api.revolt.chat".to_owned(),
-                description: Some("Revolt API".to_owned()),
+                description: Some("Revolt Production".to_owned()),
+                ..Default::default()
+            },
+            Server {
+                url: "https://revolt.chat/api".to_owned(),
+                description: Some("Revolt Staging".to_owned()),
                 ..Default::default()
             },
             Server {

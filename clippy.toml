@@ -2,6 +2,14 @@ disallowed-methods = [
     # Shouldn't need to access these directly
     "revolt_database::models::bots::model::Bot::remove_field",
 
-    # Prefer to use Object::delete()
+    # Prefer to use Object::create()
+    "revolt_database::models::safety_strikes::ops::AbstractAccountStrikes::insert_account_strike",
+
+    # Prefer to use Object::update(&self)
     "revolt_database::models::bots::ops::AbstractBots::update_bot",
+    "revolt_database::models::safety_strikes::ops::AbstractAccountStrikes::update_account_strike",
+
+    # Prefer to use Object::delete(&self)
+    "revolt_database::models::bots::ops::AbstractBots::delete_bot",
+    "revolt_database::models::safety_strikes::ops::AbstractAccountStrikes::delete_account_strike",
 ]

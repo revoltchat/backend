@@ -66,14 +66,20 @@ pub async fn req(
 
     // If we want to edit a different user than self, ensure we have
     // permissions and subsequently replace the user in question
-    if target.id != "@me" {
-        if !user.privileged {
+    if target.id != "@me" && target.id != user.id {
+        let target_user = target.as_user(db).await?;
+        let is_bot_owner = target_user
+            .bot
+            .map(|bot| bot.owner == user.id)
+            .unwrap_or_default();
+
+        if !is_bot_owner && !user.privileged {
             return Err(Error::NotPrivileged);
         }
+    }
 
-        user = target.as_user(db).await?;
     // Otherwise, filter out invalid edit fields
-    } else if data.badges.is_some() || data.flags.is_some() {
+    if !user.privileged && (data.badges.is_some() || data.flags.is_some()) {
         return Err(Error::NotPrivileged);
     }
 
