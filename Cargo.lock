@@ -2837,7 +2837,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-bonfire"
-version = "0.5.22"
+version = "0.6.0-rc.1"
 dependencies = [
  "async-std",
  "async-tungstenite",
@@ -2854,7 +2854,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-database"
-version = "0.0.2"
+version = "0.6.0-rc.1"
 dependencies = [
  "async-recursion",
  "async-std",
@@ -2882,7 +2882,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-delta"
-version = "0.5.22"
+version = "0.6.0-rc.1"
 dependencies = [
  "async-channel",
  "async-std",
@@ -2921,7 +2921,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-models"
-version = "0.0.2"
+version = "0.6.0-rc.1"
 dependencies = [
  "revolt_optional_struct",
  "schemars",
@@ -2931,7 +2931,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-permissions"
-version = "0.0.2"
+version = "0.6.0-rc.1"
 dependencies = [
  "async-std",
  "async-trait",
@@ -2944,7 +2944,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-presence"
-version = "0.0.2"
+version = "0.6.0-rc.1"
 dependencies = [
  "async-std",
  "log",
@@ -2955,7 +2955,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-quark"
-version = "0.5.22"
+version = "0.6.0-rc.1"
 dependencies = [
  "async-lock",
  "async-recursion",
@@ -3006,7 +3006,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-result"
-version = "0.0.2"
+version = "0.6.0-rc.1"
 dependencies = [
  "revolt_okapi",
  "revolt_rocket_okapi",
