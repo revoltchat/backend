@@ -105,7 +105,7 @@ mod tests {
 
             let fetched_strike = strikes
                 .into_iter()
-                .find(|strike| strike.id == strike.id)
+                .find(|entry| entry.id == strike.id)
                 .unwrap();
 
             assert_eq!(fetched_strike, updated_strike);
