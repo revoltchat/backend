@@ -4,6 +4,7 @@ use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
 use once_cell::sync::Lazy;
 use regex::Regex;
+use revolt_models::v0::MessageWebhook;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -109,15 +110,6 @@ pub struct Interactions {
     pub restrict_reactions: bool,
 }
 
-/// Information about the webhook which
-#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Validate, Default)]
-pub struct MessageWebhook {
-    // The name of the webhook - 1 to 32 chars
-    pub name: String,
-    // The id of the avatar of the webhook, if it has one
-    pub avatar: Option<String>
-}
-
 /// Representation of a Message on Revolt
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, OptionalStruct, Default)]
 #[optional_derive(Serialize, Deserialize, JsonSchema, Debug, Default, Clone)]
@@ -135,7 +127,7 @@ pub struct Message {
     pub channel: String,
     /// Id of the user or webhook that sent this message
     pub author: String,
-    /// The webhook that sent this message, mutually exclusive with `author`
+    /// The webhook that sent this message
     #[serde(skip_serializing_if = "Option::is_none")]
     pub webhook: Option<MessageWebhook>,
     /// Message content

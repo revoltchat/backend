@@ -6,7 +6,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::models::{
-    Bot, Channel, Emoji, Invite, Member, Message, Report, Server, ServerBan, User, Webhook
+    Bot, Channel, Emoji, Invite, Member, Message, Report, Server, ServerBan, User,
 };
 use crate::{Database, Error, Result};
 
@@ -79,11 +79,6 @@ impl Ref {
     /// Fetch emoji from Ref
     pub async fn as_emoji(&self, db: &Database) -> Result<Emoji> {
         db.fetch_emoji(&self.id).await
-    }
-
-    /// Fetches webhook from Ref
-    pub async fn as_webhook(&self, db: &Database) -> Result<Webhook> {
-        db.fetch_webhook(&self.id).await
     }
 
     /// Fetch report from Ref

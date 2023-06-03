@@ -13,7 +13,6 @@ mod channels {
     pub mod channel_invite;
     pub mod channel_unread;
     pub mod message;
-    pub mod webhook;
 }
 
 mod servers {
@@ -55,4 +54,3 @@ pub use simple::SimpleModel;
 pub use snapshot::Snapshot;
 pub use user::User;
 pub use user_settings::UserSettings;
-pub use webhook::Webhook;

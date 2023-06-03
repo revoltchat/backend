@@ -1,8 +1,9 @@
 use std::time::SystemTime;
 
+use revolt_models::v0::Webhook;
 use serde::{Deserialize, Serialize};
 
-use crate::models::{Message, User, Webhook, File};
+use crate::models::{Message, User};
 use crate::variables::delta::{APP_URL, AUTUMN_URL, PUBLIC_URL};
 
 /// Push Notification
@@ -27,7 +28,7 @@ pub struct PushNotification {
 
 pub enum MessageAuthor<'a> {
     User(&'a User),
-    Webhook(&'a Webhook)
+    Webhook(&'a Webhook),
 }
 
 impl<'a> MessageAuthor<'a> {
@@ -38,10 +39,10 @@ impl<'a> MessageAuthor<'a> {
         }
     }
 
-    pub fn avatar(&self) -> Option<&File> {
+    pub fn avatar(&self) -> Option<&str> {
         match self {
-            MessageAuthor::User(user) => user.avatar.as_ref(),
-            MessageAuthor::Webhook(webhook) => webhook.avatar.as_ref(),
+            MessageAuthor::User(user) => user.avatar.as_ref().map(|file| file.id.as_str()),
+            MessageAuthor::Webhook(webhook) => webhook.avatar.as_ref().map(|file| file.id.as_str()),
         }
     }
 
@@ -58,7 +59,7 @@ impl PushNotification {
     pub fn new(msg: Message, author: Option<MessageAuthor<'_>>, channel_id: &str) -> Self {
         let icon = if let Some(author) = &author {
             if let Some(avatar) = author.avatar() {
-                format!("{}/avatars/{}", &*AUTUMN_URL, avatar.id)
+                format!("{}/avatars/{}", &*AUTUMN_URL, avatar)
             } else {
                 format!("{}/users/{}/default_avatar", &*PUBLIC_URL, author.id())
             }

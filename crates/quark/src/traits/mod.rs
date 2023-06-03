@@ -12,7 +12,6 @@ mod channels {
     pub mod channel_invite;
     pub mod channel_unread;
     pub mod message;
-    pub mod webhook;
 }
 
 mod servers {
@@ -41,7 +40,6 @@ pub use channels::channel::AbstractChannel;
 pub use channels::channel_invite::AbstractChannelInvite;
 pub use channels::channel_unread::AbstractChannelUnread;
 pub use channels::message::AbstractMessage;
-pub use channels::webhook::AbstractWebhook;
 
 pub use servers::server::AbstractServer;
 pub use servers::server_ban::AbstractServerBan;
@@ -70,7 +68,6 @@ pub trait AbstractDatabase:
     + AbstractBot
     + AbstractUser
     + AbstractUserSettings
-    + AbstractWebhook
     + AbstractReport
     + AbstractSnapshot
 {

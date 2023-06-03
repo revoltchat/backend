@@ -6,11 +6,14 @@ use crate::{
     events::client::EventV1,
     models::{
         channel::{FieldsChannel, PartialChannel},
-        message::{SystemMessage, Message, DataMessageSend, Reply, RE_MENTION},
+        message::{DataMessageSend, Message, Reply, SystemMessage, RE_MENTION},
         Channel,
     },
     tasks::{ack::AckEvent, process_embeds},
-    Database, Error, OverrideField, Result, types::push::MessageAuthor, web::idempotency::IdempotencyKey, Ref, variables::delta::{MAX_ATTACHMENT_COUNT, MAX_REPLY_COUNT},
+    types::push::MessageAuthor,
+    variables::delta::{MAX_ATTACHMENT_COUNT, MAX_REPLY_COUNT},
+    web::idempotency::IdempotencyKey,
+    Database, Error, OverrideField, Ref, Result,
 };
 
 impl Channel {
@@ -400,7 +403,13 @@ impl Channel {
     }
 
     /// Creates a message in a channel
-    pub async fn send_message(&self, db: &Database, data: DataMessageSend, author: MessageAuthor<'_>, mut idempotency: IdempotencyKey) -> Result<Message> {
+    pub async fn send_message(
+        &self,
+        db: &Database,
+        data: DataMessageSend,
+        author: MessageAuthor<'_>,
+        mut idempotency: IdempotencyKey,
+    ) -> Result<Message> {
         Message::validate_sum(&data.content, &data.embeds)?;
 
         idempotency.consume_nonce(data.nonce).await?;
@@ -430,7 +439,7 @@ impl Channel {
 
         let (author_id, webhook) = match &author {
             MessageAuthor::User(user) => (user.id.clone(), None),
-            MessageAuthor::Webhook(webhook) => (webhook.id.clone(), Some((*webhook).clone()))
+            MessageAuthor::Webhook(webhook) => (webhook.id.clone(), Some((*webhook).clone())),
         };
 
         // Start constructing the message
@@ -441,7 +450,7 @@ impl Channel {
             masquerade: data.masquerade,
             interactions: data.interactions.unwrap_or_default(),
             author: author_id,
-            webhook: webhook.map(|w| w.into_message_webhook()),
+            webhook: webhook.map(|w| w.into()),
             ..Default::default()
         };
 
@@ -459,7 +468,9 @@ impl Channel {
         let mut replies = HashSet::new();
         if let Some(entries) = data.replies {
             if entries.len() > *MAX_REPLY_COUNT {
-                return Err(Error::TooManyReplies { max: *MAX_REPLY_COUNT });
+                return Err(Error::TooManyReplies {
+                    max: *MAX_REPLY_COUNT,
+                });
             }
 
             for Reply { id, mention } in entries {
@@ -499,13 +510,20 @@ impl Channel {
         let mut attachments = vec![];
         if let Some(ids) = &data.attachments {
             if ids.len() > *MAX_ATTACHMENT_COUNT {
-                return Err(Error::TooManyAttachments { max: *MAX_ATTACHMENT_COUNT} );
+                return Err(Error::TooManyAttachments {
+                    max: *MAX_ATTACHMENT_COUNT,
+                });
             }
 
             for attachment_id in ids {
                 attachments.push(
-                    db.find_and_use_attachment(attachment_id, "attachments", "message", &message_id)
-                        .await?,
+                    db.find_and_use_attachment(
+                        attachment_id,
+                        "attachments",
+                        "message",
+                        &message_id,
+                    )
+                    .await?,
                 );
             }
         }
