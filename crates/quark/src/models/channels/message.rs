@@ -277,7 +277,7 @@ pub struct DataMessageSend {
     ///
     /// Text embed content contributes to the content length cap
     #[serde(default)]
-    #[validate(length(min = 1, max = 10))]
+    #[validate(length(min = 0, max = 10))]
     pub embeds: Vec<SendableEmbed>,
     /// Masquerade to apply to this message
     #[validate]

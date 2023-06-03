@@ -495,16 +495,6 @@ impl Channel {
                 .replace(replies.into_iter().collect::<Vec<String>>());
         }
 
-        // Process included embeds.
-        let mut embeds = vec![];
-        for sendable_embed in data.embeds {
-            embeds.push(sendable_embed.into_embed(db, message_id.clone()).await?)
-        }
-
-        if !embeds.is_empty() {
-            message.embeds.replace(embeds);
-        }
-
         // Add attachments to message.
         let mut attachments = vec![];
         if data.attachments.len() > *MAX_ATTACHMENT_COUNT {
@@ -522,6 +512,16 @@ impl Channel {
 
         if !attachments.is_empty() {
             message.attachments.replace(attachments);
+        }
+
+        // Process included embeds.
+        let mut embeds = vec![];
+        for sendable_embed in data.embeds {
+            embeds.push(sendable_embed.into_embed(db, message_id.clone()).await?)
+        }
+
+        if !embeds.is_empty() {
+            message.embeds.replace(embeds);
         }
 
         // Set content
