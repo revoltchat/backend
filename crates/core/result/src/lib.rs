@@ -6,6 +6,12 @@ extern crate serde;
 #[macro_use]
 extern crate schemars;
 
+#[cfg(feature = "rocket")]
+pub mod rocket;
+
+#[cfg(feature = "okapi")]
+pub mod okapi;
+
 /// Result type with custom Error
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
