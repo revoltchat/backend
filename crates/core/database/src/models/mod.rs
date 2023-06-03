@@ -1,5 +1,6 @@
 mod admin_migrations;
 mod bots;
+mod channel_webhooks;
 mod files;
 mod safety_strikes;
 mod server_members;
@@ -9,6 +10,7 @@ mod users;
 
 pub use admin_migrations::*;
 pub use bots::*;
+pub use channel_webhooks::*;
 pub use files::*;
 pub use safety_strikes::*;
 pub use server_members::*;
@@ -29,6 +31,7 @@ pub trait AbstractDatabase:
     + servers::AbstractServers
     + user_settings::AbstractUserSettings
     + users::AbstractUsers
+    + channel_webhooks::AbstractWebhooks
 {
 }
 

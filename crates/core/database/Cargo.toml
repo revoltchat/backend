@@ -15,6 +15,7 @@ mongodb = [ "dep:mongodb", "bson" ]
 # ... Other
 async-std-runtime = [ "async-std" ]
 rocket-impl = [ "rocket", "schemars" ]
+redis-is-patched = [ "revolt-presence/redis-is-patched" ]
 
 # Default Features
 default = [ "mongodb", "async-std-runtime" ]
@@ -22,6 +23,8 @@ default = [ "mongodb", "async-std-runtime" ]
 [dependencies]
 # Core
 revolt-result = { version = "0.0.2", path = "../result" }
+revolt-models = { version = "0.0.2", path = "../models" }
+revolt-presence = { version = "0.0.2", path = "../presence" }
 revolt-permissions = { version = "0.0.2", path = "../permissions", features = [ "serde" ] }
 
 # Utility
@@ -35,6 +38,9 @@ serde_json = "1"
 revolt_optional_struct = "0.2.0"
 serde = { version = "1", features = ["derive"] }
 iso8601-timestamp = { version = "0.2.10", features = ["serde", "bson"] }
+
+# Events
+redis-kiss = { version = "0.1.4" }
 
 # Database
 bson = { optional = true, version = "2.1.0" }
