@@ -11,19 +11,18 @@ description = "Revolt Backend: API Models"
 [features]
 serde = [ "dep:serde" ]
 schemas = [ "dep:schemars" ]
-from_database = [ "revolt-database", "revolt-presence" ]
+validator = [ "dep:validator" ]
+partials = [ "dep:revolt_optional_struct", "serde", "schemas" ]
 
-redis-is-patched = [ "revolt-presence/redis-is-patched" ]
-
-default = [ "serde", "from_database" ]
+default = [ "serde", "partials" ]
 
 [dependencies]
-# Repo
-revolt-database = { version = "0.0.2", path = "../database", optional = true }
-revolt-presence = { version = "0.0.2", path = "../presence", optional = true }
-
 # Serialisation
+revolt_optional_struct = { version = "0.2.0", optional = true }
 serde = { version = "1", features = ["derive"], optional = true }
 
 # Spec Generation
 schemars = { version = "0.8.8", optional = true }
+
+# Validation
+validator = { version = "0.16.0", optional = true, features = ["derive"] }

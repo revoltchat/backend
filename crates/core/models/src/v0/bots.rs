@@ -4,11 +4,11 @@ auto_derived!(
     /// Bot
     pub struct Bot {
         /// Bot Id
-        #[serde(rename = "_id")]
+        #[cfg_attr(feature = "serde", serde(rename = "_id"))]
         pub id: String,
 
         /// User Id of the bot owner
-        #[serde(rename = "owner")]
+        #[cfg_attr(feature = "serde", serde(rename = "owner"))]
         pub owner_id: String,
         /// Token used to authenticate requests for this bot
         pub token: String,
@@ -66,16 +66,16 @@ auto_derived!(
     pub struct PublicBot {
         /// Bot Id
         #[serde(rename = "_id")]
-        id: String,
+        pub id: String,
 
         /// Bot Username
-        username: String,
+        pub username: String,
         /// Profile Avatar
         #[serde(skip_serializing_if = "String::is_empty")]
-        avatar: String,
+        pub avatar: String,
         /// Profile Description
         #[serde(skip_serializing_if = "String::is_empty")]
-        description: String,
+        pub description: String,
     }
 
     /// Bot Response
@@ -86,39 +86,3 @@ auto_derived!(
         pub user: User,
     }
 );
-
-#[cfg(feature = "from_database")]
-impl PublicBot {
-    pub fn from(bot: revolt_database::Bot, user: revolt_database::User) -> Self {
-        #[cfg(debug_assertions)]
-        assert_eq!(bot.id, user.id);
-
-        PublicBot {
-            id: bot.id,
-            username: user.username,
-            avatar: user.avatar.map(|x| x.id).unwrap_or_default(),
-            description: user
-                .profile
-                .map(|profile| profile.content)
-                .unwrap_or_default(),
-        }
-    }
-}
-
-#[cfg(feature = "from_database")]
-impl From<revolt_database::Bot> for Bot {
-    fn from(value: revolt_database::Bot) -> Self {
-        Bot {
-            id: value.id,
-            owner_id: value.owner,
-            token: value.token,
-            public: value.public,
-            analytics: value.analytics,
-            discoverable: value.discoverable,
-            interactions_url: value.interactions_url,
-            terms_of_service_url: value.terms_of_service_url,
-            privacy_policy_url: value.privacy_policy_url,
-            flags: value.flags.unwrap_or_default() as u32,
-        }
-    }
-}
