@@ -1,17 +1,19 @@
-use revolt_quark::{Db, Ref, Result, Error, models::Webhook};
-use rocket::serde::json::Json;
+use revolt_database::Database;
+use revolt_models::v0::Webhook;
+use revolt_result::Result;
+use rocket::{serde::json::Json, State};
 
 /// # Gets a webhook
 ///
-/// gets a webhook with a token
+/// Gets a webhook with a token
 #[openapi(tag = "Webhooks")]
-#[get("/<target>/<token>")]
-pub async fn webhook_fetch_token(db: &Db, target: Ref, token: String) -> Result<Json<Webhook>> {
-    let webhook = target.as_webhook(db).await?;
-
-    (webhook.token.as_deref() == Some(&token))
-        .then_some(())
-        .ok_or(Error::InvalidCredentials)?;
-
-    Ok(Json(webhook))
+#[get("/<webhook_id>/<token>")]
+pub async fn webhook_fetch_token(
+    db: &State<Database>,
+    webhook_id: String,
+    token: String,
+) -> Result<Json<Webhook>> {
+    let webhook = db.fetch_webhook(&webhook_id).await?;
+    webhook.assert_token(&token)?;
+    Ok(Json(webhook.into()))
 }

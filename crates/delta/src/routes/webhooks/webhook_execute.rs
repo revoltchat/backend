@@ -1,26 +1,47 @@
-use revolt_quark::{Db, Ref, Result, Error, models::message::{Message, DataMessageSend}, web::idempotency::IdempotencyKey, types::push::MessageAuthor};
-use rocket::serde::json::Json;
+use revolt_database::Database;
+use revolt_quark::{
+    models::message::{DataMessageSend, Message},
+    types::push::MessageAuthor,
+    web::idempotency::IdempotencyKey,
+    Db, Error, Result,
+};
+use rocket::{serde::json::Json, State};
 
 use validator::Validate;
 
 /// # Executes a webhook
 ///
-/// executes a webhook and sends a message
+/// Executes a webhook and sends a message
 #[openapi(tag = "Webhooks")]
-#[post("/<target>/<token>", data="<data>")]
-pub async fn webhook_execute(db: &Db, target: Ref, token: String, data: Json<DataMessageSend>, idempotency: IdempotencyKey) -> Result<Json<Message>> {
+#[post("/<webhook_id>/<token>", data = "<data>")]
+pub async fn webhook_execute(
+    db: &State<Database>,
+    legacy_db: &Db,
+    webhook_id: String,
+    token: String,
+    data: Json<DataMessageSend>,
+    idempotency: IdempotencyKey,
+) -> Result<Json<Message>> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    let webhook = target.as_webhook(db).await?;
+    let webhook = db
+        .fetch_webhook(&webhook_id)
+        .await
+        .map_err(Error::from_core)?;
 
-    (webhook.token.as_deref() == Some(&token))
-        .then_some(())
-        .ok_or(Error::InvalidCredentials)?;
+    webhook.assert_token(&token).map_err(Error::from_core)?;
 
-    let channel = Ref::from_unchecked(webhook.channel.clone()).as_channel(db).await?;
-    let message = channel.send_message(db, data, MessageAuthor::Webhook(&webhook), idempotency).await?;
+    let channel = legacy_db.fetch_channel(&webhook.channel_id).await?;
+    let message = channel
+        .send_message(
+            legacy_db,
+            data,
+            MessageAuthor::Webhook(&webhook.into()),
+            idempotency,
+        )
+        .await?;
 
     Ok(Json(message))
 }

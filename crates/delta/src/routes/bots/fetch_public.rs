@@ -21,5 +21,5 @@ pub async fn fetch_public_bot(
     }
 
     let user = db.fetch_user(&bot.id).await.map_err(Error::from_core)?;
-    Ok(Json(PublicBot::from(bot, user)))
+    Ok(Json(bot.into_public_bot(user)))
 }

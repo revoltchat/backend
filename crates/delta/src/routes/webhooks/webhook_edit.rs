@@ -1,60 +1,65 @@
-use revolt_quark::{Db, Ref, Result, Error, models::{webhook::{FieldsWebhook, Webhook, PartialWebhook}, File, User}, Permission, perms};
-use serde::{Serialize, Deserialize};
+use revolt_database::{Database, PartialWebhook};
+use revolt_models::v0::{DataEditWebhook, Webhook};
+use revolt_quark::{models::User, perms, Db, Error, Permission, Result};
+use rocket::{serde::json::Json, State};
 use validator::Validate;
-use rocket::serde::json::Json;
-
-#[derive(Serialize, Deserialize, Validate, JsonSchema)]
-pub struct WebhookEditBody {
-    #[validate(length(min = 1, max = 32))]
-    name: Option<String>,
-
-    #[validate(length(min = 1, max = 128))]
-    avatar: Option<String>,
-
-    #[serde(default)]
-    remove: Vec<FieldsWebhook>
-}
 
 /// # Edits a webhook
 ///
-/// edits a webhook
+/// Edits a webhook
 #[openapi(tag = "Webhooks")]
-#[patch("/<target>", data="<data>")]
-pub async fn webhook_edit(db: &Db, target: Ref, user: User, data: Json<WebhookEditBody>) -> Result<Json<Webhook>> {
+#[patch("/<webhook_id>", data = "<data>")]
+pub async fn webhook_edit(
+    db: &State<Database>,
+    legacy_db: &Db,
+    webhook_id: String,
+    user: User,
+    data: Json<DataEditWebhook>,
+) -> Result<Json<Webhook>> {
     let data = data.into_inner();
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    let mut webhook = target.as_webhook(db).await?;
+    let mut webhook = db
+        .fetch_webhook(&webhook_id)
+        .await
+        .map_err(Error::from_core)?;
 
-    let channel = Ref::from_unchecked(webhook.channel.clone()).as_channel(db).await?;
+    let channel = legacy_db.fetch_channel(&webhook.channel_id).await?;
 
     perms(&user)
         .channel(&channel)
-        .throw_permission(db, Permission::ManageWebhooks)
+        .throw_permission(legacy_db, Permission::ManageWebhooks)
         .await?;
 
-    if data.name.is_none()
-        && data.avatar.is_none()
-        && data.remove.is_empty()
-    {
-        return Ok(Json(webhook))
+    if data.name.is_none() && data.avatar.is_none() && data.remove.is_empty() {
+        return Ok(Json(webhook.into()));
     };
 
-    let mut partial = PartialWebhook::default();
+    let DataEditWebhook {
+        name,
+        avatar,
+        remove,
+    } = data;
 
-    let WebhookEditBody { name, avatar, remove } = data;
-
-    if let Some(name) = name {
-        partial.name = Some(name)
-    }
+    let mut partial = PartialWebhook {
+        name,
+        ..Default::default()
+    };
 
     if let Some(avatar) = avatar {
-        let file = File::use_avatar(db, &avatar, &webhook.id).await?;
+        let file = db
+            .find_and_use_attachment(&avatar, "avatars", "user", &webhook.id)
+            .await
+            .map_err(Error::from_core)?;
+
         partial.avatar = Some(file)
     }
 
-    webhook.update(db, partial, remove).await?;
+    webhook
+        .update(db, partial, remove.into_iter().map(|v| v.into()).collect())
+        .await
+        .map_err(Error::from_core)?;
 
-    Ok(Json(webhook))
+    Ok(Json(webhook.into()))
 }

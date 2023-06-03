@@ -1,57 +1,56 @@
-use revolt_quark::{Db, Ref, Result, Error, models::{webhook::{FieldsWebhook, Webhook, PartialWebhook}, File}};
-use serde::{Serialize, Deserialize};
-use validator::Validate;
-use rocket::serde::json::Json;
-
-#[derive(Serialize, Deserialize, Validate, JsonSchema)]
-pub struct WebhookEditBody {
-    #[validate(length(min = 1, max = 32))]
-    name: Option<String>,
-
-    #[validate(length(min = 1, max = 128))]
-    avatar: Option<String>,
-
-    #[serde(default)]
-    remove: Vec<FieldsWebhook>
-}
+use revolt_database::{Database, PartialWebhook};
+use revolt_models::v0::{DataEditWebhook, Webhook};
+use revolt_models::validator::Validate;
+use revolt_result::{create_error, Result};
+use rocket::{serde::json::Json, State};
 
 /// # Edits a webhook
 ///
-/// edits a webhook with a token
+/// Edits a webhook with a token
 #[openapi(tag = "Webhooks")]
-#[patch("/<target>/<token>", data="<data>")]
-pub async fn webhook_edit_token(db: &Db, target: Ref, token: String, data: Json<WebhookEditBody>) -> Result<Json<Webhook>> {
+#[patch("/<webhook_id>/<token>", data = "<data>")]
+pub async fn webhook_edit_token(
+    db: &State<Database>,
+    webhook_id: String,
+    token: String,
+    data: Json<DataEditWebhook>,
+) -> Result<Json<Webhook>> {
     let data = data.into_inner();
-    data.validate()
-        .map_err(|error| Error::FailedValidation { error })?;
+    data.validate().map_err(|error| {
+        create_error!(FailedValidation {
+            error: error.to_string()
+        })
+    })?;
 
-    let mut webhook = target.as_webhook(db).await?;
+    let mut webhook = db.fetch_webhook(&webhook_id).await?;
+    webhook.assert_token(&token)?;
 
-    (webhook.token.as_deref() == Some(&token))
-        .then_some(())
-        .ok_or(Error::InvalidCredentials)?;
-
-    if data.name.is_none()
-        && data.avatar.is_none()
-        && data.remove.is_empty()
-    {
-        return Ok(Json(webhook))
+    if data.name.is_none() && data.avatar.is_none() && data.remove.is_empty() {
+        return Ok(Json(webhook.into()));
     };
 
-    let mut partial = PartialWebhook::default();
+    let DataEditWebhook {
+        name,
+        avatar,
+        remove,
+    } = data;
 
-    let WebhookEditBody { name, avatar, remove } = data;
-
-    if let Some(name) = name {
-        partial.name = Some(name)
-    }
+    let mut partial = PartialWebhook {
+        name,
+        ..Default::default()
+    };
 
     if let Some(avatar) = avatar {
-        let file = File::use_avatar(db, &avatar, &webhook.id).await?;
+        let file = db
+            .find_and_use_attachment(&avatar, "avatars", "user", &webhook.id)
+            .await?;
+
         partial.avatar = Some(file)
     }
 
-    webhook.update(db, partial, remove).await?;
+    webhook
+        .update(db, partial, remove.into_iter().map(|v| v.into()).collect())
+        .await?;
 
-    Ok(Json(webhook))
+    Ok(Json(webhook.into()))
 }

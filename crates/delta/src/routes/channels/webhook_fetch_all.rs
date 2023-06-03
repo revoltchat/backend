@@ -1,19 +1,31 @@
-use revolt_quark::{models::{User, Webhook}, perms, Db, Permission, Ref, Result};
-use rocket::serde::json::Json;
+use revolt_database::Database;
+use revolt_models::v0::Webhook;
+use revolt_quark::{models::User, perms, Db, Error, Permission, Ref, Result};
+use rocket::{serde::json::Json, State};
 
 /// # Gets all webhooks
 ///
-/// gets all webhooks inside the channel
+/// Gets all webhooks inside the channel
 #[openapi(tag = "Webhooks")]
-#[get("/<target>/webhooks")]
-pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<Vec<Webhook>>> {
-    let channel = target.as_channel(db).await?;
+#[get("/<channel_id>/webhooks")]
+pub async fn req(
+    db: &State<Database>,
+    legacy_db: &Db,
+    user: User,
+    channel_id: Ref,
+) -> Result<Json<Vec<Webhook>>> {
+    let channel = channel_id.as_channel(legacy_db).await?;
     let mut permissions = perms(&user).channel(&channel);
     permissions
-        .has_permission(db, Permission::ManageWebhooks)
+        .has_permission(legacy_db, Permission::ManageWebhooks)
         .await?;
 
-    let webhooks = db.fetch_webhooks_for_channel(channel.id()).await?;
-
-    Ok(Json(webhooks))
+    Ok(Json(
+        db.fetch_webhooks_for_channel(channel.id())
+            .await
+            .map_err(Error::from_core)?
+            .into_iter()
+            .map(|v| v.into())
+            .collect::<Vec<Webhook>>(),
+    ))
 }

@@ -1,28 +1,30 @@
-use revolt_quark::{Db, Ref, Result, models::{Webhook, File}};
-use rocket::serde::json::Json;
-use serde::{Serialize, Deserialize};
-
-
-// This route is used to get the info about the webhook by clients to get the name and avatar,
-// so this function cant return the token or require any permissions.
-
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub struct WebhookData {
-    #[serde(rename = "_id")]
-    pub id: String,
-    pub name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub avatar: Option<File>,
-    pub channel: String,
-}
+use revolt_database::Database;
+use revolt_models::v0::{ResponseWebhook, Webhook};
+use revolt_quark::{models::User, perms, Db, Error, Permission, Result};
+use rocket::{serde::json::Json, State};
 
 /// # Gets a webhook
 ///
-/// gets a webhook
+/// Gets a webhook
 #[openapi(tag = "Webhooks")]
-#[get("/<target>")]
-pub async fn webhook_fetch(db: &Db, target: Ref) -> Result<Json<WebhookData>> {
-    let Webhook { id, name, avatar, channel, .. } = target.as_webhook(db).await?;
+#[get("/<webhook_id>")]
+pub async fn webhook_fetch(
+    db: &State<Database>,
+    legacy_db: &Db,
+    webhook_id: String,
+    user: User,
+) -> Result<Json<ResponseWebhook>> {
+    let webhook = db
+        .fetch_webhook(&webhook_id)
+        .await
+        .map_err(Error::from_core)?;
 
-    Ok(Json(WebhookData { id, name, avatar, channel }))
+    let channel = legacy_db.fetch_channel(&webhook.channel_id).await?;
+
+    perms(&user)
+        .channel(&channel)
+        .throw_permission(legacy_db, Permission::ViewChannel)
+        .await?;
+
+    Ok(Json(std::convert::Into::<Webhook>::into(webhook).into()))
 }

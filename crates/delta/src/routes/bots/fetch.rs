@@ -23,11 +23,12 @@ pub async fn fetch_bot(
     }
 
     Ok(Json(FetchBotResponse {
-        user: revolt_models::v0::User::from(
-            db.fetch_user(&bot.id).await.map_err(Error::from_core)?,
-            None,
-        )
-        .await,
+        user: db
+            .fetch_user(&bot.id)
+            .await
+            .map_err(Error::from_core)?
+            .into(None)
+            .await,
         bot: bot.into(),
     }))
 }
