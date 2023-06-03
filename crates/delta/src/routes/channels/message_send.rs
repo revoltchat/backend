@@ -1,11 +1,9 @@
 use revolt_quark::{
-    models::{
-        message::DataMessageSend,
-        Message, User,
-    },
+    models::{message::DataMessageSend, Message, User},
     perms,
+    types::push::MessageAuthor,
     web::idempotency::IdempotencyKey,
-    Db, Error, Permission, Ref, Result, types::push::MessageAuthor,
+    Db, Error, Permission, Ref, Result,
 };
 
 use rocket::serde::json::Json;
@@ -35,7 +33,7 @@ pub async fn message_send(
         .throw_permission_and_view_channel(db, Permission::SendMessage)
         .await?;
 
-    // Verify permissions for masquerade.
+    // Verify permissions for masquerade
     if let Some(masq) = &data.masquerade {
         permissions
             .throw_permission(db, Permission::Masquerade)
@@ -48,8 +46,37 @@ pub async fn message_send(
         }
     }
 
+    // Check permissions for embeds
+    if !data.embeds.is_empty() {
+        permissions
+            .throw_permission(db, Permission::SendEmbeds)
+            .await?;
+    }
+
+    // Check permissions for files
+    if !data.attachments.is_empty() {
+        permissions
+            .throw_permission(db, Permission::UploadFiles)
+            .await?;
+    }
+
+    // Ensure interactions information is correct
+    if let Some(interactions) = &data.interactions {
+        interactions.validate(db, &mut permissions).await?;
+    }
+
     // Create the message
-    let message = channel.send_message(db, data, MessageAuthor::User(&user), idempotency).await?;
+    let message = channel
+        .send_message(
+            db,
+            data,
+            MessageAuthor::User(&user),
+            idempotency,
+            permissions
+                .has_permission(db, Permission::SendEmbeds)
+                .await?,
+        )
+        .await?;
 
     Ok(Json(message))
 }

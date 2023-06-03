@@ -409,6 +409,7 @@ impl Channel {
         data: DataMessageSend,
         author: MessageAuthor<'_>,
         mut idempotency: IdempotencyKey,
+        generate_embeds: bool,
     ) -> Result<Message> {
         Message::validate_sum(&data.content, &data.embeds)?;
 
@@ -416,8 +417,8 @@ impl Channel {
 
         // Check the message is not empty
         if (data.content.as_ref().map_or(true, |v| v.is_empty()))
-            && (data.attachments.as_ref().map_or(true, |v| v.is_empty()))
-            && (data.embeds.as_ref().map_or(true, |v| v.is_empty()))
+            && (data.attachments.is_empty())
+            && (data.embeds.is_empty())
         {
             return Err(Error::EmptyMessage);
         }
@@ -496,10 +497,8 @@ impl Channel {
 
         // Process included embeds.
         let mut embeds = vec![];
-        if let Some(sendable_embeds) = data.embeds {
-            for sendable_embed in sendable_embeds {
-                embeds.push(sendable_embed.into_embed(db, message_id.clone()).await?)
-            }
+        for sendable_embed in data.embeds {
+            embeds.push(sendable_embed.into_embed(db, message_id.clone()).await?)
         }
 
         if !embeds.is_empty() {
@@ -508,24 +507,17 @@ impl Channel {
 
         // Add attachments to message.
         let mut attachments = vec![];
-        if let Some(ids) = &data.attachments {
-            if ids.len() > *MAX_ATTACHMENT_COUNT {
-                return Err(Error::TooManyAttachments {
-                    max: *MAX_ATTACHMENT_COUNT,
-                });
-            }
+        if data.attachments.len() > *MAX_ATTACHMENT_COUNT {
+            return Err(Error::TooManyAttachments {
+                max: *MAX_ATTACHMENT_COUNT,
+            });
+        }
 
-            for attachment_id in ids {
-                attachments.push(
-                    db.find_and_use_attachment(
-                        attachment_id,
-                        "attachments",
-                        "message",
-                        &message_id,
-                    )
+        for attachment_id in data.attachments {
+            attachments.push(
+                db.find_and_use_attachment(&attachment_id, "attachments", "message", &message_id)
                     .await?,
-                );
-            }
+            );
         }
 
         if !attachments.is_empty() {
@@ -541,13 +533,15 @@ impl Channel {
         message.create(db, self, Some(author)).await?;
 
         // Queue up a task for processing embeds
-        if let Some(content) = &message.content {
-            process_embeds::queue(
-                self.id().to_string(),
-                message.id.to_string(),
-                content.clone(),
-            )
-            .await;
+        if generate_embeds {
+            if let Some(content) = &message.content {
+                process_embeds::queue(
+                    self.id().to_string(),
+                    message.id.to_string(),
+                    content.clone(),
+                )
+                .await;
+            }
         }
 
         Ok(message)

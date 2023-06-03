@@ -18,7 +18,7 @@ use crate::{
     tasks::ack::AckEvent,
     types::{
         january::{Embed, Text},
-        push::{PushNotification, MessageAuthor},
+        push::{MessageAuthor, PushNotification},
     },
     Database, Error, Permission, Result,
 };
@@ -170,20 +170,15 @@ impl Message {
     }
 
     /// Validate the sum of content of a message is under threshold
-    pub fn validate_sum(
-        content: &Option<String>,
-        embeds: &Option<Vec<SendableEmbed>>,
-    ) -> Result<()> {
+    pub fn validate_sum(content: &Option<String>, embeds: &Vec<SendableEmbed>) -> Result<()> {
         let mut running_total = 0;
         if let Some(content) = content {
             running_total += content.len();
         }
 
-        if let Some(embeds) = embeds {
-            for embed in embeds {
-                if let Some(desc) = &embed.description {
-                    running_total += desc.len();
-                }
+        for embed in embeds {
+            if let Some(desc) = &embed.description {
+                running_total += desc.len();
             }
         }
 
