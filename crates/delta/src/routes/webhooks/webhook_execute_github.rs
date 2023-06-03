@@ -15,6 +15,7 @@ use schemars::schema::SchemaObject;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use ulid::Ulid;
+use validator::Validate;
 
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub struct GithubUser {
@@ -1060,6 +1061,10 @@ pub async fn webhook_execute_github(
             _ => return Ok(()),
         },
     };
+
+    sendable_embed
+        .validate()
+        .map_err(|error| Error::FailedValidation { error })?;
 
     let message_id = Ulid::new().to_string();
 

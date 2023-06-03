@@ -40,6 +40,7 @@ pub struct Reply {
 pub struct SendableEmbed {
     #[validate(length(min = 1, max = 128))]
     pub icon_url: Option<String>,
+    #[validate(length(min = 1, max = 256))]
     pub url: Option<String>,
     #[validate(length(min = 1, max = 100))]
     pub title: Option<String>,
