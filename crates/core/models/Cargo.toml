@@ -9,8 +9,8 @@ description = "Revolt Backend: API Models"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-serde = [ "dep:serde", "dep:revolt-permissions/serde" ]
-schemas = [ "dep:schemars", "dep:revolt-permissions/schemas" ]
+serde = [ "dep:serde", "revolt-permissions/serde" ]
+schemas = [ "dep:schemars", "revolt-permissions/schemas" ]
 validator = [ "dep:validator" ]
 partials = [ "dep:revolt_optional_struct", "serde", "schemas" ]
 
