@@ -1,7 +1,9 @@
 use authifier::AuthifierEvent;
 use serde::{Deserialize, Serialize};
 
-use revolt_models::v0::{FieldsWebhook, PartialWebhook, Webhook};
+use revolt_models::v0::{
+    Channel, FieldsChannel, FieldsWebhook, PartialChannel, PartialWebhook, Webhook,
+};
 use revolt_result::Error;
 
 use crate::Database;
@@ -101,38 +103,6 @@ pub enum EventV1 {
     /// Bulk delete messages
     BulkMessageDelete { channel: String, ids: Vec<String> },
 
-    /// New channel
-    ChannelCreate(Channel),
-
-    /// Update existing channel
-    ChannelUpdate {
-        id: String,
-        data: PartialChannel,
-        clear: Vec<FieldsChannel>,
-    },
-
-    /// Delete channel
-    ChannelDelete { id: String },
-
-    /// User joins a group
-    ChannelGroupJoin { id: String, user: String },
-
-    /// User leaves a group
-    ChannelGroupLeave { id: String, user: String },
-
-    /// User started typing in a channel
-    ChannelStartTyping { id: String, user: String },
-
-    /// User stopped typing in a channel
-    ChannelStopTyping { id: String, user: String },
-
-    /// User acknowledged message in channel
-    ChannelAck {
-        id: String,
-        user: String,
-        message_id: String,
-    },
-
     /// New server
     ServerCreate {
         id: String,
@@ -212,6 +182,38 @@ pub enum EventV1 {
 
     /// New report
     ReportCreate(Report), */
+    /// New channel
+    ChannelCreate(Channel),
+
+    /// Update existing channel
+    ChannelUpdate {
+        id: String,
+        data: PartialChannel,
+        clear: Vec<FieldsChannel>,
+    },
+
+    /// Delete channel
+    ChannelDelete { id: String },
+
+    /// User joins a group
+    ChannelGroupJoin { id: String, user: String },
+
+    /// User leaves a group
+    ChannelGroupLeave { id: String, user: String },
+
+    /// User started typing in a channel
+    ChannelStartTyping { id: String, user: String },
+
+    /// User stopped typing in a channel
+    ChannelStopTyping { id: String, user: String },
+
+    /// User acknowledged message in channel
+    ChannelAck {
+        id: String,
+        user: String,
+        message_id: String,
+    },
+
     /// New webhook
     WebhookCreate(Webhook),
 
