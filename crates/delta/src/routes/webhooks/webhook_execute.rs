@@ -1,4 +1,4 @@
-use revolt_database::Database;
+use revolt_database::{util::reference::Reference, Database};
 use revolt_quark::{
     models::message::{DataMessageSend, Message},
     types::push::MessageAuthor,
@@ -17,7 +17,7 @@ use validator::Validate;
 pub async fn webhook_execute(
     db: &State<Database>,
     legacy_db: &Db,
-    webhook_id: String,
+    webhook_id: Reference,
     token: String,
     data: Json<DataMessageSend>,
     idempotency: IdempotencyKey,
@@ -26,11 +26,7 @@ pub async fn webhook_execute(
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    let webhook = db
-        .fetch_webhook(&webhook_id)
-        .await
-        .map_err(Error::from_core)?;
-
+    let webhook = webhook_id.as_webhook(db).await.map_err(Error::from_core)?;
     webhook.assert_token(&token).map_err(Error::from_core)?;
 
     // TODO: webhooks can currently always send masquerades, files, embeds, reactions (interactions)

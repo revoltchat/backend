@@ -1,3 +1,4 @@
+use revolt_database::util::reference::Reference;
 use revolt_database::{Database, PartialWebhook};
 use revolt_models::v0::{DataEditWebhook, Webhook};
 use revolt_models::validator::Validate;
@@ -11,7 +12,7 @@ use rocket::{serde::json::Json, State};
 #[patch("/<webhook_id>/<token>", data = "<data>")]
 pub async fn webhook_edit_token(
     db: &State<Database>,
-    webhook_id: String,
+    webhook_id: Reference,
     token: String,
     data: Json<DataEditWebhook>,
 ) -> Result<Json<Webhook>> {
@@ -22,7 +23,7 @@ pub async fn webhook_edit_token(
         })
     })?;
 
-    let mut webhook = db.fetch_webhook(&webhook_id).await?;
+    let mut webhook = webhook_id.as_webhook(db).await?;
     webhook.assert_token(&token)?;
 
     if data.name.is_none() && data.avatar.is_none() && data.remove.is_empty() {

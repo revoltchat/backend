@@ -1,4 +1,4 @@
-use revolt_database::Database;
+use revolt_database::{util::reference::Reference, Database};
 use revolt_result::Result;
 use rocket::State;
 use rocket_empty::EmptyResponse;
@@ -10,10 +10,10 @@ use rocket_empty::EmptyResponse;
 #[delete("/<webhook_id>/<token>")]
 pub async fn webhook_delete_token(
     db: &State<Database>,
-    webhook_id: String,
+    webhook_id: Reference,
     token: String,
 ) -> Result<EmptyResponse> {
-    let webhook = db.fetch_webhook(&webhook_id).await?;
+    let webhook = webhook_id.as_webhook(db).await?;
     webhook.assert_token(&token)?;
     webhook.delete(db).await.map(|_| EmptyResponse)
 }

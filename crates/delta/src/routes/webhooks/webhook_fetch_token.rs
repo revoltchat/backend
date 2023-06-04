@@ -1,4 +1,4 @@
-use revolt_database::Database;
+use revolt_database::{util::reference::Reference, Database};
 use revolt_models::v0::Webhook;
 use revolt_result::Result;
 use rocket::{serde::json::Json, State};
@@ -10,10 +10,10 @@ use rocket::{serde::json::Json, State};
 #[get("/<webhook_id>/<token>")]
 pub async fn webhook_fetch_token(
     db: &State<Database>,
-    webhook_id: String,
+    webhook_id: Reference,
     token: String,
 ) -> Result<Json<Webhook>> {
-    let webhook = db.fetch_webhook(&webhook_id).await?;
+    let webhook = webhook_id.as_webhook(db).await?;
     webhook.assert_token(&token)?;
     Ok(Json(webhook.into()))
 }

@@ -1,4 +1,4 @@
-use revolt_database::Database;
+use revolt_database::{util::reference::Reference, Database};
 use revolt_models::v0::Webhook;
 use revolt_quark::{
     models::{message::SendableEmbed, Message},
@@ -752,16 +752,12 @@ fn convert_event(data: &str, event_name: &str) -> Result<Event> {
 pub async fn webhook_execute_github(
     db: &State<Database>,
     legacy_db: &Db,
-    webhook_id: String,
+    webhook_id: Reference,
     token: String,
     event: EventHeader<'_>,
     data: String,
 ) -> Result<()> {
-    let webhook = db
-        .fetch_webhook(&webhook_id)
-        .await
-        .map_err(Error::from_core)?;
-
+    let webhook = webhook_id.as_webhook(db).await.map_err(Error::from_core)?;
     webhook.assert_token(&token).map_err(Error::from_core)?;
 
     let channel = legacy_db.fetch_channel(&webhook.channel_id).await?;
