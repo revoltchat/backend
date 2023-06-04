@@ -1,18 +1,9 @@
-use rocket::serde::json::Json;
-use serde::Deserialize;
-
+use revolt_permissions::DataPermissionsValue;
 use revolt_quark::{
     models::{server::PartialServer, Server, User},
     perms, Db, Permission, Ref, Result,
 };
-
-/// # Permission Value
-#[derive(Deserialize, JsonSchema)]
-pub struct DataSetServerDefaultPermission {
-    /// Default member permission value
-    permissions: u64,
-}
-
+use rocket::serde::json::Json;
 /// # Set Default Permission
 ///
 /// Sets permissions for the default role in this server.
@@ -22,7 +13,7 @@ pub async fn req(
     db: &Db,
     user: User,
     target: Ref,
-    data: Json<DataSetServerDefaultPermission>,
+    data: Json<DataPermissionsValue>,
 ) -> Result<Json<Server>> {
     let data = data.into_inner();
 

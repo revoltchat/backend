@@ -59,6 +59,7 @@ revolt-quark = { path = "../quark" }
 revolt-database = { path = "../core/database", features = [ "rocket-impl", "redis-is-patched" ] }
 revolt-models = { path = "../core/models", features = [ "schemas", "validator" ] }
 revolt-result = { path = "../core/result", features = [ "rocket", "okapi" ] }
+revolt-permissions = { path = "../core/permissions", features = [ "schemas" ] }
 
 [build-dependencies]
 vergen = "7.5.0"

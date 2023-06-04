@@ -1,4 +1,4 @@
-use revolt_database::{Database, PartialWebhook};
+use revolt_database::{util::reference::Reference, Database, PartialWebhook};
 use revolt_models::v0::{DataEditWebhook, Webhook};
 use revolt_quark::{models::User, perms, Db, Error, Permission, Result};
 use rocket::{serde::json::Json, State};
@@ -12,7 +12,7 @@ use validator::Validate;
 pub async fn webhook_edit(
     db: &State<Database>,
     legacy_db: &Db,
-    webhook_id: String,
+    webhook_id: Reference,
     user: User,
     data: Json<DataEditWebhook>,
 ) -> Result<Json<Webhook>> {
@@ -20,11 +20,7 @@ pub async fn webhook_edit(
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    let mut webhook = db
-        .fetch_webhook(&webhook_id)
-        .await
-        .map_err(Error::from_core)?;
-
+    let mut webhook = webhook_id.as_webhook(db).await.map_err(Error::from_core)?;
     let channel = legacy_db.fetch_channel(&webhook.channel_id).await?;
 
     perms(&user)

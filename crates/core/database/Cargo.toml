@@ -25,7 +25,7 @@ default = [ "mongodb", "async-std-runtime" ]
 revolt-result = { version = "0.6.0-rc.1", path = "../result" }
 revolt-models = { version = "0.6.0-rc.1", path = "../models" }
 revolt-presence = { version = "0.6.0-rc.1", path = "../presence" }
-revolt-permissions = { version = "0.6.0-rc.1", path = "../permissions", features = [ "serde" ] }
+revolt-permissions = { version = "0.6.0-rc.1", path = "../permissions", features = [ "serde", "bson" ] }
 
 # Utility
 log = "0.4"

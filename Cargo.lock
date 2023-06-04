@@ -2904,6 +2904,7 @@ dependencies = [
  "reqwest",
  "revolt-database",
  "revolt-models",
+ "revolt-permissions",
  "revolt-quark",
  "revolt-result",
  "revolt_rocket_okapi",
@@ -2923,6 +2924,7 @@ dependencies = [
 name = "revolt-models"
 version = "0.6.0-rc.1"
 dependencies = [
+ "revolt-permissions",
  "revolt_optional_struct",
  "schemars",
  "serde",
@@ -2936,6 +2938,7 @@ dependencies = [
  "async-std",
  "async-trait",
  "auto_ops",
+ "bson",
  "num_enum 0.6.1",
  "once_cell",
  "schemars",

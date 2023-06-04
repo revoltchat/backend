@@ -17,6 +17,9 @@ partials = [ "dep:revolt_optional_struct", "serde", "schemas" ]
 default = [ "serde", "partials" ]
 
 [dependencies]
+# Core
+revolt-permissions = { version = "0.6.0-rc.1", path = "../permissions", features = [ "serde" ] }
+
 # Serialisation
 revolt_optional_struct = { version = "0.2.0", optional = true }
 serde = { version = "1", features = ["derive"], optional = true }
