@@ -53,11 +53,7 @@ pub async fn req(
         return Err(Error::CannotEditMessage);
     }
 
-    if let Some(new_embeds) = &edit.embeds {
-        Message::validate_sum(&edit.content, new_embeds)?;
-    } else {
-        Message::validate_sum(&edit.content, &vec![])?;
-    }
+    Message::validate_sum(&edit.content, edit.embeds.as_deref().unwrap_or_default())?;
 
     message.edited = Some(Timestamp::now_utc());
     let mut partial = PartialMessage {
@@ -85,7 +81,7 @@ pub async fn req(
         new_embeds.clear();
 
         for embed in embeds {
-            new_embeds.push(embed.clone().into_embed(db, message.id.clone()).await?);
+            new_embeds.push(embed.clone().into_embed(db, &message.id).await?);
         }
     }
 

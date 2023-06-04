@@ -47,14 +47,14 @@ pub async fn message_send(
     }
 
     // Check permissions for embeds
-    if !data.embeds.is_empty() {
+    if data.embeds.as_ref().is_some_and(|v| !v.is_empty()) {
         permissions
             .throw_permission(db, Permission::SendEmbeds)
             .await?;
     }
 
     // Check permissions for files
-    if !data.attachments.is_empty() {
+    if data.attachments.as_ref().is_some_and(|v| !v.is_empty()) {
         permissions
             .throw_permission(db, Permission::UploadFiles)
             .await?;

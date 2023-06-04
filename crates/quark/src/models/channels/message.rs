@@ -269,16 +269,15 @@ pub struct DataMessageSend {
     #[validate(length(min = 0, max = 2000))]
     pub content: Option<String>,
     /// Attachments to include in message
-    #[serde(default)]
-    pub attachments: Vec<String>,
+
+    pub attachments: Option<Vec<String>>,
     /// Messages to reply to
     pub replies: Option<Vec<Reply>>,
     /// Embeds to include in message
     ///
     /// Text embed content contributes to the content length cap
-    #[serde(default)]
-    #[validate(length(min = 0, max = 10))]
-    pub embeds: Vec<SendableEmbed>,
+    #[validate]
+    pub embeds: Option<Vec<SendableEmbed>>,
     /// Masquerade to apply to this message
     #[validate]
     pub masquerade: Option<Masquerade>,

@@ -53,6 +53,9 @@ pub enum Error {
     TooManyChannels {
         max: usize,
     },
+    TooManyEmbeds {
+        max: usize,
+    },
     EmptyMessage,
     PayloadTooLarge,
     CannotRemoveYourself,
@@ -191,6 +194,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::TooManyEmoji { .. } => Status::BadRequest,
             Error::TooManyChannels { .. } => Status::BadRequest,
             Error::TooManyRoles { .. } => Status::BadRequest,
+            Error::TooManyEmbeds { .. } => Status::BadRequest,
 
             Error::ReachedMaximumBots => Status::BadRequest,
             Error::IsBot => Status::BadRequest,

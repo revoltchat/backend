@@ -1065,7 +1065,7 @@ pub async fn webhook_execute_github(
     let message_id = Ulid::new().to_string();
 
     let embed = sendable_embed
-        .into_embed(legacy_db, message_id.clone())
+        .into_embed(legacy_db, &message_id)
         .await?;
 
     let mut message = Message {

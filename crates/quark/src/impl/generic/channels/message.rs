@@ -170,7 +170,7 @@ impl Message {
     }
 
     /// Validate the sum of content of a message is under threshold
-    pub fn validate_sum(content: &Option<String>, embeds: &Vec<SendableEmbed>) -> Result<()> {
+    pub fn validate_sum(content: &Option<String>, embeds: &[SendableEmbed]) -> Result<()> {
         let mut running_total = 0;
         if let Some(content) = content {
             running_total += content.len();
@@ -353,13 +353,13 @@ impl From<SystemMessage> for String {
 }
 
 impl SendableEmbed {
-    pub async fn into_embed(self, db: &Database, message_id: String) -> Result<Embed> {
+    pub async fn into_embed(self, db: &Database, message_id: &str) -> Result<Embed> {
         self.validate()
             .map_err(|error| Error::FailedValidation { error })?;
 
         let media = if let Some(id) = self.media {
             Some(
-                db.find_and_use_attachment(&id, "attachments", "message", &message_id)
+                db.find_and_use_attachment(&id, "attachments", "message", message_id)
                     .await?,
             )
         } else {
