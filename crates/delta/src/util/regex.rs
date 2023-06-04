@@ -8,6 +8,8 @@ use regex::Regex;
 pub static RE_USERNAME: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^[^\u200BА-Яа-яΑ-Ωα-ω@#:\n\r\[\]]+$").unwrap());
 
+pub static RE_ULID: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-7][0-9A-HJKMNP-TV-Z]{25}").unwrap());
+
 /// Regex for valid emoji names
 ///
 /// Alphanumeric and underscores

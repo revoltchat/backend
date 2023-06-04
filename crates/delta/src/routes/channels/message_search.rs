@@ -1,3 +1,4 @@
+use crate::util::regex::RE_ULID;
 use revolt_quark::{
     models::{
         message::{
@@ -14,13 +15,16 @@ use validator::Validate;
 
 /// # Search Parameters
 #[derive(Validate, Serialize, Deserialize, JsonSchema)]
+
 pub struct OptionsMessageSearch {
     /// Full-text search query
     ///
     /// See [MongoDB documentation](https://docs.mongodb.com/manual/text-search/#-text-operator) for more information.
-    #[validate(length(min = 1, max = 64))]
+    #[validate(length(min = 0, max = 64))]
     query: String,
 
+    #[validate(length(min = 26, max = 26), regex = "RE_ULID")]
+    author: Option<String>,
     /// Maximum number of messages to fetch
     #[validate(range(min = 1, max = 100))]
     limit: Option<i64>,
@@ -67,6 +71,7 @@ pub async fn req(
 
     let OptionsMessageSearch {
         query,
+        author,
         limit,
         before,
         after,
@@ -79,6 +84,7 @@ pub async fn req(
             filter: MessageFilter {
                 channel: Some(channel.id().to_string()),
                 query: Some(query),
+                author: author,
                 ..Default::default()
             },
             time_period: MessageTimePeriod::Absolute {
