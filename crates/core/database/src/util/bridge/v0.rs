@@ -80,6 +80,123 @@ impl From<crate::FieldsWebhook> for FieldsWebhook {
     }
 }
 
+impl From<crate::Channel> for Channel {
+    fn from(value: crate::Channel) -> Self {
+        match value {
+            crate::Channel::SavedMessages { id, user } => Channel::SavedMessages { id, user },
+            crate::Channel::DirectMessage {
+                id,
+                active,
+                recipients,
+                last_message_id,
+            } => Channel::DirectMessage {
+                id,
+                active,
+                recipients,
+                last_message_id,
+            },
+            crate::Channel::Group {
+                id,
+                name,
+                owner,
+                description,
+                recipients,
+                icon,
+                last_message_id,
+                permissions,
+                nsfw,
+            } => Channel::Group {
+                id,
+                name,
+                owner,
+                description,
+                recipients,
+                icon: icon.map(|file| file.into()),
+                last_message_id,
+                permissions,
+                nsfw,
+            },
+            crate::Channel::TextChannel {
+                id,
+                server,
+                name,
+                description,
+                icon,
+                last_message_id,
+                default_permissions,
+                role_permissions,
+                nsfw,
+            } => Channel::TextChannel {
+                id,
+                server,
+                name,
+                description,
+                icon: icon.map(|file| file.into()),
+                last_message_id,
+                default_permissions,
+                role_permissions,
+                nsfw,
+            },
+            crate::Channel::VoiceChannel {
+                id,
+                server,
+                name,
+                description,
+                icon,
+                default_permissions,
+                role_permissions,
+                nsfw,
+            } => Channel::VoiceChannel {
+                id,
+                server,
+                name,
+                description,
+                icon: icon.map(|file| file.into()),
+                default_permissions,
+                role_permissions,
+                nsfw,
+            },
+        }
+    }
+}
+
+impl From<crate::PartialChannel> for PartialChannel {
+    fn from(value: crate::PartialChannel) -> Self {
+        PartialChannel {
+            name: value.name,
+            owner: value.owner,
+            description: value.description,
+            icon: value.icon.map(|file| file.into()),
+            nsfw: value.nsfw,
+            active: value.active,
+            permissions: value.permissions,
+            role_permissions: value.role_permissions,
+            default_permissions: value.default_permissions,
+            last_message_id: value.last_message_id,
+        }
+    }
+}
+
+impl From<FieldsChannel> for crate::FieldsChannel {
+    fn from(value: FieldsChannel) -> Self {
+        match value {
+            FieldsChannel::Description => crate::FieldsChannel::Description,
+            FieldsChannel::Icon => crate::FieldsChannel::Icon,
+            FieldsChannel::DefaultPermissions => crate::FieldsChannel::DefaultPermissions,
+        }
+    }
+}
+
+impl From<crate::FieldsChannel> for FieldsChannel {
+    fn from(value: crate::FieldsChannel) -> Self {
+        match value {
+            crate::FieldsChannel::Description => FieldsChannel::Description,
+            crate::FieldsChannel::Icon => FieldsChannel::Icon,
+            crate::FieldsChannel::DefaultPermissions => FieldsChannel::DefaultPermissions,
+        }
+    }
+}
+
 impl From<crate::File> for File {
     fn from(value: crate::File) -> Self {
         File {

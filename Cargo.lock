@@ -2924,6 +2924,7 @@ dependencies = [
 name = "revolt-models"
 version = "0.6.0-rc.1"
 dependencies = [
+ "revolt-permissions",
  "revolt_optional_struct",
  "schemars",
  "serde",
