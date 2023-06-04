@@ -16,7 +16,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 21;
+pub const LATEST_REVISION: i32 = 23;
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -696,26 +696,15 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
     if revision <= 19 {
         info!("Running migration [revision 19 / 27-02-2023]: Create report / snapshot collections, migrate to new model if applicable.");
 
-        // TODO: make these fail once production is migrated
-        if db
-            .db()
+        db.db()
             .create_collection("safety_reports", None)
             .await
-            .is_err()
-        {
-            info!("Failed to create safety_reports collection but this is expected in production.");
-        }
+            .unwrap();
 
-        if db
-            .db()
+        db.db()
             .create_collection("safety_snapshots", None)
             .await
-            .is_err()
-        {
-            info!(
-                "Failed to create safety_snapshots collection but this is expected in production."
-            );
-        }
+            .unwrap();
 
         db.col::<Document>("safety_reports")
             .update_many(
@@ -751,6 +740,32 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             )
             .await
             .expect("Failed to create safety snapshot index.");
+    }
+
+    if revision <= 21 {
+        info!("Running migration [revision 21 / 31-05-2023]: Add collection `safety_strikes`.");
+
+        db.db()
+            .create_collection("safety_strikes", None)
+            .await
+            .unwrap();
+    }
+
+    if revision <= 22 {
+        info!("Running migration [revision 22 / 31-05-2023]: Add moderator_id to account strikes.");
+
+        db.col::<Document>("safety_strikes")
+            .update_many(
+                doc! {},
+                doc! {
+                    "$set": {
+                        "moderator_id": "01EX2NCWQ0CHS3QJF0FEQS1GR4"
+                    }
+                },
+                None,
+            )
+            .await
+            .expect("Failed to update server members.");
     }
 
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.

@@ -91,7 +91,7 @@ impl Bot {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Bot, FieldsBot, PartialBot};
+    use crate::{Bot, FieldsBot, PartialBot, User};
 
     #[async_std::test]
     async fn crud() {
@@ -99,6 +99,14 @@ mod tests {
             let bot_id = "bot";
             let user_id = "user";
             let token = "my_token";
+
+            let user = User {
+                id: bot_id.to_string(),
+                username: "Bot Name".to_string(),
+                ..Default::default()
+            };
+
+            db.insert_user(&user).await.unwrap();
 
             let bot = Bot {
                 id: bot_id.to_string(),
@@ -139,7 +147,8 @@ mod tests {
 
             bot.delete(&db).await.unwrap();
             assert!(db.fetch_bot(bot_id).await.is_err());
-            assert_eq!(0, db.get_number_of_bots_by_user(user_id).await.unwrap())
+            assert_eq!(0, db.get_number_of_bots_by_user(user_id).await.unwrap());
+            assert_eq!(db.fetch_user(bot_id).await.unwrap().flags, Some(2))
         });
     }
 }

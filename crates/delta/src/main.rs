@@ -8,10 +8,13 @@ extern crate serde_json;
 pub mod routes;
 pub mod util;
 
+use std::net::Ipv4Addr;
+
 use async_std::channel::unbounded;
 use revolt_quark::authifier::{Authifier, AuthifierEvent};
 use revolt_quark::events::client::EventV1;
 use revolt_quark::DatabaseInfo;
+use rocket::data::ToByteUnit;
 
 #[launch]
 async fn rocket() -> _ {
@@ -72,4 +75,9 @@ async fn rocket() -> _ {
         .manage(cors.clone())
         .attach(revolt_quark::web::ratelimiter::RatelimitFairing)
         .attach(cors)
+        .configure(rocket::Config {
+            limits: rocket::data::Limits::default().limit("string", 5.megabytes()),
+            address: Ipv4Addr::new(0, 0, 0, 0).into(),
+            ..Default::default()
+        })
 }

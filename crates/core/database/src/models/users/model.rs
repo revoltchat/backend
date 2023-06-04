@@ -76,7 +76,7 @@ auto_derived!(
     /// User's active status
     pub struct UserStatus {
         /// Custom status text
-        #[serde(skip_serializing_if = "String::is_empty")]
+        #[serde(skip_serializing_if = "String::is_empty", default)]
         pub text: String,
         /// Current presence option
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -86,7 +86,7 @@ auto_derived!(
     /// User's profile
     pub struct UserProfile {
         /// Text content on user's profile
-        #[serde(skip_serializing_if = "String::is_empty")]
+        #[serde(skip_serializing_if = "String::is_empty", default)]
         pub content: String,
         /// Background visible on user's profile
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -111,6 +111,7 @@ auto_derived!(
 
 impl User {
     /// Check whether a username is already in use by another user
+    #[allow(dead_code)]
     async fn is_username_taken(db: &Database, username: &str) -> Result<bool> {
         match db.fetch_user_by_username(username).await {
             Ok(_) => Ok(true),

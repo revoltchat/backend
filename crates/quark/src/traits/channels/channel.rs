@@ -1,4 +1,4 @@
-use crate::models::channel::{Channel, FieldsChannel, PartialChannel};
+use crate::models::{channel::{Channel, FieldsChannel, PartialChannel}};
 use crate::{OverrideField, Result};
 
 #[async_trait]

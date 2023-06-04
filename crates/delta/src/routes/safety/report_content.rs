@@ -57,7 +57,7 @@ pub async fn report_content(db: &Db, user: User, data: Json<DataReportContent>) 
                 return Err(Error::CannotReportYourself);
             }
 
-            let (snapshot, files) = SnapshotContent::generate_from_server(db, server)?;
+            let (snapshot, files) = SnapshotContent::generate_from_server(server)?;
             (vec![snapshot], files)
         }
         ReportedContent::User { id, message_id, .. } => {
@@ -75,7 +75,7 @@ pub async fn report_content(db: &Db, user: User, data: Json<DataReportContent>) 
                 None
             };
 
-            let (snapshot, files) = SnapshotContent::generate_from_user(db, reported_user)?;
+            let (snapshot, files) = SnapshotContent::generate_from_user(reported_user)?;
 
             if let Some(message) = message {
                 let (message_snapshot, message_files) =

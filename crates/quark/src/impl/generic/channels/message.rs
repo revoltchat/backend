@@ -18,7 +18,7 @@ use crate::{
     tasks::ack::AckEvent,
     types::{
         january::{Embed, Text},
-        push::PushNotification,
+        push::{MessageAuthor, PushNotification},
     },
     Database, Error, Permission, Result,
 };
@@ -66,7 +66,7 @@ impl Message {
         &mut self,
         db: &Database,
         channel: &Channel,
-        sender: Option<&User>,
+        sender: Option<MessageAuthor<'_>>,
     ) -> Result<()> {
         self.create_no_web_push(db, channel.id(), channel.is_direct_dm())
             .await?;
@@ -170,20 +170,15 @@ impl Message {
     }
 
     /// Validate the sum of content of a message is under threshold
-    pub fn validate_sum(
-        content: &Option<String>,
-        embeds: &Option<Vec<SendableEmbed>>,
-    ) -> Result<()> {
+    pub fn validate_sum(content: &Option<String>, embeds: &Vec<SendableEmbed>) -> Result<()> {
         let mut running_total = 0;
         if let Some(content) = content {
             running_total += content.len();
         }
 
-        if let Some(embeds) = embeds {
-            for embed in embeds {
-                if let Some(desc) = &embed.description {
-                    running_total += desc.len();
-                }
+        for embed in embeds {
+            if let Some(desc) = &embed.description {
+                running_total += desc.len();
             }
         }
 
@@ -271,6 +266,10 @@ impl Message {
         // Write to database
         db.clear_reaction(&self.id, emoji).await
     }
+
+    pub fn is_webhook(&self) -> bool {
+        self.webhook.is_some()
+    }
 }
 
 pub trait IntoUsers {
@@ -279,7 +278,11 @@ pub trait IntoUsers {
 
 impl IntoUsers for Message {
     fn get_user_ids(&self) -> Vec<String> {
-        let mut ids = vec![self.author.clone()];
+        let mut ids = Vec::new();
+
+        if !self.is_webhook() {
+            ids.push(self.author.clone());
+        };
 
         if let Some(msg) = &self.system {
             match msg {

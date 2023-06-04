@@ -24,6 +24,8 @@ mod message_unreact;
 mod permissions_set;
 mod permissions_set_default;
 mod voice_join;
+mod webhook_create;
+mod webhook_fetch_all;
 
 pub fn routes() -> (Vec<Route>, OpenApi) {
     openapi_get_routes_spec![
@@ -49,6 +51,8 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         permissions_set_default::req,
         message_react::react_message,
         message_unreact::unreact_message,
-        message_clear_reactions::clear_reactions
+        message_clear_reactions::clear_reactions,
+        webhook_create::req,
+        webhook_fetch_all::req,
     ]
 }

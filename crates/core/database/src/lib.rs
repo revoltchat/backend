@@ -80,6 +80,8 @@ mod models;
 pub mod util;
 pub use models::*;
 
+pub mod events;
+
 /// Utility function to check if a boolean value is false
 pub fn if_false(t: &bool) -> bool {
     !t

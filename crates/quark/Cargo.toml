@@ -1,6 +1,6 @@
 [package]
 name = "revolt-quark"
-version = "0.5.20"
+version = "0.6.0-rc.1"
 edition = "2021"
 license = "AGPL-3.0-or-later"
 
@@ -28,7 +28,7 @@ default = [ "test" ]
 # Serialisation
 revolt_optional_struct = "0.2.0"
 serde = { version = "1", features = ["derive"] }
-validator = { version = "0.14", features = ["derive"] }
+validator = { version = "0.16", features = ["derive"] }
 iso8601-timestamp = { version = "0.1.8", features = ["schema", "bson"] }
 
 # Formats
@@ -93,3 +93,4 @@ sentry = "0.25.0"
 # Core
 revolt-result = { path = "../core/result", features = [ "serde", "schemas" ] }
 revolt-presence = { path = "../core/presence", features = [ "redis-is-patched" ] }
+revolt-models = { path = "../core/models" }

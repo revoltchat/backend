@@ -1,6 +1,6 @@
 [package]
 name = "revolt-delta"
-version = "0.5.20"
+version = "0.6.0-rc.1"
 license = "AGPL-3.0-or-later"
 authors = ["Paul Makles <paulmakles@gmail.com>"]
 edition = "2018"
@@ -31,7 +31,7 @@ nanoid = "0.4.0"
 # serde
 serde_json = "1.0.57"
 serde = { version = "1.0.115", features = ["derive"] }
-validator = { version = "0.14", features = ["derive"] }
+validator = { version = "0.16", features = ["derive"] }
 
 # async
 futures = "0.3.8"
@@ -56,9 +56,10 @@ revolt_rocket_okapi = { version = "0.9.1", features = [ "swagger" ] }
 revolt-quark = { path = "../quark" }
 
 # core
-revolt-database = { path = "../core/database", features = [ "rocket-impl" ] }
-revolt-models = { path = "../core/models", features = [ "schemas", "redis-is-patched" ] }
-revolt-permissions = { path = "../core/permissions", features = [ "schemas"] }
+revolt-database = { path = "../core/database", features = [ "rocket-impl", "redis-is-patched" ] }
+revolt-models = { path = "../core/models", features = [ "schemas", "validator" ] }
+revolt-result = { path = "../core/result", features = [ "rocket", "okapi" ] }
+revolt-permissions = { path = "../core/permissions", features = [ "schemas" ] }
 
 [build-dependencies]
 vergen = "7.5.0"

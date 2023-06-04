@@ -1,4 +1,5 @@
 use authifier::AuthifierEvent;
+use revolt_models::v0::{FieldsWebhook, PartialWebhook, Webhook};
 use serde::{Deserialize, Serialize};
 
 use crate::models::channel::{FieldsChannel, PartialChannel};
@@ -213,6 +214,19 @@ pub enum EventV1 {
 
     /// Delete emoji
     EmojiDelete { id: String },
+
+    /// New webhook
+    WebhookCreate(Webhook),
+
+    /// Update existing webhook
+    WebhookUpdate {
+        id: String,
+        data: PartialWebhook,
+        remove: Vec<FieldsWebhook>,
+    },
+
+    /// Delete webhook
+    WebhookDelete { id: String },
 
     /// New report
     ReportCreate(Report),

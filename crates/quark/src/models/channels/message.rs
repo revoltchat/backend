@@ -2,6 +2,9 @@ use crate::util::regex::RE_COLOUR;
 
 use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
+use once_cell::sync::Lazy;
+use regex::Regex;
+use revolt_models::v0::MessageWebhook;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -18,6 +21,9 @@ pub fn if_false(t: &bool) -> bool {
     !t
 }
 
+pub static RE_MENTION: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"<@([0-9A-HJKMNP-TV-Z]{26})>").unwrap());
+
 /// # Reply
 ///
 /// Representation of a message reply before it is sent.
@@ -30,10 +36,11 @@ pub struct Reply {
 }
 
 /// Representation of a text embed before it is sent.
-#[derive(Validate, Serialize, Deserialize, JsonSchema, Clone, Debug)]
+#[derive(Validate, Serialize, Deserialize, JsonSchema, Clone, Debug, Default)]
 pub struct SendableEmbed {
     #[validate(length(min = 1, max = 128))]
     pub icon_url: Option<String>,
+    #[validate(length(min = 1, max = 256))]
     pub url: Option<String>,
     #[validate(length(min = 1, max = 100))]
     pub title: Option<String>,
@@ -119,9 +126,11 @@ pub struct Message {
     pub nonce: Option<String>,
     /// Id of the channel this message was sent in
     pub channel: String,
-    /// Id of the user that sent this message
+    /// Id of the user or webhook that sent this message
     pub author: String,
-
+    /// The webhook that sent this message
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub webhook: Option<MessageWebhook>,
     /// Message content
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<String>,
@@ -246,4 +255,33 @@ pub struct AppendMessage {
     /// Additional embeds to include in this message
     #[serde(skip_serializing_if = "Option::is_none")]
     pub embeds: Option<Vec<Embed>>,
+}
+
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataMessageSend {
+    /// Unique token to prevent duplicate message sending
+    ///
+    /// **This is deprecated and replaced by `Idempotency-Key`!**
+    #[validate(length(min = 1, max = 64))]
+    pub nonce: Option<String>,
+
+    /// Message content to send
+    #[validate(length(min = 0, max = 2000))]
+    pub content: Option<String>,
+    /// Attachments to include in message
+    #[serde(default)]
+    pub attachments: Vec<String>,
+    /// Messages to reply to
+    pub replies: Option<Vec<Reply>>,
+    /// Embeds to include in message
+    ///
+    /// Text embed content contributes to the content length cap
+    #[serde(default)]
+    #[validate(length(min = 0, max = 10))]
+    pub embeds: Vec<SendableEmbed>,
+    /// Masquerade to apply to this message
+    #[validate]
+    pub masquerade: Option<Masquerade>,
+    /// Information about how this message should be interacted with
+    pub interactions: Option<Interactions>,
 }

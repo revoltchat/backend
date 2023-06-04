@@ -44,8 +44,6 @@ pub async fn req(
         .throw_permission_and_view_channel(db, Permission::SendMessage)
         .await?;
 
-    Message::validate_sum(&edit.content, &edit.embeds)?;
-
     let mut message = msg.as_message(db).await?;
     if message.channel != channel.id() {
         return Err(Error::NotFound);
@@ -53,6 +51,12 @@ pub async fn req(
 
     if message.author != user.id {
         return Err(Error::CannotEditMessage);
+    }
+
+    if let Some(new_embeds) = &edit.embeds {
+        Message::validate_sum(&edit.content, new_embeds)?;
+    } else {
+        Message::validate_sum(&edit.content, &vec![])?;
     }
 
     message.edited = Some(Timestamp::now_utc());

@@ -64,6 +64,10 @@ pub async fn create_database(db: &MongoDb) {
         .await
         .expect("Failed to create safety_snapshots collection.");
 
+    db.create_collection("safety_strikes", None)
+        .await
+        .expect("Failed to create safety_strikes collection.");
+
     db.create_collection("bots", None)
         .await
         .expect("Failed to create bots collection.");
