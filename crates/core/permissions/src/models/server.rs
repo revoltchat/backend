@@ -32,7 +32,7 @@ pub struct DataPermissionsValue {
 #[derive(Debug, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
-#[serde(untagged)]
+#[cfg_attr(feature = "serde", serde(untagged))]
 pub enum DataPermissionPoly {
     Value {
         /// Permission values to set for members in a `Group`
@@ -88,6 +88,8 @@ impl From<OverrideField> for Override {
 
 #[cfg(feature = "bson")]
 use bson::Bson;
+
+#[cfg(feature = "bson")]
 impl From<OverrideField> for Bson {
     fn from(v: OverrideField) -> Self {
         Self::Document(bson::to_document(&v).unwrap())
