@@ -2,15 +2,9 @@ use std::collections::HashMap;
 
 use revolt_permissions::OverrideField;
 use revolt_result::Result;
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{Database, File, IntoDocumentPath};
-
-/// Utility function to check if a boolean value is false
-pub fn if_false(t: &bool) -> bool {
-    !t
-}
+use crate::{events::client::EventV1, Database, File, IntoDocumentPath};
 
 auto_derived!(
     pub enum Channel {
@@ -65,7 +59,7 @@ auto_derived!(
             permissions: Option<i64>,
 
             /// Whether this group is marked as not safe for work
-            #[serde(skip_serializing_if = "if_false", default)]
+            #[serde(skip_serializing_if = "crate::if_false", default)]
             nsfw: bool,
         },
         /// Text channel belonging to a server
@@ -100,7 +94,7 @@ auto_derived!(
             role_permissions: HashMap<String, OverrideField>,
 
             /// Whether this channel is marked as not safe for work
-            #[serde(skip_serializing_if = "if_false", default)]
+            #[serde(skip_serializing_if = "crate::if_false", default)]
             nsfw: bool,
         },
         /// Voice channel belonging to a server
@@ -131,14 +125,15 @@ auto_derived!(
             role_permissions: HashMap<String, OverrideField>,
 
             /// Whether this channel is marked as not safe for work
-            #[serde(skip_serializing_if = "if_false", default)]
+            #[serde(skip_serializing_if = "crate::if_false", default)]
             nsfw: bool,
         },
     }
 );
 
-auto_derived_partial!(
-    struct NullName {
+auto_derived!(
+    #[derive(Default)]
+    pub struct PartialChannel {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub name: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -159,17 +154,15 @@ auto_derived_partial!(
         pub default_permissions: Option<OverrideField>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub last_message_id: Option<String>,
-    },
-    "PartialChannel"
-);
+    }
 
-/// Optional fields on channel object
-#[derive(Serialize, Deserialize, JsonSchema, Debug, PartialEq, Eq, Clone)]
-pub enum FieldsChannel {
-    Description,
-    Icon,
-    DefaultPermissions,
-}
+    /// Optional fields on channel object
+    pub enum FieldsChannel {
+        Description,
+        Icon,
+        DefaultPermissions,
+    }
+);
 
 impl Channel {
     /// Create a channel
@@ -180,18 +173,43 @@ impl Channel {
     }
 
     /// Add user to a group
-    pub async fn add_user_to_group(&mut self, db: &Database, user: &str, by: &str) -> Result<()> {
+    pub async fn add_user_to_group(
+        &mut self,
+        db: &Database,
+        user_id: &str,
+        _by_id: &str,
+    ) -> Result<()> {
         if let Channel::Group { recipients, .. } = self {
-            if recipients.contains(&String::from(user)) {
+            if recipients.contains(&String::from(user_id)) {
                 return Err(create_error!(AlreadyInGroup));
             }
 
-            recipients.push(String::from(user));
+            recipients.push(String::from(user_id));
         }
 
         match &self {
             Channel::Group { id, .. } => {
-                db.add_user_to_group(id, user).await?;
+                db.add_user_to_group(id, user_id).await?;
+
+                EventV1::ChannelGroupJoin {
+                    id: id.to_string(),
+                    user: user_id.to_string(),
+                }
+                .p(id.to_string())
+                .await;
+
+                EventV1::ChannelCreate(self.clone().into())
+                    .private(user_id.to_string())
+                    .await;
+
+                /* TODO: SystemMessage::UserAdded {
+                    id: user.to_string(),
+                    by: by.to_string(),
+                }
+                .into_message(id.to_string())
+                .create(db, self, None)
+                .await
+                .ok(); */
 
                 Ok(())
             }
@@ -204,19 +222,7 @@ impl Channel {
         matches!(self, Channel::DirectMessage { .. })
     }
 
-    // return an override role
-    pub fn find_role(&self, role_id: &str) -> Option<&OverrideField> {
-        match self {
-            Channel::TextChannel {
-                role_permissions, ..
-            }
-            | Channel::VoiceChannel {
-                role_permissions, ..
-            } => role_permissions.get(role_id),
-            _ => None,
-        }
-    }
-
+    /// Check whether has a user as a recipient
     pub fn contains_user(&self, user_id: &str) -> bool {
         match self {
             Channel::Group { recipients, .. } => recipients.contains(&String::from(user_id)),
@@ -224,6 +230,7 @@ impl Channel {
         }
     }
 
+    /// Get list of recipients
     pub fn users(&self) -> Result<Vec<String>> {
         match self {
             Channel::Group { recipients, .. } => Ok(recipients.to_owned()),
@@ -245,29 +252,41 @@ impl Channel {
     /// Set role permission on a channel
     pub async fn set_role_permission(
         &mut self,
-        role: &str,
+        db: &Database,
+        role_id: &str,
         permissions: OverrideField,
     ) -> Result<()> {
         match self {
             Channel::TextChannel {
-                role_permissions, ..
+                id,
+                server,
+                role_permissions,
+                ..
             }
             | Channel::VoiceChannel {
-                role_permissions, ..
+                id,
+                server,
+                role_permissions,
+                ..
             } => {
-                if let Some(_) = role_permissions.get(role) {
-                    role_permissions.remove(role);
-                    role_permissions.insert(String::from(role), permissions);
+                db.set_channel_role_permission(id, role_id, permissions)
+                    .await?;
 
-                    let mut partial = PartialChannel::empty();
-                    partial.role_permissions = Some(role_permissions.to_owned());
+                role_permissions.insert(role_id.to_string(), permissions);
 
-                    self.apply_options(partial);
-
-                    Ok(())
-                } else {
-                    Err(create_error!(NotFound))
+                EventV1::ChannelUpdate {
+                    id: id.clone(),
+                    data: PartialChannel {
+                        role_permissions: Some(role_permissions.clone()),
+                        ..Default::default()
+                    }
+                    .into(),
+                    clear: vec![],
                 }
+                .p(server.clone())
+                .await;
+
+                Ok(())
             }
             _ => Err(create_error!(InvalidOperation)),
         }
@@ -333,10 +352,11 @@ impl Channel {
             self.remove_field(&field)
         }
     }
+
     /// Apply partial channel to channel
     pub fn apply_options(&mut self, partial: PartialChannel) {
-        // ! FIXME: maybe flatten channel object?
         match self {
+            Self::SavedMessages { .. } => {}
             Self::DirectMessage { active, .. } => {
                 if let Some(v) = partial.active {
                     *active = v;
@@ -417,22 +437,15 @@ impl Channel {
                     default_permissions.replace(v);
                 }
             }
-            _ => {}
         }
-    }
-
-    /// Acknowledge a message
-    pub async fn ack(&self, user: &str, message: &str) -> Result<()> {
-        //todo
-        Ok(())
     }
 
     /// Remove user from a group
     pub async fn remove_user_from_group(
         &self,
         db: &Database,
-        user: &str,
-        by: Option<&str>,
+        user_id: &str,
+        _by_id: Option<&str>,
         silent: bool,
     ) -> Result<()> {
         match &self {
@@ -442,8 +455,8 @@ impl Channel {
                 recipients,
                 ..
             } => {
-                if user == owner {
-                    if let Some(new_owner) = recipients.iter().find(|x| *x != user) {
+                if user_id == owner {
+                    if let Some(new_owner) = recipients.iter().find(|x| *x != user_id) {
                         db.update_channel(
                             id,
                             &PartialChannel {
@@ -453,14 +466,44 @@ impl Channel {
                             vec![],
                         )
                         .await?;
+
+                        /* TODO: SystemMessage::ChannelOwnershipChanged {
+                            from: owner.to_string(),
+                            to: new_owner.into(),
+                        }
+                        .into_message(id.to_string())
+                        .create(db, self, None)
+                        .await
+                        .ok(); */
                     } else {
                         db.delete_channel(self).await?;
                         return Ok(());
                     }
                 }
 
-                //todo send system message
-                // afaik system messages are no longer supported by the Channel::Group type
+                EventV1::ChannelGroupLeave {
+                    id: id.to_string(),
+                    user: user_id.to_string(),
+                }
+                .p(id.to_string())
+                .await;
+
+                if !silent {
+                    /* TODO: if let Some(_by) = by_id {
+                        SystemMessage::UserRemove {
+                            id: user_id.to_string(),
+                            by: by.to_string(),
+                        }
+                    } else {
+                        SystemMessage::UserLeft {
+                            id: user_id.to_string(),
+                        }
+                    }
+                    .into_message(id.to_string())
+                    .create(db, self, None)
+                    .await
+                    .ok(); */
+                }
 
                 Ok(())
             }
@@ -471,7 +514,7 @@ impl Channel {
 
     /// Delete a channel
     pub async fn delete(&self, db: &Database) -> Result<()> {
-        db.delete_channel(&self).await
+        db.delete_channel(self).await
     }
 }
 

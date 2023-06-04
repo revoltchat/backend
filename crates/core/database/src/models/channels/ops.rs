@@ -9,7 +9,7 @@ pub trait AbstractChannels: Sync + Send {
     async fn insert_channel(&self, channel: &Channel) -> Result<()>;
 
     /// Fetch a channel from the database
-    async fn fetch_channel(&self, id: &str) -> Result<Channel>;
+    async fn fetch_channel(&self, channel_id: &str) -> Result<Channel>;
 
     /// Fetch all channels from the database
     async fn fetch_channels<'a>(&self, ids: &'a [String]) -> Result<Vec<Channel>>;
@@ -20,17 +20,17 @@ pub trait AbstractChannels: Sync + Send {
     // Fetch saved messages channel
     async fn find_saved_messages_channel(&self, user_id: &str) -> Result<Channel>;
 
-    // Fetch direct message channel (PMs)
+    // Fetch direct message channel (DM or Saved Messages)
     async fn find_direct_message_channel(&self, user_a: &str, user_b: &str) -> Result<Channel>;
 
-    /// Insert a a user to a group
-    async fn add_user_to_group(&self, channel: &str, user: &str) -> Result<()>;
+    /// Insert a user to a group
+    async fn add_user_to_group(&self, channel_id: &str, user_id: &str) -> Result<()>;
 
     /// Insert channel role permissions
     async fn set_channel_role_permission(
         &self,
-        channel: &str,
-        role: &str,
+        channel_id: &str,
+        role_id: &str,
         permissions: OverrideField,
     ) -> Result<()>;
 
@@ -38,13 +38,13 @@ pub trait AbstractChannels: Sync + Send {
     async fn update_channel(
         &self,
         id: &str,
-        channel: &PartialChannel,
+        channel_id: &PartialChannel,
         remove: Vec<FieldsChannel>,
     ) -> Result<()>;
 
     // Remove a user from a group
-    async fn remove_user_from_group(&self, channel: &str, user: &str) -> Result<()>;
+    async fn remove_user_from_group(&self, channel_id: &str, user_id: &str) -> Result<()>;
 
     // Delete a channel
-    async fn delete_channel(&self, channel: &Channel) -> Result<()>;
+    async fn delete_channel(&self, channel_id: &Channel) -> Result<()>;
 }

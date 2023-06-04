@@ -1,3 +1,5 @@
+use std::collections::hash_map::Entry;
+
 use super::AbstractChannels;
 use crate::ReferenceDb;
 use crate::{Channel, FieldsChannel, PartialChannel};
@@ -9,19 +11,19 @@ impl AbstractChannels for ReferenceDb {
     /// Insert a new channel in the database
     async fn insert_channel(&self, channel: &Channel) -> Result<()> {
         let mut channels = self.channels.lock().await;
-        if channels.contains_key(&channel.id()) {
-            Err(create_database_error!("insert", "channel"))
-        } else {
-            channels.insert(channel.id(), channel.clone());
+        if let Entry::Vacant(entry) = channels.entry(channel.id()) {
+            entry.insert(channel.clone());
             Ok(())
+        } else {
+            Err(create_database_error!("insert", "channel"))
         }
     }
 
     /// Fetch a channel from the database
-    async fn fetch_channel(&self, id: &str) -> Result<Channel> {
+    async fn fetch_channel(&self, channel_id: &str) -> Result<Channel> {
         let channels = self.channels.lock().await;
         channels
-            .get(id)
+            .get(channel_id)
             .cloned()
             .ok_or_else(|| create_error!(NotFound))
     }
@@ -41,15 +43,12 @@ impl AbstractChannels for ReferenceDb {
 
     /// Fetch all direct messages for a user
     async fn find_direct_messages(&self, user_id: &str) -> Result<Vec<Channel>> {
-        // todo this method does not use the isnerd style of iterating over a data set but it is functional
-        let mut result_channels = Vec::new();
         let channels = self.channels.lock().await;
-        for (_, data) in channels.iter() {
-            if data.contains_user(user_id) {
-                result_channels.push(data.to_owned());
-            }
-        }
-        Ok(result_channels)
+        Ok(channels
+            .values()
+            .filter(|channel| channel.contains_user(user_id))
+            .cloned()
+            .collect())
     }
 
     // Fetch saved messages channel
@@ -61,7 +60,7 @@ impl AbstractChannels for ReferenceDb {
             .ok_or_else(|| create_database_error!("fetch", "channel"))
     }
 
-    // Fetch direct message channel (PMs)
+    // Fetch direct message channel (DM or Saved Messages)
     async fn find_direct_message_channel(&self, user_a: &str, user_b: &str) -> Result<Channel> {
         let channels = self.channels.lock().await;
         for (_, data) in channels.iter() {
@@ -72,11 +71,11 @@ impl AbstractChannels for ReferenceDb {
         Err(create_error!(NotFound))
     }
     /// Insert a user to a group
-    async fn add_user_to_group(&self, channel: &str, user: &str) -> Result<()> {
+    async fn add_user_to_group(&self, channel_id: &str, user_id: &str) -> Result<()> {
         let mut channels = self.channels.lock().await;
 
-        if let Some(Channel::Group { recipients, .. }) = channels.get_mut(channel) {
-            recipients.push(String::from(user));
+        if let Some(Channel::Group { recipients, .. }) = channels.get_mut(channel_id) {
+            recipients.push(String::from(user_id));
             Ok(())
         } else {
             Err(create_error!(InvalidOperation))
@@ -85,18 +84,30 @@ impl AbstractChannels for ReferenceDb {
     /// Insert channel role permissions
     async fn set_channel_role_permission(
         &self,
-        channel: &str,
-        role: &str,
+        channel_id: &str,
+        role_id: &str,
         permissions: OverrideField,
     ) -> Result<()> {
         let mut channels = self.channels.lock().await;
 
-        if let Some(channel) = channels.get_mut(channel) {
-            // check for non override
-            if channel.find_role(role).is_some() {
-                channel.set_role_permission(role, permissions).await
-            } else {
-                Err(create_error!(NotFound))
+        if let Some(mut channel) = channels.get_mut(channel_id) {
+            match &mut channel {
+                Channel::TextChannel {
+                    role_permissions, ..
+                }
+                | Channel::VoiceChannel {
+                    role_permissions, ..
+                } => {
+                    if role_permissions.get(role_id).is_some() {
+                        role_permissions.remove(role_id);
+                        role_permissions.insert(String::from(role_id), permissions);
+
+                        Ok(())
+                    } else {
+                        Err(create_error!(NotFound))
+                    }
+                }
+                _ => Err(create_error!(NotFound)),
             }
         } else {
             Err(create_error!(NotFound))
