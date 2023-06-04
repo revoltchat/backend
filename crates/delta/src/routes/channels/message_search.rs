@@ -20,7 +20,7 @@ pub struct OptionsMessageSearch {
     /// Full-text search query
     ///
     /// See [MongoDB documentation](https://docs.mongodb.com/manual/text-search/#-text-operator) for more information.
-    #[validate(length(min = 0, max = 64))]
+    #[validate(length(min = 1, max = 64))]
     query: String,
 
     #[validate(length(min = 26, max = 26), regex = "RE_ULID")]
