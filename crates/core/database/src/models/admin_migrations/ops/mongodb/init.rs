@@ -44,6 +44,10 @@ pub async fn create_database(db: &MongoDb) {
         .await
         .expect("Failed to create channel_unreads collection.");
 
+    db.create_collection("channel_webhooks", None)
+        .await
+        .expect("Failed to create channel_webhooks collection.");
+
     db.create_collection("migrations", None)
         .await
         .expect("Failed to create migrations collection.");
@@ -91,6 +95,18 @@ pub async fn create_database(db: &MongoDb) {
                         "username": 1_i32
                     },
                     "name": "username",
+                    "unique": false,
+                    "collation": {
+                        "locale": "en",
+                        "strength": 2_i32
+                    }
+                },
+                {
+                    "key": {
+                        "username": 1_i32,
+                        "discriminator": 1_i32
+                    },
+                    "name": "username_discriminator",
                     "unique": true,
                     "collation": {
                         "locale": "en",

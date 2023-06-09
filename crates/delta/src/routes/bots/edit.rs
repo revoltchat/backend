@@ -58,10 +58,6 @@ pub async fn edit_bot(
     }
 
     if let Some(name) = data.name {
-        if db.is_username_taken(&name).await? {
-            return Err(Error::UsernameTaken);
-        }
-
         let mut user = db.fetch_user(&bot.id).await?;
         user.update_username(db, name).await?;
     }

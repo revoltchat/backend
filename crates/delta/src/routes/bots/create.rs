@@ -38,14 +38,12 @@ pub async fn create_bot(db: &Db, user: User, info: Json<DataCreateBot>) -> Resul
         return Err(Error::ReachedMaximumBots);
     }
 
-    if db.is_username_taken(&info.name).await? {
-        return Err(Error::UsernameTaken);
-    }
-
     let id = Ulid::new().to_string();
+    let username = User::validate_username(info.name)?;
     let bot_user = User {
         id: id.clone(),
-        username: info.name.trim().to_string(),
+        discriminator: User::find_discriminator(db, &username, None).await?,
+        username,
         bot: Some(BotInformation {
             owner: user.id.clone(),
         }),

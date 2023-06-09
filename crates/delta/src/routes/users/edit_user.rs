@@ -8,6 +8,8 @@ use rocket::State;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
+use crate::util::regex::RE_DISPLAY_NAME;
+
 /// # Profile Data
 #[derive(Validate, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct UserProfileData {
@@ -24,6 +26,10 @@ pub struct UserProfileData {
 /// # User Data
 #[derive(Validate, Serialize, Deserialize, JsonSchema)]
 pub struct DataEditUser {
+    /// New display name
+    #[serde(rename = "displayName")]
+    #[validate(length(min = 2, max = 32), regex = "RE_DISPLAY_NAME")]
+    display_name: Option<String>,
     /// Attachment Id for avatar
     #[validate(length(min = 1, max = 128))]
     avatar: Option<String>,
@@ -84,7 +90,8 @@ pub async fn req(
     }
 
     // Exit out early if nothing is changed
-    if data.status.is_none()
+    if data.display_name.is_none()
+        && data.status.is_none()
         && data.profile.is_none()
         && data.avatar.is_none()
         && data.badges.is_none()

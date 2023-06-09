@@ -9,11 +9,12 @@ impl AbstractUser for DummyDb {
         Ok(User {
             id: id.into(),
             username: "username".into(),
+            discriminator: "0000".into(),
             ..Default::default()
         })
     }
 
-    async fn fetch_user_by_username(&self, username: &str) -> Result<User> {
+    async fn fetch_user_by_username(&self, username: &str, _discriminator: &str) -> Result<User> {
         self.fetch_user(username).await
     }
 
@@ -45,8 +46,8 @@ impl AbstractUser for DummyDb {
         Ok(vec![self.fetch_user("id").await.unwrap()])
     }
 
-    async fn is_username_taken(&self, _username: &str) -> Result<bool> {
-        Ok(false)
+    async fn fetch_discriminators_in_use(&self, _username: &str) -> Result<Vec<String>> {
+        Ok(vec![])
     }
 
     async fn fetch_mutual_user_ids(&self, _user_a: &str, _user_b: &str) -> Result<Vec<String>> {

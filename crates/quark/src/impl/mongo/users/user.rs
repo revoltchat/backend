@@ -9,14 +9,16 @@ use crate::{AbstractUser, Error, Result};
 
 use super::super::MongoDb;
 
-static FIND_USERNAME_OPTIONS: Lazy<FindOneOptions> = Lazy::new(|| FindOneOptions::builder()
-    .collation(
-        Collation::builder()
-            .locale("en")
-            .strength(CollationStrength::Secondary)
-            .build()
-    )
-    .build());
+static FIND_USERNAME_OPTIONS: Lazy<FindOneOptions> = Lazy::new(|| {
+    FindOneOptions::builder()
+        .collation(
+            Collation::builder()
+                .locale("en")
+                .strength(CollationStrength::Secondary)
+                .build(),
+        )
+        .build()
+});
 
 static COL: &str = "users";
 
@@ -26,11 +28,12 @@ impl AbstractUser for MongoDb {
         self.find_one_by_id(COL, id).await
     }
 
-    async fn fetch_user_by_username(&self, username: &str) -> Result<User> {
+    async fn fetch_user_by_username(&self, username: &str, discriminator: &str) -> Result<User> {
         self.find_one_with_options(
             COL,
             doc! {
-                "username": username
+                "username": username,
+                "discriminator": discriminator
             },
             FIND_USERNAME_OPTIONS.clone(),
         )
@@ -106,13 +109,34 @@ impl AbstractUser for MongoDb {
         Ok(users)
     }
 
-    async fn is_username_taken(&self, username: &str) -> Result<bool> {
-        // ! FIXME: move this up to generic
-        match self.fetch_user_by_username(username).await {
-            Ok(_) => Ok(true),
-            Err(Error::NotFound) => Ok(false),
-            Err(error) => Err(error),
-        }
+    async fn fetch_discriminators_in_use(&self, username: &str) -> Result<Vec<String>> {
+        Ok(self
+            .col::<Document>(COL)
+            .find(
+                doc! {
+                    "username": username
+                },
+                FindOptions::builder()
+                    .collation(
+                        Collation::builder()
+                            .locale("en")
+                            .strength(CollationStrength::Secondary)
+                            .build(),
+                    )
+                    .projection(doc! { "_id": 0, "discriminator": 1 })
+                    .build(),
+            )
+            .await
+            .map_err(|_| Error::DatabaseError {
+                operation: "find",
+                with: "users",
+            })?
+            .filter_map(|s| async { s.ok() })
+            .collect::<Vec<Document>>()
+            .await
+            .into_iter()
+            .filter_map(|x| x.get_str("discriminator").ok().map(|x| x.to_string()))
+            .collect::<Vec<String>>())
     }
 
     async fn fetch_mutual_user_ids(&self, user_a: &str, user_b: &str) -> Result<Vec<String>> {

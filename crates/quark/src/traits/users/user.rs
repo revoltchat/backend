@@ -7,7 +7,7 @@ pub trait AbstractUser: Sync + Send {
     async fn fetch_user(&self, id: &str) -> Result<User>;
 
     /// Fetch a user from the database by their username
-    async fn fetch_user_by_username(&self, username: &str) -> Result<User>;
+    async fn fetch_user_by_username(&self, username: &str, discriminator: &str) -> Result<User>;
 
     /// Fetch a user from the database by their session token
     async fn fetch_user_by_token(&self, token: &str) -> Result<User>;
@@ -29,8 +29,8 @@ pub trait AbstractUser: Sync + Send {
     /// Fetch multiple users by their ids
     async fn fetch_users<'a>(&self, ids: &'a [String]) -> Result<Vec<User>>;
 
-    /// Check whether a username is already in use by another user
-    async fn is_username_taken(&self, username: &str) -> Result<bool>;
+    /// Fetch all discriminators in use for a username
+    async fn fetch_discriminators_in_use(&self, username: &str) -> Result<Vec<String>>;
 
     /// Fetch ids of users that both users are friends with
     async fn fetch_mutual_user_ids(&self, user_a: &str, user_b: &str) -> Result<Vec<String>>;

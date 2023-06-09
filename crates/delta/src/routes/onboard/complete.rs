@@ -34,9 +34,10 @@ pub async fn req(
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    let username = User::validate_username(db, data.username).await?;
+    let username = User::validate_username(data.username)?;
     let user = User {
         id: session.user_id,
+        discriminator: User::find_discriminator(db, &username, None).await?,
         username,
         ..Default::default()
     };

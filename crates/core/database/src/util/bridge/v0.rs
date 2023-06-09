@@ -257,6 +257,8 @@ impl crate::User {
 
         User {
             username: self.username,
+            discriminator: self.discriminator,
+            display_name: self.display_name,
             avatar: self.avatar.map(|file| file.into()),
             relations: vec![],
             badges: self.badges.unwrap_or_default() as u32,

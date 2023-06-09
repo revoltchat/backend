@@ -8,7 +8,9 @@ use crate::{perms, Database, Error, Result};
 
 use futures::try_join;
 use impl_ops::impl_op_ex_commutative;
+use rand::seq::SliceRandom;
 use revolt_presence::filter_online;
+use std::collections::HashSet;
 use std::ops;
 
 impl_op_ex_commutative!(+ |a: &i32, b: &Badges| -> i32 { *a | *b as i32 });
@@ -169,15 +171,7 @@ impl User {
     }
 
     /// Sanitise and validate a username can be used
-    pub async fn validate_username(db: &Database, username: String) -> Result<String> {
-        // Trim surrounding spaces
-        let username = username.trim().to_string();
-
-        // Make sure username is still at least 3 characters
-        if username.len() < 2 {
-            return Err(Error::InvalidUsername);
-        }
-
+    pub fn validate_username(username: String) -> Result<String> {
         // Copy the username for validation
         let username_lowercase = username.to_lowercase();
 
@@ -199,25 +193,74 @@ impl User {
             }
         }
 
-        // Make sure the username isn't taken
-        if db.is_username_taken(&username).await? {
+        Ok(username)
+    }
+
+    // Find a free discriminator for a given username
+    pub async fn find_discriminator(
+        db: &Database,
+        username: &str,
+        preferred: Option<String>,
+    ) -> Result<String> {
+        let search_space: HashSet<String> = (0..9999).map(|v| format!("{:0>4}", v)).collect();
+        let used_discriminators: HashSet<String> = db
+            .fetch_discriminators_in_use(username)
+            .await?
+            .into_iter()
+            .collect();
+
+        let available_discriminators: Vec<&String> =
+            search_space.difference(&used_discriminators).collect();
+
+        if available_discriminators.is_empty() {
             return Err(Error::UsernameTaken);
         }
 
-        Ok(username)
+        if let Some(preferred) = preferred {
+            if available_discriminators.contains(&&preferred) {
+                return Ok(preferred.to_string());
+            }
+        }
+
+        let mut rng = rand::thread_rng();
+        Ok(available_discriminators
+            .choose(&mut rng)
+            .expect("we can assert this has an element")
+            .to_string())
     }
 
     /// Update a user's username
     pub async fn update_username(&mut self, db: &Database, username: String) -> Result<()> {
-        self.update(
-            db,
-            PartialUser {
-                username: Some(User::validate_username(db, username).await?),
-                ..Default::default()
-            },
-            vec![],
-        )
-        .await
+        let username = User::validate_username(username)?;
+        if self.username.to_lowercase() == username.to_lowercase() {
+            self.update(
+                db,
+                PartialUser {
+                    username: Some(username),
+                    ..Default::default()
+                },
+                vec![],
+            )
+            .await
+        } else {
+            self.update(
+                db,
+                PartialUser {
+                    discriminator: Some(
+                        User::find_discriminator(
+                            db,
+                            &username,
+                            Some(self.discriminator.to_string()),
+                        )
+                        .await?,
+                    ),
+                    username: Some(username),
+                    ..Default::default()
+                },
+                vec![],
+            )
+            .await
+        }
     }
 
     /// Apply a certain relationship between two users

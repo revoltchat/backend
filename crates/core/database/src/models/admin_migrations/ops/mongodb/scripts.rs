@@ -16,7 +16,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 23;
+pub const LATEST_REVISION: i32 = 24;
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -766,6 +766,61 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             )
             .await
             .expect("Failed to update server members.");
+    }
+
+    if revision <= 23 {
+        info!("Running migration [revision 23 / 09-06-2023]: Add collection `channel_webhooks` if not exists, update users index.");
+
+        db.db()
+            .create_collection("channel_webhooks", None)
+            .await
+            .ok();
+
+        db.db()
+            .run_command(
+                doc! {
+                    "dropIndexes": "users",
+                    "indexes": "username"
+                },
+                None,
+            )
+            .await
+            .expect("Failed to drop existing username index.");
+
+        db.db()
+            .run_command(
+                doc! {
+                    "createIndexes": "users",
+                    "indexes": [
+                        {
+                            "key": {
+                                "username": 1_i32
+                            },
+                            "name": "username",
+                            "unique": false,
+                            "collation": {
+                                "locale": "en",
+                                "strength": 2_i32
+                            }
+                        },
+                        {
+                            "key": {
+                                "username": 1_i32,
+                                "discriminator": 1_i32
+                            },
+                            "name": "username_discriminator",
+                            "unique": true,
+                            "collation": {
+                                "locale": "en",
+                                "strength": 2_i32
+                            }
+                        }
+                    ]
+                },
+                None,
+            )
+            .await
+            .expect("Failed to create username index.");
     }
 
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.

@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 /// # User Lookup Information
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct DataSendFriendRequest {
+    /// Username and discriminator combo separated by #
     username: String,
 }
 
@@ -21,12 +22,16 @@ pub async fn req(
     user: User,
     data: Json<DataSendFriendRequest>,
 ) -> Result<Json<User>> {
-    let mut target = db.fetch_user_by_username(&data.username).await?;
+    if let Some((username, discriminator)) = data.username.split_once('#') {
+        let mut target = db.fetch_user_by_username(username, discriminator).await?;
 
-    if user.bot.is_some() || target.bot.is_some() {
-        return Err(Error::IsBot);
+        if user.bot.is_some() || target.bot.is_some() {
+            return Err(Error::IsBot);
+        }
+
+        user.add_friend(db, &mut target).await?;
+        Ok(Json(target.with_auto_perspective(db, &user).await))
+    } else {
+        Err(Error::InvalidProperty)
     }
-
-    user.add_friend(db, &mut target).await?;
-    Ok(Json(target.with_auto_perspective(db, &user).await))
 }
