@@ -457,8 +457,10 @@ pub static DISCRIMINATOR_SEARCH_SPACE_QUARK: Lazy<HashSet<String>> = Lazy::new(|
         .map(|v| format!("{:0>4}", v))
         .collect::<HashSet<String>>();
 
-    for discrim in [1111, 2222, 3333, 4444, 5555, 6666, 7777, 8888, 9999] {
-        set.remove(&discrim.to_string());
+    for discrim in [
+        123, 1234, 1111, 2222, 3333, 4444, 5555, 6666, 7777, 8888, 9999,
+    ] {
+        set.remove(&format!("{:0>4}", discrim));
     }
 
     set.into_iter().collect()
