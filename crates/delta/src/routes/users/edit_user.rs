@@ -27,7 +27,6 @@ pub struct UserProfileData {
 #[derive(Validate, Serialize, Deserialize, JsonSchema)]
 pub struct DataEditUser {
     /// New display name
-    #[serde(rename = "displayName")]
     #[validate(length(min = 2, max = 32), regex = "RE_DISPLAY_NAME")]
     display_name: Option<String>,
     /// Attachment Id for avatar
@@ -123,6 +122,7 @@ pub async fn req(
     }
 
     let mut partial: PartialUser = PartialUser {
+        display_name: data.display_name,
         badges: data.badges,
         flags: data.flags,
         ..Default::default()
