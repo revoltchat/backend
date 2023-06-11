@@ -177,6 +177,11 @@ impl User {
         // Copy the username for validation
         let username_lowercase = username.to_lowercase();
 
+        // Block homoglyphs
+        if decancer::cure(&username_lowercase).into_str() != username_lowercase {
+            return Err(Error::InvalidUsername);
+        }
+
         // Ensure the username itself isn't blocked
         const BLOCKED_USERNAMES: &[&str] = &["admin", "revolt"];
 

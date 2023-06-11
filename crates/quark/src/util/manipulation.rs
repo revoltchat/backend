@@ -8,6 +8,6 @@ pub fn prefix_keys<T: Serialize>(t: &T, prefix: &str) -> HashMap<String, serde_j
     let v: HashMap<String, serde_json::Value> = serde_json::from_str(&v).unwrap();
     v.into_iter()
         .filter(|(_k, v)| !v.is_null())
-        .map(|(k, v)| (prefix.to_owned() + &k, v))
+        .map(|(k, v)| (format!("{}{}", prefix.to_owned(), k), v))
         .collect()
 }

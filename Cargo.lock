@@ -807,6 +807,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "decancer"
+version = "1.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "808127a7de612079ec37bfc1abc48ed77a6015a971a8bd7d4178d79147cbc839"
+
+[[package]]
 name = "derivative"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2974,6 +2980,7 @@ dependencies = [
  "bson",
  "dashmap",
  "deadqueue",
+ "decancer",
  "dotenv",
  "futures",
  "impl_ops",
