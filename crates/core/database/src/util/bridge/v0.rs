@@ -52,6 +52,7 @@ impl From<crate::Webhook> for Webhook {
             avatar: value.avatar.map(|file| file.into()),
             channel_id: value.channel_id,
             token: value.token,
+            permissions: value.permissions
         }
     }
 }
@@ -64,6 +65,7 @@ impl From<crate::PartialWebhook> for PartialWebhook {
             avatar: value.avatar.map(|file| file.into()),
             channel_id: value.channel_id,
             token: value.token,
+            permissions: value.permissions
         }
     }
 }

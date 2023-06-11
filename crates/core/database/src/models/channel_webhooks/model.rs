@@ -20,6 +20,9 @@ auto_derived_partial!(
         /// The channel this webhook belongs to
         pub channel_id: String,
 
+        /// The permissions of the webhook
+        pub permissions: u64,
+
         /// The private token for the webhook
         pub token: Option<String>,
     },

@@ -35,11 +35,13 @@ pub async fn webhook_edit(
     let DataEditWebhook {
         name,
         avatar,
+        permissions,
         remove,
     } = data;
 
     let mut partial = PartialWebhook {
         name,
+        permissions,
         ..Default::default()
     };
 

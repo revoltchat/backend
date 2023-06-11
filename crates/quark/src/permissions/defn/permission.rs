@@ -110,6 +110,7 @@ pub static DEFAULT_PERMISSION: Lazy<u64> = Lazy::new(|| DEFAULT_PERMISSION_VIEW_
 pub static DEFAULT_PERMISSION_SAVED_MESSAGES: u64 = Permission::GrantAllSafe as u64;
 pub static DEFAULT_PERMISSION_DIRECT_MESSAGE: Lazy<u64> = Lazy::new(|| DEFAULT_PERMISSION.add(Permission::ManageChannel + Permission::React));
 pub static DEFAULT_PERMISSION_SERVER: Lazy<u64> = Lazy::new(|| DEFAULT_PERMISSION.add(Permission::React + Permission::ChangeNickname + Permission::ChangeAvatar));
+pub static DEFAULT_WEBHOOK_PERMISSIONS: Lazy<u64> = Lazy::new(|| Permission::SendMessage + Permission::SendEmbeds + Permission::Masquerade + Permission::React);
 
 bitfield! {
     #[derive(Default)]

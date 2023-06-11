@@ -29,8 +29,7 @@ pub async fn webhook_execute(
     let webhook = webhook_id.as_webhook(db).await.map_err(Error::from_core)?;
     webhook.assert_token(&token).map_err(Error::from_core)?;
 
-    // TODO: webhooks can currently always send masquerades, files, embeds, reactions (interactions)
-    // TODO: they can also mention anyone
+    data.validate_webhook_permissions(webhook.permissions)?;
 
     let channel = legacy_db.fetch_channel(&webhook.channel_id).await?;
     let message = channel

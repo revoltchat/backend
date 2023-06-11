@@ -9,6 +9,7 @@ use crate::{
 };
 use futures::StreamExt;
 use rand::seq::SliceRandom;
+use revolt_permissions::DEFAULT_WEBHOOK_PERMISSIONS;
 use serde::{Deserialize, Serialize};
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -18,7 +19,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 25;
+pub const LATEST_REVISION: i32 = 26;
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -945,6 +946,23 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             )
             .await
             .expect("Failed to create username index.");
+    };
+
+    if revision <= 25 {
+        info!("Running migration [revision 25 / 11-06-2023]: Add permissions to webhooks.");
+
+        db.col::<Document>("webhooks")
+            .update_many(
+                doc! {},
+                doc! {
+                    "$set": {
+                        "permissions": *DEFAULT_WEBHOOK_PERMISSIONS as i64
+                    }
+                },
+                None,
+            )
+            .await
+            .expect("Failed to update webhooks.");
     }
 
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.

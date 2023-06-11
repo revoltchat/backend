@@ -10,7 +10,7 @@ use crate::{
     models::{
         message::{
             AppendMessage, BulkMessageResponse, Interactions, PartialMessage, SendableEmbed,
-            SystemMessage,
+            SystemMessage, DataMessageSend,
         },
         Channel, Emoji, Message, User,
     },
@@ -449,5 +449,41 @@ impl Interactions {
     /// Check if default initialisation of fields
     pub fn is_default(&self) -> bool {
         !self.restrict_reactions && self.reactions.is_none()
+    }
+}
+
+
+fn throw_permission(permissions: u64, permission: Permission) -> Result<()> {
+    if (permission as u64) & permissions == (permission as u64) {
+        Ok(())
+    } else {
+        Err(Error::MissingPermission { permission })
+    }
+}
+
+impl DataMessageSend {
+    pub fn validate_webhook_permissions(
+        &self,
+        permissions: u64,
+    ) -> Result<()> {
+        throw_permission(permissions, Permission::SendMessage)?;
+
+        if self.attachments.as_ref().map_or(false, |v| !v.is_empty()) {
+            throw_permission(permissions, Permission::UploadFiles)?;
+        };
+
+        if self.embeds.as_ref().map_or(false, |v| !v.is_empty()) {
+            throw_permission(permissions, Permission::SendEmbeds)?;
+        };
+
+        if self.masquerade.is_some() {
+            throw_permission(permissions, Permission::Masquerade)?;
+        };
+
+        if self.interactions.is_some() {
+            throw_permission(permissions, Permission::React)?;
+        };
+
+        Ok(())
     }
 }
