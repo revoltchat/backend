@@ -830,7 +830,8 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
                 claimed.insert(format!("{}#{}", info.username, discriminator));
 
                 info!(
-                    "({i}/{}) Migrating user \"{}\" to #{} - compliant",
+                    "({}/{}) Migrating user \"{}\" to #{} - compliant",
+                    i + 1,
                     users.len(),
                     info.username,
                     discriminator
@@ -874,7 +875,8 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
                 claimed.insert(format!("{}#{}", sanitised, discriminator));
 
                 info!(
-                    "({i}/{}) Migrating user \"{}\" to #{} - sanitised: \"{}\"",
+                    "({}/{}) Migrating user \"{}\" to #{} - sanitised: \"{}\"",
+                    i + 1,
                     users.len(),
                     info.username,
                     discriminator,
