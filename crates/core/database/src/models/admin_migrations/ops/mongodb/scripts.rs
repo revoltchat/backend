@@ -8,7 +8,9 @@ use crate::{
     MongoDb,
 };
 use futures::StreamExt;
+use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
+use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Serialize, Deserialize)]
 struct MigrationInfo {
@@ -16,7 +18,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 24;
+pub const LATEST_REVISION: i32 = 25;
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -769,23 +771,113 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
     }
 
     if revision <= 23 {
-        info!("Running migration [revision 23 / 09-06-2023]: Add collection `channel_webhooks` if not exists, update users index.");
-
-        db.db()
-            .create_collection("channel_webhooks", None)
-            .await
-            .ok();
+        info!("Running migration [revision 23 / 10-06-2023]: Generate discriminators for users.");
 
         db.db()
             .run_command(
                 doc! {
                     "dropIndexes": "users",
-                    "indexes": "username"
+                    "index": "username"
                 },
                 None,
             )
             .await
             .expect("Failed to drop existing username index.");
+
+        #[derive(Serialize, Deserialize)]
+        struct UserInformation {
+            #[serde(rename = "_id")]
+            id: String,
+            username: String,
+        }
+
+        let re_username = regex::Regex::new(r"^(\p{L}|[\d_.-])+$").unwrap();
+
+        let users: Vec<UserInformation> = db
+            .col::<UserInformation>("users")
+            .find(doc! {}, None)
+            .await
+            .unwrap()
+            .map(|doc| doc.expect("id and username"))
+            .collect()
+            .await;
+
+        let search_space: Vec<String> = (0..9999).map(|v| format!("{:0>4}", v)).collect();
+
+        for i in 0..users.len() {
+            let info = &users[i];
+            let discriminator = {
+                let mut rng = rand::thread_rng();
+                search_space.choose(&mut rng).unwrap()
+            };
+
+            if re_username.is_match(&info.username) {
+                info!(
+                    "Migrating user \"{}\" to #{} ({i}/{}) - compliant",
+                    info.username,
+                    discriminator,
+                    users.len()
+                );
+
+                db.col::<UserInformation>("users")
+                    .update_one(
+                        doc! {
+                            "_id": &info.id
+                        },
+                        doc! {
+                            "$set": {
+                                "discriminator": discriminator
+                            }
+                        },
+                        None,
+                    )
+                    .await
+                    .unwrap();
+            } else {
+                let mut sanitised = info
+                    .username
+                    .graphemes(true)
+                    .filter(|s| re_username.is_match(s))
+                    .collect::<String>();
+
+                while sanitised.len() < 2 {
+                    sanitised += "_";
+                }
+
+                info!(
+                    "Migrating user \"{}\" to #{} ({i}/{}) - sanitised: \"{}\"",
+                    info.username,
+                    discriminator,
+                    users.len(),
+                    sanitised
+                );
+
+                db.col::<UserInformation>("users")
+                    .update_one(
+                        doc! {
+                            "_id": &info.id
+                        },
+                        doc! {
+                            "$set": {
+                                "username": &info.username,
+                                "discriminator": discriminator
+                            }
+                        },
+                        None,
+                    )
+                    .await
+                    .unwrap();
+            }
+        }
+    }
+
+    if revision <= 24 {
+        info!("Running migration [revision 24 / 09-06-2023]: Add collection `channel_webhooks` if not exists, update users index.");
+
+        db.db()
+            .create_collection("channel_webhooks", None)
+            .await
+            .ok();
 
         db.db()
             .run_command(

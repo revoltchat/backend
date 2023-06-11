@@ -2867,7 +2867,9 @@ dependencies = [
  "mongodb",
  "nanoid",
  "once_cell",
+ "rand 0.8.5",
  "redis-kiss",
+ "regex",
  "revolt-models",
  "revolt-permissions",
  "revolt-presence",
@@ -2878,6 +2880,7 @@ dependencies = [
  "serde",
  "serde_json",
  "ulid 1.0.0",
+ "unicode-segmentation",
 ]
 
 [[package]]
@@ -4326,6 +4329,12 @@ checksum = "d54590932941a9e9266f0832deed84ebe1bf2e4c9e4a3554d393d18f5e854bf9"
 dependencies = [
  "tinyvec",
 ]
+
+[[package]]
+name = "unicode-segmentation"
+version = "1.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1dd624098567895118886609431a7c3b8f516e41d30e0643f03d94592a147e36"
 
 [[package]]
 name = "unicode-xid"
