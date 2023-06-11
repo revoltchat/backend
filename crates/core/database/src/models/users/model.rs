@@ -1,5 +1,8 @@
+use std::collections::HashSet;
+
 use crate::{Database, File};
 
+use once_cell::sync::Lazy;
 use revolt_result::{Error, ErrorType, Result};
 
 auto_derived_partial!(
@@ -199,3 +202,15 @@ impl User {
         .await
     }
 }
+
+pub static DISCRIMINATOR_SEARCH_SPACE: Lazy<HashSet<String>> = Lazy::new(|| {
+    let mut set = (2..9999)
+        .map(|v| format!("{:0>4}", v))
+        .collect::<HashSet<String>>();
+
+    for discrim in [1111, 2222, 3333, 4444, 5555, 6666, 7777, 8888, 9999] {
+        set.remove(&discrim.to_string());
+    }
+
+    set.into_iter().collect()
+});

@@ -1,11 +1,11 @@
-use std::{ops::BitXor, time::Duration};
+use std::{collections::HashSet, ops::BitXor, time::Duration};
 
 use crate::{
     mongodb::{
         bson::{doc, from_bson, from_document, to_document, Bson, DateTime, Document},
         options::FindOptions,
     },
-    MongoDb,
+    MongoDb, DISCRIMINATOR_SEARCH_SPACE,
 };
 use futures::StreamExt;
 use rand::seq::SliceRandom;
@@ -802,21 +802,38 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             .collect()
             .await;
 
-        let search_space: Vec<String> = (0..9999).map(|v| format!("{:0>4}", v)).collect();
+        let search_space: Vec<String> = DISCRIMINATOR_SEARCH_SPACE.iter().cloned().collect();
+        let mut claimed: HashSet<String> = HashSet::new();
 
         for i in 0..users.len() {
             let info = &users[i];
-            let discriminator = {
+            let mut discriminator = {
                 let mut rng = rand::thread_rng();
                 search_space.choose(&mut rng).unwrap()
             };
 
             if re_username.is_match(&info.username) {
+                while claimed.contains(&format!("{}#{}", info.username, discriminator)) {
+                    let new_discriminator = {
+                        let mut rng = rand::thread_rng();
+                        search_space.choose(&mut rng).unwrap()
+                    };
+
+                    info!(
+                        "Re-rolled {} to {new_discriminator} from {discriminator}",
+                        info.username
+                    );
+
+                    discriminator = new_discriminator;
+                }
+
+                claimed.insert(format!("{}#{}", info.username, discriminator));
+
                 info!(
-                    "Migrating user \"{}\" to #{} ({i}/{}) - compliant",
+                    "({i}/{}) Migrating user \"{}\" to #{} - compliant",
+                    users.len(),
                     info.username,
-                    discriminator,
-                    users.len()
+                    discriminator
                 );
 
                 db.col::<UserInformation>("users")
@@ -844,11 +861,23 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
                     sanitised += "_";
                 }
 
+                while claimed.contains(&format!("{}#{}", sanitised, discriminator)) {
+                    let new_discriminator = {
+                        let mut rng = rand::thread_rng();
+                        search_space.choose(&mut rng).unwrap()
+                    };
+
+                    info!("Re-rolled {sanitised} to {new_discriminator} from {discriminator}");
+                    discriminator = new_discriminator;
+                }
+
+                claimed.insert(format!("{}#{}", sanitised, discriminator));
+
                 info!(
-                    "Migrating user \"{}\" to #{} ({i}/{}) - sanitised: \"{}\"",
+                    "({i}/{}) Migrating user \"{}\" to #{} - sanitised: \"{}\"",
+                    users.len(),
                     info.username,
                     discriminator,
-                    users.len(),
                     sanitised
                 );
 
@@ -859,8 +888,9 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
                         },
                         doc! {
                             "$set": {
-                                "username": &info.username,
-                                "discriminator": discriminator
+                                "username": sanitised,
+                                "discriminator": discriminator,
+                                "display_name": &info.username
                             }
                         },
                         None,

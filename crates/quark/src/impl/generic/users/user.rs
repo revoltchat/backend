@@ -8,6 +8,7 @@ use crate::{perms, Database, Error, Result};
 
 use futures::try_join;
 use impl_ops::impl_op_ex_commutative;
+use once_cell::sync::Lazy;
 use rand::seq::SliceRandom;
 use revolt_presence::filter_online;
 use std::collections::HashSet;
@@ -202,7 +203,7 @@ impl User {
         username: &str,
         preferred: Option<String>,
     ) -> Result<String> {
-        let search_space: HashSet<String> = (0..9999).map(|v| format!("{:0>4}", v)).collect();
+        let search_space: &HashSet<String> = &DISCRIMINATOR_SEARCH_SPACE_QUARK;
         let used_discriminators: HashSet<String> = db
             .fetch_discriminators_in_use(username)
             .await?
@@ -218,7 +219,7 @@ impl User {
 
         if let Some(preferred) = preferred {
             if available_discriminators.contains(&&preferred) {
-                return Ok(preferred.to_string());
+                return Ok(preferred);
             }
         }
 
@@ -450,3 +451,15 @@ impl User {
         }
     }
 }
+
+pub static DISCRIMINATOR_SEARCH_SPACE_QUARK: Lazy<HashSet<String>> = Lazy::new(|| {
+    let mut set = (2..9999)
+        .map(|v| format!("{:0>4}", v))
+        .collect::<HashSet<String>>();
+
+    for discrim in [1111, 2222, 3333, 4444, 5555, 6666, 7777, 8888, 9999] {
+        set.remove(&discrim.to_string());
+    }
+
+    set.into_iter().collect()
+});
