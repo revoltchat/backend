@@ -16,6 +16,9 @@ auto_derived_partial!(
         /// The channel this webhook belongs to
         pub channel_id: String,
 
+        /// The permissions for the webhook
+        pub permissions: u64,
+
         /// The private token for the webhook
         pub token: Option<String>,
     },
@@ -43,6 +46,9 @@ auto_derived!(
         #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
         pub avatar: Option<String>,
 
+        /// Webhook permissions
+        pub permissions: Option<u64>,
+
         /// Fields to remove from webhook
         #[cfg_attr(feature = "serde", serde(default))]
         pub remove: Vec<FieldsWebhook>,
@@ -61,6 +67,9 @@ auto_derived!(
 
         /// The channel this webhook belongs to
         pub channel_id: String,
+
+        /// The permissions for the webhook
+        pub permissions: u64
     }
 
     /// Optional fields on webhook object
@@ -85,6 +94,7 @@ impl From<Webhook> for ResponseWebhook {
             name: value.name,
             avatar: value.avatar.map(|file| file.id),
             channel_id: value.channel_id,
+            permissions: value.permissions
         }
     }
 }

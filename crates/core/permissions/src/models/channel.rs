@@ -135,3 +135,5 @@ pub static DEFAULT_PERMISSION_SERVER: Lazy<u64> = Lazy::new(|| {
             + ChannelPermission::ChangeAvatar,
     )
 });
+
+pub static DEFAULT_WEBHOOK_PERMISSIONS: Lazy<u64> = Lazy::new(|| ChannelPermission::SendMessage + ChannelPermission::SendEmbeds + ChannelPermission::Masquerade + ChannelPermission::React);

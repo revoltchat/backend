@@ -2,6 +2,7 @@ use revolt_database::{Database, Webhook};
 use revolt_quark::{
     models::{Channel, User},
     perms, Db, Error, Permission, Ref, Result,
+    DEFAULT_WEBHOOK_PERMISSIONS,
 };
 use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
@@ -60,6 +61,7 @@ pub async fn req(
         name: data.name,
         avatar,
         channel_id: channel.id().to_string(),
+        permissions: *DEFAULT_WEBHOOK_PERMISSIONS,
         token: Some(nanoid::nanoid!(64)),
     };
 
