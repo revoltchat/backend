@@ -16,7 +16,8 @@ auto_derived_partial!(
         /// Discriminator
         pub discriminator: String,
         /// Display name
-        pub display_name: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub display_name: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         /// Avatar attachment
         pub avatar: Option<File>,
