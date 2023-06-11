@@ -68,6 +68,7 @@ impl User {
                     x.background = None;
                 }
             }
+            FieldsUser::DisplayName => self.display_name = None,
         }
     }
 

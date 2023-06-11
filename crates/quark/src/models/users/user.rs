@@ -177,6 +177,7 @@ pub enum FieldsUser {
     StatusPresence,
     ProfileContent,
     ProfileBackground,
+    DisplayName,
 }
 
 /// Enumeration providing a hint to the type of user we are handling
