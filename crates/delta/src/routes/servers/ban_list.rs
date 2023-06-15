@@ -14,6 +14,8 @@ struct BannedUser {
     pub id: String,
     /// Username of the banned user
     pub username: String,
+    /// Discriminator of the banned user
+    pub discriminator: String,
     /// Avatar of the banned user
     pub avatar: Option<File>,
 }
@@ -32,6 +34,7 @@ impl From<User> for BannedUser {
         BannedUser {
             id: user.id,
             username: user.username,
+            discriminator: user.discriminator,
             avatar: user.avatar,
         }
     }
