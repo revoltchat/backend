@@ -3,6 +3,7 @@ mod bots;
 mod channel_webhooks;
 mod channels;
 mod files;
+mod ratelimit_events;
 mod safety_strikes;
 mod server_members;
 mod servers;
@@ -14,6 +15,7 @@ pub use bots::*;
 pub use channel_webhooks::*;
 pub use channels::*;
 pub use files::*;
+pub use ratelimit_events::*;
 pub use safety_strikes::*;
 pub use server_members::*;
 pub use servers::*;
@@ -30,6 +32,7 @@ pub trait AbstractDatabase:
     + channels::AbstractChannels
     + channel_webhooks::AbstractWebhooks
     + files::AbstractAttachments
+    + ratelimit_events::AbstractRatelimitEvents
     + safety_strikes::AbstractAccountStrikes
     + server_members::AbstractServerMembers
     + servers::AbstractServers

@@ -10,9 +10,11 @@ use futures::try_join;
 use impl_ops::impl_op_ex_commutative;
 use once_cell::sync::Lazy;
 use rand::seq::SliceRandom;
+use revolt_database::RatelimitEventType;
 use revolt_presence::filter_online;
 use std::collections::HashSet;
 use std::ops;
+use std::time::Duration;
 
 impl_op_ex_commutative!(+ |a: &i32, b: &Badges| -> i32 { *a | *b as i32 });
 
@@ -207,7 +209,7 @@ impl User {
     pub async fn find_discriminator(
         db: &Database,
         username: &str,
-        preferred: Option<String>,
+        preferred: Option<(String, String)>,
     ) -> Result<String> {
         let search_space: &HashSet<String> = &DISCRIMINATOR_SEARCH_SPACE_QUARK;
         let used_discriminators: HashSet<String> = db
@@ -223,9 +225,31 @@ impl User {
             return Err(Error::UsernameTaken);
         }
 
-        if let Some(preferred) = preferred {
+        if let Some((preferred, target_id)) = preferred {
             if available_discriminators.contains(&&preferred) {
                 return Ok(preferred);
+            } else {
+                let rvdb: revolt_database::Database = db.clone().into();
+                if rvdb
+                    .has_ratelimited(
+                        &target_id,
+                        RatelimitEventType::DiscriminatorChange,
+                        Duration::from_secs(60 * 60 * 24),
+                        1,
+                    )
+                    .await
+                    .map_err(Error::from_core)?
+                {
+                    return Err(Error::DiscriminatorChangeRatelimited);
+                }
+
+                rvdb.insert_ratelimit_event(&revolt_database::RatelimitEvent {
+                    id: ulid::Ulid::new().to_string(),
+                    target_id,
+                    event_type: RatelimitEventType::DiscriminatorChange,
+                })
+                .await
+                .map_err(Error::from_core)?;
             }
         }
 
@@ -257,7 +281,7 @@ impl User {
                         User::find_discriminator(
                             db,
                             &username,
-                            Some(self.discriminator.to_string()),
+                            Some((self.discriminator.to_string(), self.id.clone())),
                         )
                         .await?,
                     ),

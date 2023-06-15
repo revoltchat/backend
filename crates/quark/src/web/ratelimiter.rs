@@ -101,16 +101,19 @@ pub struct Ratelimiter {
 fn resolve_bucket<'r>(request: &'r rocket::Request<'_>) -> (&'r str, Option<&'r str>) {
     if let Some(segment) = request.routed_segment(0) {
         let resource = request.routed_segment(1);
-        match (segment, resource) {
-            ("users", _) => {
+
+        let method = request.method();
+        match (segment, resource, method) {
+            ("users", target, Method::Patch) => ("user_edit", target),
+            ("users", _, _) => {
                 if let Some("default_avatar") = request.routed_segment(2) {
                     return ("default_avatar", None);
                 }
 
                 ("users", None)
             }
-            ("bots", _) => ("bots", None),
-            ("channels", Some(id)) => {
+            ("bots", _, _) => ("bots", None),
+            ("channels", Some(id), _) => {
                 if request.method() == Method::Post {
                     if let Some("messages") = request.routed_segment(2) {
                         return ("messaging", Some(id));
@@ -119,17 +122,17 @@ fn resolve_bucket<'r>(request: &'r rocket::Request<'_>) -> (&'r str, Option<&'r 
 
                 ("channels", Some(id))
             }
-            ("servers", Some(id)) => ("servers", Some(id)),
-            ("auth", _) => {
+            ("servers", Some(id), _) => ("servers", Some(id)),
+            ("auth", _, _) => {
                 if request.method() == Method::Delete {
                     ("auth_delete", None)
                 } else {
                     ("auth", None)
                 }
             }
-            ("swagger", _) => ("swagger", None),
-            ("safety", Some("report")) => ("safety_report", Some("report")),
-            ("safety", _) => ("safety", None),
+            ("swagger", _, _) => ("swagger", None),
+            ("safety", Some("report"), _) => ("safety_report", Some("report")),
+            ("safety", _, _) => ("safety", None),
             _ => ("any", None),
         }
     } else {
@@ -140,6 +143,7 @@ fn resolve_bucket<'r>(request: &'r rocket::Request<'_>) -> (&'r str, Option<&'r 
 /// Resolve per-bucket limits
 fn resolve_bucket_limit(bucket: &str) -> u8 {
     match bucket {
+        "user_edit" => 2,
         "users" => 20,
         "bots" => 10,
         "messaging" => 10,

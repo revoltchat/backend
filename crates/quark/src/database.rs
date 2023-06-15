@@ -71,3 +71,14 @@ impl From<Database> for authifier::Database {
         }
     }
 }
+
+impl From<Database> for revolt_database::Database {
+    fn from(val: Database) -> Self {
+        match val {
+            Database::Dummy(_) => revolt_database::Database::Reference(Default::default()),
+            Database::MongoDb(MongoDb(client)) => revolt_database::Database::MongoDb(
+                revolt_database::MongoDb(client, "revolt".to_string()),
+            ),
+        }
+    }
+}

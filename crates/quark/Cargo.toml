@@ -1,6 +1,6 @@
 [package]
 name = "revolt-quark"
-version = "0.6.2"
+version = "0.6.3"
 edition = "2021"
 license = "AGPL-3.0-or-later"
 
@@ -94,4 +94,5 @@ sentry = "0.25.0"
 # Core
 revolt-result = { path = "../core/result", features = [ "serde", "schemas" ] }
 revolt-presence = { path = "../core/presence", features = [ "redis-is-patched" ] }
+revolt-database = { path = "../core/database" }
 revolt-models = { path = "../core/models" }

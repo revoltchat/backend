@@ -76,6 +76,10 @@ pub async fn create_database(db: &MongoDb) {
         .await
         .expect("Failed to create bots collection.");
 
+    db.create_collection("ratelimit_events", None)
+        .await
+        .expect("Failed to create ratelimit_events collection.");
+
     db.create_collection(
         "pubsub",
         CreateCollectionOptions::builder()
@@ -208,6 +212,25 @@ pub async fn create_database(db: &MongoDb) {
         )
         .await
         .expect("Failed to save migration info.");
+
+    db.run_command(
+        doc! {
+            "createIndexes": "ratelimit_events",
+            "indexes": [
+                {
+                    "key": {
+                        "_id": 1_i32,
+                        "target_id": 1_i32,
+                        "event_type": 1_i32,
+                    },
+                    "name": "compound_key"
+                }
+            ]
+        },
+        None,
+    )
+    .await
+    .expect("Failed to create ratelimit_events index.");
 
     info!("Created database.");
 }

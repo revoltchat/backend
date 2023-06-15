@@ -18,7 +18,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 25;
+pub const LATEST_REVISION: i32 = 26;
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -947,8 +947,37 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             .expect("Failed to create username index.");
     }
 
+    if revision <= 25 {
+        info!("Running migration [revision 25 / 15-06-2023]: Add collection `ratelimit_events` with index.");
+
+        db.db()
+            .create_collection("ratelimit_events", None)
+            .await
+            .ok();
+
+        db.db()
+            .run_command(
+                doc! {
+                    "createIndexes": "ratelimit_events",
+                    "indexes": [
+                        {
+                            "key": {
+                                "_id": 1_i32,
+                                "target_id": 1_i32,
+                                "event_type": 1_i32,
+                            },
+                            "name": "compound_key"
+                        }
+                    ]
+                },
+                None,
+            )
+            .await
+            .expect("Failed to create ratelimit_events index.");
+    }
+
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.
 
     // Reminder to update LATEST_REVISION when adding new migrations.
-    LATEST_REVISION
+    LATEST_REVISION.max(revision)
 }
