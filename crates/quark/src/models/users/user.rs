@@ -167,6 +167,25 @@ pub struct User {
     /// Whether this user is currently online
     #[serde(skip_serializing_if = "Option::is_none")]
     pub online: Option<bool>,
+
+    // User's displayed pronouns
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 5)))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pronouns: Option<Vec<Pronoun>>,
+}
+
+// Pronoun options for Users
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
+pub enum Pronoun {
+    She,
+    Her,
+    They,
+    Them,
+    He,
+    Him,
+    It,
+    Its,
+    Neo(String),
 }
 
 /// Optional fields on user object

@@ -270,6 +270,12 @@ impl crate::User {
             relationship,
             online: can_see_profile && revolt_presence::is_online(&self.id).await,
             id: self.id,
+            pronouns: self.pronouns.map(|pronouns| {
+                pronouns
+                    .iter()
+                    .map(|pronoun| pronoun.to_owned().into())
+                    .collect()
+            }),
         }
     }
 }
@@ -314,6 +320,22 @@ impl From<crate::UserStatus> for UserStatus {
         UserStatus {
             text: value.text,
             presence: value.presence.map(|presence| presence.into()),
+        }
+    }
+}
+
+impl From<crate::Pronoun> for Pronoun {
+    fn from(value: crate::Pronoun) -> Self {
+        match value {
+            crate::Pronoun::She => Pronoun::She,
+            crate::Pronoun::Her => Pronoun::Her,
+            crate::Pronoun::They => Pronoun::They,
+            crate::Pronoun::Them => Pronoun::Them,
+            crate::Pronoun::He => Pronoun::He,
+            crate::Pronoun::Him => Pronoun::Him,
+            crate::Pronoun::It => Pronoun::It,
+            crate::Pronoun::Its => Pronoun::Its,
+            crate::Pronoun::Neo(string) => Pronoun::Neo(string),
         }
     }
 }

@@ -44,6 +44,11 @@ auto_derived_partial!(
         /// Bot information
         #[serde(skip_serializing_if = "Option::is_none")]
         pub bot: Option<BotInformation>,
+
+        // User's displayed pronouns
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 5)))]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub pronouns: Option<Vec<Pronoun>>,
     },
     "PartialUser"
 );
@@ -114,6 +119,20 @@ auto_derived!(
         StatusPresence,
         ProfileContent,
         ProfileBackground,
+        Pronouns,
+    }
+
+    // Pronoun options for Users
+    pub enum Pronoun {
+        She,
+        Her,
+        They,
+        Them,
+        He,
+        Him,
+        It,
+        Its,
+        Neo(String),
     }
 );
 
@@ -180,6 +199,7 @@ impl User {
                     x.background = None;
                 }
             }
+            FieldsUser::Pronouns => self.pronouns = None,
         }
     }
 
