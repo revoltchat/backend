@@ -1,4 +1,4 @@
-use revolt_quark::models::user::{FieldsUser, PartialUser, Pronoun, User};
+use revolt_quark::models::user::{FieldsUser, PartialUser, User};
 use revolt_quark::models::File;
 use revolt_quark::{Database, Error, Ref, Result};
 
@@ -56,7 +56,7 @@ pub struct DataEditUser {
     // User's displayed pronouns
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 5)))]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub pronouns: Option<Vec<Pronoun>>,
+    pub pronouns: Option<Vec<String>>,
 }
 
 /// # Edit User

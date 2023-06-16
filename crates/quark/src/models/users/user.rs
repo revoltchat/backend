@@ -171,21 +171,7 @@ pub struct User {
     // User's displayed pronouns
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 5)))]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub pronouns: Option<Vec<Pronoun>>,
-}
-
-// Pronoun options for Users
-#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
-pub enum Pronoun {
-    She,
-    Her,
-    They,
-    Them,
-    He,
-    Him,
-    It,
-    Its,
-    Neo(String),
+    pub pronouns: Option<Vec<String>>,
 }
 
 /// Optional fields on user object
