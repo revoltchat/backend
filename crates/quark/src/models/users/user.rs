@@ -197,6 +197,7 @@ pub enum FieldsUser {
     ProfileContent,
     ProfileBackground,
     DisplayName,
+    Pronouns,
 }
 
 /// Enumeration providing a hint to the type of user we are handling
