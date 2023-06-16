@@ -324,22 +324,6 @@ impl From<crate::UserStatus> for UserStatus {
     }
 }
 
-impl From<crate::Pronoun> for Pronoun {
-    fn from(value: crate::Pronoun) -> Self {
-        match value {
-            crate::Pronoun::She => Pronoun::She,
-            crate::Pronoun::Her => Pronoun::Her,
-            crate::Pronoun::They => Pronoun::They,
-            crate::Pronoun::Them => Pronoun::Them,
-            crate::Pronoun::He => Pronoun::He,
-            crate::Pronoun::Him => Pronoun::Him,
-            crate::Pronoun::It => Pronoun::It,
-            crate::Pronoun::Its => Pronoun::Its,
-            crate::Pronoun::Neo(string) => Pronoun::Neo(string),
-        }
-    }
-}
-
 impl From<crate::UserProfile> for UserProfile {
     fn from(value: crate::UserProfile) -> Self {
         UserProfile {

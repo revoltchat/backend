@@ -41,26 +41,12 @@ auto_derived!(
         pub bot: Option<BotInformation>,
 
         // User's displayed pronouns
-        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 5)))]
         #[serde(skip_serializing_if = "Option::is_none")]
-        pub pronouns: Option<Vec<Pronoun>>,
+        pub pronouns: Option<Vec<String>>,
         /// Current session user's relationship with this user
         pub relationship: RelationshipStatus,
         /// Whether this user is currently online
         pub online: bool,
-    }
-
-    // Pronoun options for Users
-    pub enum Pronoun {
-        She,
-        Her,
-        They,
-        Them,
-        He,
-        Him,
-        It,
-        Its,
-        Neo(String),
     }
 
     /// User's relationship with another user (or themselves)
