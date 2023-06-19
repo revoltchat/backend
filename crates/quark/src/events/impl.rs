@@ -353,7 +353,7 @@ impl State {
                 let could_view: bool = if let Some(channel) = self.cache.channels.get(id) {
                     self.cache.can_view_channel(db, channel).await
                 } else {
-                    true
+                    false
                 };
 
                 if let Some(channel) = self.cache.channels.get_mut(id) {
@@ -362,6 +362,12 @@ impl State {
                     }
 
                     channel.apply_options(data.clone());
+                }
+
+                if !self.cache.channels.contains_key(id) {
+                    if let Ok(channel) = db.fetch_channel(id).await {
+                        self.cache.channels.insert(id.clone(), channel);
+                    }
                 }
 
                 if let Some(channel) = self.cache.channels.get(id) {
