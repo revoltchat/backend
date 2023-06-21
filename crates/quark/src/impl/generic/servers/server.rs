@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 
-use iso8601_timestamp::Timestamp;
 use ulid::Ulid;
 
 use crate::{
@@ -186,18 +185,7 @@ impl Server {
             return Err(Error::Banned);
         }
 
-        let member = Member {
-            id: MemberCompositeKey {
-                server: self.id.clone(),
-                user: user.id.clone(),
-            },
-            joined_at: Timestamp::now_utc(),
-            nickname: None,
-            avatar: None,
-            roles: vec![],
-            timeout: None,
-        };
-
+        let member = Member::new(self.id.clone(), user.id.clone());
         db.insert_member(&member).await?;
 
         let should_fetch = channels.is_none();

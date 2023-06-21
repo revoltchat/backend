@@ -3,22 +3,10 @@ use crate::{AbstractServerMember, Result};
 
 use super::super::DummyDb;
 
-use iso8601_timestamp::Timestamp;
-
 #[async_trait]
 impl AbstractServerMember for DummyDb {
     async fn fetch_member(&self, server: &str, user: &str) -> Result<Member> {
-        Ok(Member {
-            id: MemberCompositeKey {
-                server: server.into(),
-                user: user.into(),
-            },
-            joined_at: Timestamp::now_utc(),
-            nickname: None,
-            avatar: None,
-            roles: vec![],
-            timeout: None,
-        })
+        Ok(Member::new(server.into(), user.into()))
     }
 
     async fn insert_member(&self, member: &Member) -> Result<()> {

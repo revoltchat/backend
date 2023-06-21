@@ -3,13 +3,27 @@ use iso8601_timestamp::Timestamp;
 use crate::{
     events::client::EventV1,
     models::{
-        server_member::{FieldsMember, PartialMember},
+        server_member::{FieldsMember, MemberCompositeKey, PartialMember},
         Member, Server,
     },
     Database, Result,
 };
 
 impl Member {
+    pub fn new(server_id: String, user_id: String) -> Self {
+        Self {
+            id: MemberCompositeKey {
+                server: server_id,
+                user: user_id,
+            },
+            joined_at: Timestamp::now_utc(),
+            nickname: None,
+            avatar: None,
+            roles: vec![],
+            timeout: None,
+        }
+    }
+
     /// Update member data
     pub async fn update<'a>(
         &mut self,

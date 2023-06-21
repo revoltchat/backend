@@ -23,8 +23,7 @@ impl Cache {
     pub async fn can_view_channel(&self, db: &Database, channel: &Channel) -> bool {
         match &channel {
             Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => {
-                let member = self.members.values().find(|x| &x.id.server == server);
-
+                let member = self.members.get(server);
                 let server = self.servers.get(server);
                 let mut perms = perms(self.users.get(&self.user_id).unwrap()).channel(channel);
 
@@ -107,9 +106,15 @@ impl State {
 
         // Fetch all memberships with their corresponding servers.
         let members: Vec<Member> = db.fetch_all_memberships(&user.id).await?;
+        self.cache.members = members
+            .iter()
+            .cloned()
+            .map(|x| (x.id.server.clone(), x))
+            .collect();
 
         let server_ids: Vec<String> = members.iter().map(|x| x.id.server.clone()).collect();
         let servers = db.fetch_servers(&server_ids).await?;
+        self.cache.servers = servers.iter().cloned().map(|x| (x.id.clone(), x)).collect();
 
         // Collect channel ids from servers.
         let mut channel_ids = vec![];
@@ -164,16 +169,10 @@ impl State {
         self.cache
             .users
             .insert(self.cache.user_id.clone(), user.clone());
-        self.cache.servers = servers.iter().cloned().map(|x| (x.id.clone(), x)).collect();
         self.cache.channels = channels
             .iter()
             .cloned()
             .map(|x| (x.id().to_string(), x))
-            .collect();
-        self.cache.members = members
-            .iter()
-            .cloned()
-            .map(|x| (x.id.server.clone(), x))
             .collect();
 
         // Make all users appear from our perspective.
@@ -404,7 +403,9 @@ impl State {
                 channels,
             } => {
                 self.insert_subscription(id.clone());
-                self.cache.servers.insert(id.to_string(), server.clone());
+                self.cache.servers.insert(id.clone(), server.clone());
+                let member = Member::new(id.clone(), self.cache.user_id.clone());
+                self.cache.members.insert(id.clone(), member);
 
                 for channel in channels {
                     self.cache
@@ -442,6 +443,7 @@ impl State {
                             self.cache.channels.remove(channel);
                         }
                     }
+                    self.cache.members.remove(id);
                 }
             }
             EventV1::ServerDelete { id } => {
@@ -453,6 +455,7 @@ impl State {
                         self.cache.channels.remove(channel);
                     }
                 }
+                self.cache.members.remove(id);
             }
             EventV1::ServerMemberUpdate { id, data, clear } => {
                 if id.user == self.cache.user_id {
