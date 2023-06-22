@@ -5,6 +5,10 @@ use rocket::{serde::json::Json, State};
 /// # Fetch User
 ///
 /// Retrieve a user's information.
+///
+/// You must be in a mutual server or group in order to use this endpoint
+///
+/// Bots can use the ``Fetch Public User`` endpoint to fetch some information about a user
 #[openapi(tag = "User Information")]
 #[get("/<target>")]
 pub async fn req(db: &State<Database>, user: User, target: Ref) -> Result<Json<User>> {

@@ -91,6 +91,7 @@ pub enum ErrorType {
     // ? Bot related errors
     ReachedMaximumBots,
     IsBot,
+    IsNotBot,
     BotIsPrivate,
 
     // ? User safety related errors

@@ -7,6 +7,7 @@ mod change_username;
 mod edit_user;
 mod fetch_dms;
 mod fetch_profile;
+mod fetch_public_user;
 mod fetch_self;
 mod fetch_user;
 mod fetch_user_flags;
@@ -22,6 +23,7 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         // User Information
         fetch_self::req,
         fetch_user::req,
+        fetch_public_user::req,
         fetch_user_flags::fetch_user_flags,
         edit_user::req,
         change_username::req,

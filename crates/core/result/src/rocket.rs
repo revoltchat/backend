@@ -50,6 +50,7 @@ impl<'r> Responder<'r, 'static> for Error {
 
             ErrorType::ReachedMaximumBots => Status::BadRequest,
             ErrorType::IsBot => Status::BadRequest,
+            ErrorType::IsNotBot => Status::BadRequest,
             ErrorType::BotIsPrivate => Status::Forbidden,
 
             ErrorType::CannotReportYourself => Status::BadRequest,

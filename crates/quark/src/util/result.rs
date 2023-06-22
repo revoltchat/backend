@@ -83,6 +83,7 @@ pub enum Error {
     // ? Bot related errors
     ReachedMaximumBots,
     IsBot,
+    IsNotBot,
     BotIsPrivate,
 
     // ? User safety related errors
@@ -200,6 +201,7 @@ impl<'r> Responder<'r, 'static> for Error {
 
             Error::ReachedMaximumBots => Status::BadRequest,
             Error::IsBot => Status::BadRequest,
+            Error::IsNotBot => Status::BadRequest,
             Error::BotIsPrivate => Status::Forbidden,
 
             Error::CannotReportYourself => Status::BadRequest,
