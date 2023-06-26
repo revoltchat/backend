@@ -13,7 +13,7 @@ pub async fn req(db: &Db, user: User, target: Ref, role_id: String) -> Result<Em
         .throw_permission(db, Permission::ManageRole)
         .await?;
 
-    let member_rank = permissions.get_member_rank().unwrap_or(0);
+    let member_rank = permissions.get_member_rank().unwrap_or(i64::MIN);
 
     if let Some(role) = server.roles.remove(&role_id) {
         if role.rank <= member_rank {
