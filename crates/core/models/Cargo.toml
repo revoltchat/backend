@@ -1,6 +1,6 @@
 [package]
 name = "revolt-models"
-version = "0.6.4"
+version = "0.6.5"
 edition = "2021"
 license = "AGPL-3.0-or-later"
 authors = [ "Paul Makles <me@insrt.uk>" ]
@@ -18,7 +18,7 @@ default = [ "serde", "partials" ]
 
 [dependencies]
 # Core
-revolt-permissions = { version = "0.6.4", path = "../permissions" }
+revolt-permissions = { version = "0.6.5", path = "../permissions" }
 
 # Serialisation
 revolt_optional_struct = { version = "0.2.0", optional = true }

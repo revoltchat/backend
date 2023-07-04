@@ -8,6 +8,7 @@ extern crate serde_json;
 pub mod routes;
 pub mod util;
 
+use rocket_prometheus::PrometheusMetrics;
 use std::net::Ipv4Addr;
 
 use async_std::channel::unbounded;
@@ -65,7 +66,11 @@ async fn rocket() -> _ {
 
     // Configure Rocket
     let rocket = rocket::build();
+    let prometheus = PrometheusMetrics::new();
+
     routes::mount(rocket)
+        .attach(prometheus.clone())
+        .mount("/metrics", prometheus)
         .mount("/", revolt_quark::web::cors::catch_all_options_routes())
         .mount("/", revolt_quark::web::ratelimiter::routes())
         .mount("/swagger/", revolt_quark::web::swagger::routes())
