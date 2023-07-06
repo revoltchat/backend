@@ -24,10 +24,6 @@ pub async fn req(db: &State<Database>, user: User, target: Ref) -> Result<Json<M
         return Err(Error::InvalidOperation);
     }
 
-    if user.bot.is_some() {
-        return Err(Error::IsBot);
-    }
-
     let target = target.as_user(db).await?;
 
     if perms(&user)
