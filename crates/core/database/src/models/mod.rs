@@ -1,5 +1,6 @@
 mod admin_migrations;
 mod bots;
+mod channel_invites;
 mod channel_webhooks;
 mod channels;
 mod files;
@@ -11,6 +12,7 @@ mod users;
 
 pub use admin_migrations::*;
 pub use bots::*;
+pub use channel_invites::*;
 pub use channel_webhooks::*;
 pub use channels::*;
 pub use files::*;
@@ -28,6 +30,7 @@ pub trait AbstractDatabase:
     + admin_migrations::AbstractMigrations
     + bots::AbstractBots
     + channels::AbstractChannels
+    + channel_invites::AbstractChannelInvites
     + channel_webhooks::AbstractWebhooks
     + files::AbstractAttachments
     + ratelimit_events::AbstractRatelimitEvents

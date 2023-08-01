@@ -34,6 +34,33 @@ impl From<crate::Bot> for Bot {
     }
 }
 
+impl From<crate::Invite> for Invite {
+    fn from(value: crate::Invite) -> Self {
+        match value {
+            crate::Invite::Group {
+                code,
+                creator,
+                channel,
+            } => Invite::Group {
+                code,
+                creator,
+                channel,
+            },
+            crate::Invite::Server {
+                code,
+                server,
+                creator,
+                channel,
+            } => Invite::Server {
+                code,
+                server,
+                creator,
+                channel,
+            },
+        }
+    }
+}
+
 impl From<crate::Webhook> for Webhook {
     fn from(value: crate::Webhook) -> Self {
         Webhook {

@@ -1,4 +1,5 @@
 mod bots;
+mod channel_invites;
 mod channel_webhooks;
 mod channels;
 mod files;
@@ -7,6 +8,7 @@ mod servers;
 mod users;
 
 pub use bots::*;
+pub use channel_invites::*;
 pub use channel_webhooks::*;
 pub use channels::*;
 pub use files::*;
