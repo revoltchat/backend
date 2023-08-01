@@ -21,6 +21,10 @@ Note: `january`, `autumn`, and `vortex` are yet to be moved into this monorepo.
 - [Revolt Testers Server](https://app.revolt.chat/invite/Testers)
 - [Contribution Guide](https://developers.revolt.chat/contributing)
 
+## Minimum Supported Rust Version
+
+Rust 1.70 or higher.
+
 ## Contributing
 
 The contribution guide is located at [developers.revolt.chat/contributing](https://developers.revolt.chat/contributing).
