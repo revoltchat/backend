@@ -1,4 +1,3 @@
-use futures::StreamExt;
 use revolt_result::Result;
 
 use crate::MongoDb;
