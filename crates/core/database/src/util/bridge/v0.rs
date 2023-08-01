@@ -61,6 +61,25 @@ impl From<crate::Invite> for Invite {
     }
 }
 
+impl From<crate::ChannelUnread> for ChannelUnread {
+    fn from(value: crate::ChannelUnread) -> Self {
+        ChannelUnread {
+            id: value.id.into(),
+            last_id: value.last_id,
+            mentions: value.mentions.unwrap_or_default(),
+        }
+    }
+}
+
+impl From<crate::ChannelCompositeKey> for ChannelCompositeKey {
+    fn from(value: crate::ChannelCompositeKey) -> Self {
+        ChannelCompositeKey {
+            channel: value.channel,
+            user: value.user,
+        }
+    }
+}
+
 impl From<crate::Webhook> for Webhook {
     fn from(value: crate::Webhook) -> Self {
         Webhook {
