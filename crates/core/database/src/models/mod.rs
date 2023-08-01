@@ -4,6 +4,7 @@ mod channel_invites;
 mod channel_unreads;
 mod channel_webhooks;
 mod channels;
+mod emojis;
 mod files;
 mod ratelimit_events;
 mod server_members;
@@ -17,6 +18,7 @@ pub use channel_invites::*;
 pub use channel_unreads::*;
 pub use channel_webhooks::*;
 pub use channels::*;
+pub use emojis::*;
 pub use files::*;
 pub use ratelimit_events::*;
 pub use server_members::*;
@@ -35,6 +37,7 @@ pub trait AbstractDatabase:
     + channel_invites::AbstractChannelInvites
     + channel_unreads::AbstractChannelUnreads
     + channel_webhooks::AbstractWebhooks
+    + emojis::AbstractEmojis
     + files::AbstractAttachments
     + ratelimit_events::AbstractRatelimitEvents
     + server_members::AbstractServerMembers

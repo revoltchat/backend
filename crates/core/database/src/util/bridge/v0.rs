@@ -235,6 +235,28 @@ impl From<crate::FieldsChannel> for FieldsChannel {
     }
 }
 
+impl From<crate::Emoji> for Emoji {
+    fn from(value: crate::Emoji) -> Self {
+        Emoji {
+            id: value.id,
+            parent: value.parent.into(),
+            creator_id: value.creator_id,
+            name: value.name,
+            animated: value.animated,
+            nsfw: value.nsfw,
+        }
+    }
+}
+
+impl From<crate::EmojiParent> for EmojiParent {
+    fn from(value: crate::EmojiParent) -> Self {
+        match value {
+            crate::EmojiParent::Detached => EmojiParent::Detached,
+            crate::EmojiParent::Server { id } => EmojiParent::Server { id },
+        }
+    }
+}
+
 impl From<crate::File> for File {
     fn from(value: crate::File) -> Self {
         File {
