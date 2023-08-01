@@ -4,3 +4,4 @@ target
 .env
 
 .vercel
+.DS_Store

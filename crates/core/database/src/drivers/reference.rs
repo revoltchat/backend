@@ -2,16 +2,12 @@ use std::{collections::HashMap, sync::Arc};
 
 use futures::lock::Mutex;
 
-use crate::{
-    AccountStrike, Bot, Channel, File, Member, MemberCompositeKey, Server, User, UserSettings,
-    Webhook,
-};
+use crate::{Bot, Channel, File, Member, MemberCompositeKey, Server, User, UserSettings, Webhook};
 
 database_derived!(
     /// Reference implementation
     #[derive(Default)]
     pub struct ReferenceDb {
-        pub account_strikes: Arc<Mutex<HashMap<String, AccountStrike>>>,
         pub bots: Arc<Mutex<HashMap<String, Bot>>>,
         pub channel_webhooks: Arc<Mutex<HashMap<String, Webhook>>>,
         pub user_settings: Arc<Mutex<HashMap<String, UserSettings>>>,

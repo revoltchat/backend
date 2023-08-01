@@ -1,15 +1,5 @@
 use revolt_models::v0::*;
 
-impl From<crate::AccountStrike> for AccountStrike {
-    fn from(value: crate::AccountStrike) -> Self {
-        AccountStrike {
-            id: value.id,
-            user_id: value.user_id,
-            reason: value.reason,
-        }
-    }
-}
-
 impl crate::Bot {
     pub fn into_public_bot(self, user: crate::User) -> PublicBot {
         #[cfg(debug_assertions)]
@@ -52,7 +42,7 @@ impl From<crate::Webhook> for Webhook {
             avatar: value.avatar.map(|file| file.into()),
             channel_id: value.channel_id,
             token: value.token,
-            permissions: value.permissions
+            permissions: value.permissions,
         }
     }
 }
@@ -65,7 +55,7 @@ impl From<crate::PartialWebhook> for PartialWebhook {
             avatar: value.avatar.map(|file| file.into()),
             channel_id: value.channel_id,
             token: value.token,
-            permissions: value.permissions
+            permissions: value.permissions,
         }
     }
 }
