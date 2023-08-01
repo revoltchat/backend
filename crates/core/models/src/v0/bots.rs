@@ -65,16 +65,16 @@ auto_derived!(
     /// Public Bot
     pub struct PublicBot {
         /// Bot Id
-        #[serde(rename = "_id")]
+        #[cfg_attr(feature = "serde", serde(rename = "_id"))]
         pub id: String,
 
         /// Bot Username
         pub username: String,
         /// Profile Avatar
-        #[serde(skip_serializing_if = "String::is_empty")]
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "String::is_empty"))]
         pub avatar: String,
         /// Profile Description
-        #[serde(skip_serializing_if = "String::is_empty")]
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "String::is_empty"))]
         pub description: String,
     }
 
