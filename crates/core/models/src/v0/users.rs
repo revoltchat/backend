@@ -4,40 +4,52 @@ auto_derived!(
     /// User
     pub struct User {
         /// Unique Id
-        #[serde(rename = "_id")]
+        #[cfg_attr(feature = "serde", serde(rename = "_id"))]
         pub id: String,
         /// Username
         pub username: String,
         /// Discriminator
         pub discriminator: String,
         /// Display name
-        #[serde(skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub display_name: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         /// Avatar attachment
         pub avatar: Option<File>,
         /// Relationships with other users
-        #[serde(skip_serializing_if = "Vec::is_empty", default)]
+        #[cfg_attr(
+            feature = "serde",
+            serde(skip_serializing_if = "Vec::is_empty", default)
+        )]
         pub relations: Vec<Relationship>,
 
         /// Bitfield of user badges
-        #[serde(skip_serializing_if = "crate::if_zero_u32", default)]
+        #[cfg_attr(
+            feature = "serde",
+            serde(skip_serializing_if = "crate::if_zero_u32", default)
+        )]
         pub badges: u32,
         /// User's current status
-        #[serde(skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub status: Option<UserStatus>,
         /// User's profile page
-        #[serde(skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub profile: Option<UserProfile>,
 
         /// Enum of user flags
-        #[serde(skip_serializing_if = "crate::if_zero_u32", default)]
+        #[cfg_attr(
+            feature = "serde",
+            serde(skip_serializing_if = "crate::if_zero_u32", default)
+        )]
         pub flags: u32,
         /// Whether this user is privileged
-        #[serde(skip_serializing_if = "crate::if_false", default)]
+        #[cfg_attr(
+            feature = "serde",
+            serde(skip_serializing_if = "crate::if_false", default)
+        )]
         pub privileged: bool,
         /// Bot information
-        #[serde(skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub bot: Option<BotInformation>,
 
         /// Current session user's relationship with this user
@@ -49,20 +61,29 @@ auto_derived!(
     /// User's relationship with another user (or themselves)
     #[derive(Default)]
     pub enum RelationshipStatus {
+        /// No relationship with other user
         #[default]
         None,
+        /// Other user is us
         User,
+        /// Friends with the other user
         Friend,
+        /// Pending friend request to user
         Outgoing,
+        /// Incoming friend request from user
         Incoming,
+        /// Blocked this user
         Blocked,
+        /// Blocked by this user
         BlockedOther,
     }
 
     /// Relationship entry indicating current status with other user
     pub struct Relationship {
-        #[serde(rename = "_id")]
+        /// Other user's Id
+        #[cfg_attr(feature = "serde", serde(rename = "_id"))]
         pub user_id: String,
+        /// Relationship status with them
         pub status: RelationshipStatus,
     }
 
@@ -83,20 +104,20 @@ auto_derived!(
     /// User's active status
     pub struct UserStatus {
         /// Custom status text
-        #[serde(skip_serializing_if = "String::is_empty")]
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "String::is_empty"))]
         pub text: String,
         /// Current presence option
-        #[serde(skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub presence: Option<Presence>,
     }
 
     /// User's profile
     pub struct UserProfile {
         /// Text content on user's profile
-        #[serde(skip_serializing_if = "String::is_empty")]
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "String::is_empty"))]
         pub content: String,
         /// Background visible on user's profile
-        #[serde(skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub background: Option<File>,
     }
 
@@ -143,7 +164,7 @@ auto_derived!(
     /// Bot information for if the user is a bot
     pub struct BotInformation {
         /// Id of the owner of this bot
-        #[serde(rename = "owner")]
+        #[cfg_attr(feature = "serde", serde(rename = "owner"))]
         pub owner_id: String,
     }
 );

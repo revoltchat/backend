@@ -226,6 +226,67 @@ impl From<crate::Metadata> for Metadata {
     }
 }
 
+impl From<crate::Server> for Server {
+    fn from(value: crate::Server) -> Self {
+        Server {
+            id: value.id,
+            owner: value.owner,
+            name: value.name,
+            description: value.description,
+            channels: value.channels,
+            categories: value
+                .categories
+                .map(|categories| categories.into_iter().map(|v| v.into()).collect()),
+            system_messages: value.system_messages.map(|v| v.into()),
+            roles: value
+                .roles
+                .into_iter()
+                .map(|(k, v)| (k, v.into()))
+                .collect(),
+            default_permissions: value.default_permissions,
+            icon: value.icon.map(|f| f.into()),
+            banner: value.banner.map(|f| f.into()),
+            flags: value.flags.unwrap_or_default() as u32,
+            nsfw: value.nsfw,
+            analytics: value.analytics,
+            discoverable: value.discoverable,
+        }
+    }
+}
+
+impl From<crate::Category> for Category {
+    fn from(value: crate::Category) -> Self {
+        Category {
+            id: value.id,
+            title: value.title,
+            channels: value.channels,
+        }
+    }
+}
+
+impl From<crate::SystemMessageChannels> for SystemMessageChannels {
+    fn from(value: crate::SystemMessageChannels) -> Self {
+        SystemMessageChannels {
+            user_joined: value.user_joined,
+            user_left: value.user_left,
+            user_kicked: value.user_kicked,
+            user_banned: value.user_banned,
+        }
+    }
+}
+
+impl From<crate::Role> for Role {
+    fn from(value: crate::Role) -> Self {
+        Role {
+            name: value.name,
+            permissions: value.permissions,
+            colour: value.colour,
+            hoist: value.hoist,
+            rank: value.rank,
+        }
+    }
+}
+
 impl crate::User {
     pub async fn into<P>(self, perspective: P) -> User
     where
