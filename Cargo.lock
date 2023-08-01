@@ -1613,11 +1613,12 @@ dependencies = [
 
 [[package]]
 name = "iso8601-timestamp"
-version = "0.2.10"
+version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "368d05885f276773b79b4578869a60ab91e880415d17fb2a8d193aea74188a29"
+checksum = "3bd7663ae5b511b3d13c7d374dbe73b03da3da8e66b83950390173bc7c7325cc"
 dependencies = [
  "generic-array 0.14.5",
+ "schemars",
  "serde",
  "time 0.3.17",
 ]
@@ -2882,7 +2883,7 @@ dependencies = [
  "authifier",
  "bson",
  "futures",
- "iso8601-timestamp 0.2.10",
+ "iso8601-timestamp 0.2.11",
  "log",
  "mongodb",
  "nanoid",
@@ -2948,6 +2949,7 @@ dependencies = [
 name = "revolt-models"
 version = "0.6.5"
 dependencies = [
+ "iso8601-timestamp 0.2.11",
  "revolt-permissions",
  "revolt_optional_struct",
  "schemars",

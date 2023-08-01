@@ -226,6 +226,28 @@ impl From<crate::Metadata> for Metadata {
     }
 }
 
+impl From<crate::Member> for Member {
+    fn from(value: crate::Member) -> Self {
+        Member {
+            id: value.id.into(),
+            joined_at: value.joined_at,
+            nickname: value.nickname,
+            avatar: value.avatar.map(|f| f.into()),
+            roles: value.roles,
+            timeout: value.timeout,
+        }
+    }
+}
+
+impl From<crate::MemberCompositeKey> for MemberCompositeKey {
+    fn from(value: crate::MemberCompositeKey) -> Self {
+        MemberCompositeKey {
+            server: value.server,
+            user: value.user,
+        }
+    }
+}
+
 impl From<crate::Server> for Server {
     fn from(value: crate::Server) -> Self {
         Server {
