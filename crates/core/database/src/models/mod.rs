@@ -7,6 +7,7 @@ mod channels;
 mod emojis;
 mod files;
 mod ratelimit_events;
+mod server_bans;
 mod server_members;
 mod servers;
 mod user_settings;
@@ -21,6 +22,7 @@ pub use channels::*;
 pub use emojis::*;
 pub use files::*;
 pub use ratelimit_events::*;
+pub use server_bans::*;
 pub use server_members::*;
 pub use servers::*;
 pub use user_settings::*;
@@ -40,6 +42,7 @@ pub trait AbstractDatabase:
     + emojis::AbstractEmojis
     + files::AbstractAttachments
     + ratelimit_events::AbstractRatelimitEvents
+    + server_bans::AbstractServerBans
     + server_members::AbstractServerMembers
     + servers::AbstractServers
     + user_settings::AbstractUserSettings

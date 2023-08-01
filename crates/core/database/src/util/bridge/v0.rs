@@ -294,6 +294,15 @@ impl From<crate::Metadata> for Metadata {
     }
 }
 
+impl From<crate::ServerBan> for ServerBan {
+    fn from(value: crate::ServerBan) -> Self {
+        ServerBan {
+            id: value.id,
+            reason: value.reason,
+        }
+    }
+}
+
 impl From<crate::Member> for Member {
     fn from(value: crate::Member) -> Self {
         Member {
