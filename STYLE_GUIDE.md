@@ -2,6 +2,10 @@
 
 Beyond using Cargo format and Clippy, there are some specific code style guidelines laid out in this document for different parts of the project.
 
+## Writing Style
+
+- Shorten "identifier" to "Id" with that exact casing, i.e. Server Id.
+
 ## `core/database` crate
 
 w.r.t. `model.rs` files
@@ -22,6 +26,7 @@ w.r.t. `model.rs` files
   );
   ```
 - `auto_derived!` macro accepts multiple entries and should be used as such:
+
   ```rust
   auto_derived!(
     /// Optional fields on server object
@@ -31,6 +36,7 @@ w.r.t. `model.rs` files
     pub enum FieldsRole { .. }
   );
   ```
+
 - If special serialisation conditions are required, such as checking if a boolean is false, use the existing definitions for these functions from the crate root:
   ```rust
   #[serde(skip_serializing_if = "crate::if_false", default)]
