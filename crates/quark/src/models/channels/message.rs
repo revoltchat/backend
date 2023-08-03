@@ -269,7 +269,6 @@ pub struct DataMessageSend {
     #[validate(length(min = 0, max = 2000))]
     pub content: Option<String>,
     /// Attachments to include in message
-
     pub attachments: Option<Vec<String>>,
     /// Messages to reply to
     pub replies: Option<Vec<Reply>>,

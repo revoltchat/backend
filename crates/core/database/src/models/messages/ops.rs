@@ -1,0 +1,39 @@
+use revolt_result::Result;
+
+use crate::{AppendMessage, Message, MessageQuery, PartialMessage};
+
+// mod mongodb;
+// mod reference;
+
+#[async_trait]
+pub trait AbstractMessages: Sync + Send {
+    /// Insert a new message into the database
+    async fn insert_message(&self, message: &Message) -> Result<()>;
+
+    /// Fetch a message by its id
+    async fn fetch_message(&self, id: &str) -> Result<Message>;
+
+    /// Fetch multiple messages by given query
+    async fn fetch_messages(&self, query: MessageQuery) -> Result<Vec<Message>>;
+
+    /// Update a given message with new information
+    async fn update_message(&self, id: &str, message: &PartialMessage) -> Result<()>;
+
+    /// Append information to a given message
+    async fn append_message(&self, id: &str, append: &AppendMessage) -> Result<()>;
+
+    /// Add a new reaction to a message
+    async fn add_reaction(&self, id: &str, emoji: &str, user: &str) -> Result<()>;
+
+    /// Remove a reaction from a message
+    async fn remove_reaction(&self, id: &str, emoji: &str, user: &str) -> Result<()>;
+
+    /// Remove reaction from a message
+    async fn clear_reaction(&self, id: &str, emoji: &str) -> Result<()>;
+
+    /// Delete a message from the database by its id
+    async fn delete_message(&self, id: &str) -> Result<()>;
+
+    /// Delete messages from a channel by their ids and corresponding channel id
+    async fn delete_messages(&self, channel: &str, ids: Vec<String>) -> Result<()>;
+}

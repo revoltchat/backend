@@ -294,6 +294,95 @@ impl From<crate::Metadata> for Metadata {
     }
 }
 
+impl From<crate::Message> for Message {
+    fn from(value: crate::Message) -> Self {
+        Message {
+            id: value.id,
+            nonce: value.nonce,
+            channel: value.channel,
+            author: value.author,
+            webhook: value.webhook,
+            content: value.content,
+            system: value.system.map(|system| system.into()),
+            attachments: value
+                .attachments
+                .map(|v| v.into_iter().map(|f| f.into()).collect()),
+            edited: value.edited,
+            embeds: value.embeds,
+            mentions: value.mentions,
+            replies: value.replies,
+            reactions: value.reactions,
+            interactions: value.interactions.into(),
+            masquerade: value.masquerade.map(|masq| masq.into()),
+        }
+    }
+}
+
+impl From<crate::PartialMessage> for PartialMessage {
+    fn from(value: crate::PartialMessage) -> Self {
+        PartialMessage {
+            id: value.id,
+            nonce: value.nonce,
+            channel: value.channel,
+            author: value.author,
+            webhook: value.webhook,
+            content: value.content,
+            system: value.system.map(|system| system.into()),
+            attachments: value
+                .attachments
+                .map(|v| v.into_iter().map(|f| f.into()).collect()),
+            edited: value.edited,
+            embeds: value.embeds,
+            mentions: value.mentions,
+            replies: value.replies,
+            reactions: value.reactions,
+            interactions: value.interactions.map(|interactions| interactions.into()),
+            masquerade: value.masquerade.map(|masq| masq.into()),
+        }
+    }
+}
+
+impl From<crate::SystemMessage> for SystemMessage {
+    fn from(value: crate::SystemMessage) -> Self {
+        match value {
+            crate::SystemMessage::ChannelDescriptionChanged { by } => {
+                Self::ChannelDescriptionChanged { by }
+            }
+            crate::SystemMessage::ChannelIconChanged { by } => Self::ChannelIconChanged { by },
+            crate::SystemMessage::ChannelOwnershipChanged { from, to } => {
+                Self::ChannelOwnershipChanged { from, to }
+            }
+            crate::SystemMessage::ChannelRenamed { name, by } => Self::ChannelRenamed { name, by },
+            crate::SystemMessage::Text { content } => Self::Text { content },
+            crate::SystemMessage::UserAdded { id, by } => Self::UserAdded { id, by },
+            crate::SystemMessage::UserBanned { id } => Self::UserBanned { id },
+            crate::SystemMessage::UserJoined { id } => Self::UserJoined { id },
+            crate::SystemMessage::UserKicked { id } => Self::UserKicked { id },
+            crate::SystemMessage::UserLeft { id } => Self::UserLeft { id },
+            crate::SystemMessage::UserRemove { id, by } => Self::UserRemove { id, by },
+        }
+    }
+}
+
+impl From<crate::Interactions> for Interactions {
+    fn from(value: crate::Interactions) -> Self {
+        Interactions {
+            reactions: value.reactions,
+            restrict_reactions: value.restrict_reactions,
+        }
+    }
+}
+
+impl From<crate::Masquerade> for Masquerade {
+    fn from(value: crate::Masquerade) -> Self {
+        Masquerade {
+            name: value.name,
+            avatar: value.avatar,
+            colour: value.colour,
+        }
+    }
+}
+
 impl From<crate::ServerBan> for ServerBan {
     fn from(value: crate::ServerBan) -> Self {
         ServerBan {

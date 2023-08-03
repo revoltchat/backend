@@ -3,29 +3,32 @@ name = "revolt-database"
 version = "0.6.5"
 edition = "2021"
 license = "AGPL-3.0-or-later"
-authors = [ "Paul Makles <me@insrt.uk>" ]
+authors = ["Paul Makles <me@insrt.uk>"]
 description = "Revolt Backend: Database Implementation"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
 # Databases
-mongodb = [ "dep:mongodb", "bson" ]
+mongodb = ["dep:mongodb", "bson"]
 
 # ... Other
-async-std-runtime = [ "async-std" ]
-rocket-impl = [ "rocket", "schemars" ]
-redis-is-patched = [ "revolt-presence/redis-is-patched" ]
+async-std-runtime = ["async-std"]
+rocket-impl = ["rocket", "schemars"]
+redis-is-patched = ["revolt-presence/redis-is-patched"]
 
 # Default Features
-default = [ "mongodb", "async-std-runtime" ]
+default = ["mongodb", "async-std-runtime"]
 
 [dependencies]
 # Core
 revolt-result = { version = "0.6.5", path = "../result" }
 revolt-models = { version = "0.6.5", path = "../models" }
 revolt-presence = { version = "0.6.5", path = "../presence" }
-revolt-permissions = { version = "0.6.5", path = "../permissions", features = [ "serde", "bson" ] }
+revolt-permissions = { version = "0.6.5", path = "../permissions", features = [
+    "serde",
+    "bson",
+] }
 
 # Utility
 log = "0.4"
@@ -33,6 +36,7 @@ rand = "0.8.5"
 ulid = "1.0.0"
 nanoid = "0.4.0"
 once_cell = "1.17"
+indexmap = "1.9.1"
 
 # Serialisation
 serde_json = "1"
@@ -61,7 +65,9 @@ async-std = { version = "1.8.0", features = ["attributes"], optional = true }
 
 # Rocket Impl
 schemars = { version = "0.8.8", optional = true }
-rocket = { version = "0.5.0-rc.2", default-features = false, features = ["json"], optional = true }
+rocket = { version = "0.5.0-rc.2", default-features = false, features = [
+    "json",
+], optional = true }
 
 # Authifier
 authifier = { version = "1.0" }

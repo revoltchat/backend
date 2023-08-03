@@ -21,6 +21,7 @@ default = ["serde", "partials"]
 revolt-permissions = { version = "0.6.5", path = "../permissions" }
 
 # Serialisation
+indexmap = "1.9.3"
 revolt_optional_struct = { version = "0.2.0", optional = true }
 serde = { version = "1", features = ["derive"], optional = true }
 iso8601-timestamp = { version = "0.2.11", features = ["schema", "bson"] }

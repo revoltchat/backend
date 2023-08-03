@@ -1548,9 +1548,9 @@ checksum = "90f97a5f38dd3ccfbe7aa80f4a0c00930f21b922c74195be0201c51028f22dcf"
 
 [[package]]
 name = "indexmap"
-version = "1.9.1"
+version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10a35a97730320ffe8e2d410b5d3b69279b98d2c14bdb8b70ea89ecf7888d41e"
+checksum = "bd070e393353796e801d209ad339e89596eb4c8d430d18ede6a1cced8fafbd99"
 dependencies = [
  "autocfg 1.1.0",
  "hashbrown 0.12.1",
@@ -2883,6 +2883,7 @@ dependencies = [
  "authifier",
  "bson",
  "futures",
+ "indexmap",
  "iso8601-timestamp 0.2.11",
  "log",
  "mongodb",
@@ -2949,6 +2950,7 @@ dependencies = [
 name = "revolt-models"
 version = "0.6.5"
 dependencies = [
+ "indexmap",
  "iso8601-timestamp 0.2.11",
  "revolt-permissions",
  "revolt_optional_struct",
