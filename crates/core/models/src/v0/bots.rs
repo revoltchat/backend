@@ -85,4 +85,14 @@ auto_derived!(
         /// User object
         pub user: User,
     }
+
+    /// Bot Details
+    pub struct DataCreateBot {
+        /// Bot username
+        #[cfg_attr(
+            feature = "validator",
+            validate(length(min = 2, max = 32), regex = "RE_USERNAME")
+        )]
+        name: String,
+    }
 );

@@ -1,24 +1,11 @@
 use crate::util::regex::RE_USERNAME;
 
 use nanoid::nanoid;
-use revolt_quark::{
-    models::{user::BotInformation, Bot, User},
-    variables::delta::MAX_BOT_COUNT,
-    Db, Error, Result,
-};
 
 use rocket::serde::json::Json;
 use serde::Deserialize;
 use ulid::Ulid;
 use validator::Validate;
-
-/// # Bot Details
-#[derive(Validate, Deserialize, JsonSchema)]
-pub struct DataCreateBot {
-    /// Bot username
-    #[validate(length(min = 2, max = 32), regex = "RE_USERNAME")]
-    name: String,
-}
 
 /// # Create Bot
 ///
