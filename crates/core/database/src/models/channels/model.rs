@@ -169,6 +169,19 @@ impl Channel {
     pub async fn create(&self, db: &Database) -> Result<()> {
         db.insert_channel(self).await?;
 
+        let event = EventV1::ChannelCreate(self.clone().into());
+        match self {
+            Self::SavedMessages { user, .. } => event.private(user.clone()).await,
+            Self::DirectMessage { recipients, .. } | Self::Group { recipients, .. } => {
+                for recipient in recipients {
+                    event.clone().private(recipient.clone()).await;
+                }
+            }
+            Self::TextChannel { server, .. } | Self::VoiceChannel { server, .. } => {
+                event.p(server.clone()).await;
+            }
+        }
+
         Ok(())
     }
 
@@ -293,7 +306,7 @@ impl Channel {
     }
 
     /// Update channel data
-    pub async fn update<'a>(
+    pub async fn update(
         &mut self,
         db: &Database,
         partial: PartialChannel,
@@ -305,8 +318,19 @@ impl Channel {
 
         self.apply_options(partial.clone());
 
-        db.update_channel(&self.id(), &partial, remove.clone())
-            .await?;
+        let id = self.id().to_string();
+        db.update_channel(&id, &partial, remove.clone()).await?;
+
+        EventV1::ChannelUpdate {
+            id: id.clone(),
+            data: partial.into(),
+            clear: remove.into_iter().map(|v| v.into()).collect(),
+        }
+        .p(match self {
+            Self::TextChannel { server, .. } | Self::VoiceChannel { server, .. } => server.clone(),
+            _ => id,
+        })
+        .await;
 
         Ok(())
     }
@@ -514,6 +538,8 @@ impl Channel {
 
     /// Delete a channel
     pub async fn delete(&self, db: &Database) -> Result<()> {
+        let id = self.id().to_string();
+        EventV1::ChannelDelete { id: id.clone() }.p(id).await;
         db.delete_channel(self).await
     }
 }

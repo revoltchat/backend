@@ -3,7 +3,7 @@ use super::File;
 use revolt_permissions::OverrideField;
 use std::collections::HashMap;
 
-auto_derived!(
+auto_derived_partial!(
     /// Server
     pub struct Server {
         /// Unique Id
@@ -72,18 +72,11 @@ auto_derived!(
             serde(skip_serializing_if = "crate::if_false", default)
         )]
         pub discoverable: bool,
-    }
+    },
+    "PartialServer"
+);
 
-    /// Channel category
-    pub struct Category {
-        /// Unique ID for this category
-        pub id: String,
-        /// Title for this category
-        pub title: String,
-        /// Channels in this category
-        pub channels: Vec<String>,
-    }
-
+auto_derived_partial!(
     /// Role
     pub struct Role {
         /// Role name
@@ -104,6 +97,33 @@ auto_derived!(
         /// Ranking of this role
         #[cfg_attr(feature = "serde", serde(default))]
         pub rank: i64,
+    },
+    "PartialRole"
+);
+
+auto_derived!(
+    /// Optional fields on server object
+    pub enum FieldsServer {
+        Description,
+        Categories,
+        SystemMessages,
+        Icon,
+        Banner,
+    }
+
+    /// Optional fields on server object
+    pub enum FieldsRole {
+        Colour,
+    }
+
+    /// Channel category
+    pub struct Category {
+        /// Unique ID for this category
+        pub id: String,
+        /// Title for this category
+        pub title: String,
+        /// Channels in this category
+        pub channels: Vec<String>,
     }
 
     /// System message channel assignments

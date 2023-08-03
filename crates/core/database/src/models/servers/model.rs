@@ -4,7 +4,7 @@ use revolt_permissions::OverrideField;
 use revolt_result::Result;
 use ulid::Ulid;
 
-use crate::{Database, File};
+use crate::{events::client::EventV1, Database, File};
 
 auto_derived_partial!(
     /// Server
@@ -149,24 +149,24 @@ impl Server {
 
         db.update_server(&self.id, &partial, remove.clone()).await?;
 
-        /* // TODO: EventV1::ServerUpdate {
+        EventV1::ServerUpdate {
             id: self.id.clone(),
-            data: partial,
-            clear: remove,
+            data: partial.into(),
+            clear: remove.into_iter().map(|v| v.into()).collect(),
         }
         .p(self.id.clone())
-        .await; */
+        .await;
 
         Ok(())
     }
 
     /// Delete a server
     pub async fn delete(self, db: &Database) -> Result<()> {
-        /* // TODO: EventV1::ServerDelete {
+        EventV1::ServerDelete {
             id: self.id.clone(),
         }
         .p(self.id.clone())
-        .await; */
+        .await;
 
         db.delete_server(&self.id).await
     }
@@ -364,14 +364,14 @@ impl Role {
         let role_id = Ulid::new().to_string();
         db.insert_role(server_id, &role_id, self).await?;
 
-        /* // TODO: EventV1::ServerRoleUpdate {
+        EventV1::ServerRoleUpdate {
             id: server_id.to_string(),
             role_id: role_id.to_string(),
-            data: self.clone().into_optional(),
+            data: self.clone().into_optional().into(),
             clear: vec![],
         }
         .p(server_id.to_string())
-        .await; */
+        .await;
 
         Ok(role_id)
     }
@@ -394,14 +394,14 @@ impl Role {
         db.update_role(server_id, role_id, &partial, remove.clone())
             .await?;
 
-        /* // TODO: EventV1::ServerRoleUpdate {
+        EventV1::ServerRoleUpdate {
             id: server_id.to_string(),
             role_id: role_id.to_string(),
-            data: partial,
+            data: partial.into(),
             clear: vec![],
         }
         .p(server_id.to_string())
-        .await; */
+        .await;
 
         Ok(())
     }
@@ -415,12 +415,12 @@ impl Role {
 
     /// Delete a role
     pub async fn delete(self, db: &Database, server_id: &str, role_id: &str) -> Result<()> {
-        /* // TODO: EventV1::ServerRoleDelete {
+        EventV1::ServerRoleDelete {
             id: server_id.to_string(),
             role_id: role_id.to_string(),
         }
         .p(server_id.to_string())
-        .await; */
+        .await;
 
         db.delete_role(server_id, role_id).await
     }

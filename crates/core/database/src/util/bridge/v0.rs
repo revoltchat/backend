@@ -316,11 +316,45 @@ impl From<crate::Member> for Member {
     }
 }
 
+impl From<crate::PartialMember> for PartialMember {
+    fn from(value: crate::PartialMember) -> Self {
+        PartialMember {
+            id: value.id.map(|id| id.into()),
+            joined_at: value.joined_at,
+            nickname: value.nickname,
+            avatar: value.avatar.map(|f| f.into()),
+            roles: value.roles,
+            timeout: value.timeout,
+        }
+    }
+}
+
 impl From<crate::MemberCompositeKey> for MemberCompositeKey {
     fn from(value: crate::MemberCompositeKey) -> Self {
         MemberCompositeKey {
             server: value.server,
             user: value.user,
+        }
+    }
+}
+
+impl From<crate::FieldsMember> for FieldsMember {
+    fn from(value: crate::FieldsMember) -> Self {
+        match value {
+            crate::FieldsMember::Avatar => FieldsMember::Avatar,
+            crate::FieldsMember::Nickname => FieldsMember::Nickname,
+            crate::FieldsMember::Roles => FieldsMember::Roles,
+            crate::FieldsMember::Timeout => FieldsMember::Timeout,
+        }
+    }
+}
+
+impl From<crate::RemovalIntention> for RemovalIntention {
+    fn from(value: crate::RemovalIntention) -> Self {
+        match value {
+            crate::RemovalIntention::Ban => RemovalIntention::Ban,
+            crate::RemovalIntention::Kick => RemovalIntention::Kick,
+            crate::RemovalIntention::Leave => RemovalIntention::Leave,
         }
     }
 }
@@ -349,6 +383,44 @@ impl From<crate::Server> for Server {
             nsfw: value.nsfw,
             analytics: value.analytics,
             discoverable: value.discoverable,
+        }
+    }
+}
+
+impl From<crate::PartialServer> for PartialServer {
+    fn from(value: crate::PartialServer) -> Self {
+        PartialServer {
+            id: value.id,
+            owner: value.owner,
+            name: value.name,
+            description: value.description,
+            channels: value.channels,
+            categories: value
+                .categories
+                .map(|categories| categories.into_iter().map(|v| v.into()).collect()),
+            system_messages: value.system_messages.map(|v| v.into()),
+            roles: value
+                .roles
+                .map(|roles| roles.into_iter().map(|(k, v)| (k, v.into())).collect()),
+            default_permissions: value.default_permissions,
+            icon: value.icon.map(|f| f.into()),
+            banner: value.banner.map(|f| f.into()),
+            flags: value.flags.map(|v| v as u32),
+            nsfw: value.nsfw,
+            analytics: value.analytics,
+            discoverable: value.discoverable,
+        }
+    }
+}
+
+impl From<crate::FieldsServer> for FieldsServer {
+    fn from(value: crate::FieldsServer) -> Self {
+        match value {
+            crate::FieldsServer::Banner => FieldsServer::Banner,
+            crate::FieldsServer::Categories => FieldsServer::Categories,
+            crate::FieldsServer::Description => FieldsServer::Description,
+            crate::FieldsServer::Icon => FieldsServer::Icon,
+            crate::FieldsServer::SystemMessages => FieldsServer::SystemMessages,
         }
     }
 }
@@ -382,6 +454,26 @@ impl From<crate::Role> for Role {
             colour: value.colour,
             hoist: value.hoist,
             rank: value.rank,
+        }
+    }
+}
+
+impl From<crate::PartialRole> for PartialRole {
+    fn from(value: crate::PartialRole) -> Self {
+        PartialRole {
+            name: value.name,
+            permissions: value.permissions,
+            colour: value.colour,
+            hoist: value.hoist,
+            rank: value.rank,
+        }
+    }
+}
+
+impl From<crate::FieldsRole> for FieldsRole {
+    fn from(value: crate::FieldsRole) -> Self {
+        match value {
+            crate::FieldsRole::Colour => FieldsRole::Colour,
         }
     }
 }
