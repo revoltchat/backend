@@ -58,6 +58,12 @@ auto_derived!(
         pub flags: u32,
     }
 
+    /// Optional fields on bot object
+    pub enum FieldsBot {
+        Token,
+        InteractionsURL,
+    }
+
     /// Flags that may be attributed to a bot
     #[repr(u32)]
     pub enum BotFlags {
@@ -98,5 +104,41 @@ auto_derived!(
             validate(length(min = 2, max = 32), regex = "super::RE_USERNAME")
         )]
         pub name: String,
+    }
+
+    /// New Bot Details
+    #[cfg_attr(feature = "validator", derive(Validate))]
+    pub struct DataEditBot {
+        /// Bot username
+        #[cfg_attr(
+            feature = "validator",
+            validate(length(min = 2, max = 32), regex = "super::RE_USERNAME")
+        )]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub name: Option<String>,
+        /// Whether the bot can be added by anyone
+        pub public: Option<bool>,
+        /// Whether analytics should be gathered for this bot
+        ///
+        /// Must be enabled in order to show up on [Revolt Discover](https://rvlt.gg).
+        pub analytics: Option<bool>,
+        /// Interactions URL
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
+        pub interactions_url: Option<String>,
+        /// Fields to remove from bot object
+        #[cfg_attr(feature = "validator", validate(length(min = 1)))]
+        pub remove: Option<Vec<FieldsBot>>,
+    }
+
+    /// Owned Bots Response
+    ///
+    /// Both lists are sorted by their IDs.
+    ///
+    /// TODO: user should be in bot object
+    pub struct OwnedBotsResponse {
+        /// Bot objects
+        pub bots: Vec<Bot>,
+        /// User objects
+        pub users: Vec<User>,
     }
 );

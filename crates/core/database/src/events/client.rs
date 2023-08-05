@@ -2,9 +2,9 @@ use authifier::AuthifierEvent;
 use serde::{Deserialize, Serialize};
 
 use revolt_models::v0::{
-    Channel, Emoji, FieldsChannel, FieldsMember, FieldsRole, FieldsServer, FieldsWebhook,
-    MemberCompositeKey, PartialChannel, PartialMember, PartialRole, PartialServer, PartialWebhook,
-    Server, UserSettings, Webhook,
+    Channel, Emoji, FieldsChannel, FieldsMember, FieldsRole, FieldsServer, FieldsUser,
+    FieldsWebhook, MemberCompositeKey, PartialChannel, PartialMember, PartialRole, PartialServer,
+    PartialUser, PartialWebhook, Server, UserSettings, Webhook,
 };
 use revolt_result::Error;
 
@@ -145,7 +145,7 @@ pub enum EventV1 {
     /// Server role deleted
     ServerRoleDelete { id: String, role_id: String },
 
-    /*/// Update existing user
+    /// Update existing user
     UserUpdate {
         id: String,
         data: PartialUser,
@@ -153,7 +153,7 @@ pub enum EventV1 {
         event_id: Option<String>,
     },
 
-    /// Relationship with another user changed
+    /*/// Relationship with another user changed
     UserRelationship {
         id: String,
         user: User,

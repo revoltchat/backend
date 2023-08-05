@@ -1,6 +1,12 @@
-use revolt_quark::{models::User, perms, Db, EmptyResponse, Error, Permission, Ref, Result};
+use revolt_database::util::permissions::DatabasePermissionQuery;
+use revolt_database::Member;
+use revolt_database::{util::reference::Reference, Database, User};
+use revolt_permissions::{calculate_server_permissions, ChannelPermission};
+use revolt_result::{create_error, Result};
+use rocket::State;
 
 use rocket::serde::json::Json;
+use rocket_empty::EmptyResponse;
 use serde::Deserialize;
 
 /// # Invite Destination
@@ -25,42 +31,41 @@ pub enum InviteBotDestination {
 #[openapi(tag = "Bots")]
 #[post("/<target>/invite", data = "<dest>")]
 pub async fn invite_bot(
-    db: &Db,
+    db: &State<Database>,
     user: User,
-    target: Ref,
+    target: Reference,
     dest: Json<InviteBotDestination>,
 ) -> Result<EmptyResponse> {
     if user.bot.is_some() {
-        return Err(Error::IsBot);
+        return Err(create_error!(IsBot));
     }
 
     let bot = target.as_bot(db).await?;
     if !bot.public && bot.owner != user.id {
-        return Err(Error::BotIsPrivate);
+        return Err(create_error!(BotIsPrivate));
     }
 
     match dest.into_inner() {
         InviteBotDestination::Server { server } => {
             let server = db.fetch_server(&server).await?;
 
-            perms(&user)
-                .server(&server)
-                .throw_permission(db, Permission::ManageServer)
-                .await?;
+            let mut query = DatabasePermissionQuery::new(db, &user).server(&server);
+            calculate_server_permissions(&mut query)
+                .await
+                .throw_if_lacking_channel_permission(ChannelPermission::ManageServer)?;
 
             let user = db.fetch_user(&bot.id).await?;
-            server
-                .create_member(db, user, None)
+            Member::create(db, &server, &user)
                 .await
                 .map(|_| EmptyResponse)
         }
         InviteBotDestination::Group { group } => {
             let mut channel = db.fetch_channel(&group).await?;
 
-            perms(&user)
-                .channel(&channel)
-                .throw_permission_and_view_channel(db, Permission::InviteOthers)
-                .await?;
+            let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
+            calculate_server_permissions(&mut query)
+                .await
+                .throw_if_lacking_channel_permission(ChannelPermission::InviteOthers)?;
 
             channel
                 .add_user_to_group(db, &bot.id, &user.id)

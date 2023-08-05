@@ -1,6 +1,6 @@
 use std::{collections::HashSet, time::Duration};
 
-use crate::{Database, File, RatelimitEvent};
+use crate::{events::client::EventV1, Database, File, RatelimitEvent};
 
 use once_cell::sync::Lazy;
 use rand::seq::SliceRandom;
@@ -51,6 +51,15 @@ auto_derived_partial!(
 );
 
 auto_derived!(
+    /// Optional fields on user object
+    pub enum FieldsUser {
+        Avatar,
+        StatusText,
+        StatusPresence,
+        ProfileContent,
+        ProfileBackground,
+    }
+
     /// User's relationship with another user (or themselves)
     pub enum RelationshipStatus {
         None,
@@ -107,15 +116,6 @@ auto_derived!(
     pub struct BotInformation {
         /// Id of the owner of this bot
         pub owner: String,
-    }
-
-    /// Optional fields on user object
-    pub enum FieldsUser {
-        Avatar,
-        StatusText,
-        StatusPresence,
-        ProfileContent,
-        ProfileBackground,
     }
 );
 
@@ -229,11 +229,11 @@ impl User {
                     return Err(create_error!(DiscriminatorChangeRatelimited));
                 }
 
-                db.insert_ratelimit_event(&RatelimitEvent {
-                    id: Ulid::new().to_string(),
+                RatelimitEvent::create(
+                    db,
                     target_id,
-                    event_type: crate::RatelimitEventType::DiscriminatorChange,
-                })
+                    crate::RatelimitEventType::DiscriminatorChange,
+                )
                 .await?;
             }
         }
@@ -243,6 +243,40 @@ impl User {
             .choose(&mut rng)
             .expect("we can assert this has an element")
             .to_string())
+    }
+
+    /// Update a user's username
+    pub async fn update_username(&mut self, db: &Database, username: String) -> Result<()> {
+        let username = User::validate_username(username)?;
+        if self.username.to_lowercase() == username.to_lowercase() {
+            self.update(
+                db,
+                PartialUser {
+                    username: Some(username),
+                    ..Default::default()
+                },
+                vec![],
+            )
+            .await
+        } else {
+            self.update(
+                db,
+                PartialUser {
+                    discriminator: Some(
+                        User::find_discriminator(
+                            db,
+                            &username,
+                            Some((self.discriminator.to_string(), self.id.clone())),
+                        )
+                        .await?,
+                    ),
+                    username: Some(username),
+                    ..Default::default()
+                },
+                vec![],
+            )
+            .await
+        }
     }
 
     /// Check whether a username is already in use by another user
@@ -272,13 +306,14 @@ impl User {
         self.apply_options(partial.clone());
         db.update_user(&self.id, &partial, remove.clone()).await?;
 
-        /* // TODO: EventV1::UserUpdate {
+        EventV1::UserUpdate {
             id: self.id.clone(),
-            data: partial,
-            clear: remove,
+            data: partial.into(),
+            clear: remove.into_iter().map(|v| v.into()).collect(),
+            event_id: Some(Ulid::new().to_string()),
         }
         .p_user(self.id.clone(), db)
-        .await; */
+        .await;
 
         Ok(())
     }

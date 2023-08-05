@@ -1,8 +1,9 @@
 use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
 use revolt_models::v0::{Embed, MessageSort, MessageWebhook};
+use revolt_result::{create_error, Result};
 
-use crate::File;
+use crate::{Database, File};
 
 auto_derived_partial!(
     /// Message
@@ -166,7 +167,17 @@ auto_derived!(
 );
 
 #[allow(clippy::disallowed_methods)]
-impl Message {}
+impl Message {
+    /// Send a message without any notifications
+    pub async fn send_without_notifications(&mut self, db: &Database) -> Result<()> {
+        todo!()
+    }
+
+    /// Send a message
+    pub async fn send(&mut self) -> Result<()> {
+        todo!()
+    }
+}
 
 impl Interactions {
     /// Validate interactions info is correct

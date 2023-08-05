@@ -1,3 +1,5 @@
+use std::fmt;
+
 /// User's relationship with another user (or themselves)
 pub enum RelationshipStatus {
     None,
@@ -19,6 +21,12 @@ pub enum UserPermission {
     ViewProfile = 1 << 1,
     SendMessage = 1 << 2,
     Invite = 1 << 3,
+}
+
+impl fmt::Display for UserPermission {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Debug::fmt(self, f)
+    }
 }
 
 impl_op_ex!(+ |a: &UserPermission, b: &UserPermission| -> u32 { *a as u32 | *b as u32 });

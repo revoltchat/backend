@@ -9,7 +9,7 @@ use super::File;
 /// Block lookalike characters
 pub static RE_USERNAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\p{L}|[\d_.-])+$").unwrap());
 
-auto_derived!(
+auto_derived_partial!(
     /// User
     pub struct User {
         /// Unique Id
@@ -65,6 +65,18 @@ auto_derived!(
         pub relationship: RelationshipStatus,
         /// Whether this user is currently online
         pub online: bool,
+    },
+    "PartialUser"
+);
+
+auto_derived!(
+    /// Optional fields on user object
+    pub enum FieldsUser {
+        Avatar,
+        StatusText,
+        StatusPresence,
+        ProfileContent,
+        ProfileBackground,
     }
 
     /// User's relationship with another user (or themselves)

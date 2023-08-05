@@ -4,18 +4,19 @@ use revolt_permissions::{
     calculate_user_permissions, ChannelType, Override, PermissionQuery, RelationshipStatus,
 };
 
-use crate::{Database, User};
+use crate::{Channel, Database, Member, Server, User};
 
 /// Permissions calculator
-pub struct PermissionCalculator<'a> {
+#[derive(Clone)]
+pub struct DatabasePermissionQuery<'a> {
     #[allow(dead_code)]
     database: &'a Database,
 
     perspective: &'a User,
     user: Option<Cow<'a, User>>,
-    // pub channel: Cow<'a, Channel>,
-    // pub server: Cow<'a, Server>,
-    // pub member: Cow<'a, Member>,
+    channel: Option<Cow<'a, Channel>>,
+    server: Option<Cow<'a, Server>>,
+    member: Option<Cow<'a, Member>>,
 
     // flag_known_relationship: Option<&'a RelationshipStatus>,
     cached_user_permission: Option<u32>,
@@ -23,7 +24,7 @@ pub struct PermissionCalculator<'a> {
 }
 
 #[async_trait]
-impl PermissionQuery for PermissionCalculator<'_> {
+impl PermissionQuery for DatabasePermissionQuery<'_> {
     // * For calculating user permission
 
     /// Is our perspective user privileged?
@@ -153,13 +154,16 @@ impl PermissionQuery for PermissionCalculator<'_> {
     }
 }
 
-impl<'a> PermissionCalculator<'a> {
+impl<'a> DatabasePermissionQuery<'a> {
     /// Create a new permission calculator
-    pub fn new(database: &'a Database, perspective: &'a User) -> PermissionCalculator<'a> {
-        PermissionCalculator {
+    pub fn new(database: &'a Database, perspective: &'a User) -> DatabasePermissionQuery<'a> {
+        DatabasePermissionQuery {
             database,
             perspective,
             user: None,
+            channel: None,
+            server: None,
+            member: None,
 
             cached_user_permission: None,
             cached_permission: None,
@@ -167,7 +171,7 @@ impl<'a> PermissionCalculator<'a> {
     }
 
     /// Calculate the user permission value
-    pub async fn calc_user(mut self) -> PermissionCalculator<'a> {
+    pub async fn calc_user(mut self) -> DatabasePermissionQuery<'a> {
         if self.cached_user_permission.is_some() {
             return self;
         }
@@ -176,14 +180,14 @@ impl<'a> PermissionCalculator<'a> {
             panic!("Expected `PermissionCalculator.user to exist.");
         }
 
-        PermissionCalculator {
+        DatabasePermissionQuery {
             cached_user_permission: Some(calculate_user_permissions(&mut self).await),
             ..self
         }
     }
 
     /// Calculate the permission value
-    pub async fn calc(self) -> PermissionCalculator<'a> {
+    pub async fn calc(self) -> DatabasePermissionQuery<'a> {
         if self.cached_permission.is_some() {
             return self;
         }
@@ -192,15 +196,39 @@ impl<'a> PermissionCalculator<'a> {
     }
 
     /// Use user
-    pub fn user(self, user: Cow<'a, User>) -> PermissionCalculator {
-        PermissionCalculator {
-            user: Some(user),
+    pub fn user(self, user: &'a User) -> DatabasePermissionQuery {
+        DatabasePermissionQuery {
+            user: Some(Cow::Borrowed(user)),
+            ..self
+        }
+    }
+
+    /// Use channel
+    pub fn channel(self, channel: &'a Channel) -> DatabasePermissionQuery {
+        DatabasePermissionQuery {
+            channel: Some(Cow::Borrowed(channel)),
+            ..self
+        }
+    }
+
+    /// Use server
+    pub fn server(self, server: &'a Server) -> DatabasePermissionQuery {
+        DatabasePermissionQuery {
+            server: Some(Cow::Borrowed(server)),
+            ..self
+        }
+    }
+
+    /// Use member
+    pub fn member(self, member: &'a Member) -> DatabasePermissionQuery {
+        DatabasePermissionQuery {
+            member: Some(Cow::Borrowed(member)),
             ..self
         }
     }
 }
 
 /// Short-hand for creating a permission calculator
-pub fn perms<'a>(database: &'a Database, perspective: &'a User) -> PermissionCalculator<'a> {
-    PermissionCalculator::new(database, perspective)
+pub fn perms<'a>(database: &'a Database, perspective: &'a User) -> DatabasePermissionQuery<'a> {
+    DatabasePermissionQuery::new(database, perspective)
 }

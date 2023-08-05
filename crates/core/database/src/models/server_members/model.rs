@@ -1,7 +1,11 @@
 use iso8601_timestamp::Timestamp;
-use revolt_result::Result;
+use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
+use revolt_result::{create_error, Result};
 
-use crate::{Database, File, Server};
+use crate::{
+    events::client::EventV1, util::permissions::DatabasePermissionQuery, Database, File, Server,
+    User,
+};
 
 auto_derived_partial!(
     /// Server Member
@@ -57,7 +61,85 @@ auto_derived!(
     }
 );
 
+#[allow(clippy::disallowed_methods)]
 impl Member {
+    /// Create a new member in a server
+    pub async fn create(
+        db: &Database,
+        server: &Server,
+        user: &User,
+        // channels: Option<Vec<Channel>>,
+        //) -> Result<Vec<Channel>> {
+    ) -> Result<()> {
+        if db.fetch_ban(&server.id, &user.id).await.is_ok() {
+            return Err(create_error!(Banned));
+        }
+
+        let member = Member {
+            id: MemberCompositeKey {
+                server: server.id.to_string(),
+                user: user.id.to_string(),
+            },
+            ..Default::default()
+        };
+
+        db.insert_member(&member).await?;
+
+        let mut channels = vec![];
+
+        if true {
+            let query = DatabasePermissionQuery::new(db, user).server(server);
+            let existing_channels = db.fetch_channels(&server.channels).await?;
+
+            for channel in existing_channels {
+                let mut channel_query = query.clone().channel(&channel);
+
+                if calculate_channel_permissions(&mut channel_query)
+                    .await
+                    .has_channel_permission(ChannelPermission::ViewChannel)
+                {
+                    channels.push(channel);
+                }
+            }
+        }
+
+        EventV1::ServerMemberJoin {
+            id: server.id.clone(),
+            user: user.id.clone(),
+        }
+        .p(server.id.clone())
+        .await;
+
+        EventV1::ServerCreate {
+            id: server.id.clone(),
+            server: server.clone().into(),
+            channels: channels
+                .clone()
+                .into_iter()
+                .map(|channel| channel.into())
+                .collect(),
+        }
+        .private(user.id.clone())
+        .await;
+
+        if let Some(_id) = server
+            .system_messages
+            .as_ref()
+            .and_then(|x| x.user_joined.as_ref())
+        {
+            /* TODO: SystemMessage::UserJoined {
+                id: user.id.clone(),
+            }
+            .into_message(id.to_string())
+            .create_no_web_push(db, id, false)
+            .await
+            .ok(); */
+        }
+
+        // Ok(channels)
+        Ok(())
+    }
+
     /// Update member data
     pub async fn update<'a>(
         &mut self,

@@ -1,6 +1,6 @@
-use revolt_database::Database;
+use revolt_database::{util::reference::Reference, Database, User};
 use revolt_models::v0::PublicBot;
-use revolt_quark::{models::User, Error, Ref, Result};
+use revolt_result::{create_error, Result};
 
 use rocket::serde::json::Json;
 use rocket::State;
@@ -13,13 +13,13 @@ use rocket::State;
 pub async fn fetch_public_bot(
     db: &State<Database>,
     user: Option<User>,
-    target: Ref,
+    target: Reference,
 ) -> Result<Json<PublicBot>> {
-    let bot = db.fetch_bot(&target.id).await.map_err(Error::from_core)?;
+    let bot = db.fetch_bot(&target.id).await?;
     if !bot.public && user.map_or(true, |x| x.id != bot.owner) {
-        return Err(Error::NotFound);
+        return Err(create_error!(NotFound));
     }
 
-    let user = db.fetch_user(&bot.id).await.map_err(Error::from_core)?;
+    let user = db.fetch_user(&bot.id).await?;
     Ok(Json(bot.into_public_bot(user)))
 }
