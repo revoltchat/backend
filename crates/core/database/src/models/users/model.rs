@@ -133,7 +133,35 @@ pub static DISCRIMINATOR_SEARCH_SPACE: Lazy<HashSet<String>> = Lazy::new(|| {
     set.into_iter().collect()
 });
 
+#[allow(clippy::disallowed_methods)]
 impl User {
+    /// Create a new user
+    pub async fn create<I, D>(
+        db: &Database,
+        username: String,
+        account_id: I,
+        data: D,
+    ) -> Result<User>
+    where
+        I: Into<Option<String>>,
+        D: Into<Option<PartialUser>>,
+    {
+        let username = User::validate_username(username)?;
+        let mut user = User {
+            id: account_id.into().unwrap_or_else(|| Ulid::new().to_string()),
+            discriminator: User::find_discriminator(db, &username, None).await?,
+            username,
+            ..Default::default()
+        };
+
+        if let Some(data) = data.into() {
+            user.apply_options(data);
+        }
+
+        db.insert_user(&user).await?;
+        Ok(user)
+    }
+
     /// Sanitise and validate a username can be used
     pub fn validate_username(username: String) -> Result<String> {
         // Copy the username for validation
@@ -207,28 +235,6 @@ impl User {
                     event_type: crate::RatelimitEventType::DiscriminatorChange,
                 })
                 .await?;
-
-                /* let rvdb: revolt_database::Database = db.clone().into();
-                if rvdb
-                    .has_ratelimited(
-                        &target_id,
-                        RatelimitEventType::DiscriminatorChange,
-                        Duration::from_secs(60 * 60 * 24),
-                        1,
-                    )
-                    .await
-                    .map_err(Error::from_core)?
-                {
-                    return Err(Error::DiscriminatorChangeRatelimited);
-                }
-
-                rvdb.insert_ratelimit_event(&revolt_database::RatelimitEvent {
-                    id: ulid::Ulid::new().to_string(),
-                    target_id,
-                    event_type: RatelimitEventType::DiscriminatorChange,
-                })
-                .await
-                .map_err(Error::from_core)?; */
             }
         }
 

@@ -605,6 +605,33 @@ impl crate::User {
             id: self.id,
         }
     }
+
+    pub async fn into_self(self) -> User {
+        User {
+            username: self.username,
+            discriminator: self.discriminator,
+            display_name: self.display_name,
+            avatar: self.avatar.map(|file| file.into()),
+            relations: self
+                .relations
+                .map(|relationships| {
+                    relationships
+                        .into_iter()
+                        .map(|relationship| relationship.into())
+                        .collect()
+                })
+                .unwrap_or_default(),
+            badges: self.badges.unwrap_or_default() as u32,
+            status: None,
+            profile: None,
+            flags: self.flags.unwrap_or_default() as u32,
+            privileged: self.privileged,
+            bot: self.bot.map(|bot| bot.into()),
+            relationship: RelationshipStatus::User,
+            online: revolt_presence::is_online(&self.id).await,
+            id: self.id,
+        }
+    }
 }
 
 impl From<crate::RelationshipStatus> for RelationshipStatus {
