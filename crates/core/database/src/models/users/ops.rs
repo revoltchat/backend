@@ -22,6 +22,9 @@ pub trait AbstractUsers: Sync + Send {
     /// Fetch multiple users by their ids
     async fn fetch_users<'a>(&self, ids: &'a [String]) -> Result<Vec<User>>;
 
+    /// Fetch all discriminators in use for a username
+    async fn fetch_discriminators_in_use(&self, username: &str) -> Result<Vec<String>>;
+
     /// Fetch ids of users that both users are friends with
     async fn fetch_mutual_user_ids(&self, user_a: &str, user_b: &str) -> Result<Vec<String>>;
 

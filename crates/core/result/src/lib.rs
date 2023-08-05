@@ -43,6 +43,7 @@ pub enum ErrorType {
     // ? User related errors
     UsernameTaken,
     InvalidUsername,
+    DiscriminatorChangeRatelimited,
     UnknownUser,
     AlreadyFriends,
     AlreadySentRequest,

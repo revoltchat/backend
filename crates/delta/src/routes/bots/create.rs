@@ -1,9 +1,10 @@
-use crate::util::regex::RE_USERNAME;
-
 use nanoid::nanoid;
 
+use revolt_database::{Bot, BotInformation, Database, User};
+use revolt_models::v0;
+use revolt_result::{create_error, Result};
 use rocket::serde::json::Json;
-use serde::Deserialize;
+use rocket::State;
 use ulid::Ulid;
 use validator::Validate;
 
@@ -12,17 +13,26 @@ use validator::Validate;
 /// Create a new Revolt bot.
 #[openapi(tag = "Bots")]
 #[post("/create", data = "<info>")]
-pub async fn create_bot(db: &Db, user: User, info: Json<DataCreateBot>) -> Result<Json<Bot>> {
+pub async fn create_bot(
+    db: &State<Database>,
+    user: User,
+    info: Json<v0::DataCreateBot>,
+) -> Result<Json<v0::Bot>> {
     if user.bot.is_some() {
-        return Err(Error::IsBot);
+        return Err(create_error!(IsBot));
     }
 
     let info = info.into_inner();
-    info.validate()
-        .map_err(|error| Error::FailedValidation { error })?;
+    info.validate().map_err(|error| {
+        create_error!(FailedValidation {
+            error: error.to_string()
+        })
+    })?;
 
-    if db.get_number_of_bots_by_user(&user.id).await? >= *MAX_BOT_COUNT {
-        return Err(Error::ReachedMaximumBots);
+    // TODO: config
+    let max_bot_count = 5;
+    if db.get_number_of_bots_by_user(&user.id).await? >= max_bot_count {
+        return Err(create_error!(ReachedMaximumBots));
     }
 
     let id = Ulid::new().to_string();
@@ -46,5 +56,5 @@ pub async fn create_bot(db: &Db, user: User, info: Json<DataCreateBot>) -> Resul
 
     db.insert_user(&bot_user).await?;
     db.insert_bot(&bot).await?;
-    Ok(Json(bot))
+    Ok(Json(bot.into()))
 }

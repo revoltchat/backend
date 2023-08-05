@@ -1,9 +1,11 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, time::Duration};
 
-use crate::{Database, File};
+use crate::{Database, File, RatelimitEvent};
 
 use once_cell::sync::Lazy;
-use revolt_result::{Error, ErrorType, Result};
+use rand::seq::SliceRandom;
+use revolt_result::{create_error, Error, ErrorType, Result};
+use ulid::Ulid;
 
 auto_derived_partial!(
     /// # User
@@ -117,7 +119,126 @@ auto_derived!(
     }
 );
 
+pub static DISCRIMINATOR_SEARCH_SPACE: Lazy<HashSet<String>> = Lazy::new(|| {
+    let mut set = (2..9999)
+        .map(|v| format!("{:0>4}", v))
+        .collect::<HashSet<String>>();
+
+    for discrim in [
+        123, 1234, 1111, 2222, 3333, 4444, 5555, 6666, 7777, 8888, 9999,
+    ] {
+        set.remove(&format!("{:0>4}", discrim));
+    }
+
+    set.into_iter().collect()
+});
+
 impl User {
+    /// Sanitise and validate a username can be used
+    pub fn validate_username(username: String) -> Result<String> {
+        // Copy the username for validation
+        let username_lowercase = username.to_lowercase();
+
+        // Block homoglyphs
+        if decancer::cure(&username_lowercase).into_str() != username_lowercase {
+            return Err(create_error!(InvalidUsername));
+        }
+
+        // Ensure the username itself isn't blocked
+        const BLOCKED_USERNAMES: &[&str] = &["admin", "revolt"];
+
+        for username in BLOCKED_USERNAMES {
+            if username_lowercase == *username {
+                return Err(create_error!(InvalidUsername));
+            }
+        }
+
+        // Ensure none of the following substrings show up in the username
+        const BLOCKED_SUBSTRINGS: &[&str] = &["```"];
+
+        for substr in BLOCKED_SUBSTRINGS {
+            if username_lowercase.contains(substr) {
+                return Err(create_error!(InvalidUsername));
+            }
+        }
+
+        Ok(username)
+    }
+
+    // Find a free discriminator for a given username
+    pub async fn find_discriminator(
+        db: &Database,
+        username: &str,
+        preferred: Option<(String, String)>,
+    ) -> Result<String> {
+        let search_space: &HashSet<String> = &DISCRIMINATOR_SEARCH_SPACE;
+        let used_discriminators: HashSet<String> = db
+            .fetch_discriminators_in_use(username)
+            .await?
+            .into_iter()
+            .collect();
+
+        let available_discriminators: Vec<&String> =
+            search_space.difference(&used_discriminators).collect();
+
+        if available_discriminators.is_empty() {
+            return Err(create_error!(UsernameTaken));
+        }
+
+        if let Some((preferred, target_id)) = preferred {
+            if available_discriminators.contains(&&preferred) {
+                return Ok(preferred);
+            } else {
+                if db
+                    .has_ratelimited(
+                        &target_id,
+                        crate::RatelimitEventType::DiscriminatorChange,
+                        Duration::from_secs(60 * 60 * 24),
+                        1,
+                    )
+                    .await?
+                {
+                    return Err(create_error!(DiscriminatorChangeRatelimited));
+                }
+
+                db.insert_ratelimit_event(&RatelimitEvent {
+                    id: Ulid::new().to_string(),
+                    target_id,
+                    event_type: crate::RatelimitEventType::DiscriminatorChange,
+                })
+                .await?;
+
+                /* let rvdb: revolt_database::Database = db.clone().into();
+                if rvdb
+                    .has_ratelimited(
+                        &target_id,
+                        RatelimitEventType::DiscriminatorChange,
+                        Duration::from_secs(60 * 60 * 24),
+                        1,
+                    )
+                    .await
+                    .map_err(Error::from_core)?
+                {
+                    return Err(Error::DiscriminatorChangeRatelimited);
+                }
+
+                rvdb.insert_ratelimit_event(&revolt_database::RatelimitEvent {
+                    id: ulid::Ulid::new().to_string(),
+                    target_id,
+                    event_type: RatelimitEventType::DiscriminatorChange,
+                })
+                .await
+                .map_err(Error::from_core)?; */
+            }
+        }
+
+        let mut rng = rand::thread_rng();
+        Ok(available_discriminators
+            .choose(&mut rng)
+            .expect("we can assert this has an element")
+            .to_string())
+    }
+
     /// Check whether a username is already in use by another user
     #[allow(dead_code)]
     async fn is_username_taken(db: &Database, username: &str) -> Result<bool> {
@@ -203,17 +324,3 @@ impl User {
         .await
     }
 }
-
-pub static DISCRIMINATOR_SEARCH_SPACE: Lazy<HashSet<String>> = Lazy::new(|| {
-    let mut set = (2..9999)
-        .map(|v| format!("{:0>4}", v))
-        .collect::<HashSet<String>>();
-
-    for discrim in [
-        123, 1234, 1111, 2222, 3333, 4444, 5555, 6666, 7777, 8888, 9999,
-    ] {
-        set.remove(&format!("{:0>4}", discrim));
-    }
-
-    set.into_iter().collect()
-});

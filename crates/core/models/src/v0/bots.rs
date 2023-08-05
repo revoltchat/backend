@@ -1,7 +1,10 @@
 use super::User;
 
+use validator::Validate;
+
 auto_derived!(
     /// Bot
+    #[derive(Default)]
     pub struct Bot {
         /// Bot Id
         #[cfg_attr(feature = "serde", serde(rename = "_id"))]
@@ -87,12 +90,13 @@ auto_derived!(
     }
 
     /// Bot Details
+    #[cfg_attr(feature = "validator", derive(Validate))]
     pub struct DataCreateBot {
         /// Bot username
         #[cfg_attr(
             feature = "validator",
-            validate(length(min = 2, max = 32), regex = "RE_USERNAME")
+            validate(length(min = 2, max = 32), regex = "super::RE_USERNAME")
         )]
-        name: String,
+        pub name: String,
     }
 );

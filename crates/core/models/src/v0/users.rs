@@ -1,4 +1,13 @@
+use once_cell::sync::Lazy;
+use regex::Regex;
+
 use super::File;
+
+/// Regex for valid usernames
+///
+/// Block zero width space
+/// Block lookalike characters
+pub static RE_USERNAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\p{L}|[\d_.-])+$").unwrap());
 
 auto_derived!(
     /// User
