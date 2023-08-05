@@ -2,6 +2,7 @@ use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
 use revolt_models::v0::{Embed, MessageSort, MessageWebhook};
 use revolt_result::Result;
+use ulid::Ulid;
 
 use crate::{events::client::EventV1, Database, File};
 
@@ -191,6 +192,19 @@ impl Message {
         // TODO: web push / FCM
 
         todo!()
+    }
+}
+
+impl SystemMessage {
+    pub fn into_message(self, channel: String) -> Message {
+        Message {
+            id: Ulid::new().to_string(),
+            channel,
+            author: "00000000000000000000000000".to_string(),
+            system: Some(self),
+
+            ..Default::default()
+        }
     }
 }
 

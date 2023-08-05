@@ -4,7 +4,7 @@ use revolt_result::{create_error, Result};
 
 use crate::{
     events::client::EventV1, util::permissions::DatabasePermissionQuery, Database, File, Server,
-    User,
+    SystemMessage, User,
 };
 
 auto_derived_partial!(
@@ -122,18 +122,18 @@ impl Member {
         .private(user.id.clone())
         .await;
 
-        if let Some(_id) = server
+        if let Some(id) = server
             .system_messages
             .as_ref()
             .and_then(|x| x.user_joined.as_ref())
         {
-            /* TODO: SystemMessage::UserJoined {
+            SystemMessage::UserJoined {
                 id: user.id.clone(),
             }
             .into_message(id.to_string())
-            .create_no_web_push(db, id, false)
+            .send_without_notifications(db)
             .await
-            .ok(); */
+            .ok();
         }
 
         // Ok(channels)
