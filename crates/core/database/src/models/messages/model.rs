@@ -1,9 +1,9 @@
 use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
 use revolt_models::v0::{Embed, MessageSort, MessageWebhook};
-use revolt_result::{create_error, Result};
+use revolt_result::Result;
 
-use crate::{Database, File};
+use crate::{events::client::EventV1, Database, File};
 
 auto_derived_partial!(
     /// Message
@@ -170,11 +170,26 @@ auto_derived!(
 impl Message {
     /// Send a message without any notifications
     pub async fn send_without_notifications(&mut self, db: &Database) -> Result<()> {
-        todo!()
+        db.insert_message(self).await?;
+
+        // Fan out events
+        EventV1::Message(self.clone().into())
+            .p(self.channel.to_string())
+            .await;
+
+        // TODO: update last_message_id
+        // TODO: add mentions for affected users
+        // TODO: generate embeds
+
+        Ok(())
     }
 
     /// Send a message
-    pub async fn send(&mut self) -> Result<()> {
+    pub async fn send(&mut self, db: &Database) -> Result<()> {
+        self.send_without_notifications(db).await?;
+
+        // TODO: web push / FCM
+
         todo!()
     }
 }

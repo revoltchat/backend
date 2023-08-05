@@ -2,9 +2,10 @@ use authifier::AuthifierEvent;
 use serde::{Deserialize, Serialize};
 
 use revolt_models::v0::{
-    Channel, Emoji, FieldsChannel, FieldsMember, FieldsRole, FieldsServer, FieldsUser,
-    FieldsWebhook, MemberCompositeKey, PartialChannel, PartialMember, PartialRole, PartialServer,
-    PartialUser, PartialWebhook, Server, UserSettings, Webhook,
+    AppendMessage, Channel, Emoji, FieldsChannel, FieldsMember, FieldsRole, FieldsServer,
+    FieldsUser, FieldsWebhook, MemberCompositeKey, Message, PartialChannel, PartialMember,
+    PartialMessage, PartialRole, PartialServer, PartialUser, PartialWebhook, Server, UserSettings,
+    Webhook,
 };
 use revolt_result::Error;
 
@@ -57,8 +58,7 @@ pub enum EventV1 {
     },
 
     /// Ping response
-    Pong { data: Ping },
-
+    Pong { data: Ping }, */
     /// New message
     Message(Message),
 
@@ -103,7 +103,8 @@ pub enum EventV1 {
     },
 
     /// Bulk delete messages
-    BulkMessageDelete { channel: String, ids: Vec<String> },*/
+    BulkMessageDelete { channel: String, ids: Vec<String> },
+
     /// New server
     ServerCreate {
         id: String,

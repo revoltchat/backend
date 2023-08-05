@@ -2,8 +2,8 @@ use revolt_result::Result;
 
 use crate::{AppendMessage, Message, MessageQuery, PartialMessage};
 
-// mod mongodb;
-// mod reference;
+mod mongodb;
+mod reference;
 
 #[async_trait]
 pub trait AbstractMessages: Sync + Send {
@@ -35,5 +35,5 @@ pub trait AbstractMessages: Sync + Send {
     async fn delete_message(&self, id: &str) -> Result<()>;
 
     /// Delete messages from a channel by their ids and corresponding channel id
-    async fn delete_messages(&self, channel: &str, ids: Vec<String>) -> Result<()>;
+    async fn delete_messages(&self, channel: &str, ids: &[String]) -> Result<()>;
 }
