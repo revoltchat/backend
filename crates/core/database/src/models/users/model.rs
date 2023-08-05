@@ -162,6 +162,20 @@ impl User {
         Ok(user)
     }
 
+    /// Check whether two users have a mutual connection
+    ///
+    /// This will check if user and user_b share a server or a group.
+    pub async fn has_mutual_connection(&self, db: &Database, user_b: &str) -> Result<bool> {
+        Ok(!db
+            .fetch_mutual_server_ids(&self.id, user_b)
+            .await?
+            .is_empty()
+            || !db
+                .fetch_mutual_channel_ids(&self.id, user_b)
+                .await?
+                .is_empty())
+    }
+
     /// Sanitise and validate a username can be used
     pub fn validate_username(username: String) -> Result<String> {
         // Copy the username for validation

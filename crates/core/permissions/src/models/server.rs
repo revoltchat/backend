@@ -2,7 +2,7 @@
 use schemars::JsonSchema;
 
 /// Representation of a single permission override
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
 pub struct Override {
