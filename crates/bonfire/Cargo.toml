@@ -1,6 +1,6 @@
 [package]
 name = "revolt-bonfire"
-version = "0.6.5"
+version = "0.6.6"
 license = "AGPL-3.0-or-later"
 edition = "2021"
 
@@ -25,7 +25,11 @@ serde = "1.0.136"
 # async
 futures = "0.3.21"
 async-tungstenite = { version = "0.17.0", features = ["async-std-runtime"] }
-async-std = { version = "1.8.0", features = ["tokio1", "tokio02", "attributes"] }
+async-std = { version = "1.8.0", features = [
+    "tokio1",
+    "tokio02",
+    "attributes",
+] }
 
 # core
-revolt-presence = { path = "../core/presence", features = [ "redis-is-patched" ] }
+revolt-presence = { path = "../core/presence", features = ["redis-is-patched"] }

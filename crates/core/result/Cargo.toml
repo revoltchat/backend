@@ -1,20 +1,20 @@
 [package]
 name = "revolt-result"
-version = "0.6.5"
+version = "0.6.6"
 edition = "2021"
 license = "AGPL-3.0-or-later"
-authors = [ "Paul Makles <me@insrt.uk>" ]
+authors = ["Paul Makles <me@insrt.uk>"]
 description = "Revolt Backend: Result and Error types"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-serde = [ "dep:serde" ]
-schemas = [ "dep:schemars" ]
-rocket = [ "dep:rocket", "dep:serde_json" ]
-okapi = [ "dep:revolt_rocket_okapi", "dep:revolt_okapi" ]
+serde = ["dep:serde"]
+schemas = ["dep:schemars"]
+rocket = ["dep:rocket", "dep:serde_json"]
+okapi = ["dep:revolt_rocket_okapi", "dep:revolt_okapi"]
 
-default = [ "serde" ]
+default = ["serde"]
 
 [dependencies]
 # Serialisation

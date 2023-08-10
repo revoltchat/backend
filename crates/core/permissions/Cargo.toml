@@ -1,18 +1,18 @@
 [package]
 name = "revolt-permissions"
-version = "0.6.5"
+version = "0.6.6"
 edition = "2021"
 license = "AGPL-3.0-or-later"
-authors = [ "Paul Makles <me@insrt.uk>" ]
+authors = ["Paul Makles <me@insrt.uk>"]
 description = "Revolt Backend: Permission Logic"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
 bson = ["dep:bson"]
-serde = [ "dep:serde" ]
-schemas = [ "dep:schemars" ]
-try-from-primitive = [ "dep:num_enum" ]
+serde = ["dep:serde"]
+schemas = ["dep:schemars"]
+try-from-primitive = ["dep:num_enum"]
 
 
 [dev-dependencies]
@@ -30,7 +30,7 @@ async-trait = "0.1.51"
 
 # Serialisation
 serde = { version = "1", features = ["derive"], optional = true }
-bson = { version = "2.1.0", optional = true}
+bson = { version = "2.1.0", optional = true }
 
 # Spec Generation
 schemars = { version = "0.8.8", optional = true }

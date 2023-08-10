@@ -1,5 +1,5 @@
 /// Configure logging and common Rust variables
-pub fn setup_logging(release: &'static str) -> sentry::ClientInitGuard {
+pub fn setup_logging(release: &'static str) -> Option<sentry::ClientInitGuard> {
     dotenv::dotenv().ok();
 
     if std::env::var("RUST_LOG").is_err() {
@@ -13,13 +13,17 @@ pub fn setup_logging(release: &'static str) -> sentry::ClientInitGuard {
     pretty_env_logger::init();
     info!("Starting {release}");
 
-    sentry::init((
-        "https://d1d2a6f15c6245a987c532bbbcb30a04@glitchtip.insert.moe/2",
-        sentry::ClientOptions {
-            release: Some(release.into()),
-            ..Default::default()
-        },
-    ))
+    if let Ok(dsn) = std::env::var("SENTRY_DSN") {
+        Some(sentry::init((
+            dsn,
+            sentry::ClientOptions {
+                release: Some(release.into()),
+                ..Default::default()
+            },
+        )))
+    } else {
+        None
+    }
 }
 
 #[macro_export]

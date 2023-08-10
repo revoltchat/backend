@@ -1,6 +1,6 @@
 [package]
 name = "revolt-delta"
-version = "0.6.5"
+version = "0.6.6"
 license = "AGPL-3.0-or-later"
 authors = ["Paul Makles <paulmakles@gmail.com>"]
 edition = "2018"
@@ -38,29 +38,38 @@ futures = "0.3.8"
 chrono = "0.4.15"
 async-channel = "1.6.1"
 reqwest = { version = "0.11.4", features = ["json"] }
-async-std = { version = "1.8.0", features = ["tokio1", "tokio02", "attributes"] }
+async-std = { version = "1.8.0", features = [
+    "tokio1",
+    "tokio02",
+    "attributes",
+] }
 
 # internal util
 lettre = "0.10.0-alpha.4"
 
 # web
-rocket = { version = "0.5.0-rc.2", default-features = false, features = ["json"] }
+rocket = { version = "0.5.0-rc.2", default-features = false, features = [
+    "json",
+] }
 rocket_empty = { version = "0.1.1", features = ["schema"] }
 rocket_authifier = { version = "1.0.7" }
 rocket_prometheus = "0.10.0-rc.3"
 
 # spec generation
 schemars = "0.8.8"
-revolt_rocket_okapi = { version = "0.9.1", features = [ "swagger" ] }
+revolt_rocket_okapi = { version = "0.9.1", features = ["swagger"] }
 
 # quark
 revolt-quark = { path = "../quark" }
 
 # core
-revolt-database = { path = "../core/database", features = [ "rocket-impl", "redis-is-patched" ] }
-revolt-models = { path = "../core/models", features = [ "schemas", "validator" ] }
-revolt-result = { path = "../core/result", features = [ "rocket", "okapi" ] }
-revolt-permissions = { path = "../core/permissions", features = [ "schemas" ] }
+revolt-database = { path = "../core/database", features = [
+    "rocket-impl",
+    "redis-is-patched",
+] }
+revolt-models = { path = "../core/models", features = ["schemas", "validator"] }
+revolt-result = { path = "../core/result", features = ["rocket", "okapi"] }
+revolt-permissions = { path = "../core/permissions", features = ["schemas"] }
 
 [build-dependencies]
 vergen = "7.5.0"
