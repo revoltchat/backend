@@ -33,3 +33,4 @@ async-std = { version = "1.8.0", features = [
 
 # core
 revolt-presence = { path = "../core/presence", features = ["redis-is-patched"] }
+sentry = "0.31.5"

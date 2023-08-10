@@ -3,4 +3,4 @@ members = ["crates/delta", "crates/bonfire", "crates/quark", "crates/core/*"]
 
 [patch.crates-io]
 # mobc-redis = { git = "https://github.com/insertish/mobc", rev = "8b880bb59f2ba80b4c7bc40c649c113d8857a186" }
-redis = { git = "https://github.com/insertish/redis-rs", rev = "1a41faf356fd21aebba71cea7eb7eb2653e5f0ef" }
+redis = { git = "https://github.com/revoltchat/redis-rs", rev = "cfd75cdebebf55f646697a933981741e74949c89" }
