@@ -19,7 +19,6 @@ pub mod servers {
 }
 
 pub mod users {
-    pub mod bot;
     pub mod user;
     pub mod user_settings;
 }

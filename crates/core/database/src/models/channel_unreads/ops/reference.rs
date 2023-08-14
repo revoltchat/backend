@@ -20,7 +20,7 @@ impl AbstractChannelUnreads for ReferenceDb {
             user: user_id.to_string(),
         };
 
-        if let Some(mut unread) = unreads.get_mut(&key) {
+        if let Some(unread) = unreads.get_mut(&key) {
             unread.mentions = None;
             unread.last_id.replace(message_id.to_string());
         } else {

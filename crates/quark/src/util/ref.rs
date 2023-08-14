@@ -6,7 +6,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::models::{
-    Bot, Channel, Emoji, Invite, Member, Message, Report, Server, ServerBan, User,
+    Channel, Emoji, Invite, Member, Message, Report, Server, ServerBan, User,
 };
 use crate::{Database, Error, Result};
 
@@ -54,11 +54,6 @@ impl Ref {
         }
 
         Ok(message)
-    }
-
-    /// Fetch bot from Ref
-    pub async fn as_bot(&self, db: &Database) -> Result<Bot> {
-        db.fetch_bot(&self.id).await
     }
 
     /// Fetch invite from Ref

@@ -21,7 +21,6 @@ mod servers {
 }
 
 mod users {
-    pub mod bot;
     pub mod user;
     pub mod user_settings;
 }
@@ -45,7 +44,6 @@ pub use servers::server::AbstractServer;
 pub use servers::server_ban::AbstractServerBan;
 pub use servers::server_member::AbstractServerMember;
 
-pub use users::bot::AbstractBot;
 pub use users::user::AbstractUser;
 pub use users::user_settings::AbstractUserSettings;
 
@@ -65,7 +63,6 @@ pub trait AbstractDatabase:
     + AbstractServer
     + AbstractServerBan
     + AbstractServerMember
-    + AbstractBot
     + AbstractUser
     + AbstractUserSettings
     + AbstractReport
