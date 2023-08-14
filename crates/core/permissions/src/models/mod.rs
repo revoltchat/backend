@@ -28,6 +28,11 @@ impl PermissionValue {
         self.0 &= !v;
     }
 
+    /// Revoke all permissions
+    pub fn revoke_all(&mut self) {
+        self.0 = 0;
+    }
+
     /// Restrict to given permissions
     pub fn restrict(&mut self, v: u64) {
         self.0 &= v;
