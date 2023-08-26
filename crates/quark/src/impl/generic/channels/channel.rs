@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use revolt_database::util::idempotency::IdempotencyKey;
 use ulid::Ulid;
 
 use crate::{
@@ -11,8 +12,7 @@ use crate::{
     },
     tasks::{ack::AckEvent, process_embeds},
     types::push::MessageAuthor,
-    variables::delta::{MAX_ATTACHMENT_COUNT, MAX_REPLY_COUNT, MAX_EMBED_COUNT},
-    web::idempotency::IdempotencyKey,
+    variables::delta::{MAX_ATTACHMENT_COUNT, MAX_EMBED_COUNT, MAX_REPLY_COUNT},
     Database, Error, OverrideField, Ref, Result,
 };
 
@@ -413,7 +413,10 @@ impl Channel {
     ) -> Result<Message> {
         Message::validate_sum(&data.content, data.embeds.as_deref().unwrap_or_default())?;
 
-        idempotency.consume_nonce(data.nonce).await?;
+        idempotency
+            .consume_nonce(data.nonce)
+            .await
+            .map_err(|_| Error::InvalidOperation)?;
 
         // Check the message is not empty
         if (data.content.as_ref().map_or(true, |v| v.is_empty()))
@@ -497,16 +500,24 @@ impl Channel {
 
         // Add attachments to message.
         let mut attachments = vec![];
-        if data.attachments.as_ref().is_some_and(|v| v.len() > *MAX_ATTACHMENT_COUNT) {
+        if data
+            .attachments
+            .as_ref()
+            .is_some_and(|v| v.len() > *MAX_ATTACHMENT_COUNT)
+        {
             return Err(Error::TooManyAttachments {
                 max: *MAX_ATTACHMENT_COUNT,
             });
         }
 
-        if data.embeds.as_ref().is_some_and(|v| v.len() > *MAX_EMBED_COUNT) {
+        if data
+            .embeds
+            .as_ref()
+            .is_some_and(|v| v.len() > *MAX_EMBED_COUNT)
+        {
             return Err(Error::TooManyEmbeds {
-                max: *MAX_EMBED_COUNT
-            })
+                max: *MAX_EMBED_COUNT,
+            });
         }
 
         for attachment_id in data.attachments.as_deref().unwrap_or_default() {

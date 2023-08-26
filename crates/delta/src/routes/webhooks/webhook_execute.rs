@@ -1,8 +1,10 @@
-use revolt_database::{util::reference::Reference, Database};
+use revolt_database::{
+    util::{idempotency::IdempotencyKey, reference::Reference},
+    Database,
+};
 use revolt_quark::{
     models::message::{DataMessageSend, Message},
     types::push::MessageAuthor,
-    web::idempotency::IdempotencyKey,
     Db, Error, Result,
 };
 use rocket::{serde::json::Json, State};

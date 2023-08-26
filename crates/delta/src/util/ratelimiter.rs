@@ -1,14 +1,9 @@
-//! Pulled from lightspeed-tv/backend.
-//!
-//! This will be replaced again in the near future since
-//! I don't want duplication between two different projects.
-
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
 use std::ops::Add;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::authifier::models::Session;
+use revolt_quark::authifier::models::Session;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::uri::Origin;
 use rocket::http::{Method, Status};

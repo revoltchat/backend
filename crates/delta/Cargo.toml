@@ -51,6 +51,7 @@ lettre = "0.10.0-alpha.4"
 rocket = { version = "0.5.0-rc.2", default-features = false, features = [
     "json",
 ] }
+rocket_cors = { git = "https://github.com/lawliet89/rocket_cors", rev = "c17e8145baa4790319fdb6a473e465b960f55e7c" }
 rocket_empty = { version = "0.1.1", features = ["schema"] }
 rocket_authifier = { version = "1.0.7" }
 rocket_prometheus = "0.10.0-rc.3"

@@ -1,8 +1,8 @@
+use revolt_database::util::idempotency::IdempotencyKey;
 use revolt_quark::{
     models::{message::DataMessageSend, Message, User},
     perms,
     types::push::MessageAuthor,
-    web::idempotency::IdempotencyKey,
     Db, Error, Permission, Ref, Result,
 };
 
