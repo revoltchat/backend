@@ -136,13 +136,13 @@ pub fn spawn_client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
                                             );*/
 
                                             // Handle incoming events.
-                                            match conn.on_message().next().await.map(|item| {
-                                                (
+                                            match conn.on_message().next().await.map(|res| {
+                                                res.map(|item|(
                                                     item.get_channel_name().to_string(),
                                                     redis_kiss::decode_payload::<EventV1>(&item),
-                                                )
+                                                ))
                                             }) {
-                                                Some((channel, item)) => {
+                                                Some(Ok((channel, item))) => {
                                                     if let Ok(mut event) = item {
                                                         if state
                                                             .handle_incoming_event_v1(
@@ -159,6 +159,11 @@ pub fn spawn_client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
                                                     } else {
                                                         warn!("Failed to deserialise an event for {channel}!");
                                                     }
+                                                }
+                                                Some(Err(e)) => {
+                                                    info!("Error while consuming pub/sub messages: {e:?}");
+                                                    sentry::capture_error(&e);
+                                                    break
                                                 }
                                                 // No more data, assume we disconnected or otherwise
                                                 // something bad occurred, so disconnect user.
