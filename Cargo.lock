@@ -2712,7 +2712,7 @@ dependencies = [
 [[package]]
 name = "redis"
 version = "0.22.3"
-source = "git+https://github.com/insertish/redis-rs?rev=1a41faf356fd21aebba71cea7eb7eb2653e5f0ef#1a41faf356fd21aebba71cea7eb7eb2653e5f0ef"
+source = "git+https://github.com/revoltchat/redis-rs?rev=1a41faf356fd21aebba71cea7eb7eb2653e5f0ef#1a41faf356fd21aebba71cea7eb7eb2653e5f0ef"
 dependencies = [
  "async-std",
  "async-trait",
@@ -2731,9 +2731,8 @@ dependencies = [
 
 [[package]]
 name = "redis"
-version = "0.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ea8c51b5dc1d8e5fd3350ec8167f464ec0995e79f2e90a075b63371500d557f"
+version = "0.23.1"
+source = "git+https://github.com/revoltchat/redis-rs?rev=f8ca28ab85da59d2ccde526b4d2fb390eff5a5f9#f8ca28ab85da59d2ccde526b4d2fb390eff5a5f9"
 dependencies = [
  "async-std",
  "async-trait",
@@ -2759,7 +2758,7 @@ dependencies = [
  "lazy_static",
  "mobc",
  "mobc-redis",
- "redis 0.23.0",
+ "redis 0.23.1",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -2877,7 +2876,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-bonfire"
-version = "0.6.6"
+version = "0.6.7"
 dependencies = [
  "async-std",
  "async-tungstenite",
@@ -2888,13 +2887,14 @@ dependencies = [
  "revolt-presence",
  "revolt-quark",
  "rmp-serde",
+ "sentry",
  "serde",
  "serde_json",
 ]
 
 [[package]]
 name = "revolt-database"
-version = "0.6.6"
+version = "0.6.7"
 dependencies = [
  "async-recursion",
  "async-std",
@@ -2926,7 +2926,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-delta"
-version = "0.6.6"
+version = "0.6.7"
 dependencies = [
  "async-channel",
  "async-std",
@@ -2967,7 +2967,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-models"
-version = "0.6.6"
+version = "0.6.7"
 dependencies = [
  "indexmap",
  "iso8601-timestamp 0.2.11",
@@ -2980,7 +2980,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-permissions"
-version = "0.6.6"
+version = "0.6.7"
 dependencies = [
  "async-std",
  "async-trait",
@@ -2994,7 +2994,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-presence"
-version = "0.6.6"
+version = "0.6.7"
 dependencies = [
  "async-std",
  "log",
@@ -3005,7 +3005,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-quark"
-version = "0.6.6"
+version = "0.6.7"
 dependencies = [
  "async-lock",
  "async-recursion",
@@ -3058,7 +3058,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-result"
-version = "0.6.6"
+version = "0.6.7"
 dependencies = [
  "revolt_okapi",
  "revolt_rocket_okapi",
