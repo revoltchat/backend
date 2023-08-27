@@ -28,3 +28,36 @@ pub async fn fetch_owned_bots(db: &State<Database>, user: User) -> Result<Json<O
         bots: bots.into_iter().map(|bot| bot.into()).collect(),
     }))
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{rocket, util::test::TestHarness};
+    use revolt_database::Bot;
+    use revolt_models::v0;
+    use rocket::http::{Header, Status};
+
+    #[rocket::async_test]
+    async fn fetch_owned() {
+        let harness = TestHarness::new().await;
+        let (_, session, user) = harness.new_user().await;
+
+        let bot = Bot::create(&harness.db, TestHarness::rand_string(), &user, None)
+            .await
+            .expect("`Bot`");
+
+        let response = harness
+            .client
+            .get("/bots/@me")
+            .header(Header::new("x-session-token", session.token.to_string()))
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+
+        let resp: v0::OwnedBotsResponse = response.into_json().await.expect("`Vec<Bot>`");
+        assert_eq!(resp.bots.len(), 1);
+        assert_eq!(resp.users.len(), 1);
+        assert_eq!(resp.bots[0], bot.into());
+        assert_eq!(resp.bots[0].id, resp.users[0].id);
+    }
+}

@@ -27,3 +27,33 @@ pub async fn fetch_bot(
         bot: bot.into(),
     }))
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{rocket, util::test::TestHarness};
+    use revolt_database::Bot;
+    use revolt_models::v0;
+    use rocket::http::{Header, Status};
+
+    #[rocket::async_test]
+    async fn fetch_bot() {
+        let harness = TestHarness::new().await;
+        let (_, session, user) = harness.new_user().await;
+
+        let bot = Bot::create(&harness.db, TestHarness::rand_string(), &user, None)
+            .await
+            .expect("`Bot`");
+
+        let response = harness
+            .client
+            .get(format!("/bots/{}", bot.id))
+            .header(Header::new("x-session-token", session.token.to_string()))
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+
+        let response: v0::FetchBotResponse = response.into_json().await.expect("`Bot`");
+        assert_eq!(response.bot, bot.into());
+    }
+}

@@ -273,7 +273,7 @@ impl Message {
         )
         .await;
 
-        todo!()
+        Ok(())
     }
 
     /// Append content to message

@@ -23,3 +23,41 @@ pub async fn fetch_public_bot(
     let user = db.fetch_user(&bot.id).await?;
     Ok(Json(bot.into_public_bot(user)))
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{rocket, util::test::TestHarness};
+    use revolt_database::{Bot, PartialBot};
+    use revolt_models::v0;
+
+    #[rocket::async_test]
+    async fn fetch_public() {
+        let harness = TestHarness::new().await;
+        let (_, _, user) = harness.new_user().await;
+
+        let mut bot = Bot::create(&harness.db, TestHarness::rand_string(), &user, None)
+            .await
+            .expect("`Bot`");
+
+        bot.update(
+            &harness.db,
+            PartialBot {
+                public: Some(true),
+                ..Default::default()
+            },
+            vec![],
+        )
+        .await
+        .unwrap();
+
+        let bot_user = harness.db.fetch_user(&bot.id).await.expect("`User`");
+        let response = harness
+            .client
+            .get(format!("/bots/{}/invite", bot.id))
+            .dispatch()
+            .await;
+
+        let public_bot: v0::PublicBot = response.into_json().await.expect("`PublicBot`");
+        assert_eq!(public_bot, bot.into_public_bot(bot_user));
+    }
+}

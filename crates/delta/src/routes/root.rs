@@ -145,14 +145,14 @@ mod test {
     #[rocket::async_test]
     async fn hello_world() {
         let harness = crate::util::test::TestHarness::new().await;
-        let response = harness.get("/").dispatch().await;
+        let response = harness.client.get("/").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
     }
 
     #[rocket::async_test]
     async fn hello_world_concurrent() {
         let harness = crate::util::test::TestHarness::new().await;
-        let response = harness.get("/").dispatch().await;
+        let response = harness.client.get("/").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
     }
 }

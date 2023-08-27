@@ -80,10 +80,16 @@ auto_derived!(
         /// Bot Username
         pub username: String,
         /// Profile Avatar
-        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "String::is_empty"))]
+        #[cfg_attr(
+            feature = "serde",
+            serde(skip_serializing_if = "String::is_empty", default)
+        )]
         pub avatar: String,
         /// Profile Description
-        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "String::is_empty"))]
+        #[cfg_attr(
+            feature = "serde",
+            serde(skip_serializing_if = "String::is_empty", default)
+        )]
         pub description: String,
     }
 
@@ -96,6 +102,7 @@ auto_derived!(
     }
 
     /// Bot Details
+    #[derive(Default)]
     #[cfg_attr(feature = "validator", derive(Validate))]
     pub struct DataCreateBot {
         /// Bot username
@@ -107,6 +114,7 @@ auto_derived!(
     }
 
     /// New Bot Details
+    #[derive(Default)]
     #[cfg_attr(feature = "validator", derive(Validate))]
     pub struct DataEditBot {
         /// Bot username
@@ -128,6 +136,21 @@ auto_derived!(
         /// Fields to remove from bot object
         #[cfg_attr(feature = "validator", validate(length(min = 1)))]
         pub remove: Option<Vec<FieldsBot>>,
+    }
+
+    /// Where we are inviting a bot to
+    #[serde(untagged)]
+    pub enum InviteBotDestination {
+        /// Invite to a server
+        Server {
+            /// Server Id
+            server: String,
+        },
+        /// Invite to a group
+        Group {
+            /// Group Id
+            group: String,
+        },
     }
 
     /// Owned Bots Response

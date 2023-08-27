@@ -25,3 +25,35 @@ pub async fn create_bot(
     let bot = Bot::create(db, info.name, &user, None).await?;
     Ok(Json(bot.into()))
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{rocket, util::test::TestHarness};
+    use revolt_models::v0;
+    use rocket::http::{ContentType, Header, Status};
+
+    #[rocket::async_test]
+    async fn create_bot() {
+        let harness = TestHarness::new().await;
+        let (_, session, _) = harness.new_user().await;
+
+        let response = harness
+            .client
+            .post("/bots/create")
+            .header(Header::new("x-session-token", session.token.to_string()))
+            .header(ContentType::JSON)
+            .body(
+                json!(v0::DataCreateBot {
+                    name: TestHarness::rand_string(),
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+
+        let bot: v0::Bot = response.into_json().await.expect("`Bot`");
+        assert!(harness.db.fetch_bot(&bot.id).await.is_ok());
+    }
+}

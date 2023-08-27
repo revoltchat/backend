@@ -70,3 +70,43 @@ pub async fn edit_bot(
 
     Ok(Json(bot.into()))
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{rocket, util::test::TestHarness};
+    use revolt_database::Bot;
+    use revolt_models::v0::{self, FieldsBot};
+    use rocket::http::{ContentType, Header, Status};
+
+    #[rocket::async_test]
+    async fn edit_bot() {
+        let harness = TestHarness::new().await;
+        let (_, session, user) = harness.new_user().await;
+
+        let bot = Bot::create(&harness.db, TestHarness::rand_string(), &user, None)
+            .await
+            .expect("`Bot`");
+
+        let response = harness
+            .client
+            .patch(format!("/bots/{}", bot.id))
+            .header(ContentType::JSON)
+            .body(
+                json!(v0::DataEditBot {
+                    public: Some(true),
+                    remove: Some(vec![FieldsBot::Token]),
+                    ..Default::default()
+                })
+                .to_string(),
+            )
+            .header(Header::new("x-session-token", session.token.to_string()))
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+
+        let updated_bot: v0::Bot = response.into_json().await.expect("`Bot`");
+        assert!(!bot.public);
+        assert!(updated_bot.public);
+    }
+}
