@@ -394,9 +394,7 @@ impl From<crate::Interactions> for Interactions {
 impl From<crate::AppendMessage> for AppendMessage {
     fn from(value: crate::AppendMessage) -> Self {
         AppendMessage {
-            embeds: value
-                .embeds
-                .map(|embeds| embeds.into_iter().map(|embed| embed.into()).collect()),
+            embeds: value.embeds,
         }
     }
 }

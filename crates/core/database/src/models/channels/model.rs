@@ -164,6 +164,7 @@ auto_derived!(
     }
 );
 
+#[allow(clippy::disallowed_methods)]
 impl Channel {
     /// Create a channel
     pub async fn create(&self, db: &Database) -> Result<()> {
