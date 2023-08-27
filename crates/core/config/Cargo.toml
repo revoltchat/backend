@@ -1,0 +1,26 @@
+[package]
+name = "revolt-config"
+version = "0.6.7"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+authors = ["Paul Makles <me@insrt.uk>"]
+description = "Revolt Backend: Configuration"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+test = ["async-std"]
+default = ["test"]
+
+[dependencies]
+# Utility
+config = "0.13.3"
+cached = "0.44.0"
+once_cell = "1.18.0"
+
+# Serde
+serde = { version = "1", features = ["derive"] }
+
+# Async
+futures-locks = "0.7.1"
+async-std = { version = "1.8.0", features = ["attributes"], optional = true }
