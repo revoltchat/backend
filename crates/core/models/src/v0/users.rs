@@ -52,6 +52,9 @@ auto_derived!(
         #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub bot: Option<BotInformation>,
 
+        // User's displayed pronouns
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub pronouns: Option<Vec<String>>,
         /// Current session user's relationship with this user
         pub relationship: RelationshipStatus,
         /// Whether this user is currently online

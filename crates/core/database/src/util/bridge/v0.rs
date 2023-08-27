@@ -603,6 +603,9 @@ impl crate::User {
             relationship,
             online: can_see_profile && revolt_presence::is_online(&self.id).await,
             id: self.id,
+            pronouns: self
+                .pronouns
+                .map(|pronouns| pronouns.iter().map(|pronoun| pronoun.to_owned()).collect()),
         }
     }
 }

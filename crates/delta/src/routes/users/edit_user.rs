@@ -52,6 +52,11 @@ pub struct DataEditUser {
     /// Fields to remove from user object
     #[validate(length(min = 1))]
     remove: Option<Vec<FieldsUser>>,
+
+    // User's displayed pronouns
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 5)))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pronouns: Option<Vec<String>>,
 }
 
 /// # Edit User
@@ -96,6 +101,7 @@ pub async fn req(
         && data.badges.is_none()
         && data.flags.is_none()
         && data.remove.is_none()
+        && data.pronouns.is_none()
     {
         return Ok(Json(user));
     }
@@ -125,6 +131,7 @@ pub async fn req(
         display_name: data.display_name,
         badges: data.badges,
         flags: data.flags,
+        pronouns: data.pronouns,
         ..Default::default()
     };
 

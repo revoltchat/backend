@@ -71,6 +71,7 @@ impl User {
                 }
             }
             FieldsUser::DisplayName => self.display_name = None,
+            FieldsUser::Pronouns => self.pronouns = None,
         }
     }
 

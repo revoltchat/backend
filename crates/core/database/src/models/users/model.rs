@@ -44,6 +44,10 @@ auto_derived_partial!(
         /// Bot information
         #[serde(skip_serializing_if = "Option::is_none")]
         pub bot: Option<BotInformation>,
+
+        // User's displayed pronouns
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub pronouns: Option<Vec<String>>,
     },
     "PartialUser"
 );
@@ -114,6 +118,7 @@ auto_derived!(
         StatusPresence,
         ProfileContent,
         ProfileBackground,
+        Pronouns,
     }
 );
 
@@ -180,6 +185,7 @@ impl User {
                     x.background = None;
                 }
             }
+            FieldsUser::Pronouns => self.pronouns = None,
         }
     }
 
@@ -198,6 +204,7 @@ impl User {
                 FieldsUser::StatusPresence,
                 FieldsUser::ProfileContent,
                 FieldsUser::ProfileBackground,
+                FieldsUser::Pronouns,
             ],
         )
         .await
