@@ -4,12 +4,6 @@ use revolt_result::{create_error, Error, Result};
 
 use async_std::sync::Mutex;
 use once_cell::sync::Lazy;
-use revolt_rocket_okapi::gen::OpenApiGenerator;
-use revolt_rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
-use revolt_rocket_okapi::revolt_okapi::openapi3::{Parameter, ParameterValue};
-use rocket::http::Status;
-use rocket::request::{FromRequest, Outcome};
-use schemars::schema::{InstanceType, SchemaObject, SingleOrVec};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -42,6 +36,17 @@ impl IdempotencyKey {
     }
 }
 
+#[cfg(feature = "rocket-impl")]
+use revolt_rocket_okapi::{
+    gen::OpenApiGenerator,
+    request::{OpenApiFromRequest, RequestHeaderInput},
+    revolt_okapi::openapi3::{Parameter, ParameterValue},
+};
+
+#[cfg(feature = "rocket-impl")]
+use schemars::schema::{InstanceType, SchemaObject, SingleOrVec};
+
+#[cfg(feature = "rocket-impl")]
 impl<'r> OpenApiFromRequest<'r> for IdempotencyKey {
     fn from_request_input(
         _gen: &mut OpenApiGenerator,
@@ -71,6 +76,13 @@ impl<'r> OpenApiFromRequest<'r> for IdempotencyKey {
     }
 }
 
+#[cfg(feature = "rocket-impl")]
+use rocket::{
+    http::Status,
+    request::{FromRequest, Outcome},
+};
+
+#[cfg(feature = "rocket-impl")]
 #[async_trait]
 impl<'r> FromRequest<'r> for IdempotencyKey {
     type Error = Error;

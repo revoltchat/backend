@@ -329,7 +329,11 @@ impl From<crate::Message> for Message {
             embeds: value.embeds,
             mentions: value.mentions,
             replies: value.replies,
-            reactions: value.reactions,
+            reactions: value
+                .reactions
+                .into_iter()
+                .map(|(k, v)| (k, v.into_iter().collect()))
+                .collect(),
             interactions: value.interactions.into(),
             masquerade: value.masquerade.map(|masq| masq.into()),
         }
@@ -353,7 +357,12 @@ impl From<crate::PartialMessage> for PartialMessage {
             embeds: value.embeds,
             mentions: value.mentions,
             replies: value.replies,
-            reactions: value.reactions,
+            reactions: value.reactions.map(|reactions| {
+                reactions
+                    .into_iter()
+                    .map(|(k, v)| (k, v.into_iter().collect()))
+                    .collect()
+            }),
             interactions: value.interactions.map(|interactions| interactions.into()),
             masquerade: value.masquerade.map(|masq| masq.into()),
         }
@@ -385,7 +394,9 @@ impl From<crate::SystemMessage> for SystemMessage {
 impl From<crate::Interactions> for Interactions {
     fn from(value: crate::Interactions) -> Self {
         Interactions {
-            reactions: value.reactions,
+            reactions: value
+                .reactions
+                .map(|reactions| reactions.into_iter().collect()),
             restrict_reactions: value.restrict_reactions,
         }
     }
