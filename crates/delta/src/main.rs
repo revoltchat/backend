@@ -8,6 +8,7 @@ extern crate serde_json;
 pub mod routes;
 pub mod util;
 
+use rocket::{Build, Rocket};
 use rocket_cors::{AllowedOrigins, CorsOptions};
 use rocket_prometheus::PrometheusMetrics;
 use std::net::Ipv4Addr;
@@ -19,14 +20,7 @@ use revolt_quark::events::client::EventV1;
 use revolt_quark::DatabaseInfo;
 use rocket::data::ToByteUnit;
 
-#[launch]
-async fn rocket() -> _ {
-    // Configure logging and environment
-    revolt_quark::configure!();
-
-    // Ensure environment variables are present
-    revolt_quark::variables::delta::preflight_checks();
-
+pub async fn web() -> Rocket<Build> {
     // Setup database
     let db = revolt_database::DatabaseInfo::Auto.connect().await.unwrap();
     db.migrate_database().await.unwrap();
@@ -108,4 +102,16 @@ async fn rocket() -> _ {
             address: Ipv4Addr::new(0, 0, 0, 0).into(),
             ..Default::default()
         })
+}
+
+#[launch]
+async fn rocket() -> _ {
+    // Configure logging and environment
+    revolt_quark::configure!();
+
+    // Ensure environment variables are present
+    revolt_quark::variables::delta::preflight_checks();
+
+    // Start web server
+    web().await
 }

@@ -8,14 +8,16 @@ use serde::Deserialize;
 
 static CONFIG_BUILDER: Lazy<RwLock<Config>> = Lazy::new(|| {
     RwLock::new({
-        Config::builder()
-            .add_source(File::from_str(
-                include_str!("../Revolt.toml"),
-                FileFormat::Toml,
-            ))
-            .add_source(File::new("revolt.toml", FileFormat::Toml))
-            .build()
-            .unwrap()
+        let mut builder = Config::builder().add_source(File::from_str(
+            include_str!("../Revolt.toml"),
+            FileFormat::Toml,
+        ));
+
+        if std::path::Path::new("revolt.toml").exists() {
+            builder = builder.add_source(File::new("revolt.toml", FileFormat::Toml));
+        }
+
+        builder.build().unwrap()
     })
 });
 

@@ -134,7 +134,7 @@ mod tests {
                 id: webhook_id.to_string(),
                 name: "Webhook Name".to_string(),
                 channel_id: channel_id.to_string(),
-                avatar: Some(Default::default()),
+                avatar: None,
                 ..Default::default()
             };
 

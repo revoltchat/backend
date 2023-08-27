@@ -2,12 +2,12 @@ use std::collections::HashSet;
 
 use authifier::Database;
 use base64::{
-    alphabet,
     engine::{self},
     Engine as _,
 };
 use deadqueue::limited::Queue;
 use once_cell::sync::Lazy;
+use revolt_config::config;
 use revolt_presence::filter_online;
 use web_push::{
     ContentEncoding, IsahcWebPushClient, SubscriptionInfo, SubscriptionKeys, VapidSignatureBuilder,
@@ -47,9 +47,10 @@ pub async fn queue(recipients: Vec<String>, payload: String) {
 
 /// Start a new worker
 pub async fn worker(db: Database) {
+    let config = config().await;
     let client = IsahcWebPushClient::new().unwrap();
-    let key = engine::GeneralPurpose::new(&alphabet::URL_SAFE, engine::general_purpose::NO_PAD)
-        .decode(std::env::var("REVOLT_VAPID_PRIVATE_KEY").unwrap())
+    let key = engine::general_purpose::URL_SAFE_NO_PAD
+        .decode(config.api.vapid.private_key)
         .expect("valid `VAPID_PRIVATE_KEY`");
 
     loop {
