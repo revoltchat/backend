@@ -18,6 +18,7 @@ default = ["serde", "partials"]
 
 [dependencies]
 # Core
+revolt-config = { version = "0.6.7", path = "../config" }
 revolt-permissions = { version = "0.6.7", path = "../permissions" }
 
 # Utility

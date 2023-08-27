@@ -131,7 +131,7 @@ impl Member {
                 id: user.id.clone(),
             }
             .into_message(id.to_string())
-            .send_without_notifications(db)
+            .send_without_notifications(db, false, false)
             .await
             .ok();
         }

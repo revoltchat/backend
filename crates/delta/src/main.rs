@@ -39,7 +39,7 @@ async fn rocket() -> _ {
 
     // Setup Authifier
     let authifier = Authifier {
-        database: legacy_db.clone().into(),
+        database: db.clone().into(),
         config: revolt_quark::util::authifier::config(),
         event_channel: Some(sender),
     };
@@ -61,6 +61,7 @@ async fn rocket() -> _ {
     });
 
     // Launch background task workers
+    async_std::task::spawn(revolt_database::tasks::start_workers(db.clone()));
     async_std::task::spawn(revolt_quark::tasks::start_workers(legacy_db.clone()));
 
     // Configure CORS

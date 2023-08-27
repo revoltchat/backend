@@ -65,3 +65,14 @@ impl DatabaseInfo {
         })
     }
 }
+
+impl From<Database> for authifier::Database {
+    fn from(value: Database) -> Self {
+        match value {
+            Database::Reference(_) => Default::default(),
+            Database::MongoDb(MongoDb(client, _)) => authifier::Database::MongoDb(
+                authifier::database::MongoDb(client.database("revolt")),
+            ),
+        }
+    }
+}
