@@ -1,7 +1,5 @@
 use super::User;
 
-use validator::Validate;
-
 auto_derived!(
     /// Bot
     #[derive(Default)]
@@ -103,7 +101,7 @@ auto_derived!(
 
     /// Bot Details
     #[derive(Default)]
-    #[cfg_attr(feature = "validator", derive(Validate))]
+    #[cfg_attr(feature = "validator", derive(validator::Validate))]
     pub struct DataCreateBot {
         /// Bot username
         #[cfg_attr(
@@ -115,7 +113,7 @@ auto_derived!(
 
     /// New Bot Details
     #[derive(Default)]
-    #[cfg_attr(feature = "validator", derive(Validate))]
+    #[cfg_attr(feature = "validator", derive(validator::Validate))]
     pub struct DataEditBot {
         /// Bot username
         #[cfg_attr(
