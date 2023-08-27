@@ -43,7 +43,7 @@ macro_rules! auto_derived {
 
 macro_rules! auto_derived_partial {
     ( $item:item, $name:expr ) => {
-        #[derive(OptionalStruct, Serialize, Deserialize, Debug, Clone, Default, Eq, PartialEq)]
+        #[derive(OptionalStruct, Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
         #[optional_derive(Serialize, Deserialize, Debug, Clone, Default, Eq, PartialEq)]
         #[optional_name = $name]
         #[opt_skip_serializing_none]

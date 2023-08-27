@@ -43,6 +43,7 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::UnknownServer => Status::NotFound,
             ErrorType::InvalidRole => Status::NotFound,
             ErrorType::Banned => Status::Forbidden,
+            ErrorType::AlreadyInServer => Status::Conflict,
 
             ErrorType::TooManyServers { .. } => Status::BadRequest,
             ErrorType::TooManyEmoji { .. } => Status::BadRequest,

@@ -158,6 +158,10 @@ auto_derived!(
 pub enum MessageAuthor<'a> {
     User(&'a User),
     Webhook(&'a Webhook),
+    System {
+        username: &'a str,
+        avatar: Option<&'a str>,
+    },
 }
 
 impl Interactions {
@@ -172,6 +176,7 @@ impl<'a> MessageAuthor<'a> {
         match self {
             MessageAuthor::User(user) => &user.id,
             MessageAuthor::Webhook(webhook) => &webhook.id,
+            MessageAuthor::System { .. } => "00000000000000000000000000",
         }
     }
 
@@ -179,6 +184,7 @@ impl<'a> MessageAuthor<'a> {
         match self {
             MessageAuthor::User(user) => user.avatar.as_ref().map(|file| file.id.as_str()),
             MessageAuthor::Webhook(webhook) => webhook.avatar.as_ref().map(|file| file.id.as_str()),
+            MessageAuthor::System { avatar, .. } => *avatar,
         }
     }
 
@@ -186,6 +192,7 @@ impl<'a> MessageAuthor<'a> {
         match self {
             MessageAuthor::User(user) => &user.username,
             MessageAuthor::Webhook(webhook) => &webhook.name,
+            MessageAuthor::System { username, .. } => username,
         }
     }
 }

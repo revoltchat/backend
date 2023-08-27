@@ -45,6 +45,8 @@ pub async fn invite_bot(
         return Err(create_error!(BotIsPrivate));
     }
 
+    let bot_user = db.fetch_user(&bot.id).await?;
+
     match dest.into_inner() {
         InviteBotDestination::Server { server } => {
             let server = db.fetch_server(&server).await?;
@@ -54,8 +56,7 @@ pub async fn invite_bot(
                 .await
                 .throw_if_lacking_channel_permission(ChannelPermission::ManageServer)?;
 
-            let user = db.fetch_user(&bot.id).await?;
-            Member::create(db, &server, &user)
+            Member::create(db, &server, &bot_user)
                 .await
                 .map(|_| EmptyResponse)
         }
@@ -68,7 +69,7 @@ pub async fn invite_bot(
                 .throw_if_lacking_channel_permission(ChannelPermission::InviteOthers)?;
 
             channel
-                .add_user_to_group(db, &bot.id, &user.id)
+                .add_user_to_group(db, &bot_user, &user.id)
                 .await
                 .map(|_| EmptyResponse)
         }

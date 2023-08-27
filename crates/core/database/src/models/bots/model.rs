@@ -50,6 +50,24 @@ auto_derived!(
     }
 );
 
+#[allow(clippy::derivable_impls)]
+impl Default for Bot {
+    fn default() -> Self {
+        Self {
+            id: Default::default(),
+            owner: Default::default(),
+            token: Default::default(),
+            public: Default::default(),
+            analytics: Default::default(),
+            discoverable: Default::default(),
+            interactions_url: Default::default(),
+            terms_of_service_url: Default::default(),
+            privacy_policy_url: Default::default(),
+            flags: Default::default(),
+        }
+    }
+}
+
 #[allow(clippy::disallowed_methods)]
 impl Bot {
     /// Create a new bot

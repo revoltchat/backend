@@ -15,8 +15,7 @@ auto_derived_partial!(
         pub id: MemberCompositeKey,
 
         /// Time at which this user joined the server
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub joined_at: Option<Timestamp>,
+        pub joined_at: Timestamp,
 
         /// Member's nickname
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -61,6 +60,19 @@ auto_derived!(
     }
 );
 
+impl Default for Member {
+    fn default() -> Self {
+        Self {
+            id: Default::default(),
+            joined_at: Timestamp::now_utc(),
+            nickname: None,
+            avatar: None,
+            roles: vec![],
+            timeout: None,
+        }
+    }
+}
+
 #[allow(clippy::disallowed_methods)]
 impl Member {
     /// Create a new member in a server
@@ -73,6 +85,10 @@ impl Member {
     ) -> Result<()> {
         if db.fetch_ban(&server.id, &user.id).await.is_ok() {
             return Err(create_error!(Banned));
+        }
+
+        if db.fetch_member(&server.id, &user.id).await.is_ok() {
+            return Err(create_error!(AlreadyInServer));
         }
 
         let member = Member {
@@ -155,13 +171,13 @@ impl Member {
 
         db.update_member(&self.id, &partial, remove.clone()).await?;
 
-        /* // TODO: EventV1::ServerMemberUpdate {
-            id: self.id.clone(),
-            data: partial,
-            clear: remove,
+        EventV1::ServerMemberUpdate {
+            id: self.id.clone().into(),
+            data: partial.into(),
+            clear: remove.into_iter().map(|field| field.into()).collect(),
         }
         .p(self.id.server.clone())
-        .await; */
+        .await;
 
         Ok(())
     }

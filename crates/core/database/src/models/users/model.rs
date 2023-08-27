@@ -133,6 +133,26 @@ pub static DISCRIMINATOR_SEARCH_SPACE: Lazy<HashSet<String>> = Lazy::new(|| {
     set.into_iter().collect()
 });
 
+#[allow(clippy::derivable_impls)]
+impl Default for User {
+    fn default() -> Self {
+        Self {
+            id: Default::default(),
+            username: Default::default(),
+            discriminator: Default::default(),
+            display_name: Default::default(),
+            avatar: Default::default(),
+            relations: Default::default(),
+            badges: Default::default(),
+            status: Default::default(),
+            profile: Default::default(),
+            flags: Default::default(),
+            privileged: Default::default(),
+            bot: Default::default(),
+        }
+    }
+}
+
 #[allow(clippy::disallowed_methods)]
 impl User {
     /// Create a new user

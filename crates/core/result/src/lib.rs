@@ -88,6 +88,7 @@ pub enum ErrorType {
     TooManyRoles {
         max: usize,
     },
+    AlreadyInServer,
 
     // ? Bot related errors
     ReachedMaximumBots,

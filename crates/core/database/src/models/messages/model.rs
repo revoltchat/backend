@@ -172,6 +172,29 @@ auto_derived!(
     }
 );
 
+#[allow(clippy::derivable_impls)]
+impl Default for Message {
+    fn default() -> Self {
+        Self {
+            id: Default::default(),
+            nonce: None,
+            channel: Default::default(),
+            author: Default::default(),
+            webhook: None,
+            content: None,
+            system: None,
+            attachments: None,
+            edited: None,
+            embeds: None,
+            mentions: None,
+            replies: None,
+            reactions: Default::default(),
+            interactions: Default::default(),
+            masquerade: None,
+        }
+    }
+}
+
 #[allow(clippy::disallowed_methods)]
 impl Message {
     /// Send a message without any notifications

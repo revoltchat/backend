@@ -1,4 +1,4 @@
-use crate::models::{channel::{Channel, FieldsChannel, PartialChannel}};
+use crate::models::channel::{Channel, FieldsChannel, PartialChannel};
 use crate::{OverrideField, Result};
 
 #[async_trait]
@@ -13,9 +13,6 @@ pub trait AbstractChannel: Sync + Send {
     async fn insert_channel(&self, channel: &Channel) -> Result<()>;
 
     /// Update an existing channel using some data
-    /// ! TODO: we need separate Channel::update which also sends out the relevant events
-    /// ! also applies to other methods I guess, try to restrict event bound methods to
-    /// ! the models themselves instead of the abstract database
     async fn update_channel(
         &self,
         id: &str,
