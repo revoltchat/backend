@@ -2,7 +2,6 @@ use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
 use revolt_models::v0::{Embed, MessageAuthor, MessageSort, MessageWebhook, PushNotification};
 use revolt_result::Result;
-use serde_json::json;
 use ulid::Ulid;
 
 use crate::{
@@ -268,8 +267,7 @@ impl Message {
                     _ => vec![],
                 }
             },
-            json!(PushNotification::from(self.clone().into(), Some(author), &channel.id()).await)
-                .to_string(),
+            PushNotification::from(self.clone().into(), Some(author), &channel.id()).await,
         )
         .await;
 
