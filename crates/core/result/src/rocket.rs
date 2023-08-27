@@ -19,6 +19,7 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::UnknownUser => Status::NotFound,
             ErrorType::InvalidUsername => Status::BadRequest,
             ErrorType::UsernameTaken => Status::Conflict,
+            ErrorType::DiscriminatorChangeRatelimited => Status::TooManyRequests,
             ErrorType::AlreadyFriends => Status::Conflict,
             ErrorType::AlreadySentRequest => Status::Conflict,
             ErrorType::Blocked => Status::Conflict,
@@ -42,6 +43,7 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::UnknownServer => Status::NotFound,
             ErrorType::InvalidRole => Status::NotFound,
             ErrorType::Banned => Status::Forbidden,
+            ErrorType::AlreadyInServer => Status::Conflict,
 
             ErrorType::TooManyServers { .. } => Status::BadRequest,
             ErrorType::TooManyEmoji { .. } => Status::BadRequest,

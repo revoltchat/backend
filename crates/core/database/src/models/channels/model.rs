@@ -1,12 +1,14 @@
 use std::collections::HashMap;
 
+use revolt_models::v0::MessageAuthor;
 use revolt_permissions::OverrideField;
 use revolt_result::Result;
 use serde::{Deserialize, Serialize};
 
-use crate::{events::client::EventV1, Database, File, IntoDocumentPath};
+use crate::{events::client::EventV1, Database, File, IntoDocumentPath, SystemMessage, User};
 
 auto_derived!(
+    #[serde(tag = "channel_type")]
     pub enum Channel {
         /// Personal "Saved Notes" channel which allows users to save messages
         SavedMessages {
@@ -164,6 +166,7 @@ auto_derived!(
     }
 );
 
+#[allow(clippy::disallowed_methods)]
 impl Channel {
     /// Create a channel
     pub async fn create(&self, db: &Database) -> Result<()> {
@@ -189,40 +192,48 @@ impl Channel {
     pub async fn add_user_to_group(
         &mut self,
         db: &Database,
-        user_id: &str,
-        _by_id: &str,
+        user: &User,
+        by_id: &str,
     ) -> Result<()> {
         if let Channel::Group { recipients, .. } = self {
-            if recipients.contains(&String::from(user_id)) {
+            if recipients.contains(&String::from(&user.id)) {
                 return Err(create_error!(AlreadyInGroup));
             }
 
-            recipients.push(String::from(user_id));
+            recipients.push(String::from(&user.id));
         }
 
         match &self {
             Channel::Group { id, .. } => {
-                db.add_user_to_group(id, user_id).await?;
+                db.add_user_to_group(id, &user.id).await?;
 
                 EventV1::ChannelGroupJoin {
                     id: id.to_string(),
-                    user: user_id.to_string(),
+                    user: user.id.to_string(),
                 }
                 .p(id.to_string())
                 .await;
 
                 EventV1::ChannelCreate(self.clone().into())
-                    .private(user_id.to_string())
+                    .private(user.id.to_string())
                     .await;
 
-                /* TODO: SystemMessage::UserAdded {
-                    id: user.to_string(),
-                    by: by.to_string(),
+                SystemMessage::UserAdded {
+                    id: user.id.to_string(),
+                    by: by_id.to_string(),
                 }
                 .into_message(id.to_string())
-                .create(db, self, None)
+                .send(
+                    db,
+                    MessageAuthor::System {
+                        username: &user.username,
+                        avatar: user.avatar.as_ref().map(|file| file.id.as_ref()),
+                    },
+                    self,
+                    false,
+                )
                 .await
-                .ok(); */
+                .ok();
 
                 Ok(())
             }
@@ -468,19 +479,20 @@ impl Channel {
     pub async fn remove_user_from_group(
         &self,
         db: &Database,
-        user_id: &str,
-        _by_id: Option<&str>,
+        user: &User,
+        by_id: Option<&str>,
         silent: bool,
     ) -> Result<()> {
         match &self {
             Channel::Group {
                 id,
+                name,
                 owner,
                 recipients,
                 ..
             } => {
-                if user_id == owner {
-                    if let Some(new_owner) = recipients.iter().find(|x| *x != user_id) {
+                if &user.id == owner {
+                    if let Some(new_owner) = recipients.iter().find(|x| *x != &user.id) {
                         db.update_channel(
                             id,
                             &PartialChannel {
@@ -491,14 +503,22 @@ impl Channel {
                         )
                         .await?;
 
-                        /* TODO: SystemMessage::ChannelOwnershipChanged {
+                        SystemMessage::ChannelOwnershipChanged {
                             from: owner.to_string(),
-                            to: new_owner.into(),
+                            to: new_owner.to_string(),
                         }
                         .into_message(id.to_string())
-                        .create(db, self, None)
+                        .send(
+                            db,
+                            MessageAuthor::System {
+                                username: name,
+                                avatar: None,
+                            },
+                            self,
+                            false,
+                        )
                         .await
-                        .ok(); */
+                        .ok();
                     } else {
                         db.delete_channel(self).await?;
                         return Ok(());
@@ -507,26 +527,34 @@ impl Channel {
 
                 EventV1::ChannelGroupLeave {
                     id: id.to_string(),
-                    user: user_id.to_string(),
+                    user: user.id.to_string(),
                 }
                 .p(id.to_string())
                 .await;
 
                 if !silent {
-                    /* TODO: if let Some(_by) = by_id {
+                    if let Some(by) = by_id {
                         SystemMessage::UserRemove {
-                            id: user_id.to_string(),
+                            id: user.id.to_string(),
                             by: by.to_string(),
                         }
                     } else {
                         SystemMessage::UserLeft {
-                            id: user_id.to_string(),
+                            id: user.id.to_string(),
                         }
                     }
                     .into_message(id.to_string())
-                    .create(db, self, None)
+                    .send(
+                        db,
+                        MessageAuthor::System {
+                            username: &user.username,
+                            avatar: user.avatar.as_ref().map(|file| file.id.as_ref()),
+                        },
+                        self,
+                        false,
+                    )
                     .await
-                    .ok(); */
+                    .ok();
                 }
 
                 Ok(())

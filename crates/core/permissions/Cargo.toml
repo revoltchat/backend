@@ -20,6 +20,9 @@ try-from-primitive = ["dep:num_enum"]
 async-std = { version = "1.8.0", features = ["attributes"] }
 
 [dependencies]
+# Core
+revolt-result = { version = "0.6.5", path = "../result" }
+
 # Utility
 auto_ops = "0.3.0"
 once_cell = "1.17"

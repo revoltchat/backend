@@ -43,6 +43,7 @@ pub enum ErrorType {
     // ? User related errors
     UsernameTaken,
     InvalidUsername,
+    DiscriminatorChangeRatelimited,
     UnknownUser,
     AlreadyFriends,
     AlreadySentRequest,
@@ -87,6 +88,7 @@ pub enum ErrorType {
     TooManyRoles {
         max: usize,
     },
+    AlreadyInServer,
 
     // ? Bot related errors
     ReachedMaximumBots,

@@ -128,6 +128,7 @@ auto_derived!(
     }
 );
 
+#[allow(clippy::disallowed_methods)]
 impl Server {
     /// Create a server
     pub async fn create(&self, db: &Database) -> Result<()> {

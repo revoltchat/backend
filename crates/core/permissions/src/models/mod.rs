@@ -3,6 +3,7 @@ mod server;
 mod user;
 
 pub use channel::*;
+use revolt_result::{create_error, Result};
 pub use server::*;
 pub use user::*;
 
@@ -27,9 +28,38 @@ impl PermissionValue {
         self.0 &= !v;
     }
 
+    /// Revoke all permissions
+    pub fn revoke_all(&mut self) {
+        self.0 = 0;
+    }
+
     /// Restrict to given permissions
     pub fn restrict(&mut self, v: u64) {
         self.0 &= v;
+    }
+
+    /// Check whether certain a permission has been granted
+    pub fn has(&mut self, v: u64) -> bool {
+        (self.0 & v) == v
+    }
+
+    /// Check whether certain a channel permission has been granted
+    pub fn has_channel_permission(&mut self, permission: ChannelPermission) -> bool {
+        self.has(permission as u64)
+    }
+
+    /// Throw if missing channel permission
+    pub fn throw_if_lacking_channel_permission(
+        &mut self,
+        permission: ChannelPermission,
+    ) -> Result<()> {
+        if self.has_channel_permission(permission) {
+            Ok(())
+        } else {
+            Err(create_error!(MissingPermission {
+                permission: permission.to_string()
+            }))
+        }
     }
 }
 

@@ -1,3 +1,5 @@
+use once_cell::sync::Lazy;
+use regex::Regex;
 use revolt_quark::models::user::{FieldsUser, PartialUser, User};
 use revolt_quark::models::File;
 use revolt_quark::{Database, Error, Ref, Result};
@@ -8,7 +10,11 @@ use rocket::State;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-use crate::util::regex::RE_DISPLAY_NAME;
+/// Regex for valid display names
+///
+/// Block zero width space
+/// Block newline and carriage return
+pub static RE_DISPLAY_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[^\u200B\n\r]+$").unwrap());
 
 /// # Profile Data
 #[derive(Validate, Serialize, Deserialize, Debug, JsonSchema)]

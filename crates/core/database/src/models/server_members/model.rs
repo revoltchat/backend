@@ -1,7 +1,11 @@
 use iso8601_timestamp::Timestamp;
-use revolt_result::Result;
+use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
+use revolt_result::{create_error, Result};
 
-use crate::{Database, File, Server};
+use crate::{
+    events::client::EventV1, util::permissions::DatabasePermissionQuery, Database, File, Server,
+    SystemMessage, User,
+};
 
 auto_derived_partial!(
     /// Server Member
@@ -11,8 +15,7 @@ auto_derived_partial!(
         pub id: MemberCompositeKey,
 
         /// Time at which this user joined the server
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub joined_at: Option<Timestamp>,
+        pub joined_at: Timestamp,
 
         /// Member's nickname
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -57,7 +60,102 @@ auto_derived!(
     }
 );
 
+impl Default for Member {
+    fn default() -> Self {
+        Self {
+            id: Default::default(),
+            joined_at: Timestamp::now_utc(),
+            nickname: None,
+            avatar: None,
+            roles: vec![],
+            timeout: None,
+        }
+    }
+}
+
+#[allow(clippy::disallowed_methods)]
 impl Member {
+    /// Create a new member in a server
+    pub async fn create(
+        db: &Database,
+        server: &Server,
+        user: &User,
+        // channels: Option<Vec<Channel>>,
+        //) -> Result<Vec<Channel>> {
+    ) -> Result<()> {
+        if db.fetch_ban(&server.id, &user.id).await.is_ok() {
+            return Err(create_error!(Banned));
+        }
+
+        if db.fetch_member(&server.id, &user.id).await.is_ok() {
+            return Err(create_error!(AlreadyInServer));
+        }
+
+        let member = Member {
+            id: MemberCompositeKey {
+                server: server.id.to_string(),
+                user: user.id.to_string(),
+            },
+            ..Default::default()
+        };
+
+        db.insert_member(&member).await?;
+
+        let mut channels = vec![];
+
+        if true {
+            let query = DatabasePermissionQuery::new(db, user).server(server);
+            let existing_channels = db.fetch_channels(&server.channels).await?;
+
+            for channel in existing_channels {
+                let mut channel_query = query.clone().channel(&channel);
+
+                if calculate_channel_permissions(&mut channel_query)
+                    .await
+                    .has_channel_permission(ChannelPermission::ViewChannel)
+                {
+                    channels.push(channel);
+                }
+            }
+        }
+
+        EventV1::ServerMemberJoin {
+            id: server.id.clone(),
+            user: user.id.clone(),
+        }
+        .p(server.id.clone())
+        .await;
+
+        EventV1::ServerCreate {
+            id: server.id.clone(),
+            server: server.clone().into(),
+            channels: channels
+                .clone()
+                .into_iter()
+                .map(|channel| channel.into())
+                .collect(),
+        }
+        .private(user.id.clone())
+        .await;
+
+        if let Some(id) = server
+            .system_messages
+            .as_ref()
+            .and_then(|x| x.user_joined.as_ref())
+        {
+            SystemMessage::UserJoined {
+                id: user.id.clone(),
+            }
+            .into_message(id.to_string())
+            .send_without_notifications(db, false, false)
+            .await
+            .ok();
+        }
+
+        // Ok(channels)
+        Ok(())
+    }
+
     /// Update member data
     pub async fn update<'a>(
         &mut self,
@@ -73,13 +171,13 @@ impl Member {
 
         db.update_member(&self.id, &partial, remove.clone()).await?;
 
-        /* // TODO: EventV1::ServerMemberUpdate {
-            id: self.id.clone(),
-            data: partial,
-            clear: remove,
+        EventV1::ServerMemberUpdate {
+            id: self.id.clone().into(),
+            data: partial.into(),
+            clear: remove.into_iter().map(|field| field.into()).collect(),
         }
         .p(self.id.server.clone())
-        .await; */
+        .await;
 
         Ok(())
     }

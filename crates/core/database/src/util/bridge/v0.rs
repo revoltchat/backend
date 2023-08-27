@@ -34,6 +34,24 @@ impl From<crate::Bot> for Bot {
     }
 }
 
+impl From<FieldsBot> for crate::FieldsBot {
+    fn from(value: FieldsBot) -> Self {
+        match value {
+            FieldsBot::InteractionsURL => crate::FieldsBot::InteractionsURL,
+            FieldsBot::Token => crate::FieldsBot::Token,
+        }
+    }
+}
+
+impl From<crate::FieldsBot> for FieldsBot {
+    fn from(value: crate::FieldsBot) -> Self {
+        match value {
+            crate::FieldsBot::InteractionsURL => FieldsBot::InteractionsURL,
+            crate::FieldsBot::Token => FieldsBot::Token,
+        }
+    }
+}
+
 impl From<crate::Invite> for Invite {
     fn from(value: crate::Invite) -> Self {
         match value {
@@ -373,6 +391,14 @@ impl From<crate::Interactions> for Interactions {
     }
 }
 
+impl From<crate::AppendMessage> for AppendMessage {
+    fn from(value: crate::AppendMessage) -> Self {
+        AppendMessage {
+            embeds: value.embeds,
+        }
+    }
+}
+
 impl From<crate::Masquerade> for Masquerade {
     fn from(value: crate::Masquerade) -> Self {
         Masquerade {
@@ -603,6 +629,83 @@ impl crate::User {
             relationship,
             online: can_see_profile && revolt_presence::is_online(&self.id).await,
             id: self.id,
+        }
+    }
+
+    pub async fn into_self(self) -> User {
+        User {
+            username: self.username,
+            discriminator: self.discriminator,
+            display_name: self.display_name,
+            avatar: self.avatar.map(|file| file.into()),
+            relations: self
+                .relations
+                .map(|relationships| {
+                    relationships
+                        .into_iter()
+                        .map(|relationship| relationship.into())
+                        .collect()
+                })
+                .unwrap_or_default(),
+            badges: self.badges.unwrap_or_default() as u32,
+            status: self.status.map(|status| status.into()),
+            profile: self.profile.map(|profile| profile.into()),
+            flags: self.flags.unwrap_or_default() as u32,
+            privileged: self.privileged,
+            bot: self.bot.map(|bot| bot.into()),
+            relationship: RelationshipStatus::User,
+            online: revolt_presence::is_online(&self.id).await,
+            id: self.id,
+        }
+    }
+}
+
+impl From<crate::PartialUser> for PartialUser {
+    fn from(value: crate::PartialUser) -> Self {
+        PartialUser {
+            username: value.username,
+            discriminator: value.discriminator,
+            display_name: value.display_name,
+            avatar: value.avatar.map(|file| file.into()),
+            relations: value.relations.map(|relationships| {
+                relationships
+                    .into_iter()
+                    .map(|relationship| relationship.into())
+                    .collect()
+            }),
+            badges: value.badges.map(|badges| badges as u32),
+            status: value.status.map(|status| status.into()),
+            profile: value.profile.map(|profile| profile.into()),
+            flags: value.flags.map(|flags| flags as u32),
+            privileged: value.privileged,
+            bot: value.bot.map(|bot| bot.into()),
+            relationship: None,
+            online: None,
+            id: value.id,
+        }
+    }
+}
+
+impl From<FieldsUser> for crate::FieldsUser {
+    fn from(value: FieldsUser) -> Self {
+        match value {
+            FieldsUser::Avatar => crate::FieldsUser::Avatar,
+            FieldsUser::ProfileBackground => crate::FieldsUser::ProfileBackground,
+            FieldsUser::ProfileContent => crate::FieldsUser::ProfileContent,
+            FieldsUser::StatusPresence => crate::FieldsUser::StatusPresence,
+            FieldsUser::StatusText => crate::FieldsUser::StatusText,
+        }
+    }
+}
+
+impl From<crate::FieldsUser> for FieldsUser {
+    fn from(value: crate::FieldsUser) -> Self {
+        match value {
+            crate::FieldsUser::Avatar => FieldsUser::Avatar,
+            crate::FieldsUser::ProfileBackground => FieldsUser::ProfileBackground,
+            crate::FieldsUser::ProfileContent => FieldsUser::ProfileContent,
+            crate::FieldsUser::StatusPresence => FieldsUser::StatusPresence,
+            crate::FieldsUser::StatusText => FieldsUser::StatusText,
         }
     }
 }

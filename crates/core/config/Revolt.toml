@@ -1,0 +1,64 @@
+[database]
+mongodb = "mongodb://database"
+redis = "redis://redis/"
+
+[hosts]
+app = "http://local.revolt.chat"
+api = "http://local.revolt.chat/api"
+events = "ws://local.revolt.chat/ws"
+autumn = "http://local.revolt.chat/autumn"
+january = "http://local.revolt.chat/january"
+voso_legacy = ""
+voso_legacy_ws = ""
+
+[api]
+staging = false
+
+[api.registration]
+invite_only = false
+
+[api.smtp]
+host = ""
+username = ""
+password = ""
+from_address = ""
+
+[api.vapid]
+private_key = "LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUJSUWpyTWxLRnBiVWhsUHpUbERvcEliYk1yeVNrNXpKYzVYVzIxSjJDS3hvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFWnkrQkg2TGJQZ2hEa3pEempXOG0rUXVPM3pCajRXT1phdkR6ZU00c0pqbmFwd1psTFE0WAp1ZDh2TzVodU94QWhMQlU3WWRldVovWHlBdFpWZmNyQi9BPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo"
+public_key = "BGcvgR-i2z4IQ5Mw841vJvkLjt8wY-FjmWrw83jOLCY52qcGZS0OF7nfLzuYbjsQISwVO2HXrmf18gLWVX3Kwfw="
+
+[api.fcm]
+api_key = ""
+
+[api.security]
+authifier_shield_key = ""
+voso_legacy_token = ""
+
+[api.security.captcha]
+hcaptcha_key = ""
+hcaptcha_sitekey = ""
+
+[api.workers]
+max_concurrent_connections = 50
+
+[features]
+
+[features.limits]
+
+[features.limits.default]
+group_size = 100
+bots = 5
+message_replies = 5
+message_attachments = 5
+message_embeds = 5
+servers = 100
+server_emoji = 100
+server_roles = 200
+server_channels = 200
+
+attachment_size = 20000000
+avatar_size = 4000000
+background_size = 6000000
+icon_size = 2500000
+banner_size = 6000000
+emoji_size = 500000

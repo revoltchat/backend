@@ -4,7 +4,6 @@ use revolt_quark::variables::delta::{
 };
 use revolt_quark::Result;
 
-use rocket::http::Status;
 use rocket::serde::json::Json;
 use serde::Serialize;
 
@@ -138,9 +137,22 @@ pub async fn root() -> Result<Json<RevoltConfig>> {
     }))
 }
 
-/// Example endpoint.
-#[openapi(skip)]
-#[get("/ping")]
-pub async fn ping(/*_limitguard: Ratelimiter*/) -> Status {
-    Status::Ok
+#[cfg(test)]
+mod test {
+    use crate::rocket;
+    use rocket::http::Status;
+
+    #[rocket::async_test]
+    async fn hello_world() {
+        let harness = crate::util::test::TestHarness::new().await;
+        let response = harness.client.get("/").dispatch().await;
+        assert_eq!(response.status(), Status::Ok);
+    }
+
+    #[rocket::async_test]
+    async fn hello_world_concurrent() {
+        let harness = crate::util::test::TestHarness::new().await;
+        let response = harness.client.get("/").dispatch().await;
+        assert_eq!(response.status(), Status::Ok);
+    }
 }

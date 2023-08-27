@@ -1,8 +1,14 @@
 use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
-use revolt_models::v0::{Embed, MessageSort, MessageWebhook};
+use revolt_models::v0::{Embed, MessageAuthor, MessageSort, MessageWebhook, PushNotification};
+use revolt_result::Result;
+use ulid::Ulid;
 
-use crate::File;
+use crate::{
+    events::client::EventV1,
+    tasks::{self, ack::AckEvent},
+    Channel, Database, File,
+};
 
 auto_derived_partial!(
     /// Message
@@ -165,33 +171,144 @@ auto_derived!(
     }
 );
 
+#[allow(clippy::derivable_impls)]
+impl Default for Message {
+    fn default() -> Self {
+        Self {
+            id: Default::default(),
+            nonce: None,
+            channel: Default::default(),
+            author: Default::default(),
+            webhook: None,
+            content: None,
+            system: None,
+            attachments: None,
+            edited: None,
+            embeds: None,
+            mentions: None,
+            replies: None,
+            reactions: Default::default(),
+            interactions: Default::default(),
+            masquerade: None,
+        }
+    }
+}
+
 #[allow(clippy::disallowed_methods)]
-impl Message {}
-
-impl Interactions {
-    /// Validate interactions info is correct
-    /* pub async fn validate(
-        &self,
+impl Message {
+    /// Send a message without any notifications
+    pub async fn send_without_notifications(
+        &mut self,
         db: &Database,
-        permissions: &mut PermissionCalculator<'_>,
+        is_dm: bool,
+        generate_embeds: bool,
     ) -> Result<()> {
-        if let Some(reactions) = &self.reactions {
-            permissions.throw_permission(db, Permission::React).await?;
+        db.insert_message(self).await?;
 
-            if reactions.len() > 20 {
-                return Err(Error::InvalidOperation);
+        // Fan out events
+        EventV1::Message(self.clone().into())
+            .p(self.channel.to_string())
+            .await;
+
+        // Update last_message_id
+        tasks::last_message_id::queue(self.channel.to_string(), self.id.to_string(), is_dm).await;
+
+        // Add mentions for affected users
+        if let Some(mentions) = &self.mentions {
+            for user in mentions {
+                tasks::ack::queue(
+                    self.channel.to_string(),
+                    user.to_string(),
+                    AckEvent::AddMention {
+                        ids: vec![self.id.to_string()],
+                    },
+                )
+                .await;
             }
+        }
 
-            for reaction in reactions {
-                if !Emoji::can_use(db, reaction).await? {
-                    return Err(Error::InvalidOperation);
-                }
+        // Generate embeds
+        if generate_embeds {
+            if let Some(content) = &self.content {
+                tasks::process_embeds::queue(
+                    self.channel.to_string(),
+                    self.id.to_string(),
+                    content.clone(),
+                )
+                .await;
             }
         }
 
         Ok(())
-    }*/
+    }
 
+    /// Send a message
+    pub async fn send(
+        &mut self,
+        db: &Database,
+        author: MessageAuthor<'_>,
+        channel: &Channel,
+        generate_embeds: bool,
+    ) -> Result<()> {
+        self.send_without_notifications(
+            db,
+            matches!(channel, Channel::DirectMessage { .. }),
+            generate_embeds,
+        )
+        .await?;
+
+        // Push out Web Push notifications
+        crate::tasks::web_push::queue(
+            {
+                match channel {
+                    Channel::DirectMessage { recipients, .. }
+                    | Channel::Group { recipients, .. } => recipients.clone(),
+                    Channel::TextChannel { .. } => self.mentions.clone().unwrap_or_default(),
+                    _ => vec![],
+                }
+            },
+            PushNotification::from(self.clone().into(), Some(author), &channel.id()).await,
+        )
+        .await;
+
+        Ok(())
+    }
+
+    /// Append content to message
+    pub async fn append(
+        db: &Database,
+        id: String,
+        channel: String,
+        append: AppendMessage,
+    ) -> Result<()> {
+        db.append_message(&id, &append).await?;
+
+        EventV1::MessageAppend {
+            id,
+            channel: channel.to_string(),
+            append: append.into(),
+        }
+        .p(channel)
+        .await;
+
+        Ok(())
+    }
+}
+
+impl SystemMessage {
+    pub fn into_message(self, channel: String) -> Message {
+        Message {
+            id: Ulid::new().to_string(),
+            channel,
+            author: "00000000000000000000000000".to_string(),
+            system: Some(self),
+
+            ..Default::default()
+        }
+    }
+}
+
+impl Interactions {
     /// Check if we can use a given emoji to react
     pub fn can_use(&self, emoji: &str) -> bool {
         if self.restrict_reactions {

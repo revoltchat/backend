@@ -20,7 +20,7 @@ impl AbstractChannelUnreads for ReferenceDb {
             user: user_id.to_string(),
         };
 
-        if let Some(mut unread) = unreads.get_mut(&key) {
+        if let Some(unread) = unreads.get_mut(&key) {
             unread.mentions = None;
             unread.last_id.replace(message_id.to_string());
         } else {
@@ -41,6 +41,7 @@ impl AbstractChannelUnreads for ReferenceDb {
     async fn acknowledge_channels(&self, user_id: &str, channel_ids: &[String]) -> Result<()> {
         let current_time = Ulid::new().to_string();
         for channel_id in channel_ids {
+            #[allow(clippy::disallowed_methods)]
             self.acknowledge_message(channel_id, user_id, &current_time)
                 .await?;
         }

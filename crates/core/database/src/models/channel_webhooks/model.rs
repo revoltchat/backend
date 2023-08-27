@@ -36,6 +36,20 @@ auto_derived!(
     }
 );
 
+#[allow(clippy::derivable_impls)]
+impl Default for Webhook {
+    fn default() -> Self {
+        Self {
+            id: Default::default(),
+            name: Default::default(),
+            avatar: None,
+            channel_id: Default::default(),
+            permissions: Default::default(),
+            token: Default::default(),
+        }
+    }
+}
+
 #[allow(clippy::disallowed_methods)]
 impl Webhook {
     pub async fn create(&self, db: &Database) -> Result<()> {
@@ -120,7 +134,7 @@ mod tests {
                 id: webhook_id.to_string(),
                 name: "Webhook Name".to_string(),
                 channel_id: channel_id.to_string(),
-                avatar: Some(Default::default()),
+                avatar: None,
                 ..Default::default()
             };
 

@@ -43,6 +43,7 @@ pub trait AbstractDatabase:
     + channel_webhooks::AbstractWebhooks
     + emojis::AbstractEmojis
     + files::AbstractAttachments
+    + messages::AbstractMessages
     + ratelimit_events::AbstractRatelimitEvents
     + server_bans::AbstractServerBans
     + server_members::AbstractServerMembers

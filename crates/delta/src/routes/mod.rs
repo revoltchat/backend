@@ -25,7 +25,7 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
         mount_endpoints_and_merged_docs! {
             rocket, "/".to_owned(), settings,
             "/" => (vec![], custom_openapi_spec()),
-            "" => openapi_get_routes_spec![root::root, root::ping],
+            "" => openapi_get_routes_spec![root::root],
             "/admin" => admin::routes(),
             "/users" => users::routes(),
             "/bots" => bots::routes(),
@@ -46,7 +46,7 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
         mount_endpoints_and_merged_docs! {
             rocket, "/".to_owned(), settings,
             "/" => (vec![], custom_openapi_spec()),
-            "" => openapi_get_routes_spec![root::root, root::ping],
+            "" => openapi_get_routes_spec![root::root],
             "/admin" => admin::routes(),
             "/users" => users::routes(),
             "/bots" => bots::routes(),

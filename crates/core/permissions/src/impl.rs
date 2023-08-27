@@ -118,6 +118,10 @@ pub async fn calculate_channel_permissions<P: PermissionQuery>(query: &mut P) ->
                     permissions.restrict(*ALLOW_IN_TIMEOUT);
                 }
 
+                if !permissions.has_channel_permission(ChannelPermission::ViewChannel) {
+                    permissions.revoke_all();
+                }
+                
                 permissions
             } else {
                 0_u64.into()

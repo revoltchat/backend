@@ -8,8 +8,11 @@ extern crate serde_json;
 pub mod routes;
 pub mod util;
 
+use rocket::{Build, Rocket};
+use rocket_cors::{AllowedOrigins, CorsOptions};
 use rocket_prometheus::PrometheusMetrics;
 use std::net::Ipv4Addr;
+use std::str::FromStr;
 
 use async_std::channel::unbounded;
 use revolt_quark::authifier::{Authifier, AuthifierEvent};
@@ -17,14 +20,7 @@ use revolt_quark::events::client::EventV1;
 use revolt_quark::DatabaseInfo;
 use rocket::data::ToByteUnit;
 
-#[launch]
-async fn rocket() -> _ {
-    // Configure logging and environment
-    revolt_quark::configure!();
-
-    // Ensure environment variables are present
-    revolt_quark::variables::delta::preflight_checks();
-
+pub async fn web() -> Rocket<Build> {
     // Setup database
     let db = revolt_database::DatabaseInfo::Auto.connect().await.unwrap();
     db.migrate_database().await.unwrap();
@@ -37,7 +33,7 @@ async fn rocket() -> _ {
 
     // Setup Authifier
     let authifier = Authifier {
-        database: legacy_db.clone().into(),
+        database: db.clone().into(),
         config: revolt_quark::util::authifier::config(),
         event_channel: Some(sender),
     };
@@ -59,10 +55,31 @@ async fn rocket() -> _ {
     });
 
     // Launch background task workers
+    async_std::task::spawn(revolt_database::tasks::start_workers(db.clone()));
     async_std::task::spawn(revolt_quark::tasks::start_workers(legacy_db.clone()));
 
     // Configure CORS
-    let cors = revolt_quark::web::cors::new();
+    let cors = CorsOptions {
+        allowed_origins: AllowedOrigins::All,
+        allowed_methods: [
+            "Get", "Put", "Post", "Delete", "Options", "Head", "Trace", "Connect", "Patch",
+        ]
+        .iter()
+        .map(|s| FromStr::from_str(s).unwrap())
+        .collect(),
+        ..Default::default()
+    }
+    .to_cors()
+    .expect("Failed to create CORS.");
+
+    // Configure Swagger
+    let swagger = revolt_rocket_okapi::swagger_ui::make_swagger_ui(
+        &revolt_rocket_okapi::swagger_ui::SwaggerUIConfig {
+            url: "../openapi.json".to_owned(),
+            ..Default::default()
+        },
+    )
+    .into();
 
     // Configure Rocket
     let rocket = rocket::build();
@@ -71,18 +88,30 @@ async fn rocket() -> _ {
     routes::mount(rocket)
         .attach(prometheus.clone())
         .mount("/metrics", prometheus)
-        .mount("/", revolt_quark::web::cors::catch_all_options_routes())
-        .mount("/", revolt_quark::web::ratelimiter::routes())
-        .mount("/swagger/", revolt_quark::web::swagger::routes())
+        .mount("/", rocket_cors::catch_all_options_routes())
+        .mount("/", util::ratelimiter::routes())
+        .mount("/swagger/", swagger)
         .manage(authifier)
         .manage(db)
         .manage(legacy_db)
         .manage(cors.clone())
-        .attach(revolt_quark::web::ratelimiter::RatelimitFairing)
+        .attach(util::ratelimiter::RatelimitFairing)
         .attach(cors)
         .configure(rocket::Config {
             limits: rocket::data::Limits::default().limit("string", 5.megabytes()),
             address: Ipv4Addr::new(0, 0, 0, 0).into(),
             ..Default::default()
         })
+}
+
+#[launch]
+async fn rocket() -> _ {
+    // Configure logging and environment
+    revolt_quark::configure!();
+
+    // Ensure environment variables are present
+    revolt_quark::variables::delta::preflight_checks();
+
+    // Start web server
+    web().await
 }

@@ -1,11 +1,19 @@
-use crate::util::regex::RE_USERNAME;
-use revolt_quark::{
-    authifier::models::Session, models::User, Database, EmptyResponse, Error, Result,
-};
+use once_cell::sync::Lazy;
+use regex::Regex;
+use revolt_database::{Database, User};
+use revolt_models::v0;
+use revolt_quark::authifier::models::Session;
+use revolt_result::{create_error, Result};
 
 use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
+
+/// Regex for valid usernames
+///
+/// Block zero width space
+/// Block lookalike characters
+pub static RE_USERNAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\p{L}|[\d_.-])+$").unwrap());
 
 /// # New User Data
 #[derive(Validate, Serialize, Deserialize, JsonSchema)]
@@ -25,22 +33,22 @@ pub async fn req(
     session: Session,
     user: Option<User>,
     data: Json<DataOnboard>,
-) -> Result<EmptyResponse> {
+) -> Result<Json<v0::User>> {
     if user.is_some() {
-        return Err(Error::AlreadyOnboarded);
+        return Err(create_error!(AlreadyOnboarded));
     }
 
     let data = data.into_inner();
-    data.validate()
-        .map_err(|error| Error::FailedValidation { error })?;
+    data.validate().map_err(|error| {
+        create_error!(FailedValidation {
+            error: error.to_string()
+        })
+    })?;
 
-    let username = User::validate_username(data.username)?;
-    let user = User {
-        id: session.user_id,
-        discriminator: User::find_discriminator(db, &username, None).await?,
-        username,
-        ..Default::default()
-    };
-
-    db.insert_user(&user).await.map(|_| EmptyResponse)
+    Ok(Json(
+        User::create(db, data.username, session.user_id, None)
+            .await?
+            .into_self()
+            .await,
+    ))
 }

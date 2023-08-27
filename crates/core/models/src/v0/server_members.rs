@@ -10,8 +10,7 @@ auto_derived_partial!(
         pub id: MemberCompositeKey,
 
         /// Time at which this user joined the server
-        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-        pub joined_at: Option<Timestamp>,
+        pub joined_at: Timestamp,
 
         /// Member's nickname
         #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]

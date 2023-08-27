@@ -243,6 +243,8 @@ impl User {
                     return Err(Error::DiscriminatorChangeRatelimited);
                 }
 
+                // FIXME: don't access directly?
+                #[allow(clippy::disallowed_methods)]
                 rvdb.insert_ratelimit_event(&revolt_database::RatelimitEvent {
                     id: ulid::Ulid::new().to_string(),
                     target_id,
@@ -469,7 +471,17 @@ impl User {
     #[async_recursion]
     pub async fn from_token(db: &Database, token: &str, hint: UserHint) -> Result<User> {
         match hint {
-            UserHint::Bot => db.fetch_user(&db.fetch_bot_by_token(token).await?.id).await,
+            UserHint::Bot => {
+                let rvdb: revolt_database::Database = db.clone().into();
+                db.fetch_user(
+                    &rvdb
+                        .fetch_bot_by_token(token)
+                        .await
+                        .map_err(|_| Error::InternalError)?
+                        .id,
+                )
+                .await
+            }
             UserHint::User => db.fetch_user_by_token(token).await,
             UserHint::Any => {
                 if let Ok(user) = User::from_token(db, token, UserHint::User).await {

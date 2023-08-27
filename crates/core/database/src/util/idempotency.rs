@@ -1,6 +1,9 @@
-use crate::{Error, Result};
+use std::num::NonZeroUsize;
+
+use revolt_result::{create_error, Error, Result};
 
 use async_std::sync::Mutex;
+use once_cell::sync::Lazy;
 use revolt_rocket_okapi::gen::OpenApiGenerator;
 use revolt_rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 use revolt_rocket_okapi::revolt_okapi::openapi3::{Parameter, ParameterValue};
@@ -8,16 +11,14 @@ use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
 use schemars::schema::{InstanceType, SchemaObject, SingleOrVec};
 use serde::{Deserialize, Serialize};
-use validator::Validate;
-use once_cell::sync::Lazy;
 
-#[derive(Validate, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct IdempotencyKey {
-    #[validate(length(min = 1, max = 64))]
     key: String,
 }
 
-static TOKEN_CACHE: Lazy<Mutex<lru::LruCache<String, ()>>> = Lazy::new(|| Mutex::new(lru::LruCache::new(100)));
+static TOKEN_CACHE: Lazy<Mutex<lru::LruCache<String, ()>>> =
+    Lazy::new(|| Mutex::new(lru::LruCache::new(NonZeroUsize::new(1000).unwrap())));
 
 impl IdempotencyKey {
     // Backwards compatibility.
@@ -26,7 +27,7 @@ impl IdempotencyKey {
         if let Some(v) = v {
             let mut cache = TOKEN_CACHE.lock().await;
             if cache.get(&v).is_some() {
-                return Err(Error::DuplicateNonce);
+                return Err(create_error!(DuplicateNonce));
             }
 
             cache.put(v.clone(), ());
@@ -81,14 +82,19 @@ impl<'r> FromRequest<'r> for IdempotencyKey {
             .next()
             .map(|k| k.to_string())
         {
-            let idempotency = IdempotencyKey { key };
-            if let Err(error) = idempotency.validate() {
-                return Outcome::Failure((Status::BadRequest, Error::FailedValidation { error }));
+            if key.len() > 64 {
+                return Outcome::Failure((
+                    Status::BadRequest,
+                    create_error!(FailedValidation {
+                        error: "idempotency key too long".to_string(),
+                    }),
+                ));
             }
 
+            let idempotency = IdempotencyKey { key };
             let mut cache = TOKEN_CACHE.lock().await;
             if cache.get(&idempotency.key).is_some() {
-                return Outcome::Failure((Status::Conflict, Error::DuplicateNonce));
+                return Outcome::Failure((Status::Conflict, create_error!(DuplicateNonce)));
             }
 
             cache.put(idempotency.key.clone(), ());

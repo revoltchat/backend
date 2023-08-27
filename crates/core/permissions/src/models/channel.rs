@@ -1,5 +1,5 @@
 use once_cell::sync::Lazy;
-use std::ops::Add;
+use std::{fmt, ops::Add};
 
 /// Abstract channel type
 pub enum ChannelType {
@@ -102,6 +102,12 @@ pub enum ChannelPermission {
     GrantAll = u64::MAX,
 }
 
+impl fmt::Display for ChannelPermission {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Debug::fmt(self, f)
+    }
+}
+
 impl_op_ex!(+ |a: &ChannelPermission, b: &ChannelPermission| -> u64 { *a as u64 | *b as u64 });
 impl_op_ex_commutative!(+ |a: &u64, b: &ChannelPermission| -> u64 { *a | *b as u64 });
 
@@ -136,4 +142,9 @@ pub static DEFAULT_PERMISSION_SERVER: Lazy<u64> = Lazy::new(|| {
     )
 });
 
-pub static DEFAULT_WEBHOOK_PERMISSIONS: Lazy<u64> = Lazy::new(|| ChannelPermission::SendMessage + ChannelPermission::SendEmbeds + ChannelPermission::Masquerade + ChannelPermission::React);
+pub static DEFAULT_WEBHOOK_PERMISSIONS: Lazy<u64> = Lazy::new(|| {
+    ChannelPermission::SendMessage
+        + ChannelPermission::SendEmbeds
+        + ChannelPermission::Masquerade
+        + ChannelPermission::React
+});

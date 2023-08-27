@@ -56,6 +56,18 @@ impl AbstractUsers for ReferenceDb {
             .collect()
     }
 
+    /// Fetch all discriminators in use for a username
+    async fn fetch_discriminators_in_use(&self, username: &str) -> Result<Vec<String>> {
+        let users = self.users.lock().await;
+        let lowercase = username.to_lowercase();
+        Ok(users
+            .values()
+            .filter(|user| user.username.to_lowercase() == lowercase)
+            .map(|user| &user.discriminator)
+            .cloned()
+            .collect())
+    }
+
     /// Fetch ids of users that both users are friends with
     async fn fetch_mutual_user_ids(&self, _user_a: &str, _user_b: &str) -> Result<Vec<String>> {
         todo!()

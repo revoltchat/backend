@@ -1,9 +1,11 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, time::Duration};
 
-use crate::{Database, File};
+use crate::{events::client::EventV1, Database, File, RatelimitEvent};
 
 use once_cell::sync::Lazy;
-use revolt_result::{Error, ErrorType, Result};
+use rand::seq::SliceRandom;
+use revolt_result::{create_error, Error, ErrorType, Result};
+use ulid::Ulid;
 
 auto_derived_partial!(
     /// # User
@@ -49,6 +51,15 @@ auto_derived_partial!(
 );
 
 auto_derived!(
+    /// Optional fields on user object
+    pub enum FieldsUser {
+        Avatar,
+        StatusText,
+        StatusPresence,
+        ProfileContent,
+        ProfileBackground,
+    }
+
     /// User's relationship with another user (or themselves)
     pub enum RelationshipStatus {
         None,
@@ -106,18 +117,202 @@ auto_derived!(
         /// Id of the owner of this bot
         pub owner: String,
     }
-
-    /// Optional fields on user object
-    pub enum FieldsUser {
-        Avatar,
-        StatusText,
-        StatusPresence,
-        ProfileContent,
-        ProfileBackground,
-    }
 );
 
+pub static DISCRIMINATOR_SEARCH_SPACE: Lazy<HashSet<String>> = Lazy::new(|| {
+    let mut set = (2..9999)
+        .map(|v| format!("{:0>4}", v))
+        .collect::<HashSet<String>>();
+
+    for discrim in [
+        123, 1234, 1111, 2222, 3333, 4444, 5555, 6666, 7777, 8888, 9999,
+    ] {
+        set.remove(&format!("{:0>4}", discrim));
+    }
+
+    set.into_iter().collect()
+});
+
+#[allow(clippy::derivable_impls)]
+impl Default for User {
+    fn default() -> Self {
+        Self {
+            id: Default::default(),
+            username: Default::default(),
+            discriminator: Default::default(),
+            display_name: Default::default(),
+            avatar: Default::default(),
+            relations: Default::default(),
+            badges: Default::default(),
+            status: Default::default(),
+            profile: Default::default(),
+            flags: Default::default(),
+            privileged: Default::default(),
+            bot: Default::default(),
+        }
+    }
+}
+
+#[allow(clippy::disallowed_methods)]
 impl User {
+    /// Create a new user
+    pub async fn create<I, D>(
+        db: &Database,
+        username: String,
+        account_id: I,
+        data: D,
+    ) -> Result<User>
+    where
+        I: Into<Option<String>>,
+        D: Into<Option<PartialUser>>,
+    {
+        let username = User::validate_username(username)?;
+        let mut user = User {
+            id: account_id.into().unwrap_or_else(|| Ulid::new().to_string()),
+            discriminator: User::find_discriminator(db, &username, None).await?,
+            username,
+            ..Default::default()
+        };
+
+        if let Some(data) = data.into() {
+            user.apply_options(data);
+        }
+
+        db.insert_user(&user).await?;
+        Ok(user)
+    }
+
+    /// Check whether two users have a mutual connection
+    ///
+    /// This will check if user and user_b share a server or a group.
+    pub async fn has_mutual_connection(&self, db: &Database, user_b: &str) -> Result<bool> {
+        Ok(!db
+            .fetch_mutual_server_ids(&self.id, user_b)
+            .await?
+            .is_empty()
+            || !db
+                .fetch_mutual_channel_ids(&self.id, user_b)
+                .await?
+                .is_empty())
+    }
+
+    /// Sanitise and validate a username can be used
+    pub fn validate_username(username: String) -> Result<String> {
+        // Copy the username for validation
+        let username_lowercase = username.to_lowercase();
+
+        // Block homoglyphs
+        if decancer::cure(&username_lowercase).into_str() != username_lowercase {
+            return Err(create_error!(InvalidUsername));
+        }
+
+        // Ensure the username itself isn't blocked
+        const BLOCKED_USERNAMES: &[&str] = &["admin", "revolt"];
+
+        for username in BLOCKED_USERNAMES {
+            if username_lowercase == *username {
+                return Err(create_error!(InvalidUsername));
+            }
+        }
+
+        // Ensure none of the following substrings show up in the username
+        const BLOCKED_SUBSTRINGS: &[&str] = &["```"];
+
+        for substr in BLOCKED_SUBSTRINGS {
+            if username_lowercase.contains(substr) {
+                return Err(create_error!(InvalidUsername));
+            }
+        }
+
+        Ok(username)
+    }
+
+    // Find a free discriminator for a given username
+    pub async fn find_discriminator(
+        db: &Database,
+        username: &str,
+        preferred: Option<(String, String)>,
+    ) -> Result<String> {
+        let search_space: &HashSet<String> = &DISCRIMINATOR_SEARCH_SPACE;
+        let used_discriminators: HashSet<String> = db
+            .fetch_discriminators_in_use(username)
+            .await?
+            .into_iter()
+            .collect();
+
+        let available_discriminators: Vec<&String> =
+            search_space.difference(&used_discriminators).collect();
+
+        if available_discriminators.is_empty() {
+            return Err(create_error!(UsernameTaken));
+        }
+
+        if let Some((preferred, target_id)) = preferred {
+            if available_discriminators.contains(&&preferred) {
+                return Ok(preferred);
+            } else {
+                if db
+                    .has_ratelimited(
+                        &target_id,
+                        crate::RatelimitEventType::DiscriminatorChange,
+                        Duration::from_secs(60 * 60 * 24),
+                        1,
+                    )
+                    .await?
+                {
+                    return Err(create_error!(DiscriminatorChangeRatelimited));
+                }
+
+                RatelimitEvent::create(
+                    db,
+                    target_id,
+                    crate::RatelimitEventType::DiscriminatorChange,
+                )
+                .await?;
+            }
+        }
+
+        let mut rng = rand::thread_rng();
+        Ok(available_discriminators
+            .choose(&mut rng)
+            .expect("we can assert this has an element")
+            .to_string())
+    }
+
+    /// Update a user's username
+    pub async fn update_username(&mut self, db: &Database, username: String) -> Result<()> {
+        let username = User::validate_username(username)?;
+        if self.username.to_lowercase() == username.to_lowercase() {
+            self.update(
+                db,
+                PartialUser {
+                    username: Some(username),
+                    ..Default::default()
+                },
+                vec![],
+            )
+            .await
+        } else {
+            self.update(
+                db,
+                PartialUser {
+                    discriminator: Some(
+                        User::find_discriminator(
+                            db,
+                            &username,
+                            Some((self.discriminator.to_string(), self.id.clone())),
+                        )
+                        .await?,
+                    ),
+                    username: Some(username),
+                    ..Default::default()
+                },
+                vec![],
+            )
+            .await
+        }
+    }
+
     /// Check whether a username is already in use by another user
     #[allow(dead_code)]
     async fn is_username_taken(db: &Database, username: &str) -> Result<bool> {
@@ -145,13 +340,14 @@ impl User {
         self.apply_options(partial.clone());
         db.update_user(&self.id, &partial, remove.clone()).await?;
 
-        /* // TODO: EventV1::UserUpdate {
+        EventV1::UserUpdate {
             id: self.id.clone(),
-            data: partial,
-            clear: remove,
+            data: partial.into(),
+            clear: remove.into_iter().map(|v| v.into()).collect(),
+            event_id: Some(Ulid::new().to_string()),
         }
         .p_user(self.id.clone(), db)
-        .await; */
+        .await;
 
         Ok(())
     }
@@ -203,17 +399,3 @@ impl User {
         .await
     }
 }
-
-pub static DISCRIMINATOR_SEARCH_SPACE: Lazy<HashSet<String>> = Lazy::new(|| {
-    let mut set = (2..9999)
-        .map(|v| format!("{:0>4}", v))
-        .collect::<HashSet<String>>();
-
-    for discrim in [
-        123, 1234, 1111, 2222, 3333, 4444, 5555, 6666, 7777, 8888, 9999,
-    ] {
-        set.remove(&format!("{:0>4}", discrim));
-    }
-
-    set.into_iter().collect()
-});

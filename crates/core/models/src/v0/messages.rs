@@ -1,7 +1,11 @@
+use std::time::SystemTime;
+
+use revolt_config::config;
+
 use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
 
-use super::{Embed, File, MessageWebhook};
+use super::{Embed, File, MessageWebhook, User, Webhook};
 
 auto_derived_partial!(
     /// Message
@@ -129,11 +133,136 @@ auto_derived!(
         /// Sort by the oldest messages first
         Oldest,
     }
+
+    /// Push Notification
+    pub struct PushNotification {
+        /// Known author name
+        pub author: String,
+        /// URL to author avatar
+        pub icon: String,
+        /// URL to first matching attachment
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub image: Option<String>,
+        /// Message content or system message information
+        pub body: String,
+        /// Unique tag, usually the channel ID
+        pub tag: String,
+        /// Timestamp at which this notification was created
+        pub timestamp: u64,
+        /// URL to open when clicking notification
+        pub url: String,
+    }
 );
+
+/// Message Author Abstraction
+pub enum MessageAuthor<'a> {
+    User(&'a User),
+    Webhook(&'a Webhook),
+    System {
+        username: &'a str,
+        avatar: Option<&'a str>,
+    },
+}
 
 impl Interactions {
     /// Check if default initialisation of fields
     pub fn is_default(&self) -> bool {
         !self.restrict_reactions && self.reactions.is_none()
+    }
+}
+
+impl<'a> MessageAuthor<'a> {
+    pub fn id(&self) -> &str {
+        match self {
+            MessageAuthor::User(user) => &user.id,
+            MessageAuthor::Webhook(webhook) => &webhook.id,
+            MessageAuthor::System { .. } => "00000000000000000000000000",
+        }
+    }
+
+    pub fn avatar(&self) -> Option<&str> {
+        match self {
+            MessageAuthor::User(user) => user.avatar.as_ref().map(|file| file.id.as_str()),
+            MessageAuthor::Webhook(webhook) => webhook.avatar.as_ref().map(|file| file.id.as_str()),
+            MessageAuthor::System { avatar, .. } => *avatar,
+        }
+    }
+
+    pub fn username(&self) -> &str {
+        match self {
+            MessageAuthor::User(user) => &user.username,
+            MessageAuthor::Webhook(webhook) => &webhook.name,
+            MessageAuthor::System { username, .. } => username,
+        }
+    }
+}
+
+impl From<SystemMessage> for String {
+    fn from(s: SystemMessage) -> String {
+        match s {
+            SystemMessage::Text { content } => content,
+            SystemMessage::UserAdded { .. } => "User added to the channel.".to_string(),
+            SystemMessage::UserRemove { .. } => "User removed from the channel.".to_string(),
+            SystemMessage::UserJoined { .. } => "User joined the channel.".to_string(),
+            SystemMessage::UserLeft { .. } => "User left the channel.".to_string(),
+            SystemMessage::UserKicked { .. } => "User kicked from the channel.".to_string(),
+            SystemMessage::UserBanned { .. } => "User banned from the channel.".to_string(),
+            SystemMessage::ChannelRenamed { .. } => "Channel renamed.".to_string(),
+            SystemMessage::ChannelDescriptionChanged { .. } => {
+                "Channel description changed.".to_string()
+            }
+            SystemMessage::ChannelIconChanged { .. } => "Channel icon changed.".to_string(),
+            SystemMessage::ChannelOwnershipChanged { .. } => {
+                "Channel ownership changed.".to_string()
+            }
+        }
+    }
+}
+
+impl PushNotification {
+    /// Create a new notification from a given message, author and channel ID
+    pub async fn from(msg: Message, author: Option<MessageAuthor<'_>>, channel_id: &str) -> Self {
+        let config = config().await;
+
+        let icon = if let Some(author) = &author {
+            if let Some(avatar) = author.avatar() {
+                format!("{}/avatars/{}", config.hosts.autumn, avatar)
+            } else {
+                format!("{}/users/{}/default_avatar", config.hosts.api, author.id())
+            }
+        } else {
+            format!("{}/assets/logo.png", config.hosts.app)
+        };
+
+        let image = msg.attachments.and_then(|attachments| {
+            attachments
+                .first()
+                .map(|v| format!("{}/attachments/{}", config.hosts.autumn, v.id))
+        });
+
+        let body = if let Some(sys) = msg.system {
+            sys.into()
+        } else if let Some(text) = msg.content {
+            text
+        } else {
+            "Empty Message".to_string()
+        };
+
+        let timestamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_secs();
+
+        Self {
+            author: author
+                .map(|x| x.username().to_string())
+                .unwrap_or_else(|| "Revolt".to_string()),
+            icon,
+            image,
+            body,
+            tag: channel_id.to_string(),
+            timestamp,
+            url: format!("{}/channel/{}/{}", config.hosts.app, channel_id, msg.id),
+        }
     }
 }

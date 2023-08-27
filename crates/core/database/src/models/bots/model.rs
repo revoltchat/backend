@@ -1,6 +1,7 @@
 use revolt_result::Result;
+use ulid::Ulid;
 
-use crate::Database;
+use crate::{BotInformation, Database, PartialUser, User};
 
 auto_derived_partial!(
     /// Bot
@@ -49,8 +50,71 @@ auto_derived!(
     }
 );
 
+#[allow(clippy::derivable_impls)]
+impl Default for Bot {
+    fn default() -> Self {
+        Self {
+            id: Default::default(),
+            owner: Default::default(),
+            token: Default::default(),
+            public: Default::default(),
+            analytics: Default::default(),
+            discoverable: Default::default(),
+            interactions_url: Default::default(),
+            terms_of_service_url: Default::default(),
+            privacy_policy_url: Default::default(),
+            flags: Default::default(),
+        }
+    }
+}
+
 #[allow(clippy::disallowed_methods)]
 impl Bot {
+    /// Create a new bot
+    pub async fn create<D>(db: &Database, username: String, owner: &User, data: D) -> Result<Bot>
+    where
+        D: Into<Option<PartialBot>>,
+    {
+        if owner.bot.is_some() {
+            return Err(create_error!(IsBot));
+        }
+
+        // TODO: config
+        let max_bot_count = 5;
+        if db.get_number_of_bots_by_user(&owner.id).await? >= max_bot_count {
+            return Err(create_error!(ReachedMaximumBots));
+        }
+
+        let id = Ulid::new().to_string();
+
+        User::create(
+            db,
+            username,
+            Some(id.to_string()),
+            Some(PartialUser {
+                bot: Some(BotInformation {
+                    owner: id.to_string(),
+                }),
+                ..Default::default()
+            }),
+        )
+        .await?;
+
+        let mut bot = Bot {
+            id,
+            owner: owner.id.to_string(),
+            token: nanoid::nanoid!(64),
+            ..Default::default()
+        };
+
+        if let Some(data) = data.into() {
+            bot.apply_options(data);
+        }
+
+        db.insert_bot(&bot).await?;
+        Ok(bot)
+    }
+
     /// Remove a field from this object
     pub fn remove_field(&mut self, field: &FieldsBot) {
         match field {
@@ -96,27 +160,24 @@ mod tests {
     #[async_std::test]
     async fn crud() {
         database_test!(|db| async move {
-            let bot_id = "bot";
-            let user_id = "user";
-            let token = "my_token";
+            let owner = User::create(&db, "Owner".to_string(), None, None)
+                .await
+                .unwrap();
 
-            let user = User {
-                id: bot_id.to_string(),
-                username: "Bot Name".to_string(),
-                ..Default::default()
-            };
+            let bot = Bot::create(
+                &db,
+                "Bot Name".to_string(),
+                &owner,
+                PartialBot {
+                    token: Some("my token".to_string()),
+                    interactions_url: Some("some url".to_string()),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
 
-            db.insert_user(&user).await.unwrap();
-
-            let bot = Bot {
-                id: bot_id.to_string(),
-                owner: user_id.to_string(),
-                token: token.to_string(),
-                interactions_url: "some url".to_string(),
-                ..Default::default()
-            };
-
-            db.insert_bot(&bot).await.unwrap();
+            assert!(!bot.interactions_url.is_empty());
 
             let mut updated_bot = bot.clone();
             updated_bot
@@ -131,9 +192,9 @@ mod tests {
                 .await
                 .unwrap();
 
-            let fetched_bot1 = db.fetch_bot(bot_id).await.unwrap();
+            let fetched_bot1 = db.fetch_bot(&bot.id).await.unwrap();
             let fetched_bot2 = db.fetch_bot_by_token(&fetched_bot1.token).await.unwrap();
-            let fetched_bots = db.fetch_bots_by_user(user_id).await.unwrap();
+            let fetched_bots = db.fetch_bots_by_user(&owner.id).await.unwrap();
 
             assert!(!bot.public);
             assert!(fetched_bot1.public);
@@ -143,12 +204,12 @@ mod tests {
             assert_eq!(updated_bot, fetched_bot1);
             assert_eq!(fetched_bot1, fetched_bot2);
             assert_eq!(fetched_bot1, fetched_bots[0]);
-            assert_eq!(1, db.get_number_of_bots_by_user(user_id).await.unwrap());
+            assert_eq!(1, db.get_number_of_bots_by_user(&owner.id).await.unwrap());
 
             bot.delete(&db).await.unwrap();
-            assert!(db.fetch_bot(bot_id).await.is_err());
-            assert_eq!(0, db.get_number_of_bots_by_user(user_id).await.unwrap());
-            assert_eq!(db.fetch_user(bot_id).await.unwrap().flags, Some(2))
+            assert!(db.fetch_bot(&bot.id).await.is_err());
+            assert_eq!(0, db.get_number_of_bots_by_user(&owner.id).await.unwrap());
+            assert_eq!(db.fetch_user(&bot.id).await.unwrap().flags, Some(2))
         });
     }
 }
