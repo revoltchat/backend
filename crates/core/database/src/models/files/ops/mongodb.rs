@@ -6,7 +6,7 @@ use crate::MongoDb;
 
 use super::AbstractAttachments;
 
-static COL: &str = "bots";
+static COL: &str = "attachments";
 
 #[async_trait]
 impl AbstractAttachments for MongoDb {
