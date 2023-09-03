@@ -48,9 +48,10 @@ max_concurrent_connections = 50
 [features.limits.default]
 group_size = 100
 bots = 5
+message_length = 2000
+message_embeds = 5
 message_replies = 5
 message_attachments = 5
-message_embeds = 5
 servers = 100
 server_emoji = 100
 server_roles = 200

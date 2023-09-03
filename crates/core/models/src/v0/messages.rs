@@ -3,11 +3,17 @@ use std::{
     time::SystemTime,
 };
 
+use once_cell::sync::Lazy;
+use regex::Regex;
 use revolt_config::config;
+use validator::Validate;
 
 use iso8601_timestamp::Timestamp;
 
-use super::{Embed, File, MessageWebhook, User, Webhook};
+use super::{Embed, File, MessageWebhook, User, Webhook, RE_COLOUR};
+
+pub static RE_MENTION: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"<@([0-9A-HJKMNP-TV-Z]{26})>").unwrap());
 
 auto_derived_partial!(
     /// Message
@@ -88,7 +94,9 @@ auto_derived!(
     }
 
     /// Name and / or avatar override information
+    #[derive(Validate)]
     pub struct Masquerade {
+        // FIXME: missing validation
         /// Replace the display name shown on this message
         #[serde(skip_serializing_if = "Option::is_none")]
         pub name: Option<String>,
@@ -153,6 +161,58 @@ auto_derived!(
         pub timestamp: u64,
         /// URL to open when clicking notification
         pub url: String,
+    }
+
+    /// Representation of a text embed before it is sent.
+    #[derive(Default, Validate)]
+    pub struct SendableEmbed {
+        #[validate(length(min = 1, max = 128))]
+        pub icon_url: Option<String>,
+        #[validate(length(min = 1, max = 256))]
+        pub url: Option<String>,
+        #[validate(length(min = 1, max = 100))]
+        pub title: Option<String>,
+        #[validate(length(min = 1, max = 2000))]
+        pub description: Option<String>,
+        pub media: Option<String>,
+        #[validate(length(min = 1, max = 128), regex = "RE_COLOUR")]
+        pub colour: Option<String>,
+    }
+
+    /// What this message should reply to and how
+    pub struct ReplyIntent {
+        /// Message Id
+        pub id: String,
+        /// Whether this reply should mention the message's author
+        pub mention: bool,
+    }
+
+    /// Message to send
+    #[derive(Validate)]
+    pub struct DataMessageSend {
+        /// Unique token to prevent duplicate message sending
+        ///
+        /// **This is deprecated and replaced by `Idempotency-Key`!**
+        #[validate(length(min = 1, max = 64))]
+        pub nonce: Option<String>,
+
+        /// Message content to send
+        #[validate(length(min = 0, max = 2000))]
+        pub content: Option<String>,
+        /// Attachments to include in message
+        pub attachments: Option<Vec<String>>,
+        /// Messages to reply to
+        pub replies: Option<Vec<ReplyIntent>>,
+        /// Embeds to include in message
+        ///
+        /// Text embed content contributes to the content length cap
+        #[validate]
+        pub embeds: Option<Vec<SendableEmbed>>,
+        /// Masquerade to apply to this message
+        #[validate]
+        pub masquerade: Option<Masquerade>,
+        /// Information about how this message should be interacted with
+        pub interactions: Option<Interactions>,
     }
 );
 

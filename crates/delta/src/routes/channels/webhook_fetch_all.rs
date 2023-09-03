@@ -1,6 +1,10 @@
-use revolt_database::Database;
+use revolt_database::{
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Database, User,
+};
 use revolt_models::v0::Webhook;
-use revolt_quark::{models::User, perms, Db, Error, Permission, Ref, Result};
+use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
+use revolt_result::Result;
 use rocket::{serde::json::Json, State};
 
 /// # Gets all webhooks
@@ -10,20 +14,19 @@ use rocket::{serde::json::Json, State};
 #[get("/<channel_id>/webhooks")]
 pub async fn req(
     db: &State<Database>,
-    legacy_db: &Db,
     user: User,
-    channel_id: Ref,
+    channel_id: Reference,
 ) -> Result<Json<Vec<Webhook>>> {
-    let channel = channel_id.as_channel(legacy_db).await?;
-    let mut permissions = perms(&user).channel(&channel);
-    permissions
-        .has_permission(legacy_db, Permission::ManageWebhooks)
-        .await?;
+    let channel = channel_id.as_channel(db).await?;
+
+    let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
+    calculate_channel_permissions(&mut query)
+        .await
+        .throw_if_lacking_channel_permission(ChannelPermission::ViewChannel)?;
 
     Ok(Json(
-        db.fetch_webhooks_for_channel(channel.id())
-            .await
-            .map_err(Error::from_core)?
+        db.fetch_webhooks_for_channel(&channel.id())
+            .await?
             .into_iter()
             .map(|v| v.into())
             .collect::<Vec<Webhook>>(),

@@ -1,10 +1,6 @@
-use revolt_database::{util::reference::Reference, Database};
-use revolt_models::v0::Webhook;
-use revolt_quark::{
-    models::{message::SendableEmbed, Message},
-    types::push::MessageAuthor,
-    Db, Error, Result,
-};
+use revolt_database::{util::reference::Reference, Database, Message};
+use revolt_models::v0::{MessageAuthor, SendableEmbed, Webhook};
+use revolt_result::{create_error, Error, Result};
 use revolt_rocket_okapi::{
     gen::OpenApiGenerator,
     request::{OpenApiFromRequest, RequestHeaderInput},
@@ -639,7 +635,7 @@ impl<'r> FromRequest<'r> for EventHeader<'r> {
     async fn from_request(request: &'r Request<'_>) -> rocket::request::Outcome<Self, Self::Error> {
         let headers = request.headers();
         let Some(event) = headers.get_one("X-GitHub-Event") else {
-            return rocket::request::Outcome::Failure((Status::BadRequest, Error::InvalidOperation))
+            return rocket::request::Outcome::Failure((Status::BadRequest, create_error!(InvalidOperation)))
         };
 
         rocket::request::Outcome::Success(Self(event))
@@ -702,7 +698,7 @@ fn safe_from_str<T: for<'de> Deserialize<'de>>(data: &str) -> Result<T> {
         Ok(output) => Ok(output),
         Err(err) => {
             log::error!("{err:?}");
-            Err(Error::InvalidOperation)
+            Err(create_error!(InvalidOperation))
         }
     }
 }
@@ -727,7 +723,7 @@ fn convert_event(data: &str, event_name: &str) -> Result<Event> {
         "issue_comment" => BaseEvent::IssueComment(safe_from_str(data)?),
         "issues" => BaseEvent::Issues(safe_from_str(data)?),
         "pull_request" => BaseEvent::PullRequest(safe_from_str(data)?),
-        _ => return Err(Error::InvalidOperation),
+        _ => return Err(create_error!(InvalidOperation)),
     };
 
     let _Event {
@@ -751,16 +747,15 @@ fn convert_event(data: &str, event_name: &str) -> Result<Event> {
 #[post("/<webhook_id>/<token>/github", data = "<data>")]
 pub async fn webhook_execute_github(
     db: &State<Database>,
-    legacy_db: &Db,
     webhook_id: Reference,
     token: String,
     event: EventHeader<'_>,
     data: String,
 ) -> Result<()> {
-    let webhook = webhook_id.as_webhook(db).await.map_err(Error::from_core)?;
-    webhook.assert_token(&token).map_err(Error::from_core)?;
+    let webhook = webhook_id.as_webhook(db).await?;
+    webhook.assert_token(&token)?;
 
-    let channel = legacy_db.fetch_channel(&webhook.channel_id).await?;
+    let channel = db.fetch_channel(&webhook.channel_id).await?;
     let event = convert_event(&data, &event)?;
 
     let sendable_embed = match event.event {
@@ -1058,30 +1053,25 @@ pub async fn webhook_execute_github(
         },
     };
 
-    sendable_embed
-        .validate()
-        .map_err(|error| Error::FailedValidation { error })?;
+    sendable_embed.validate().map_err(|error| {
+        create_error!(FailedValidation {
+            error: error.to_string()
+        })
+    })?;
 
     let message_id = Ulid::new().to_string();
-
-    let embed = sendable_embed
-        .into_embed(legacy_db, &message_id)
-        .await?;
 
     let mut message = Message {
         id: message_id,
         author: webhook.id.clone(),
         channel: webhook.channel_id.clone(),
-        embeds: Some(vec![embed]),
         webhook: Some(std::convert::Into::<Webhook>::into(webhook.clone()).into()),
         ..Default::default()
     };
 
+    #[allow(clippy::disallowed_methods)]
+    message.attach_sendable_embed(db, sendable_embed).await?;
     message
-        .create(
-            legacy_db,
-            &channel,
-            Some(MessageAuthor::Webhook(&webhook.into())),
-        )
+        .send(db, MessageAuthor::Webhook(&webhook.into()), &channel, false)
         .await
 }

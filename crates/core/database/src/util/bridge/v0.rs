@@ -402,6 +402,17 @@ impl From<crate::Interactions> for Interactions {
     }
 }
 
+impl From<Interactions> for crate::Interactions {
+    fn from(value: Interactions) -> Self {
+        crate::Interactions {
+            reactions: value
+                .reactions
+                .map(|reactions| reactions.into_iter().collect()),
+            restrict_reactions: value.restrict_reactions,
+        }
+    }
+}
+
 impl From<crate::AppendMessage> for AppendMessage {
     fn from(value: crate::AppendMessage) -> Self {
         AppendMessage {
@@ -413,6 +424,16 @@ impl From<crate::AppendMessage> for AppendMessage {
 impl From<crate::Masquerade> for Masquerade {
     fn from(value: crate::Masquerade) -> Self {
         Masquerade {
+            name: value.name,
+            avatar: value.avatar,
+            colour: value.colour,
+        }
+    }
+}
+
+impl From<Masquerade> for crate::Masquerade {
+    fn from(value: Masquerade) -> Self {
+        crate::Masquerade {
             name: value.name,
             avatar: value.avatar,
             colour: value.colour,

@@ -1,3 +1,5 @@
+use validator::Validate;
+
 use super::File;
 
 auto_derived_partial!(
@@ -69,12 +71,22 @@ auto_derived!(
         pub channel_id: String,
 
         /// The permissions for the webhook
-        pub permissions: u64
+        pub permissions: u64,
     }
 
     /// Optional fields on webhook object
     pub enum FieldsWebhook {
         Avatar,
+    }
+
+    /// Information for the webhook
+    #[derive(Validate)]
+    pub struct CreateWebhookBody {
+        #[validate(length(min = 1, max = 32))]
+        pub name: String,
+
+        #[validate(length(min = 1, max = 128))]
+        pub avatar: Option<String>,
     }
 );
 
@@ -94,7 +106,7 @@ impl From<Webhook> for ResponseWebhook {
             name: value.name,
             avatar: value.avatar.map(|file| file.id),
             channel_id: value.channel_id,
-            permissions: value.permissions
+            permissions: value.permissions,
         }
     }
 }

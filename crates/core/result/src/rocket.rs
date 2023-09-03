@@ -46,6 +46,7 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::AlreadyInServer => Status::Conflict,
 
             ErrorType::TooManyServers { .. } => Status::BadRequest,
+            ErrorType::TooManyEmbeds { .. } => Status::BadRequest,
             ErrorType::TooManyEmoji { .. } => Status::BadRequest,
             ErrorType::TooManyChannels { .. } => Status::BadRequest,
             ErrorType::TooManyRoles { .. } => Status::BadRequest,

@@ -1,6 +1,10 @@
-use revolt_database::{util::reference::Reference, Database};
+use revolt_database::{
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Database, User,
+};
 use revolt_models::v0::{ResponseWebhook, Webhook};
-use revolt_quark::{models::User, perms, Db, Error, Permission, Result};
+use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
+use revolt_result::Result;
 use rocket::{serde::json::Json, State};
 
 /// # Gets a webhook
@@ -10,17 +14,16 @@ use rocket::{serde::json::Json, State};
 #[get("/<webhook_id>")]
 pub async fn webhook_fetch(
     db: &State<Database>,
-    legacy_db: &Db,
     webhook_id: Reference,
     user: User,
 ) -> Result<Json<ResponseWebhook>> {
-    let webhook = webhook_id.as_webhook(db).await.map_err(Error::from_core)?;
-    let channel = legacy_db.fetch_channel(&webhook.channel_id).await?;
+    let webhook = webhook_id.as_webhook(db).await?;
+    let channel = db.fetch_channel(&webhook.channel_id).await?;
 
-    perms(&user)
-        .channel(&channel)
-        .throw_permission(legacy_db, Permission::ViewChannel)
-        .await?;
+    let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
+    calculate_channel_permissions(&mut query)
+        .await
+        .throw_if_lacking_channel_permission(ChannelPermission::ViewChannel)?;
 
     Ok(Json(std::convert::Into::<Webhook>::into(webhook).into()))
 }

@@ -60,6 +60,9 @@ pub enum ErrorType {
     TooManyAttachments {
         max: usize,
     },
+    TooManyEmbeds {
+        max: usize,
+    },
     TooManyReplies {
         max: usize,
     },

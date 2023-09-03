@@ -97,6 +97,7 @@ pub struct Api {
 pub struct FeaturesLimits {
     pub group_size: usize,
     pub bots: usize,
+    pub message_length: usize,
     pub message_replies: usize,
     pub message_attachments: usize,
     pub message_embeds: usize,
