@@ -52,6 +52,7 @@ message_length = 2000
 message_embeds = 5
 message_replies = 5
 message_attachments = 5
+message_reactions = 20
 servers = 100
 server_emoji = 100
 server_roles = 200

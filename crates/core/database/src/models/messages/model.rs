@@ -7,6 +7,7 @@ use revolt_models::v0::{
     self, DataMessageSend, Embed, MessageAuthor, MessageSort, MessageWebhook, PushNotification,
     ReplyIntent, SendableEmbed, RE_MENTION,
 };
+use revolt_permissions::{ChannelPermission, PermissionValue};
 use revolt_result::Result;
 use ulid::Ulid;
 
@@ -14,7 +15,7 @@ use crate::{
     events::client::EventV1,
     tasks::{self, ack::AckEvent},
     util::idempotency::IdempotencyKey,
-    Channel, Database, File,
+    Channel, Database, Emoji, File,
 };
 
 auto_derived_partial!(
@@ -353,7 +354,9 @@ impl Message {
         // Pass-through nonce value for clients
         message.nonce = Some(idempotency.into_key());
 
+        // Send the message
         message.send(db, author, &channel, generate_embeds).await?;
+
         Ok(message)
     }
 
@@ -528,6 +531,27 @@ impl SystemMessage {
 }
 
 impl Interactions {
+    /// Validate interactions info is correct
+    pub async fn validate(&self, db: &Database, permissions: &PermissionValue) -> Result<()> {
+        let config = config().await;
+
+        if let Some(reactions) = &self.reactions {
+            permissions.throw_if_lacking_channel_permission(ChannelPermission::React)?;
+
+            if reactions.len() > config.features.limits.default.message_reactions {
+                return Err(create_error!(InvalidOperation));
+            }
+
+            for reaction in reactions {
+                if !Emoji::can_use(db, reaction).await? {
+                    return Err(create_error!(InvalidOperation));
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// Check if we can use a given emoji to react
     pub fn can_use(&self, emoji: &str) -> bool {
         if self.restrict_reactions {

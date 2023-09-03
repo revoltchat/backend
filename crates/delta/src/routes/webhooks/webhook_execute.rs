@@ -31,35 +31,37 @@ pub async fn webhook_execute(
     let webhook = webhook_id.as_webhook(db).await?;
     webhook.assert_token(&token)?;
 
-    let mut value: PermissionValue = webhook.permissions.into();
-    value.throw_if_lacking_channel_permission(ChannelPermission::SendMessage)?;
+    let permissions: PermissionValue = webhook.permissions.into();
+    permissions.throw_if_lacking_channel_permission(ChannelPermission::SendMessage)?;
 
     if data.attachments.as_ref().map_or(false, |v| !v.is_empty()) {
-        value.throw_if_lacking_channel_permission(ChannelPermission::UploadFiles)?;
+        permissions.throw_if_lacking_channel_permission(ChannelPermission::UploadFiles)?;
     }
 
     if data.embeds.as_ref().map_or(false, |v| !v.is_empty()) {
-        value.throw_if_lacking_channel_permission(ChannelPermission::SendEmbeds)?;
+        permissions.throw_if_lacking_channel_permission(ChannelPermission::SendEmbeds)?;
     }
 
     if data.masquerade.is_some() {
-        value.throw_if_lacking_channel_permission(ChannelPermission::Masquerade)?;
+        permissions.throw_if_lacking_channel_permission(ChannelPermission::Masquerade)?;
     }
 
     if data.interactions.is_some() {
-        value.throw_if_lacking_channel_permission(ChannelPermission::React)?;
+        permissions.throw_if_lacking_channel_permission(ChannelPermission::React)?;
     }
 
     let channel = db.fetch_channel(&webhook.channel_id).await?;
-    let message = Message::create_from_api(
-        db,
-        channel,
-        data,
-        v0::MessageAuthor::Webhook(&webhook.into()),
-        idempotency,
-        true,
-    )
-    .await?;
 
-    Ok(Json(message.into()))
+    Ok(Json(
+        Message::create_from_api(
+            db,
+            channel,
+            data,
+            v0::MessageAuthor::Webhook(&webhook.into()),
+            idempotency,
+            true,
+        )
+        .await?
+        .into(),
+    ))
 }

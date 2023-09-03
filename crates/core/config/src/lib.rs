@@ -101,6 +101,7 @@ pub struct FeaturesLimits {
     pub message_replies: usize,
     pub message_attachments: usize,
     pub message_embeds: usize,
+    pub message_reactions: usize,
     pub servers: usize,
     pub server_emoji: usize,
     pub server_roles: usize,

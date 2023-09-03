@@ -626,18 +626,26 @@ impl From<crate::FieldsRole> for FieldsRole {
 }
 
 impl crate::User {
-    pub async fn into<P>(self, perspective: P) -> User
+    pub async fn into<'a, P>(self, perspective: P) -> User
     where
-        P: Into<Option<crate::User>>,
+        P: Into<Option<&'a crate::User>>,
     {
         let relationship = if let Some(perspective) = perspective.into() {
-            perspective
-                .relations
-                .unwrap_or_default()
-                .into_iter()
-                .find(|relationship| relationship.id == self.id)
-                .map(|relationship| relationship.status.into())
-                .unwrap_or_default()
+            if perspective.id == self.id {
+                RelationshipStatus::User
+            } else {
+                perspective
+                    .relations
+                    .as_ref()
+                    .map(|relations| {
+                        relations
+                            .iter()
+                            .find(|relationship| relationship.id == self.id)
+                            .map(|relationship| relationship.status.clone().into())
+                            .unwrap_or_default()
+                    })
+                    .unwrap_or_default()
+            }
         } else {
             RelationshipStatus::None
         };

@@ -39,20 +39,17 @@ impl PermissionValue {
     }
 
     /// Check whether certain a permission has been granted
-    pub fn has(&mut self, v: u64) -> bool {
+    pub fn has(&self, v: u64) -> bool {
         (self.0 & v) == v
     }
 
     /// Check whether certain a channel permission has been granted
-    pub fn has_channel_permission(&mut self, permission: ChannelPermission) -> bool {
+    pub fn has_channel_permission(&self, permission: ChannelPermission) -> bool {
         self.has(permission as u64)
     }
 
     /// Throw if missing channel permission
-    pub fn throw_if_lacking_channel_permission(
-        &mut self,
-        permission: ChannelPermission,
-    ) -> Result<()> {
+    pub fn throw_if_lacking_channel_permission(&self, permission: ChannelPermission) -> Result<()> {
         if self.has_channel_permission(permission) {
             Ok(())
         } else {
