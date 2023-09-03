@@ -30,7 +30,7 @@ mod webhook_fetch_all;
 pub fn routes() -> (Vec<Route>, OpenApi) {
     openapi_get_routes_spec![
         channel_ack::req,
-        channel_fetch::req,
+        channel_fetch::fetch_channel,
         members_fetch::req,
         channel_delete::req,
         channel_edit::req,
