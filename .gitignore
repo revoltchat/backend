@@ -1,4 +1,6 @@
 Rocket.toml
+Revolt.toml
+
 target
 .data
 .env
