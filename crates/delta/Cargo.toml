@@ -68,6 +68,7 @@ revolt_rocket_okapi = { version = "0.9.1", features = ["swagger"] }
 revolt-quark = { path = "../quark" }
 
 # core
+revolt-config = { path = "../core/config" }
 revolt-database = { path = "../core/database", features = [
     "rocket-impl",
     "redis-is-patched",

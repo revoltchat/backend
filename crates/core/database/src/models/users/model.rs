@@ -182,6 +182,21 @@ impl User {
         Ok(user)
     }
 
+    /// Get the relationship with another user
+    pub fn relationship_with(&self, user_b: &str) -> RelationshipStatus {
+        if self.id == user_b {
+            return RelationshipStatus::User;
+        }
+
+        if let Some(relations) = &self.relations {
+            if let Some(relationship) = relations.iter().find(|x| x.id == user_b) {
+                return relationship.status.clone();
+            }
+        }
+
+        RelationshipStatus::None
+    }
+
     /// Check whether two users have a mutual connection
     ///
     /// This will check if user and user_b share a server or a group.

@@ -1,10 +1,11 @@
 use super::File;
 
 use revolt_permissions::OverrideField;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 auto_derived!(
     /// Channel
+    #[serde(tag = "channel_type")]
     pub enum Channel {
         /// Personal "Saved Notes" channel which allows users to save messages
         SavedMessages {
@@ -204,5 +205,29 @@ auto_derived!(
         /// Fields to remove from channel
         #[cfg_attr(feature = "serde", serde(default))]
         pub remove: Option<Vec<FieldsChannel>>,
+    }
+
+    /// Create new group
+    #[derive(Default)]
+    #[cfg_attr(feature = "validator", derive(validator::Validate))]
+    pub struct DataCreateGroup {
+        /// Group name
+        #[validate(length(min = 1, max = 32))]
+        pub name: String,
+        /// Group description
+        #[validate(length(min = 0, max = 1024))]
+        pub description: Option<String>,
+        /// Group icon
+        #[validate(length(min = 1, max = 128))]
+        pub icon: Option<String>,
+        /// Array of user IDs to add to the group
+        ///
+        /// Must be friends with these users.
+        #[validate(length(min = 0, max = 49))]
+        #[serde(default)]
+        pub users: HashSet<String>,
+        /// Whether this group is age-restricted
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub nsfw: Option<bool>,
     }
 );

@@ -78,20 +78,16 @@ mod test {
             .await
             .expect("`Bot`");
 
-        // FIXME: Channel::create_group
-        let group = Channel::Group {
-            id: ulid::Ulid::new().to_string(),
-            name: TestHarness::rand_string(),
-            owner: user.id.to_string(),
-            description: None,
-            last_message_id: None,
-            icon: None,
-            nsfw: false,
-            permissions: None,
-            recipients: vec![user.id.to_string()],
-        };
-
-        group.create(&harness.db).await.unwrap();
+        let group = Channel::create_group(
+            &harness.db,
+            v0::DataCreateGroup {
+                name: TestHarness::rand_string(),
+                ..Default::default()
+            },
+            user.id.to_string(),
+        )
+        .await
+        .unwrap();
 
         let response = harness
             .client

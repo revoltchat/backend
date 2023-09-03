@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use revolt_models::v0::MessageAuthor;
+use revolt_models::v0::{self, MessageAuthor};
 use revolt_permissions::OverrideField;
 use revolt_result::Result;
 use serde::{Deserialize, Serialize};
@@ -168,7 +168,7 @@ auto_derived!(
 
 #[allow(clippy::disallowed_methods)]
 impl Channel {
-    /// Create a channel
+    /* /// Create a channel
     pub async fn create(&self, db: &Database) -> Result<()> {
         db.insert_channel(self).await?;
 
@@ -186,6 +186,39 @@ impl Channel {
         }
 
         Ok(())
+    }*/
+
+    /// Create a group
+    pub async fn create_group(
+        db: &Database,
+        data: v0::DataCreateGroup,
+        owner_id: String,
+    ) -> Result<Channel> {
+        let recipients = data.users.into_iter().collect::<Vec<String>>();
+        let channel = Channel::Group {
+            id: ulid::Ulid::new().to_string(),
+
+            name: data.name,
+            owner: owner_id,
+            description: data.description,
+            recipients: recipients.clone(),
+
+            icon: None,
+            last_message_id: None,
+
+            permissions: None,
+
+            nsfw: data.nsfw.unwrap_or(false),
+        };
+
+        db.insert_channel(&channel).await?;
+
+        let event = EventV1::ChannelCreate(channel.clone().into());
+        for recipient in recipients {
+            event.clone().private(recipient).await;
+        }
+
+        Ok(channel)
     }
 
     /// Add user to a group

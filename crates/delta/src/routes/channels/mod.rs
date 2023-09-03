@@ -43,7 +43,7 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         message_edit::req,
         message_bulk_delete::req,
         message_delete::req,
-        group_create::req,
+        group_create::create_group,
         group_add_member::req,
         group_remove_member::req,
         voice_join::req,
