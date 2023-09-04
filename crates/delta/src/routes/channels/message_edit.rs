@@ -78,6 +78,11 @@ pub async fn req(
 
     // 3. Replace if we are given new embeds
     if let Some(embeds) = edit.embeds {
+        // Ensure we have permissions to send embeds
+        permissions
+            .throw_permission_and_view_channel(db, Permission::SendEmbeds)
+            .await?;
+
         new_embeds.clear();
 
         for embed in embeds {
@@ -89,14 +94,19 @@ pub async fn req(
 
     message.update(db, partial).await?;
 
-    // Queue up a task for processing embeds
-    if let Some(content) = edit.content {
-        revolt_quark::tasks::process_embeds::queue(
-            message.channel.to_string(),
-            message.id.to_string(),
-            content,
-        )
-        .await;
+    // Queue up a task for processing embeds if the we have sufficient permissions
+    if permissions
+        .has_permission(&db, Permission::SendEmbeds)
+        .await?
+    {
+        if let Some(content) = edit.content {
+            revolt_quark::tasks::process_embeds::queue(
+                message.channel.to_string(),
+                message.id.to_string(),
+                content,
+            )
+            .await;
+        }
     }
 
     Ok(Json(message))
