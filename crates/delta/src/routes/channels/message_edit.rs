@@ -96,7 +96,7 @@ pub async fn req(
 
     // Queue up a task for processing embeds if the we have sufficient permissions
     if permissions
-        .has_permission(&db, Permission::SendEmbeds)
+        .has_permission(db, Permission::SendEmbeds)
         .await?
     {
         if let Some(content) = edit.content {
