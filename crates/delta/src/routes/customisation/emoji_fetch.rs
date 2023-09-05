@@ -1,13 +1,18 @@
-use revolt_quark::models::{Emoji, User};
-use revolt_quark::{Db, Ref, Result};
+use revolt_database::{util::reference::Reference, Database};
+use revolt_models::v0;
+use revolt_result::Result;
 
-use rocket::serde::json::Json;
+use rocket::{serde::json::Json, State};
 
 /// # Fetch Emoji
 ///
 /// Fetch an emoji by its id.
 #[openapi(tag = "Emojis")]
-#[get("/emoji/<id>")]
-pub async fn fetch_emoji(db: &Db, _user: User, id: Ref) -> Result<Json<Emoji>> {
-    id.as_emoji(db).await.map(Json)
+#[get("/emoji/<emoji_id>")]
+pub async fn fetch_emoji(db: &State<Database>, emoji_id: Reference) -> Result<Json<v0::Emoji>> {
+    emoji_id
+        .as_emoji(db)
+        .await
+        .map(|emoji| emoji.into())
+        .map(Json)
 }

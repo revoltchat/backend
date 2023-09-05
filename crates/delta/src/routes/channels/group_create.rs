@@ -87,6 +87,8 @@ mod test {
                 assert_eq!(owner, user.id);
                 assert_eq!(recipients.len(), 1);
                 assert!(harness.db.fetch_channel(&id).await.is_ok());
+
+                // TODO: does not check for events
             }
             _ => unreachable!(),
         }

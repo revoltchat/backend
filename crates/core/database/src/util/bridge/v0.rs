@@ -275,6 +275,15 @@ impl From<crate::EmojiParent> for EmojiParent {
     }
 }
 
+impl From<EmojiParent> for crate::EmojiParent {
+    fn from(value: EmojiParent) -> Self {
+        match value {
+            EmojiParent::Detached => crate::EmojiParent::Detached,
+            EmojiParent::Server { id } => crate::EmojiParent::Server { id },
+        }
+    }
+}
+
 impl From<crate::File> for File {
     fn from(value: crate::File) -> Self {
         File {

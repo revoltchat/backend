@@ -1,31 +1,11 @@
-use once_cell::sync::Lazy;
-use regex::Regex;
-use revolt_quark::models::emoji::EmojiParent;
-use revolt_quark::models::{Emoji, File, User};
-use revolt_quark::variables::delta::MAX_EMOJI_COUNT;
-use revolt_quark::{perms, Db, Error, Permission, Result};
-use serde::Deserialize;
+use revolt_config::config;
+use revolt_database::{util::permissions::DatabasePermissionQuery, Database, Emoji, File, User};
+use revolt_models::v0;
+use revolt_permissions::{calculate_server_permissions, ChannelPermission};
+use revolt_result::{create_error, Result};
 use validator::Validate;
 
-use rocket::serde::json::Json;
-
-/// Regex for valid emoji names
-///
-/// Alphanumeric and underscores
-pub static RE_EMOJI: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[a-z0-9_]+$").unwrap());
-
-/// # Emoji Data
-#[derive(Validate, Deserialize, JsonSchema)]
-pub struct DataCreateEmoji {
-    /// Server name
-    #[validate(length(min = 1, max = 32), regex = "RE_EMOJI")]
-    name: String,
-    /// Parent information
-    parent: EmojiParent,
-    /// Whether the emoji is mature
-    #[serde(default)]
-    nsfw: bool,
-}
+use rocket::{serde::json::Json, State};
 
 /// # Create New Emoji
 ///
@@ -33,41 +13,45 @@ pub struct DataCreateEmoji {
 #[openapi(tag = "Emojis")]
 #[put("/emoji/<id>", data = "<data>")]
 pub async fn create_emoji(
-    db: &Db,
+    db: &State<Database>,
     user: User,
     id: String,
-    data: Json<DataCreateEmoji>,
-) -> Result<Json<Emoji>> {
+    data: Json<v0::DataCreateEmoji>,
+) -> Result<Json<v0::Emoji>> {
+    let config = config().await;
+
     let data = data.into_inner();
-    data.validate()
-        .map_err(|error| Error::FailedValidation { error })?;
+    data.validate().map_err(|error| {
+        create_error!(FailedValidation {
+            error: error.to_string()
+        })
+    })?;
 
     // Bots cannot manage emojis
     if user.bot.is_some() {
-        return Err(Error::IsBot);
+        return Err(create_error!(IsBot));
     }
 
     // Validate we have permission to write into parent
     match &data.parent {
-        EmojiParent::Server { id } => {
+        v0::EmojiParent::Server { id } => {
             let server = db.fetch_server(id).await?;
 
             // Check for permission
-            perms(&user)
-                .server(&server)
-                .throw_permission(db, Permission::ManageCustomisation)
-                .await?;
+            let mut query = DatabasePermissionQuery::new(db, &user).server(&server);
+            calculate_server_permissions(&mut query)
+                .await
+                .throw_if_lacking_channel_permission(ChannelPermission::ManageCustomisation)?;
 
-            // Check that there are no more than 100 emoji
-            // ! FIXME: hardcoded upper limit
+            // Check that we haven't hit the emoji limit
             let emojis = db.fetch_emoji_by_parent_id(&server.id).await?;
-            if emojis.len() > *MAX_EMOJI_COUNT {
-                return Err(Error::TooManyEmoji {
-                    max: *MAX_EMOJI_COUNT,
-                });
+            if emojis.len() > config.features.limits.default.server_emoji {
+                return Err(create_error!(TooManyEmoji {
+                    max: config.features.limits.default.server_emoji,
+                }));
             }
         }
-        EmojiParent::Detached => return Err(Error::InvalidOperation),
+        v0::EmojiParent::Detached => return Err(create_error!(InvalidOperation)),
     };
 
     // Find the relevant attachment
@@ -76,7 +60,7 @@ pub async fn create_emoji(
     // Create the emoji object
     let emoji = Emoji {
         id,
-        parent: data.parent,
+        parent: data.parent.into(),
         creator_id: user.id,
         name: data.name,
         animated: "image/gif" == &attachment.content_type,
@@ -85,5 +69,5 @@ pub async fn create_emoji(
 
     // Save emoji
     emoji.create(db).await?;
-    Ok(Json(emoji))
+    Ok(Json(emoji.into()))
 }

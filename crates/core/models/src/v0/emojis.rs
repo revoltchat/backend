@@ -1,3 +1,12 @@
+use once_cell::sync::Lazy;
+use regex::Regex;
+use validator::Validate;
+
+/// Regex for valid emoji names
+///
+/// Alphanumeric and underscores
+pub static RE_EMOJI: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[a-z0-9_]+$").unwrap());
+
 auto_derived!(
     /// Emoji
     pub struct Emoji {
@@ -29,5 +38,18 @@ auto_derived!(
     pub enum EmojiParent {
         Server { id: String },
         Detached,
+    }
+
+    /// Create a new emoji
+    #[derive(Validate)]
+    pub struct DataCreateEmoji {
+        /// Server name
+        #[validate(length(min = 1, max = 32), regex = "RE_EMOJI")]
+        pub name: String,
+        /// Parent information
+        pub parent: EmojiParent,
+        /// Whether the emoji is mature
+        #[serde(default)]
+        pub nsfw: bool,
     }
 );

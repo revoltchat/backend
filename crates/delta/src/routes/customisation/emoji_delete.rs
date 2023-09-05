@@ -1,19 +1,30 @@
-use revolt_quark::models::{emoji::EmojiParent, User};
-use revolt_quark::{perms, Db, EmptyResponse, Error, Permission, Ref, Result};
+use revolt_database::{
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Database, EmojiParent, User,
+};
+use revolt_permissions::{calculate_server_permissions, ChannelPermission};
+use revolt_result::{create_error, Result};
+
+use rocket::State;
+use rocket_empty::EmptyResponse;
 
 /// # Delete Emoji
 ///
 /// Delete an emoji by its id.
 #[openapi(tag = "Emojis")]
-#[delete("/emoji/<id>")]
-pub async fn delete_emoji(db: &Db, user: User, id: Ref) -> Result<EmptyResponse> {
+#[delete("/emoji/<emoji_id>")]
+pub async fn delete_emoji(
+    db: &State<Database>,
+    user: User,
+    emoji_id: Reference,
+) -> Result<EmptyResponse> {
     // Bots cannot manage emoji
     if user.bot.is_some() {
-        return Err(Error::IsBot);
+        return Err(create_error!(IsBot));
     }
 
     // Fetch the emoji
-    let emoji = id.as_emoji(db).await?;
+    let emoji = emoji_id.as_emoji(db).await?;
 
     // If we uploaded the emoji, then we have permission to delete it
     if emoji.creator_id != user.id {
@@ -23,10 +34,10 @@ pub async fn delete_emoji(db: &Db, user: User, id: Ref) -> Result<EmptyResponse>
                 let server = db.fetch_server(id).await?;
 
                 // Check for permission
-                perms(&user)
-                    .server(&server)
-                    .throw_permission(db, Permission::ManageCustomisation)
-                    .await?;
+                let mut query = DatabasePermissionQuery::new(db, &user).server(&server);
+                calculate_server_permissions(&mut query)
+                    .await
+                    .throw_if_lacking_channel_permission(ChannelPermission::ManageCustomisation)?;
             }
             EmojiParent::Detached => return Ok(EmptyResponse),
         };
