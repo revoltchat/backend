@@ -8,6 +8,7 @@ extern crate serde_json;
 pub mod routes;
 pub mod util;
 
+use revolt_database::{Database, MongoDb};
 use rocket::{Build, Rocket};
 use rocket_cors::{AllowedOrigins, CorsOptions};
 use rocket_prometheus::PrometheusMetrics;
@@ -33,7 +34,12 @@ pub async fn web() -> Rocket<Build> {
 
     // Setup Authifier
     let authifier = Authifier {
-        database: db.clone().into(),
+        database: match db.clone() {
+            Database::Reference(_) => Default::default(),
+            Database::MongoDb(MongoDb(client, _)) => authifier::Database::MongoDb(
+                authifier::database::MongoDb(client.database("revolt")),
+            ),
+        },
         config: revolt_quark::util::authifier::config(),
         event_channel: Some(sender),
     };
@@ -55,8 +61,14 @@ pub async fn web() -> Rocket<Build> {
     });
 
     // Launch background task workers
-    async_std::task::spawn(revolt_database::tasks::start_workers(db.clone()));
-    async_std::task::spawn(revolt_quark::tasks::start_workers(legacy_db.clone()));
+    async_std::task::spawn(revolt_database::tasks::start_workers(
+        db.clone(),
+        authifier.database.clone(),
+    ));
+    async_std::task::spawn(revolt_quark::tasks::start_workers(
+        legacy_db.clone(),
+        authifier.database.clone(),
+    ));
 
     // Configure CORS
     let cors = CorsOptions {

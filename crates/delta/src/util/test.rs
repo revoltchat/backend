@@ -1,7 +1,7 @@
 use futures::StreamExt;
 use rand::Rng;
 use redis_kiss::redis::aio::PubSub;
-use revolt_database::{events::client::EventV1, Database, DatabaseInfo, User};
+use revolt_database::{events::client::EventV1, Database, User};
 use revolt_quark::authifier::{
     models::{Account, Session},
     Authifier,
@@ -24,20 +24,27 @@ impl TestHarness {
             .await
             .expect("valid rocket instance");
 
-        let db = DatabaseInfo::Auto.connect().await.expect("`Database`");
         let mut sub = redis_kiss::open_pubsub_connection()
             .await
             .expect("`PubSub`");
 
         sub.psubscribe("*").await.unwrap();
 
+        let db = client
+            .rocket()
+            .state::<Database>()
+            .expect("`Database`")
+            .clone();
+
+        let authifier = client
+            .rocket()
+            .state::<Authifier>()
+            .expect("`Authifier`")
+            .clone();
+
         TestHarness {
             client,
-            authifier: Authifier {
-                database: db.clone().into(),
-                config: revolt_quark::util::authifier::config(),
-                event_channel: None,
-            },
+            authifier,
             db,
             sub,
             event_buffer: vec![],

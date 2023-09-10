@@ -1,6 +1,8 @@
 mod mongodb;
 mod reference;
 
+use revolt_config::config;
+
 pub use self::mongodb::*;
 pub use self::reference::*;
 
@@ -31,25 +33,41 @@ impl DatabaseInfo {
     /// Create a database client from the given database information
     #[async_recursion]
     pub async fn connect(self) -> Result<Database, String> {
+        let config = config().await;
+
         Ok(match self {
             DatabaseInfo::Auto => {
-                if let Ok(uri) = std::env::var("MONGODB") {
-                    return DatabaseInfo::MongoDb {
-                        uri,
+                if std::env::var("TEST_DB").is_ok() {
+                    DatabaseInfo::Test("revolt_test".to_string())
+                        .connect()
+                        .await?
+                } else if !config.database.mongodb.is_empty() {
+                    DatabaseInfo::MongoDb {
+                        uri: config.database.mongodb,
                         database_name: "revolt".to_string(),
                     }
                     .connect()
-                    .await;
+                    .await?
+                } else {
+                    DatabaseInfo::Reference.connect().await?
                 }
-
-                DatabaseInfo::Reference.connect().await?
             }
             DatabaseInfo::Test(database_name) => {
-                if let Ok(uri) = std::env::var("MONGODB") {
-                    return DatabaseInfo::MongoDb { uri, database_name }.connect().await;
+                match std::env::var("TEST_DB")
+                    .expect("`TEST_DB` environment variable should be set to REFERENCE or MONGODB")
+                    .as_str()
+                {
+                    "REFERENCE" => DatabaseInfo::Reference.connect().await?,
+                    "MONGODB" => {
+                        DatabaseInfo::MongoDb {
+                            uri: config.database.mongodb,
+                            database_name,
+                        }
+                        .connect()
+                        .await?
+                    }
+                    _ => unreachable!("must specify REFERENCE or MONGODB"),
                 }
-
-                DatabaseInfo::Reference.connect().await?
             }
             DatabaseInfo::Reference => Database::Reference(Default::default()),
             DatabaseInfo::MongoDb { uri, database_name } => {
@@ -63,16 +81,5 @@ impl DatabaseInfo {
                 Database::MongoDb(MongoDb(client, database_name))
             }
         })
-    }
-}
-
-impl From<Database> for authifier::Database {
-    fn from(value: Database) -> Self {
-        match value {
-            Database::Reference(_) => Default::default(),
-            Database::MongoDb(MongoDb(client, _)) => authifier::Database::MongoDb(
-                authifier::database::MongoDb(client.database("revolt")),
-            ),
-        }
     }
 }

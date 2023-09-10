@@ -31,6 +31,18 @@ impl DatabaseInfo {
     pub async fn connect(self) -> Result<Database, String> {
         Ok(match self {
             DatabaseInfo::Auto => {
+                if let Ok(test_db) = env::var("TEST_DB") {
+                    return match test_db.as_str() {
+                        "REFERENCE" => DatabaseInfo::Dummy.connect().await,
+                        "MONGODB" => {
+                            DatabaseInfo::MongoDb(env::var("MONGODB").expect("`MONGODB` env"))
+                                .connect()
+                                .await
+                        }
+                        _ => unreachable!("must specify REFERENCE or MONGODB"),
+                    };
+                }
+
                 if let Ok(uri) = env::var("MONGODB") {
                     return DatabaseInfo::MongoDb(uri).connect().await;
                 }
@@ -57,17 +69,6 @@ impl Deref for Database {
         match self {
             Database::Dummy(dummy) => dummy,
             Database::MongoDb(mongo) => mongo,
-        }
-    }
-}
-
-impl From<Database> for authifier::Database {
-    fn from(val: Database) -> Self {
-        match val {
-            Database::Dummy(_) => authifier::Database::default(),
-            Database::MongoDb(MongoDb(client)) => authifier::Database::MongoDb(
-                authifier::database::MongoDb(client.database("revolt")),
-            ),
         }
     }
 }
