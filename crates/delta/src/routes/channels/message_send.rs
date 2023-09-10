@@ -70,7 +70,7 @@ pub async fn message_send(
             data,
             v0::MessageAuthor::User(&author),
             idempotency,
-            true,
+            permissions.has_channel_permission(ChannelPermission::SendEmbeds),
         )
         .await?
         .into(),
