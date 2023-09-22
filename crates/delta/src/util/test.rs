@@ -2,6 +2,7 @@ use futures::StreamExt;
 use rand::Rng;
 use redis_kiss::redis::aio::PubSub;
 use revolt_database::{events::client::EventV1, Database, User};
+use revolt_models::v0;
 use revolt_quark::authifier::{
     models::{Account, Session},
     Authifier,
@@ -13,7 +14,7 @@ pub struct TestHarness {
     authifier: Authifier,
     pub db: Database,
     sub: PubSub,
-    event_buffer: Vec<EventV1>,
+    event_buffer: Vec<(String, EventV1)>,
 }
 
 impl TestHarness {
@@ -87,12 +88,12 @@ impl TestHarness {
         (account, session, user)
     }
 
-    pub async fn wait_for_event<F>(&mut self, predicate: F) -> EventV1
+    pub async fn wait_for_event<F>(&mut self, topic: &str, predicate: F) -> EventV1
     where
         F: Fn(&EventV1) -> bool,
     {
-        for event in &self.event_buffer {
-            if predicate(event) {
+        for (msg_topic, event) in &self.event_buffer {
+            if topic == msg_topic && predicate(event) {
                 // does not remove from buffer
                 return event.clone();
             }
@@ -100,18 +101,35 @@ impl TestHarness {
 
         let mut stream = self.sub.on_message();
         while let Some(item) = stream.next().await {
-            let payload: EventV1 = redis_kiss::decode_payload(&item.unwrap()).unwrap();
+            let item = item.unwrap();
+            let msg_topic = item.get_channel_name();
+            let payload: EventV1 = redis_kiss::decode_payload(&item).unwrap();
 
-            if predicate(&payload) {
+            if topic == msg_topic && predicate(&payload) {
                 return payload;
             }
 
-            self.event_buffer.push(payload);
+            self.event_buffer.push((msg_topic.to_string(), payload));
         }
 
         // WARNING: if predicate is never satisfied, this will never return
         //          should add a timeout for events so tests can fail gracefully
 
         unreachable!()
+    }
+
+    pub async fn wait_for_message(&mut self, channel_id: &str) -> v0::Message {
+        dbg!(&self.event_buffer);
+
+        match self
+            .wait_for_event(channel_id, |event| match event {
+                EventV1::Message(v0::Message { channel, .. }) => channel == channel_id,
+                _ => false,
+            })
+            .await
+        {
+            EventV1::Message(message) => message,
+            _ => unreachable!(),
+        }
     }
 }

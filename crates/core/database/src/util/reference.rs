@@ -7,7 +7,7 @@ use schemars::{
     JsonSchema,
 };
 
-use crate::{Bot, Channel, Database, Emoji, Message, Webhook};
+use crate::{Bot, Channel, Database, Emoji, Message, User, Webhook};
 
 /// Reference to some object in the database
 #[derive(Serialize, Deserialize)]
@@ -40,6 +40,11 @@ impl Reference {
     /// Fetch message from Ref
     pub async fn as_message(&self, db: &Database) -> Result<Message> {
         db.fetch_message(&self.id).await
+    }
+
+    /// Fetch user from Ref
+    pub async fn as_user(&self, db: &Database) -> Result<User> {
+        db.fetch_user(&self.id).await
     }
 
     /// Fetch webhook from Ref

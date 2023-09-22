@@ -1,7 +1,7 @@
 use revolt_result::Result;
 
-use crate::ReferenceDb;
 use crate::{FieldsUser, PartialUser, RelationshipStatus, User};
+use crate::{ReferenceDb, Relationship};
 
 use super::AbstractUsers;
 
@@ -106,19 +106,49 @@ impl AbstractUsers for ReferenceDb {
 
     /// Set relationship with another user
     ///
-    /// This should use pull_relationship if relationship is None.
+    /// This should use pull_relationship if relationship is None or User.
     async fn set_relationship(
         &self,
-        _user_id: &str,
-        _target_id: &str,
-        _relationship: &RelationshipStatus,
+        user_id: &str,
+        target_id: &str,
+        relationship: &RelationshipStatus,
     ) -> Result<()> {
-        todo!()
+        if let RelationshipStatus::User | RelationshipStatus::None = &relationship {
+            self.pull_relationship(user_id, target_id).await
+        } else {
+            let mut users = self.users.lock().await;
+            let user = users
+                .get_mut(user_id)
+                .ok_or_else(|| create_error!(NotFound))?;
+
+            let relation = Relationship {
+                id: target_id.to_string(),
+                status: relationship.clone(),
+            };
+
+            if let Some(relations) = &mut user.relations {
+                relations.retain(|relation| relation.id != target_id);
+                relations.push(relation);
+            } else {
+                user.relations = Some(vec![relation]);
+            }
+
+            Ok(())
+        }
     }
 
     /// Remove relationship with another user
-    async fn pull_relationship(&self, _user_id: &str, _target_id: &str) -> Result<()> {
-        todo!()
+    async fn pull_relationship(&self, user_id: &str, target_id: &str) -> Result<()> {
+        let mut users = self.users.lock().await;
+        let user = users
+            .get_mut(user_id)
+            .ok_or_else(|| create_error!(NotFound))?;
+
+        if let Some(relations) = &mut user.relations {
+            relations.retain(|relation| relation.id != target_id);
+        }
+
+        Ok(())
     }
 
     /// Delete a user by their id

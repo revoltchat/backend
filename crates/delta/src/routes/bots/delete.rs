@@ -48,7 +48,7 @@ mod test {
         drop(response);
 
         let event = harness
-            .wait_for_event(|event| match event {
+            .wait_for_event(&bot.id, |event| match event {
                 EventV1::UserUpdate { id, .. } => id == &bot.id,
                 _ => false,
             })

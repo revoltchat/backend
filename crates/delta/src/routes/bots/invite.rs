@@ -102,7 +102,7 @@ mod test {
         drop(response);
 
         let event = harness
-            .wait_for_event(|event| match event {
+            .wait_for_event(&group.id(), |event| match event {
                 EventV1::ChannelGroupJoin { id, .. } => id == &group.id(),
                 _ => false,
             })
@@ -164,7 +164,7 @@ mod test {
         drop(response);
 
         let event = harness
-            .wait_for_event(|event| match event {
+            .wait_for_event(&server.id, |event| match event {
                 EventV1::ServerMemberJoin { id, .. } => id == &server.id,
                 _ => false,
             })

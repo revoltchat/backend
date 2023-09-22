@@ -231,3 +231,16 @@ auto_derived!(
         pub nsfw: Option<bool>,
     }
 );
+
+impl Channel {
+    /// Get a reference to this channel's id
+    pub fn id(&self) -> &str {
+        match self {
+            Channel::DirectMessage { id, .. }
+            | Channel::Group { id, .. }
+            | Channel::SavedMessages { id, .. }
+            | Channel::TextChannel { id, .. }
+            | Channel::VoiceChannel { id, .. } => id,
+        }
+    }
+}

@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 use revolt_models::v0::{
     AppendMessage, Channel, Emoji, FieldsChannel, FieldsMember, FieldsRole, FieldsServer,
     FieldsUser, FieldsWebhook, MemberCompositeKey, Message, PartialChannel, PartialMember,
-    PartialMessage, PartialRole, PartialServer, PartialUser, PartialWebhook, Server, UserSettings,
-    Webhook,
+    PartialMessage, PartialRole, PartialServer, PartialUser, PartialWebhook, Server, User,
+    UserSettings, Webhook,
 };
 use revolt_result::Error;
 
@@ -154,17 +154,12 @@ pub enum EventV1 {
         event_id: Option<String>,
     },
 
-    /*/// Relationship with another user changed
-    UserRelationship {
-        id: String,
-        user: User,
-        // ! this field can be deprecated
-        status: RelationshipStatus,
-    },*/
+    /// Relationship with another user changed
+    UserRelationship { id: String, user: User },
     /// Settings updated remotely
     UserSettingsUpdate { id: String, update: UserSettings },
 
-    /*/// User has been platform banned or deleted their account
+    /// User has been platform banned or deleted their account
     ///
     /// Clients should remove the following associated data:
     /// - Messages
@@ -173,7 +168,7 @@ pub enum EventV1 {
     /// - Server Memberships
     ///
     /// User flags are specified to explain why a wipe is occurring though not all reasons will necessarily ever appear.
-    UserPlatformWipe { user_id: String, flags: i32 }, */
+    UserPlatformWipe { user_id: String, flags: i32 },
     /// New emoji
     EmojiCreate(Emoji),
 

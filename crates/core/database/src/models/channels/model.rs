@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use revolt_config::config;
 use revolt_models::v0::{self, MessageAuthor};
 use revolt_permissions::OverrideField;
 use revolt_result::Result;
@@ -191,9 +192,18 @@ impl Channel {
     /// Create a group
     pub async fn create_group(
         db: &Database,
-        data: v0::DataCreateGroup,
+        mut data: v0::DataCreateGroup,
         owner_id: String,
     ) -> Result<Channel> {
+        data.users.insert(owner_id.to_string());
+
+        let config = config().await;
+        if data.users.len() > config.features.limits.default.group_size {
+            return Err(create_error!(GroupTooLarge {
+                max: config.features.limits.default.group_size,
+            }));
+        }
+
         let recipients = data.users.into_iter().collect::<Vec<String>>();
         let channel = Channel::Group {
             id: ulid::Ulid::new().to_string(),
@@ -247,10 +257,6 @@ impl Channel {
                 .p(id.to_string())
                 .await;
 
-                EventV1::ChannelCreate(self.clone().into())
-                    .private(user.id.to_string())
-                    .await;
-
                 SystemMessage::UserAdded {
                     id: user.id.to_string(),
                     by: by_id.to_string(),
@@ -267,6 +273,10 @@ impl Channel {
                 )
                 .await
                 .ok();
+
+                EventV1::ChannelCreate(self.clone().into())
+                    .private(user.id.to_string())
+                    .await;
 
                 Ok(())
             }
@@ -295,7 +305,7 @@ impl Channel {
         }
     }
 
-    /// Get a reference to this channel's id
+    /// Clone this channel's id
     pub fn id(&self) -> String {
         match self {
             Channel::DirectMessage { id, .. }
