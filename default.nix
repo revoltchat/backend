@@ -21,10 +21,14 @@ in pkgs.mkShell {
     # Database
     # pkgs.mongodb
 
-    # Rust
+    # Cargo
     pkgs.cargo
+    pkgs.cargo-nextest
+
+    # Rust
     pkgs.rustc
     pkgs.clippy
+    pkgs.rustfmt
     pkgs.pkgconfig
     pkgs.openssl.dev
   ];
