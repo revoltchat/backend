@@ -12,7 +12,7 @@ async fn validate_user_permissions() {
     let mut query = Scenario {};
 
     let perms = calculate_user_permissions(&mut query).await;
-    assert_eq!(perms, u32::MAX);
+    assert!(perms.has(u64::MAX));
 
     let perms = calculate_channel_permissions(&mut query).await;
     let value: u64 = perms.into();

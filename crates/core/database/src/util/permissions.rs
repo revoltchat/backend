@@ -1,7 +1,8 @@
 use std::borrow::Cow;
 
 use revolt_permissions::{
-    calculate_user_permissions, ChannelType, Override, PermissionQuery, RelationshipStatus,
+    calculate_user_permissions, ChannelType, Override, PermissionQuery, PermissionValue,
+    RelationshipStatus,
 };
 
 use crate::{Channel, Database, Member, Server, User};
@@ -19,7 +20,8 @@ pub struct DatabasePermissionQuery<'a> {
     member: Option<Cow<'a, Member>>,
 
     // flag_known_relationship: Option<&'a RelationshipStatus>,
-    cached_user_permission: Option<u32>,
+    cached_user_permission: Option<PermissionValue>,
+    cached_mutual_connection: Option<bool>,
     cached_permission: Option<u64>,
 }
 
@@ -49,6 +51,10 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
     /// Get the relationship with have with the currently selected user
     async fn user_relationship(&mut self) -> RelationshipStatus {
         if let Some(other_user) = &self.user {
+            if self.perspective.id == other_user.id {
+                return RelationshipStatus::User;
+            }
+
             if let Some(relations) = &self.perspective.relations {
                 for entry in relations {
                     if entry.id == other_user.id {
@@ -82,14 +88,17 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
 
     /// Do we have a mutual connection with the currently selected user?
     async fn have_mutual_connection(&mut self) -> bool {
-        if let Some(user) = &self.user {
-            // TODO: cache result?
-            matches!(
-                self.perspective
-                    .has_mutual_connection(self.database, &user.id)
-                    .await,
-                Ok(true)
-            )
+        if let Some(value) = self.cached_mutual_connection {
+            value
+        } else if let Some(user) = &self.user {
+            let value = self
+                .perspective
+                .has_mutual_connection(self.database, &user.id)
+                .await
+                .unwrap_or_default();
+
+            self.cached_mutual_connection = Some(value);
+            matches!(value, true)
         } else {
             false
         }
@@ -352,6 +361,7 @@ impl<'a> DatabasePermissionQuery<'a> {
             server: None,
             member: None,
 
+            cached_mutual_connection: None,
             cached_user_permission: None,
             cached_permission: None,
         }

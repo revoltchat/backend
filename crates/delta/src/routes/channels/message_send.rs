@@ -62,7 +62,7 @@ pub async fn message_send(
     }
 
     // Create the message
-    let author: v0::User = user.clone().into(Some(&user)).await;
+    let author: v0::User = user.clone().into(db, Some(&user)).await;
     Ok(Json(
         Message::create_from_api(
             db,

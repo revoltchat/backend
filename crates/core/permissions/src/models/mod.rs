@@ -8,7 +8,7 @@ pub use server::*;
 pub use user::*;
 
 /// Holds a permission value to manipulate.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct PermissionValue(u64);
 
 impl PermissionValue {
@@ -41,6 +41,11 @@ impl PermissionValue {
     /// Check whether certain a permission has been granted
     pub fn has(&self, v: u64) -> bool {
         (self.0 & v) == v
+    }
+
+    /// Check whether certain a user permission has been granted
+    pub fn has_user_permission(&self, permission: UserPermission) -> bool {
+        self.has(permission as u64)
     }
 
     /// Check whether certain a channel permission has been granted

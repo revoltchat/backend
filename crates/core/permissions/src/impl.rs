@@ -5,37 +5,37 @@ use crate::{
 };
 
 /// Calculate permissions against a user
-pub async fn calculate_user_permissions<P: PermissionQuery>(query: &mut P) -> u32 {
+pub async fn calculate_user_permissions<P: PermissionQuery>(query: &mut P) -> PermissionValue {
     if query.are_we_privileged().await {
-        return u32::MAX;
+        return u64::MAX.into();
     }
 
     if query.are_the_users_same().await {
-        return u32::MAX;
+        return u64::MAX.into();
     }
 
-    let mut permissions = 0_u32;
+    let mut permissions = 0_u64;
     match query.user_relationship().await {
-        RelationshipStatus::Friend => return u32::MAX,
+        RelationshipStatus::Friend => return u64::MAX.into(),
         RelationshipStatus::Blocked | RelationshipStatus::BlockedOther => {
-            return UserPermission::Access as u32
+            return (UserPermission::Access as u64).into()
         }
         RelationshipStatus::Incoming | RelationshipStatus::Outgoing => {
-            permissions = UserPermission::Access as u32;
+            permissions = UserPermission::Access as u64;
         }
         _ => {}
     }
 
     if query.have_mutual_connection().await {
-        permissions = UserPermission::Access + UserPermission::ViewProfile;
+        permissions = UserPermission::Access as u64 + UserPermission::ViewProfile as u64;
 
         if query.user_is_bot().await || query.are_we_a_bot().await {
-            permissions += UserPermission::SendMessage as u32;
+            permissions += UserPermission::SendMessage as u64;
         }
 
-        permissions
+        permissions.into()
     } else {
-        permissions
+        permissions.into()
     }
 }
 
@@ -81,9 +81,7 @@ pub async fn calculate_channel_permissions<P: PermissionQuery>(query: &mut P) ->
                 query.set_recipient_as_user().await;
 
                 let permissions = calculate_user_permissions(query).await;
-                if (permissions & UserPermission::SendMessage as u32)
-                    == UserPermission::SendMessage as u32
-                {
+                if permissions.has_user_permission(UserPermission::SendMessage) {
                     (*DEFAULT_PERMISSION_DIRECT_MESSAGE).into()
                 } else {
                     (*DEFAULT_PERMISSION_VIEW_ONLY).into()
@@ -121,7 +119,7 @@ pub async fn calculate_channel_permissions<P: PermissionQuery>(query: &mut P) ->
                 if !permissions.has_channel_permission(ChannelPermission::ViewChannel) {
                     permissions.revoke_all();
                 }
-                
+
                 permissions
             } else {
                 0_u64.into()

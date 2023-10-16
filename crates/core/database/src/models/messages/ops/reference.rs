@@ -60,7 +60,7 @@ impl AbstractMessages for ReferenceDb {
             .cloned()
             .collect();
 
-        // TODO: sorting, etc
+        // TODO: sorting, etc (will be required for tests)
 
         Ok(matched_messages)
 

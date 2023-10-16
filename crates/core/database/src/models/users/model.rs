@@ -391,14 +391,14 @@ impl User {
 
         EventV1::UserRelationship {
             id: target.id.clone(),
-            user: self.clone().into(Some(&*target)).await,
+            user: self.clone().into(db, Some(&*target)).await,
         }
         .private(target.id.clone())
         .await;
 
         EventV1::UserRelationship {
             id: self.id.clone(),
-            user: target.clone().into(Some(&*self)).await,
+            user: target.clone().into(db, Some(&*self)).await,
         }
         .private(self.id.clone())
         .await;
