@@ -1,0 +1,439 @@
+{
+  "_id": "01F7ZSBSFHQ8TA81725KQCSDDP",
+  "owner": "01EX2NCWQ0CHS3QJF0FEQS1GR4",
+  "name": "Revolt",
+  "channels": [
+    "01F7ZSBSFHCAAJQ92ZGTY67HMN",
+    "01F80YXPABK0NVD3KMY0Z6VK5G",
+    "01F8PZ2ZHPZFCHAEGQQWSMMF3N",
+    "01F92C5ZXBQWQ8KY7J8KY917NM",
+    "01F9534XAHDCCS60M5W0J9DJQQ",
+    "01F9CKVJXYJC0328M3YQZYXNV7",
+    "01F9CKVSCWBJTHJKJX4F459SS5",
+    "01F9KATFHCAWGYG1NQ13MFDRAT",
+    "01FBCT2PXQC0SSH6GD3V1BEHRP",
+    "01FBZBDB31QKBAK8ZXASDR6PQZ",
+    "01FBZBDFDD1VS81ZZ89RN9YXCC",
+    "01FD53QCD84PX7D2GBV5SBE09N",
+    "01FD5J33XHKGMJJ9XCM71B9924",
+    "01FDAHKCQ96CGMGC8YYC74F75W",
+    "01FDAY86R8XYHRXDK5H707GC87",
+    "01FFJHD9V7XSN74VAJ661EZVE7",
+    "01FMNH11130YBK8QYWVK0ECB23",
+    "01FR415PBTTABVESSRB2ESGHZR",
+    "01FW9XW0MCK2CXPRAA7AAY59CB",
+    "01FY1ENB2K17625XAB985HVWSQ",
+    "01G2FX72TXKJY8MF2CPXBBG0CB",
+    "01G3E05SSC1EQC0M10YHJQKCP4",
+    "01FQWEDGBE9K4JR7GCS5G5EMNB",
+    "01GEFVJKBZJ08D86J1W48DNNFW",
+    "01GG7KWQ3VNFWJP25Z19DZPQP7",
+    "01GNHP9CXFEN5YCNH9CMWPAXS5",
+    "01GQF3F07966JHKP1FZTNZ5592",
+    "01GQJ90K6Y89M94DTK68MWJ5VY",
+    "01GQJ90SEQK1KHXGVNPNK2QHHN",
+    "01GSZQ1AH8Y0PKB3R83H1AMQR9",
+    "01GWC3QCX43AVWYKKF0R0Z00GG",
+    "01GWCS2WZF2G2P4NA91WSRWK9H",
+    "01GXXWR5KCA6935XXM9V2ZSGY9",
+    "01H0T2H7MR3PH4NFSY0MGPDBB1",
+    "01H0TPNRZ2CJK97Z33J45CF04Y",
+    "01H2EAMX399RYD3P59RQKJRCZF",
+    "01HC0P7QBKYPHH97D1ZMD9E9BC"
+  ],
+  "system_messages": {
+    "user_joined": "01FFJHD9V7XSN74VAJ661EZVE7",
+    "user_left": "01FFJHD9V7XSN74VAJ661EZVE7",
+    "user_kicked": "01FFJHD9V7XSN74VAJ661EZVE7",
+    "user_banned": "01FFJHD9V7XSN74VAJ661EZVE7"
+  },
+  "icon": {
+    "_id": "gtc0gJE2S3RvuDhrl2-JeakvgbqEGr2acvBnRTTh6k",
+    "tag": "icons",
+    "filename": "logo_round.png",
+    "metadata": {
+      "type": "Image",
+      "width": {
+        "$numberLong": "500"
+      },
+      "height": {
+        "$numberLong": "500"
+      }
+    },
+    "content_type": "image/png",
+    "size": {
+      "$numberLong": "7558"
+    }
+  },
+  "banner": {
+    "_id": "yMurJiXf45VJpbal0X2zQkm4vaXsXGaRtoPUIcvPcH",
+    "tag": "banners",
+    "filename": "pattern-big 1.png",
+    "metadata": {
+      "type": "Image",
+      "width": {
+        "$numberLong": "1650"
+      },
+      "height": {
+        "$numberLong": "750"
+      }
+    },
+    "content_type": "image/png",
+    "size": {
+      "$numberLong": "69477"
+    }
+  },
+  "description": "Official server run by the team behind #Revolt.\nGeneral conversation and support server.\n \nAppeals and reports: lounge@revolt.chat",
+  "default_permissions": {
+    "$numberLong": "4000322560"
+  },
+  "categories": [
+    {
+      "id": "01H7J6TH1YYW8Y2C700FC9PSFD",
+      "title": "Information",
+      "channels": [
+        "01F9534XAHDCCS60M5W0J9DJQQ",
+        "01H0TPNRZ2CJK97Z33J45CF04Y",
+        "01F9KATFHCAWGYG1NQ13MFDRAT",
+        "01GQJ90K6Y89M94DTK68MWJ5VY",
+        "01GQJ90SEQK1KHXGVNPNK2QHHN"
+      ]
+    },
+    {
+      "id": "a",
+      "title": "Discussion",
+      "channels": [
+        "01F92C5ZXBQWQ8KY7J8KY917NM",
+        "01FY1ENB2K17625XAB985HVWSQ",
+        "01FBZBDB31QKBAK8ZXASDR6PQZ"
+      ]
+    },
+    {
+      "id": "01HC0P7FNSEA6FMTQ1QAVB46NG",
+      "title": "Social",
+      "channels": [
+        "01FD53QCD84PX7D2GBV5SBE09N",
+        "01HC0P7QBKYPHH97D1ZMD9E9BC"
+      ]
+    },
+    {
+      "id": "01G3E05H65N1K6WM64SPVJ4PSE",
+      "title": "Moderation",
+      "channels": [
+        "01FFJHD9V7XSN74VAJ661EZVE7",
+        "01FR415PBTTABVESSRB2ESGHZR",
+        "01H0T2H7MR3PH4NFSY0MGPDBB1",
+        "01G3E05SSC1EQC0M10YHJQKCP4",
+        "01FQWEDGBE9K4JR7GCS5G5EMNB",
+        "01GEFVJKBZJ08D86J1W48DNNFW",
+        "01GNHP9CXFEN5YCNH9CMWPAXS5",
+        "01GQF3F07966JHKP1FZTNZ5592",
+        "01GSZQ1AH8Y0PKB3R83H1AMQR9"
+      ]
+    },
+    {
+      "id": "01HC0JQH88WC02Y0S1VE9WEBRM",
+      "title": "Archive",
+      "channels": [
+        "01F7ZSBSFHCAAJQ92ZGTY67HMN",
+        "01FDAHKCQ96CGMGC8YYC74F75W",
+        "01FD5J33XHKGMJJ9XCM71B9924",
+        "01F8PZ2ZHPZFCHAEGQQWSMMF3N",
+        "01FW9XW0MCK2CXPRAA7AAY59CB",
+        "01G2FX72TXKJY8MF2CPXBBG0CB",
+        "01H2EAMX399RYD3P59RQKJRCZF",
+        "01GG7KWQ3VNFWJP25Z19DZPQP7",
+        "01GXXWR5KCA6935XXM9V2ZSGY9",
+        "01GWC3QCX43AVWYKKF0R0Z00GG",
+        "01FDAY86R8XYHRXDK5H707GC87",
+        "01F9CKVSCWBJTHJKJX4F459SS5",
+        "01F9CKVJXYJC0328M3YQZYXNV7",
+        "01F80YXPABK0NVD3KMY0Z6VK5G",
+        "01GWCS2WZF2G2P4NA91WSRWK9H",
+        "01FBZBDFDD1VS81ZZ89RN9YXCC",
+        "01FBCT2PXQC0SSH6GD3V1BEHRP",
+        "01FMNH11130YBK8QYWVK0ECB23"
+      ]
+    }
+  ],
+  "roles": {
+    "01F9HFTSBWTNA2F4TMSV7VM3FG": {
+      "name": "Moderator",
+      "permissions": {
+        "a": {
+          "$numberLong": "545270208"
+        },
+        "d": {
+          "$numberLong": "0"
+        }
+      },
+      "colour": "linear-gradient(20deg, #FF424F, rgb(173,20,87))",
+      "hoist": true,
+      "rank": {
+        "$numberLong": "3"
+      }
+    },
+    "01FBF9DNHSRPVTWFMNB3JNB8FK": {
+      "name": "Founder",
+      "permissions": {
+        "a": {
+          "$numberLong": "1590705871"
+        },
+        "d": {
+          "$numberLong": "0"
+        }
+      },
+      "colour": "linear-gradient(30deg, purple, orange)",
+      "hoist": true,
+      "rank": {
+        "$numberLong": "0"
+      }
+    },
+    "01FBF9NZAYKKMZPYFBXSC1JVX6": {
+      "name": "pink",
+      "permissions": {
+        "a": {
+          "$numberLong": "0"
+        },
+        "d": {
+          "$numberLong": "0"
+        }
+      },
+      "colour": "#D468EE",
+      "rank": {
+        "$numberLong": "4"
+      }
+    },
+    "01FM3NVKW274HDNBMJ94PVSMX0": {
+      "name": "W",
+      "permissions": {
+        "a": {
+          "$numberLong": "0"
+        },
+        "d": {
+          "$numberLong": "0"
+        }
+      }
+    },
+    "01FMD8N4XW9QAHZSYBEEBVZ4H2": {
+      "name": "Bot",
+      "permissions": {
+        "a": {
+          "$numberLong": "482356680"
+        },
+        "d": {
+          "$numberLong": "0"
+        }
+      },
+      "colour": "#1ABC9C",
+      "hoist": true,
+      "rank": {
+        "$numberLong": "5"
+      }
+    },
+    "01FMFTQA97DNMH773MYB538S75": {
+      "name": "(real)",
+      "permissions": {
+        "a": {
+          "$numberLong": "0"
+        },
+        "d": {
+          "$numberLong": "0"
+        }
+      },
+      "colour": "#FF7F50",
+      "rank": {
+        "$numberLong": "1"
+      },
+      "hoist": true
+    },
+    "01FRED5JVVYPCAKA6K8R1HA6Z0": {
+      "name": "Regulars",
+      "permissions": {
+        "a": {
+          "$numberLong": "205520896"
+        },
+        "d": {
+          "$numberLong": "0"
+        }
+      },
+      "colour": "#8fbad6",
+      "hoist": false,
+      "rank": {
+        "$numberLong": "20"
+      }
+    },
+    "01G2J8G50VGWD6AEZ891WS54SK": {
+      "name": "PR",
+      "permissions": {
+        "a": {
+          "$numberLong": "0"
+        },
+        "d": {
+          "$numberLong": "0"
+        }
+      },
+      "rank": {
+        "$numberLong": "200"
+      },
+      "hoist": false
+    },
+    "01G3RYHN19HZKX42754TD5YMAR": {
+      "name": "Muted Bots",
+      "permissions": {
+        "a": {
+          "$numberLong": "0"
+        },
+        "d": {
+          "$numberLong": "0"
+        }
+      },
+      "rank": {
+        "$numberLong": "8"
+      },
+      "hoist": false
+    },
+    "01G83VP6TC9V3XFJF8TAM27QT8": {
+      "name": "Homophobe",
+      "permissions": {
+        "a": {
+          "$numberLong": "268435456"
+        },
+        "d": {
+          "$numberLong": "0"
+        }
+      },
+      "rank": {
+        "$numberLong": "19"
+      },
+      "hoist": false,
+      "colour": "linear-gradient(to right,red 0%,#ff9a00 10%,#d0de21 20%,#4fdc4a 30%,#3fdad8 40%,#2fc9e2 50%,#1c7fee 60%,#5f15f2 70%,#ba0cf8 80%)"
+    },
+    "01GBDDB3J1TS17SZA9SY61TQHM": {
+      "name": "Security Triage",
+      "permissions": {
+        "a": {
+          "$numberLong": "0"
+        },
+        "d": {
+          "$numberLong": "0"
+        }
+      },
+      "rank": {
+        "$numberLong": "9"
+      },
+      "hoist": true
+    },
+    "01GDE9VX4AD3T3KBPYZE7932P9": {
+      "name": "Team",
+      "permissions": {
+        "a": {
+          "$numberLong": "750795732"
+        },
+        "d": {
+          "$numberLong": "0"
+        }
+      },
+      "rank": {
+        "$numberLong": "2"
+      },
+      "hoist": true,
+      "colour": "#FD6671"
+    },
+    "01GGWTQSB7BMEMJAFB83YKCFPQ": {
+      "name": "Masquerade",
+      "permissions": {
+        "a": {
+          "$numberLong": "268435456"
+        },
+        "d": {
+          "$numberLong": "0"
+        }
+      },
+      "rank": {
+        "$numberLong": "1000"
+      },
+      "hoist": false
+    },
+    "01GXXWWJ66ANEK2RMRW8DD3SFF": {
+      "name": "Not in the focus group",
+      "permissions": {
+        "a": {
+          "$numberLong": "0"
+        },
+        "d": {
+          "$numberLong": "0"
+        }
+      },
+      "rank": {
+        "$numberLong": "21"
+      },
+      "hoist": false
+    }
+  },
+  "flags": 1,
+  "analytics": true,
+  "discoverable": true
+}
+
+{
+  "_id": "01H0T2H7MR3PH4NFSY0MGPDBB1",
+  "channel_type": "TextChannel",
+  "server": "01F7ZSBSFHQ8TA81725KQCSDDP",
+  "name": "Mod Discussion",
+  "role_permissions": {
+    "01GDE9VX4AD3T3KBPYZE7932P9": {
+      "a": 1048576,
+      "d": 0
+    },
+    "01F9HFTSBWTNA2F4TMSV7VM3FG": {
+      "a": 1048576,
+      "d": 0
+    },
+    "01FMD8N4XW9QAHZSYBEEBVZ4H2": {
+      "a": 1048576,
+      "d": 0
+    }
+  },
+  "default_permissions": {
+    "a": 0,
+    "d": 1048576
+  },
+  "last_message_id": "01HCQYBKJXHYGNEP1MGEH3R9PE",
+  "description": "https://app.revolt.chat/server/01F7ZSBSFHQ8TA81725KQCSDDP/settings",
+  "nsfw": false
+}
+
+
+
+{
+  "_id": {
+    "server": "01F7ZSBSFHQ8TA81725KQCSDDP",
+    "user": "01EX2NCWQ0CHS3QJF0FEQS1GR4"
+  },
+  "roles": [
+    "01FBF9DNHSRPVTWFMNB3JNB8FK"
+  ],
+  "avatar": {
+    "_id": "X-sUZ8KJ0W8_BTFa4GFj5vqLgHY2oJkO5NdGkpOt1D",
+    "tag": "avatars",
+    "filename": "1689571705840576.jpg",
+    "metadata": {
+      "type": "Image",
+      "width": {
+        "$numberLong": "1112"
+      },
+      "height": {
+        "$numberLong": "1113"
+      }
+    },
+    "content_type": "image/jpeg",
+    "size": {
+      "$numberLong": "104276"
+    }
+  },
+  "joined_at": "2022-07-15T20:50:36.631Z"
+}
+
+
+{"type":"MissingPermission","permission":"SendMessage","location":"crates/core/permissions/src/models/mod.rs:56:17"}
