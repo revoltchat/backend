@@ -1,5 +1,6 @@
 {
   "editor.formatOnSave": true,
   "rust-analyzer.checkOnSave.command": "clippy",
-  "nixEnvSelector.suggestion": false
+  "nixEnvSelector.suggestion": false,
+  "nixEnvSelector.nixFile": "${workspaceRoot}/default.nix"
 }
