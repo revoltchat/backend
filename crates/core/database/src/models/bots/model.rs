@@ -1,3 +1,4 @@
+use revolt_config::config;
 use revolt_result::Result;
 use ulid::Ulid;
 
@@ -79,9 +80,8 @@ impl Bot {
             return Err(create_error!(IsBot));
         }
 
-        // TODO: config
-        let max_bot_count = 5;
-        if db.get_number_of_bots_by_user(&owner.id).await? >= max_bot_count {
+        let config = config().await;
+        if db.get_number_of_bots_by_user(&owner.id).await? >= config.features.limits.default.bots {
             return Err(create_error!(ReachedMaximumBots));
         }
 
