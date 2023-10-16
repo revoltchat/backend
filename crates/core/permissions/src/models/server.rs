@@ -51,9 +51,9 @@ pub enum DataPermissionPoly {
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
 pub struct OverrideField {
     /// Allow bit flags
-    a: i64,
+    pub a: i64,
     /// Disallow bit flags
-    d: i64,
+    pub d: i64,
 }
 
 impl Override {

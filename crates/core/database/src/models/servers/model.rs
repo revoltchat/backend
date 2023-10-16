@@ -450,3 +450,73 @@ impl SystemMessageChannels {
         ids
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use revolt_permissions::OverrideField;
+
+    use crate::{Role, Server, User};
+
+    #[async_std::test]
+    async fn permissions() {
+        database_test!(|db| async move {
+            let owner = User::create(&db, "Owner".to_string(), None, None)
+                .await
+                .unwrap();
+
+            let moderator = User::create(&db, "Moderator".to_string(), None, None)
+                .await
+                .unwrap();
+
+            let user = User::create(&db, "User".to_string(), None, None)
+                .await
+                .unwrap();
+
+            let server = Server {
+                id: ulid::Ulid::new().to_string(),
+                owner: owner.id,
+                name: "My Server".to_string(),
+                description: None,
+                channels: vec![],
+                categories: None,
+                system_messages: None,
+                roles: HashMap::from([
+                    (
+                        "01F9HFTSBWTNA2F4TMSV7VM3FG".to_string(),
+                        Role {
+                            name: "Moderator".to_string(),
+                            permissions: OverrideField {
+                                a: 545270208,
+                                ..Default::default()
+                            },
+                            colour: None,
+                            hoist: true,
+                            rank: 3,
+                        },
+                    ),
+                    (
+                        "01FBF9DNHSRPVTWFMNB3JNB8FK".to_string(),
+                        Role {
+                            name: "Owner".to_string(),
+                            permissions: Default::default(),
+                            colour: None,
+                            hoist: true,
+                            rank: 0,
+                        },
+                    ),
+                ]),
+                default_permissions: 4000322560, // TODO: use bitfield
+                icon: None,
+                banner: None,
+                flags: None,
+                nsfw: false,
+                analytics: false,
+                discoverable: false,
+            };
+
+            server.create(&db).await.unwrap();
+        });
+    }
+}
