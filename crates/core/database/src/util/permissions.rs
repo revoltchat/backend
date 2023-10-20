@@ -120,11 +120,15 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
         if let Some(server) = &self.server {
             if self.member.is_some() {
                 true
+            } else if let Ok(member) = self
+                .database
+                .fetch_member(&server.id, &self.perspective.id)
+                .await
+            {
+                self.member = Some(Cow::Owned(member));
+                true
             } else {
-                self.database
-                    .fetch_member(&server.id, &self.perspective.id)
-                    .await
-                    .is_ok()
+                false
             }
         } else {
             false
