@@ -1,5 +1,7 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
+
+#[cfg(feature = "validator")]
 use validator::Validate;
 
 /// Regex for valid emoji names
@@ -41,7 +43,7 @@ auto_derived!(
     }
 
     /// Create a new emoji
-    #[derive(Validate)]
+    #[cfg_attr(feature = "validator", derive(Validate))]
     pub struct DataCreateEmoji {
         /// Server name
         #[validate(length(min = 1, max = 32), regex = "RE_EMOJI")]
