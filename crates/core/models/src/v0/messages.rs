@@ -6,6 +6,8 @@ use std::{
 use once_cell::sync::Lazy;
 use regex::Regex;
 use revolt_config::config;
+
+#[cfg(feature = "validator")]
 use validator::Validate;
 
 use iso8601_timestamp::Timestamp;
@@ -94,7 +96,7 @@ auto_derived!(
     }
 
     /// Name and / or avatar override information
-    #[derive(Validate)]
+    #[cfg_attr(feature = "validator", derive(Validate))]
     pub struct Masquerade {
         // FIXME: missing validation
         /// Replace the display name shown on this message
@@ -164,7 +166,8 @@ auto_derived!(
     }
 
     /// Representation of a text embed before it is sent.
-    #[derive(Default, Validate)]
+    #[derive(Default)]
+    #[cfg_attr(feature = "validator", derive(Validate))]
     pub struct SendableEmbed {
         #[validate(length(min = 1, max = 128))]
         pub icon_url: Option<String>,
@@ -188,7 +191,7 @@ auto_derived!(
     }
 
     /// Message to send
-    #[derive(Validate)]
+    #[cfg_attr(feature = "validator", derive(Validate))]
     pub struct DataMessageSend {
         /// Unique token to prevent duplicate message sending
         ///

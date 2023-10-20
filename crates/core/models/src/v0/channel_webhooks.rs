@@ -1,3 +1,4 @@
+#[cfg(feature = "validator")]
 use validator::Validate;
 
 use super::File;
@@ -80,7 +81,7 @@ auto_derived!(
     }
 
     /// Information for the webhook
-    #[derive(Validate)]
+    #[cfg_attr(feature = "validator", derive(Validate))]
     pub struct CreateWebhookBody {
         #[validate(length(min = 1, max = 32))]
         pub name: String,
