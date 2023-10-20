@@ -455,9 +455,12 @@ impl SystemMessageChannels {
 mod tests {
     use std::collections::HashMap;
 
-    use revolt_permissions::OverrideField;
+    use revolt_permissions::{calculate_server_permissions, ChannelPermission, OverrideField};
 
-    use crate::{Role, Server, User};
+    use crate::{
+        util::permissions::DatabasePermissionQuery, Channel, Member, MemberCompositeKey, Role,
+        Server, User,
+    };
 
     #[async_std::test]
     async fn permissions() {
@@ -474,12 +477,26 @@ mod tests {
                 .await
                 .unwrap();
 
-            let server = Server {
+            let server_id = ulid::Ulid::new().to_string();
+
+            let channel = Channel::TextChannel {
                 id: ulid::Ulid::new().to_string(),
-                owner: owner.id,
+                server: server_id.clone(),
+                name: "Channel".to_string(),
+                description: None,
+                icon: None,
+                last_message_id: None,
+                default_permissions: None,
+                role_permissions: HashMap::new(),
+                nsfw: false,
+            };
+
+            let server = Server {
+                id: server_id,
+                owner: owner.id.clone(),
                 name: "My Server".to_string(),
                 description: None,
-                channels: vec![],
+                channels: vec![channel.id()],
                 categories: None,
                 system_messages: None,
                 roles: HashMap::from([
@@ -488,7 +505,7 @@ mod tests {
                         Role {
                             name: "Moderator".to_string(),
                             permissions: OverrideField {
-                                a: 545270208,
+                                a: 545270208, // TODO: explicit
                                 ..Default::default()
                             },
                             colour: None,
@@ -516,7 +533,56 @@ mod tests {
                 discoverable: false,
             };
 
+            // TODO: proper creation
+            db.insert_channel(&channel).await.unwrap();
             server.create(&db).await.unwrap();
+
+            db.insert_member(&Member {
+                id: MemberCompositeKey {
+                    user: owner.id.clone(),
+                    server: server.id.clone(),
+                },
+                roles: vec!["01FBF9DNHSRPVTWFMNB3JNB8FK".to_string()],
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+
+            db.insert_member(&Member {
+                id: MemberCompositeKey {
+                    user: moderator.id.clone(),
+                    server: server.id.clone(),
+                },
+                roles: vec!["01F9HFTSBWTNA2F4TMSV7VM3FG".to_string()],
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+
+            db.insert_member(&Member {
+                id: MemberCompositeKey {
+                    user: user.id.clone(),
+                    server: server.id.clone(),
+                },
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+
+            let mut query = DatabasePermissionQuery::new(&db, &owner).server(&server);
+            assert!(calculate_server_permissions(&mut query)
+                .await
+                .has_channel_permission(ChannelPermission::GrantAllSafe));
+
+            let mut query = DatabasePermissionQuery::new(&db, &moderator).server(&server);
+            assert!(calculate_server_permissions(&mut query)
+                .await
+                .has_channel_permission(ChannelPermission::BanMembers));
+
+            let mut query = DatabasePermissionQuery::new(&db, &user).server(&server);
+            assert!(!calculate_server_permissions(&mut query)
+                .await
+                .has_channel_permission(ChannelPermission::BanMembers));
         });
     }
 }

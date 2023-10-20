@@ -1,6 +1,6 @@
 use std::num::NonZeroUsize;
 
-use revolt_result::{create_error, Error, Result};
+use revolt_result::{create_error, Result};
 
 use async_std::sync::Mutex;
 use once_cell::sync::Lazy;
