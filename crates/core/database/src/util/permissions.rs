@@ -344,6 +344,7 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
                 | Cow::Owned(Channel::TextChannel { server, .. })
                 | Cow::Borrowed(Channel::VoiceChannel { server, .. })
                 | Cow::Owned(Channel::VoiceChannel { server, .. }) => {
+                    // FIXME: may double fetch
                     if let Ok(server) = self.database.fetch_server(server).await {
                         self.server.replace(Cow::Owned(server));
                     }
