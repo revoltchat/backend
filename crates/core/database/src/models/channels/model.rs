@@ -624,3 +624,148 @@ impl IntoDocumentPath for FieldsChannel {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use revolt_permissions::{calculate_channel_permissions, ChannelPermission, OverrideField};
+
+    use crate::{
+        util::permissions::DatabasePermissionQuery, Channel, Member, MemberCompositeKey, Role,
+        Server, User,
+    };
+
+    #[async_std::test]
+    async fn permissions_text_channel() {
+        database_test!(|db| async move {
+            let owner = User::create(&db, "Owner".to_string(), None, None)
+                .await
+                .unwrap();
+
+            let moderator = User::create(&db, "Moderator".to_string(), None, None)
+                .await
+                .unwrap();
+
+            let user = User::create(&db, "User".to_string(), None, None)
+                .await
+                .unwrap();
+
+            let server_id = ulid::Ulid::new().to_string();
+
+            let channel = Channel::TextChannel {
+                id: ulid::Ulid::new().to_string(),
+                server: server_id.clone(),
+                name: "Channel".to_string(),
+                description: None,
+                icon: None,
+                last_message_id: None,
+                default_permissions: Some(OverrideField {
+                    d: 1048576, // TODO: bitfield
+                    ..Default::default()
+                }),
+                role_permissions: HashMap::from([(
+                    "01F9HFTSBWTNA2F4TMSV7VM3FG".to_string(),
+                    OverrideField {
+                        a: 1048576, // TODO: bitfield
+                        ..Default::default()
+                    },
+                )]),
+                nsfw: false,
+            };
+
+            let server = Server {
+                id: server_id,
+                owner: owner.id.clone(),
+                name: "My Server".to_string(),
+                description: None,
+                channels: vec![channel.id()],
+                categories: None,
+                system_messages: None,
+                roles: HashMap::from([
+                    (
+                        "01F9HFTSBWTNA2F4TMSV7VM3FG".to_string(),
+                        Role {
+                            name: "Moderator".to_string(),
+                            permissions: OverrideField {
+                                a: 545270208, // TODO: explicit
+                                ..Default::default()
+                            },
+                            colour: None,
+                            hoist: true,
+                            rank: 3,
+                        },
+                    ),
+                    (
+                        "01FBF9DNHSRPVTWFMNB3JNB8FK".to_string(),
+                        Role {
+                            name: "Owner".to_string(),
+                            permissions: Default::default(),
+                            colour: None,
+                            hoist: true,
+                            rank: 0,
+                        },
+                    ),
+                ]),
+                default_permissions: 4000322560, // TODO: use bitfield
+                icon: None,
+                banner: None,
+                flags: None,
+                nsfw: false,
+                analytics: false,
+                discoverable: false,
+            };
+
+            // TODO: proper creation
+            db.insert_channel(&channel).await.unwrap();
+            server.create(&db).await.unwrap();
+
+            db.insert_member(&Member {
+                id: MemberCompositeKey {
+                    user: owner.id.clone(),
+                    server: server.id.clone(),
+                },
+                roles: vec!["01FBF9DNHSRPVTWFMNB3JNB8FK".to_string()],
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+
+            db.insert_member(&Member {
+                id: MemberCompositeKey {
+                    user: moderator.id.clone(),
+                    server: server.id.clone(),
+                },
+                roles: vec!["01F9HFTSBWTNA2F4TMSV7VM3FG".to_string()],
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+
+            db.insert_member(&Member {
+                id: MemberCompositeKey {
+                    user: user.id.clone(),
+                    server: server.id.clone(),
+                },
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+
+            let mut query = DatabasePermissionQuery::new(&db, &owner).channel(&channel);
+            assert!(calculate_channel_permissions(&mut query)
+                .await
+                .has_channel_permission(ChannelPermission::SendMessage));
+
+            let mut query = DatabasePermissionQuery::new(&db, &moderator).channel(&channel);
+            assert!(calculate_channel_permissions(&mut query)
+                .await
+                .has_channel_permission(ChannelPermission::SendMessage));
+
+            let mut query = DatabasePermissionQuery::new(&db, &user).channel(&channel);
+            assert!(!calculate_channel_permissions(&mut query)
+                .await
+                .has_channel_permission(ChannelPermission::SendMessage));
+        });
+    }
+}

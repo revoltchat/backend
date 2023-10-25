@@ -221,7 +221,6 @@ mod tests {
         // Create a few more sessions
         let (first_session, second_session_id) = create_session(&user_id, 0).await;
         assert!(!first_session);
-        dbg!(second_session_id);
         assert_eq!(second_session_id as u8 & 1, 0);
 
         let (first_session, other_session_id) = create_session(&other_id, 0).await;

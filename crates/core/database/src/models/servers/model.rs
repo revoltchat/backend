@@ -458,8 +458,7 @@ mod tests {
     use revolt_permissions::{calculate_server_permissions, ChannelPermission, OverrideField};
 
     use crate::{
-        util::permissions::DatabasePermissionQuery, Channel, Member, MemberCompositeKey, Role,
-        Server, User,
+        util::permissions::DatabasePermissionQuery, Member, MemberCompositeKey, Role, Server, User,
     };
 
     #[async_std::test]
@@ -479,24 +478,14 @@ mod tests {
 
             let server_id = ulid::Ulid::new().to_string();
 
-            let channel = Channel::TextChannel {
-                id: ulid::Ulid::new().to_string(),
-                server: server_id.clone(),
-                name: "Channel".to_string(),
-                description: None,
-                icon: None,
-                last_message_id: None,
-                default_permissions: None,
-                role_permissions: HashMap::new(),
-                nsfw: false,
-            };
-
+            // TODO: seeder functions
+            // e.g. seed!("channel", "file.json")
             let server = Server {
                 id: server_id,
                 owner: owner.id.clone(),
                 name: "My Server".to_string(),
                 description: None,
-                channels: vec![channel.id()],
+                channels: vec![],
                 categories: None,
                 system_messages: None,
                 roles: HashMap::from([
@@ -534,7 +523,6 @@ mod tests {
             };
 
             // TODO: proper creation
-            db.insert_channel(&channel).await.unwrap();
             server.create(&db).await.unwrap();
 
             db.insert_member(&Member {
