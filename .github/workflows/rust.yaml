@@ -54,6 +54,8 @@ jobs:
 
       - name: Start API in background
         if: github.event_name != 'pull_request' && github.ref_name == 'master'
+        env:
+          TEST_DB: REFERENCE
         run: |
           cargo run --bin revolt-delta &
 
