@@ -13,7 +13,12 @@ static CONFIG_BUILDER: Lazy<RwLock<Config>> = Lazy::new(|| {
             FileFormat::Toml,
         ));
 
-        if std::path::Path::new("Revolt.toml").exists() {
+        if std::env::var("TEST_DB").is_ok() {
+            builder = builder.add_source(File::from_str(
+                include_str!("../Revolt.test.toml"),
+                FileFormat::Toml,
+            ));
+        } else if std::path::Path::new("Revolt.toml").exists() {
             builder = builder.add_source(File::new("Revolt.toml", FileFormat::Toml));
         }
 
