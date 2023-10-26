@@ -1,6 +1,9 @@
 use std::num::NonZeroUsize;
 
-use revolt_result::{create_error, Result, Error};
+use revolt_result::{create_error, Result};
+
+#[cfg(feature = "rocket-impl")]
+use revolt_result::Error;
 
 use async_std::sync::Mutex;
 use once_cell::sync::Lazy;

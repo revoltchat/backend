@@ -18,7 +18,7 @@ mod tests {
             db.migrate_database().await.unwrap();
 
             // Migrate the existing database
-            db.migrate_database().await.unwrap()
+            db.migrate_database().await.unwrap();
         });
     }
 }
