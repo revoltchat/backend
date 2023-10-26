@@ -1,6 +1,7 @@
 mod mongodb;
 mod reference;
 
+use rand::Rng;
 use revolt_config::config;
 
 pub use self::mongodb::*;
@@ -38,9 +39,12 @@ impl DatabaseInfo {
         Ok(match self {
             DatabaseInfo::Auto => {
                 if std::env::var("TEST_DB").is_ok() {
-                    DatabaseInfo::Test("revolt_test".to_string())
-                        .connect()
-                        .await?
+                    DatabaseInfo::Test(format!(
+                        "revolt_test_{}",
+                        rand::thread_rng().gen_range(1_000_000..10_000_000)
+                    ))
+                    .connect()
+                    .await?
                 } else if !config.database.mongodb.is_empty() {
                     DatabaseInfo::MongoDb {
                         uri: config.database.mongodb,
