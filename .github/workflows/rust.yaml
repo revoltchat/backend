@@ -34,10 +34,6 @@ jobs:
         run: |
           cp .env.example .env
 
-      - name: Copy Revolt.test.toml
-        run: |
-          cp Revolt.test.toml Revolt.toml
-
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         env:
