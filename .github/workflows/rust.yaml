@@ -20,6 +20,11 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt, clippy
+      - name: Install cargo-nextest
+        uses: baptiste0928/cargo-install@v1
+        with:
+          crate: cargo-nextest
+          locked: true
 
       - name: Run cargo build
         uses: actions-rs/cargo@v1
@@ -35,19 +40,17 @@ jobs:
           cp .env.example .env
 
       - name: Run cargo test
-        uses: actions-rs/cargo@v1
         env:
           TEST_DB: REFERENCE
-        with:
-          command: test
+        run: |
+          cargo nextest run
 
       - name: Run cargo test (with MongoDB)
-        uses: actions-rs/cargo@v1
         env:
           TEST_DB: MONGODB
           MONGODB: mongodb://localhost
-        with:
-          command: test
+        run: |
+          cargo nextest run
 
       - name: Start API in background
         if: github.event_name != 'pull_request' && github.ref_name == 'master'
