@@ -1,119 +1,39 @@
-use std::collections::HashMap;
-
-use revolt_quark::{
-    models::{server::PartialServer, Channel, User},
-    perms, Db, Error, Permission, Ref, Result, variables::delta::MAX_CHANNEL_COUNT,
-};
+use revolt_database::util::permissions::DatabasePermissionQuery;
+use revolt_database::{util::reference::Reference, Channel, Database, User};
+use revolt_models::v0;
+use revolt_permissions::{calculate_server_permissions, ChannelPermission};
+use revolt_result::{create_error, Result};
 
 use rocket::serde::json::Json;
-use serde::{Deserialize, Serialize};
-use ulid::Ulid;
+use rocket::State;
 use validator::Validate;
-
-/// # Channel Type
-#[derive(Serialize, Deserialize, JsonSchema, Default)]
-enum ChannelType {
-    /// Text Channel
-    #[default]
-    Text,
-    /// Voice Channel
-    Voice,
-}
-
-/// # Channel Data
-#[derive(Validate, Serialize, Deserialize, JsonSchema)]
-pub struct DataCreateChannel {
-    /// Channel type
-    #[serde(rename = "type", default = "ChannelType::default")]
-    channel_type: ChannelType,
-    /// Channel name
-    #[validate(length(min = 1, max = 32))]
-    name: String,
-    /// Channel description
-    #[validate(length(min = 0, max = 1024))]
-    description: Option<String>,
-    /// Whether this channel is age restricted
-    #[serde(skip_serializing_if = "Option::is_none")]
-    nsfw: Option<bool>,
-}
 
 /// # Create Channel
 ///
 /// Create a new Text or Voice channel.
 #[openapi(tag = "Server Information")]
-#[post("/<target>/channels", data = "<info>")]
-pub async fn req(
-    db: &Db,
+#[post("/<server>/channels", data = "<data>")]
+pub async fn create_server_channel(
+    db: &State<Database>,
     user: User,
-    target: Ref,
-    info: Json<DataCreateChannel>,
-) -> Result<Json<Channel>> {
-    let info = info.into_inner();
-    info.validate()
-        .map_err(|error| Error::FailedValidation { error })?;
+    server: Reference,
+    data: Json<v0::DataCreateServerChannel>,
+) -> Result<Json<v0::Channel>> {
+    let data = data.into_inner();
+    data.validate().map_err(|error| {
+        create_error!(FailedValidation {
+            error: error.to_string()
+        })
+    })?;
 
-    let mut server = target.as_server(db).await?;
-    perms(&user)
-        .server(&server)
-        .throw_permission(db, Permission::ManageChannel)
-        .await?;
+    let mut server = server.as_server(db).await?;
+    let mut query = DatabasePermissionQuery::new(db, &user).server(&server);
+    calculate_server_permissions(&mut query)
+        .await
+        .throw_if_lacking_channel_permission(ChannelPermission::ManageChannel)?;
 
-    if server.channels.len() > *MAX_CHANNEL_COUNT {
-        return Err(Error::TooManyChannels { max: *MAX_CHANNEL_COUNT })
-    };
-
-    let id = Ulid::new().to_string();
-    let mut channels = server.channels.clone();
-    channels.push(id.clone());
-
-    let DataCreateChannel {
-        name,
-        description,
-        nsfw,
-        channel_type,
-    } = info;
-    let channel = match channel_type {
-        ChannelType::Text => Channel::TextChannel {
-            id,
-            server: server.id.clone(),
-
-            name,
-            description,
-
-            icon: None,
-            last_message_id: None,
-
-            default_permissions: None,
-            role_permissions: HashMap::new(),
-
-            nsfw: nsfw.unwrap_or(false),
-        },
-        ChannelType::Voice => Channel::VoiceChannel {
-            id,
-            server: server.id.clone(),
-
-            name,
-            description,
-            icon: None,
-
-            default_permissions: None,
-            role_permissions: HashMap::new(),
-
-            nsfw: nsfw.unwrap_or(false),
-        },
-    };
-
-    channel.create(db).await?;
-    server
-        .update(
-            db,
-            PartialServer {
-                channels: Some(channels),
-                ..Default::default()
-            },
-            vec![],
-        )
-        .await?;
-
-    Ok(Json(channel))
+    Channel::create_server_channel(db, &mut server, data, true)
+        .await
+        .map(|channel| channel.into())
+        .map(Json)
 }

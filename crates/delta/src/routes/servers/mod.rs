@@ -30,7 +30,7 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         server_fetch::req,
         server_edit::req,
         server_ack::req,
-        channel_create::req,
+        channel_create::create_server_channel,
         member_fetch_all::req,
         member_remove::req,
         member_fetch::req,

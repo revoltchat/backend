@@ -6,7 +6,10 @@ use revolt_permissions::OverrideField;
 use revolt_result::Result;
 use serde::{Deserialize, Serialize};
 
-use crate::{events::client::EventV1, Database, File, IntoDocumentPath, SystemMessage, User};
+use crate::{
+    events::client::EventV1, Database, File, IntoDocumentPath, PartialServer, Server,
+    SystemMessage, User,
+};
 
 auto_derived!(
     #[serde(tag = "channel_type")]
@@ -188,6 +191,67 @@ impl Channel {
 
         Ok(())
     }*/
+
+    /// Create a new server channel
+    pub async fn create_server_channel(
+        db: &Database,
+        server: &mut Server,
+        data: v0::DataCreateServerChannel,
+        update_server: bool,
+    ) -> Result<Channel> {
+        let config = config().await;
+        if server.channels.len() > config.features.limits.default.server_channels {
+            return Err(create_error!(TooManyChannels {
+                max: config.features.limits.default.server_channels,
+            }));
+        };
+
+        let id = ulid::Ulid::new().to_string();
+        let channel = match data.channel_type {
+            v0::LegacyServerChannelType::Text => Channel::TextChannel {
+                id: id.clone(),
+                server: server.id.to_owned(),
+                name: data.name,
+                description: data.description,
+                icon: None,
+                last_message_id: None,
+                default_permissions: None,
+                role_permissions: HashMap::new(),
+                nsfw: data.nsfw.unwrap_or(false),
+            },
+            v0::LegacyServerChannelType::Voice => Channel::VoiceChannel {
+                id: id.clone(),
+                server: server.id.to_owned(),
+                name: data.name,
+                description: data.description,
+                icon: None,
+                default_permissions: None,
+                role_permissions: HashMap::new(),
+                nsfw: data.nsfw.unwrap_or(false),
+            },
+        };
+
+        db.insert_channel(&channel).await?;
+
+        if update_server {
+            server
+                .update(
+                    db,
+                    PartialServer {
+                        channels: Some([server.channels.clone(), [id].into()].concat()),
+                        ..Default::default()
+                    },
+                    vec![],
+                )
+                .await?;
+
+            EventV1::ChannelCreate(channel.clone().into())
+                .p(server.id.clone())
+                .await;
+        }
+
+        Ok(channel)
+    }
 
     /// Create a group
     pub async fn create_group(
@@ -627,130 +691,18 @@ impl IntoDocumentPath for FieldsChannel {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 
-    use revolt_permissions::{calculate_channel_permissions, ChannelPermission, OverrideField};
-
-    use crate::{
-        util::permissions::DatabasePermissionQuery, Channel, Member, MemberCompositeKey, Role,
-        Server, User,
-    };
+    use crate::{fixture, util::permissions::DatabasePermissionQuery};
 
     #[async_std::test]
     async fn permissions_text_channel() {
         database_test!(|db| async move {
-            let owner = User::create(&db, "Owner".to_string(), None, None)
-                .await
-                .unwrap();
-
-            let moderator = User::create(&db, "Moderator".to_string(), None, None)
-                .await
-                .unwrap();
-
-            let user = User::create(&db, "User".to_string(), None, None)
-                .await
-                .unwrap();
-
-            let server_id = ulid::Ulid::new().to_string();
-
-            let channel = Channel::TextChannel {
-                id: ulid::Ulid::new().to_string(),
-                server: server_id.clone(),
-                name: "Channel".to_string(),
-                description: None,
-                icon: None,
-                last_message_id: None,
-                default_permissions: Some(OverrideField {
-                    d: 1048576, // TODO: bitfield
-                    ..Default::default()
-                }),
-                role_permissions: HashMap::from([(
-                    "01F9HFTSBWTNA2F4TMSV7VM3FG".to_string(),
-                    OverrideField {
-                        a: 1048576, // TODO: bitfield
-                        ..Default::default()
-                    },
-                )]),
-                nsfw: false,
-            };
-
-            let server = Server {
-                id: server_id,
-                owner: owner.id.clone(),
-                name: "My Server".to_string(),
-                description: None,
-                channels: vec![channel.id()],
-                categories: None,
-                system_messages: None,
-                roles: HashMap::from([
-                    (
-                        "01F9HFTSBWTNA2F4TMSV7VM3FG".to_string(),
-                        Role {
-                            name: "Moderator".to_string(),
-                            permissions: OverrideField {
-                                a: 545270208, // TODO: explicit
-                                ..Default::default()
-                            },
-                            colour: None,
-                            hoist: true,
-                            rank: 3,
-                        },
-                    ),
-                    (
-                        "01FBF9DNHSRPVTWFMNB3JNB8FK".to_string(),
-                        Role {
-                            name: "Owner".to_string(),
-                            permissions: Default::default(),
-                            colour: None,
-                            hoist: true,
-                            rank: 0,
-                        },
-                    ),
-                ]),
-                default_permissions: 4000322560, // TODO: use bitfield
-                icon: None,
-                banner: None,
-                flags: None,
-                nsfw: false,
-                analytics: false,
-                discoverable: false,
-            };
-
-            // TODO: proper creation
-            db.insert_channel(&channel).await.unwrap();
-            server.create(&db).await.unwrap();
-
-            db.insert_member(&Member {
-                id: MemberCompositeKey {
-                    user: owner.id.clone(),
-                    server: server.id.clone(),
-                },
-                roles: vec!["01FBF9DNHSRPVTWFMNB3JNB8FK".to_string()],
-                ..Default::default()
-            })
-            .await
-            .unwrap();
-
-            db.insert_member(&Member {
-                id: MemberCompositeKey {
-                    user: moderator.id.clone(),
-                    server: server.id.clone(),
-                },
-                roles: vec!["01F9HFTSBWTNA2F4TMSV7VM3FG".to_string()],
-                ..Default::default()
-            })
-            .await
-            .unwrap();
-
-            db.insert_member(&Member {
-                id: MemberCompositeKey {
-                    user: user.id.clone(),
-                    server: server.id.clone(),
-                },
-                ..Default::default()
-            })
-            .await
-            .unwrap();
+            fixture!(db, "server_with_roles",
+                owner user 0
+                moderator user 1
+                user user 2
+                channel channel 3);
 
             let mut query = DatabasePermissionQuery::new(&db, &owner).channel(&channel);
             assert!(calculate_channel_permissions(&mut query)

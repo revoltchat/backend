@@ -212,21 +212,49 @@ auto_derived!(
     #[cfg_attr(feature = "validator", derive(validator::Validate))]
     pub struct DataCreateGroup {
         /// Group name
-        #[validate(length(min = 1, max = 32))]
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
         pub name: String,
         /// Group description
-        #[validate(length(min = 0, max = 1024))]
+        #[cfg_attr(feature = "validator", validate(length(min = 0, max = 1024)))]
         pub description: Option<String>,
         /// Group icon
-        #[validate(length(min = 1, max = 128))]
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
         pub icon: Option<String>,
         /// Array of user IDs to add to the group
         ///
         /// Must be friends with these users.
-        #[validate(length(min = 0, max = 49))]
+        #[cfg_attr(feature = "validator", validate(length(min = 0, max = 49)))]
         #[serde(default)]
         pub users: HashSet<String>,
         /// Whether this group is age-restricted
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub nsfw: Option<bool>,
+    }
+
+    /// Server Channel Type
+    #[derive(Default)]
+    pub enum LegacyServerChannelType {
+        /// Text Channel
+        #[default]
+        Text,
+        /// Voice Channel
+        Voice,
+    }
+
+    /// Create new server channel
+    #[derive(Default)]
+    #[cfg_attr(feature = "validator", derive(validator::Validate))]
+    pub struct DataCreateServerChannel {
+        /// Channel type
+        #[serde(rename = "type", default = "LegacyServerChannelType::default")]
+        pub channel_type: LegacyServerChannelType,
+        /// Channel name
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
+        pub name: String,
+        /// Channel description
+        #[cfg_attr(feature = "validator", validate(length(min = 0, max = 1024)))]
+        pub description: Option<String>,
+        /// Whether this channel is age restricted
         #[serde(skip_serializing_if = "Option::is_none")]
         pub nsfw: Option<bool>,
     }

@@ -453,109 +453,18 @@ impl SystemMessageChannels {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use revolt_permissions::{calculate_server_permissions, ChannelPermission};
 
-    use revolt_permissions::{calculate_server_permissions, ChannelPermission, OverrideField};
-
-    use crate::{
-        util::permissions::DatabasePermissionQuery, Member, MemberCompositeKey, Role, Server, User,
-    };
+    use crate::{fixture, util::permissions::DatabasePermissionQuery};
 
     #[async_std::test]
     async fn permissions() {
         database_test!(|db| async move {
-            let owner = User::create(&db, "Owner".to_string(), None, None)
-                .await
-                .unwrap();
-
-            let moderator = User::create(&db, "Moderator".to_string(), None, None)
-                .await
-                .unwrap();
-
-            let user = User::create(&db, "User".to_string(), None, None)
-                .await
-                .unwrap();
-
-            let server_id = ulid::Ulid::new().to_string();
-
-            // TODO: seeder functions
-            // e.g. seed!("channel", "file.json")
-            let server = Server {
-                id: server_id,
-                owner: owner.id.clone(),
-                name: "My Server".to_string(),
-                description: None,
-                channels: vec![],
-                categories: None,
-                system_messages: None,
-                roles: HashMap::from([
-                    (
-                        "01F9HFTSBWTNA2F4TMSV7VM3FG".to_string(),
-                        Role {
-                            name: "Moderator".to_string(),
-                            permissions: OverrideField {
-                                a: 545270208, // TODO: explicit
-                                ..Default::default()
-                            },
-                            colour: None,
-                            hoist: true,
-                            rank: 3,
-                        },
-                    ),
-                    (
-                        "01FBF9DNHSRPVTWFMNB3JNB8FK".to_string(),
-                        Role {
-                            name: "Owner".to_string(),
-                            permissions: Default::default(),
-                            colour: None,
-                            hoist: true,
-                            rank: 0,
-                        },
-                    ),
-                ]),
-                default_permissions: 4000322560, // TODO: use bitfield
-                icon: None,
-                banner: None,
-                flags: None,
-                nsfw: false,
-                analytics: false,
-                discoverable: false,
-            };
-
-            // TODO: proper creation
-            server.create(&db).await.unwrap();
-
-            db.insert_member(&Member {
-                id: MemberCompositeKey {
-                    user: owner.id.clone(),
-                    server: server.id.clone(),
-                },
-                roles: vec!["01FBF9DNHSRPVTWFMNB3JNB8FK".to_string()],
-                ..Default::default()
-            })
-            .await
-            .unwrap();
-
-            db.insert_member(&Member {
-                id: MemberCompositeKey {
-                    user: moderator.id.clone(),
-                    server: server.id.clone(),
-                },
-                roles: vec!["01F9HFTSBWTNA2F4TMSV7VM3FG".to_string()],
-                ..Default::default()
-            })
-            .await
-            .unwrap();
-
-            db.insert_member(&Member {
-                id: MemberCompositeKey {
-                    user: user.id.clone(),
-                    server: server.id.clone(),
-                },
-                ..Default::default()
-            })
-            .await
-            .unwrap();
+            fixture!(db, "server_with_roles",
+                owner user 0
+                moderator user 1
+                user user 2
+                server server 4);
 
             let mut query = DatabasePermissionQuery::new(&db, &owner).server(&server);
             assert!(calculate_server_permissions(&mut query)
