@@ -344,7 +344,23 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
                 | Cow::Owned(Channel::TextChannel { server, .. })
                 | Cow::Borrowed(Channel::VoiceChannel { server, .. })
                 | Cow::Owned(Channel::VoiceChannel { server, .. }) => {
-                    // FIXME: may double fetch
+                    if let Some(known_server) =
+                        // I'm not sure why I can't just pattern match both at once here?
+                        // It throws some weird error and the provided fix doesn't work :/
+                        if let Some(Cow::Borrowed(known_server)) = self.server {
+                                Some(known_server)
+                            } else if let Some(Cow::Owned(ref known_server)) = self.server {
+                                Some(known_server)
+                            } else {
+                                None
+                            }
+                    {
+                        if server == &known_server.id {
+                            // Already cached, return early.
+                            return;
+                        }
+                    }
+
                     if let Ok(server) = self.database.fetch_server(server).await {
                         self.server.replace(Cow::Owned(server));
                     }
