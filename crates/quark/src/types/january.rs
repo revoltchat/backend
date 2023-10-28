@@ -2,10 +2,10 @@ use async_lock::Semaphore;
 use async_std::task::spawn;
 use futures::future::join_all;
 use linkify::{LinkFinder, LinkKind};
+use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, sync::Arc};
-use once_cell::sync::Lazy;
 
 use crate::{models::attachment::File, Error, Result};
 
@@ -187,8 +187,6 @@ impl Embed {
         max_embeds: usize,
         semaphore: Arc<Semaphore>,
     ) -> Result<Vec<Embed>> {
-
-
         // Ignore code blocks.
         let content = RE_CODE.replace_all(&content, "");
 
@@ -233,7 +231,6 @@ impl Embed {
             return Err(Error::LabelMe);
         }
 
-        // ! FIXME: batch request to january?
         let client = reqwest::Client::new();
 
         let mut tasks = Vec::new();

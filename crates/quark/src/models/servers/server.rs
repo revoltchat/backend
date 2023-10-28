@@ -93,7 +93,6 @@ pub struct Server {
     pub description: Option<String>,
 
     /// Channels within this server
-    // ! FIXME: this may be redundant
     pub channels: Vec<String>,
     /// Categories for this server
     #[serde(skip_serializing_if = "Option::is_none")]

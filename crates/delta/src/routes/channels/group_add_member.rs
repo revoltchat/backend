@@ -31,8 +31,7 @@ pub async fn req(
 
     match &channel {
         Channel::Group { .. } => {
-            // FIXME: use permissions here?
-            // interesting if users could block new group invites
+            // TODO: use permissions here? interesting if users could block new group invites
             let member = member_id.as_user(db).await?;
             if !user.is_friends_with(&member.id) {
                 return Err(create_error!(NotFriends));

@@ -37,6 +37,12 @@ pub async fn calculate_user_permissions<P: PermissionQuery>(query: &mut P) -> Pe
     } else {
         permissions.into()
     }
+
+    // TODO: add boolean switch for permission for users to globally message a user
+    // maybe an enum?
+    // PrivacyLevel { Private, Friends, Mutual, Public, Global }
+
+    // TODO: add boolean switch for permission for users to mutually DM a user
 }
 
 /// Calculate permissions against a server

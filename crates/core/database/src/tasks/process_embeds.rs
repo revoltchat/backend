@@ -132,7 +132,7 @@ pub async fn generate(
         return Err(create_error!(LabelMe));
     }
 
-    // ! FIXME: batch request to january
+    // TODO: batch request to january
     let mut tasks = Vec::new();
 
     for link in links {

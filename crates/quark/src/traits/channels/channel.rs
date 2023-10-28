@@ -43,7 +43,7 @@ pub trait AbstractChannel: Sync + Send {
     async fn remove_user_from_group(&self, channel: &str, user: &str) -> Result<()>;
 
     /// Set role permission for a channel
-    /// ! FIXME: may want to refactor to just use normal updates
+    /// TODO: may want to refactor to just use normal updates
     async fn set_channel_role_permission(
         &self,
         channel: &str,

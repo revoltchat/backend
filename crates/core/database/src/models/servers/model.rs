@@ -23,7 +23,7 @@ auto_derived_partial!(
         pub description: Option<String>,
 
         /// Channels within this server
-        // ! FIXME: this may be redundant
+        // TODO: investigate if this is redundant and can be removed
         pub channels: Vec<String>,
         /// Categories for this server
         #[serde(skip_serializing_if = "Option::is_none")]

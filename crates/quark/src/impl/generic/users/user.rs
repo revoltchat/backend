@@ -170,7 +170,8 @@ impl User {
 
     /// Check if this user can acquire another server
     pub async fn can_acquire_server(&self, db: &Database) -> Result<bool> {
-        // ! FIXME: hardcoded max server count
+        // hardcoded max server count
+        // NB. fixed in new crate
         Ok(db.fetch_server_count(&self.id).await? <= 100)
     }
 

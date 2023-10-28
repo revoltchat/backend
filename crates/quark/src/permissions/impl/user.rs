@@ -78,12 +78,6 @@ async fn calculate_permission(data: &mut PermissionCalculator<'_>, db: &crate::D
         _ => {}
     }
 
-    // ! FIXME: add boolean switch for permission for users to globally message a user
-    // maybe an enum?
-    // PrivacyLevel { Private, Friends, Mutual, Public, Global }
-
-    // ! FIXME: add boolean switch for permission for users to mutually DM a user
-
     if data.flag_has_mutual_connection
         || data
             .perspective
