@@ -1,10 +1,11 @@
 use std::collections::{HashMap, HashSet};
 
-use revolt_permissions::OverrideField;
+use revolt_models::v0::{self, DataCreateServerChannel};
+use revolt_permissions::{OverrideField, DEFAULT_PERMISSION_SERVER};
 use revolt_result::Result;
 use ulid::Ulid;
 
-use crate::{events::client::EventV1, Database, File};
+use crate::{events::client::EventV1, Channel, Database, File, User};
 
 auto_derived_partial!(
     /// Server
@@ -131,8 +132,51 @@ auto_derived!(
 #[allow(clippy::disallowed_methods)]
 impl Server {
     /// Create a server
-    pub async fn create(&self, db: &Database) -> Result<()> {
-        db.insert_server(self).await
+    pub async fn create(
+        db: &Database,
+        data: v0::DataCreateServer,
+        owner: &User,
+        create_default_channels: bool,
+    ) -> Result<(Server, Vec<Channel>)> {
+        let mut server = Server {
+            id: ulid::Ulid::new().to_string(),
+            owner: owner.id.to_string(),
+            name: data.name,
+            description: data.description,
+            channels: vec![],
+            nsfw: data.nsfw.unwrap_or(false),
+            default_permissions: *DEFAULT_PERMISSION_SERVER as i64,
+
+            analytics: false,
+            banner: None,
+            categories: None,
+            discoverable: false,
+            flags: None,
+            icon: None,
+            roles: HashMap::new(),
+            system_messages: None,
+        };
+
+        let channels: Vec<Channel> = if create_default_channels {
+            vec![
+                Channel::create_server_channel(
+                    db,
+                    &mut server,
+                    DataCreateServerChannel {
+                        channel_type: v0::LegacyServerChannelType::Text,
+                        name: "General".to_string(),
+                        ..Default::default()
+                    },
+                    false,
+                )
+                .await?,
+            ]
+        } else {
+            vec![]
+        };
+
+        db.insert_server(&server).await?;
+        Ok((server, channels))
     }
 
     /// Update server data
@@ -209,80 +253,7 @@ impl Server {
         }
     }
 
-    /* /// Create a new member in a server
-    pub async fn create_member(
-        &self,
-        db: &Database,
-        user: User,
-        channels: Option<Vec<Channel>>,
-    ) -> Result<Vec<Channel>> {
-        if db.fetch_ban(&self.id, &user.id).await.is_ok() {
-            return Err(Error::Banned);
-        }
-
-        let member = Member {
-            id: MemberCompositeKey {
-                server: self.id.clone(),
-                user: user.id.clone(),
-            },
-            joined_at: Timestamp::now_utc(),
-            nickname: None,
-            avatar: None,
-            roles: vec![],
-            timeout: None,
-        };
-
-        db.insert_member(&member).await?;
-
-        let should_fetch = channels.is_none();
-        let mut channels = channels.unwrap_or_default();
-
-        if should_fetch {
-            let perm = perms(&user).server(self).member(&member);
-            let existing_channels = db.fetch_channels(&self.channels).await?;
-            for channel in existing_channels {
-                if perm
-                    .clone()
-                    .channel(&channel)
-                    .has_permission(db, Permission::ViewChannel)
-                    .await?
-                {
-                    channels.push(channel);
-                }
-            }
-        }
-
-        /* // TODO: EventV1::ServerMemberJoin {
-            id: self.id.clone(),
-            user: user.id.clone(),
-        }
-        .p(self.id.clone())
-        .await;
-
-        EventV1::ServerCreate {
-            id: self.id.clone(),
-            server: self.clone(),
-            channels: channels.clone(),
-        }
-        .private(user.id.clone())
-        .await; */
-
-        if let Some(id) = self
-            .system_messages
-            .as_ref()
-            .and_then(|x| x.user_joined.as_ref())
-        {
-            SystemMessage::UserJoined {
-                id: user.id.clone(),
-            }
-            .into_message(id.to_string())
-            .create_no_web_push(db, id, false)
-            .await
-            .ok();
-        }
-
-        Ok(channels)
-    }
+    /*
 
     /// Remove a member from a server
     pub async fn remove_member(

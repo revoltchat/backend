@@ -3,8 +3,8 @@ use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
 
 use crate::{
-    events::client::EventV1, util::permissions::DatabasePermissionQuery, Database, File, Server,
-    SystemMessage, User,
+    events::client::EventV1, util::permissions::DatabasePermissionQuery, Channel, Database, File,
+    Server, SystemMessage, User,
 };
 
 auto_derived_partial!(
@@ -80,9 +80,8 @@ impl Member {
         db: &Database,
         server: &Server,
         user: &User,
-        // channels: Option<Vec<Channel>>,
-        //) -> Result<Vec<Channel>> {
-    ) -> Result<()> {
+        channels: Option<Vec<Channel>>,
+    ) -> Result<Vec<Channel>> {
         if db.fetch_ban(&server.id, &user.id).await.is_ok() {
             return Err(create_error!(Banned));
         }
@@ -101,9 +100,10 @@ impl Member {
 
         db.insert_member(&member).await?;
 
-        let mut channels = vec![];
+        let should_fetch = channels.is_none();
+        let mut channels = channels.unwrap_or_default();
 
-        if true {
+        if should_fetch {
             let query = DatabasePermissionQuery::new(db, user).server(server);
             let existing_channels = db.fetch_channels(&server.channels).await?;
 
@@ -152,8 +152,7 @@ impl Member {
             .ok();
         }
 
-        // Ok(channels)
-        Ok(())
+        Ok(channels)
     }
 
     /// Update member data

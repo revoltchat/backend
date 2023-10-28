@@ -1,102 +1,39 @@
-use std::collections::HashMap;
-
-use revolt_quark::{
-    models::{Channel, Server, User},
-    variables::delta::MAX_SERVER_COUNT,
-    Db, Error, Result, DEFAULT_PERMISSION_SERVER,
-};
+use revolt_database::{Database, Member, Server, User};
+use revolt_models::v0;
+use revolt_result::{create_error, Result};
 
 use rocket::serde::json::Json;
-use serde::{Deserialize, Serialize};
-use ulid::Ulid;
+use rocket::State;
 use validator::Validate;
-
-/// # Server Data
-#[derive(Validate, Deserialize, JsonSchema)]
-pub struct DataCreateServer {
-    /// Server name
-    #[validate(length(min = 1, max = 32))]
-    name: String,
-    /// Server description
-    #[validate(length(min = 0, max = 1024))]
-    description: Option<String>,
-    /// Whether this server is age-restricted
-    #[serde(skip_serializing_if = "Option::is_none")]
-    nsfw: Option<bool>,
-}
-
-/// # Create Server Response
-#[derive(Validate, Serialize, JsonSchema)]
-pub struct CreateServerResponse {
-    /// Server object
-    server: Server,
-    /// Default channels
-    channels: Vec<Channel>,
-}
 
 /// # Create Server
 ///
 /// Create a new server.
 #[openapi(tag = "Server Information")]
-#[post("/create", data = "<info>")]
-pub async fn req(
-    db: &Db,
+#[post("/create", data = "<data>")]
+pub async fn create_server(
+    db: &State<Database>,
     user: User,
-    info: Json<DataCreateServer>,
-) -> Result<Json<CreateServerResponse>> {
+    data: Json<v0::DataCreateServer>,
+) -> Result<Json<v0::CreateServerLegacyResponse>> {
     if user.bot.is_some() {
-        return Err(Error::IsBot);
+        return Err(create_error!(IsBot));
     }
 
-    let info = info.into_inner();
-    info.validate()
-        .map_err(|error| Error::FailedValidation { error })?;
+    let data = data.into_inner();
+    data.validate().map_err(|error| {
+        create_error!(FailedValidation {
+            error: error.to_string()
+        })
+    })?;
 
-    if !user.can_acquire_server(db).await? {
-        return Err(Error::TooManyServers {
-            max: *MAX_SERVER_COUNT,
-        });
-    }
+    user.can_acquire_server(db).await?;
 
-    let DataCreateServer {
-        name,
-        description,
-        nsfw,
-    } = info;
+    let (server, channels) = Server::create(db, data, &user, true).await?;
+    let channels = Member::create(db, &server, &user, Some(channels)).await?;
 
-    let channel_id = Ulid::new().to_string();
-    let server_id = Ulid::new().to_string();
-
-    let channel = Channel::TextChannel {
-        id: channel_id.clone(),
-        server: server_id.clone(),
-
-        name: "General".into(),
-        description: None,
-
-        icon: None,
-        last_message_id: None,
-
-        default_permissions: None,
-        role_permissions: HashMap::new(),
-
-        nsfw: nsfw.unwrap_or(false),
-    };
-
-    db.insert_channel(&channel).await?;
-
-    let server = Server {
-        id: server_id.clone(),
-        owner: user.id.clone(),
-        name,
-        description,
-        channels: vec![channel_id],
-        nsfw: nsfw.unwrap_or(false),
-        default_permissions: *DEFAULT_PERMISSION_SERVER as i64,
-        ..Default::default()
-    };
-
-    server.create(db).await?;
-    let channels = server.create_member(db, user, Some(vec![channel])).await?;
-    Ok(Json(CreateServerResponse { server, channels }))
+    Ok(Json(v0::CreateServerLegacyResponse {
+        server: server.into(),
+        channels: channels.into_iter().map(|channel| channel.into()).collect(),
+    }))
 }

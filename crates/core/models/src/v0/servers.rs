@@ -1,7 +1,10 @@
-use super::File;
+use super::{Channel, File};
 
 use revolt_permissions::OverrideField;
 use std::collections::HashMap;
+
+#[cfg(feature = "validator")]
+use validator::Validate;
 
 auto_derived_partial!(
     /// Server
@@ -140,5 +143,28 @@ auto_derived!(
         /// ID of channel to send user banned messages in
         #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub user_banned: Option<String>,
+    }
+
+    /// Information about new server to create
+    #[derive(Default)]
+    #[cfg_attr(feature = "validator", derive(Validate))]
+    pub struct DataCreateServer {
+        /// Server name
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
+        pub name: String,
+        /// Server description
+        #[cfg_attr(feature = "validator", validate(length(min = 0, max = 1024)))]
+        pub description: Option<String>,
+        /// Whether this server is age-restricted
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub nsfw: Option<bool>,
+    }
+
+    /// Information returned when creating server
+    pub struct CreateServerLegacyResponse {
+        /// Server object
+        pub server: Server,
+        /// Default channels
+        pub channels: Vec<Channel>,
     }
 );

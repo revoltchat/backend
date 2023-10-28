@@ -42,7 +42,7 @@ pub async fn invite_bot(
                 .await
                 .throw_if_lacking_channel_permission(ChannelPermission::ManageServer)?;
 
-            Member::create(db, &server, &bot_user)
+            Member::create(db, &server, &bot_user, None)
                 .await
                 .map(|_| EmptyResponse)
         }
@@ -66,7 +66,7 @@ pub async fn invite_bot(
 mod test {
     use crate::{rocket, util::test::TestHarness};
     use revolt_database::{events::client::EventV1, Bot, Channel, Server};
-    use revolt_models::v0;
+    use revolt_models::v0::{self, DataCreateServer};
     use rocket::http::{ContentType, Header, Status};
 
     #[rocket::async_test]
@@ -125,26 +125,17 @@ mod test {
             .await
             .expect("`Bot`");
 
-        // FIXME: Server::create_server
-        let server = Server {
-            id: ulid::Ulid::new().to_string(),
-            name: TestHarness::rand_string(),
-            owner: user.id.to_string(),
-            analytics: false,
-            discoverable: false,
-            nsfw: false,
-            banner: None,
-            icon: None,
-            categories: None,
-            channels: vec![],
-            default_permissions: 0,
-            description: None,
-            flags: None,
-            roles: Default::default(),
-            system_messages: None,
-        };
-
-        server.create(&harness.db).await.unwrap();
+        let (server, _) = Server::create(
+            &harness.db,
+            DataCreateServer {
+                name: TestHarness::rand_string(),
+                ..Default::default()
+            },
+            &user,
+            false,
+        )
+        .await
+        .unwrap();
 
         let response = harness
             .client

@@ -4,6 +4,7 @@ use crate::{events::client::EventV1, Database, File, RatelimitEvent};
 
 use once_cell::sync::Lazy;
 use rand::seq::SliceRandom;
+use revolt_config::config;
 use revolt_result::{create_error, Error, ErrorType, Result};
 use ulid::Ulid;
 
@@ -216,6 +217,18 @@ impl User {
                 .fetch_mutual_channel_ids(&self.id, user_b)
                 .await?
                 .is_empty())
+    }
+
+    /// Check if this user can acquire another server
+    pub async fn can_acquire_server(&self, db: &Database) -> Result<()> {
+        let config = config().await;
+        if db.fetch_server_count(&self.id).await? <= config.features.limits.default.servers {
+            Ok(())
+        } else {
+            Err(create_error!(TooManyServers {
+                max: config.features.limits.default.servers
+            }))
+        }
     }
 
     /// Sanitise and validate a username can be used

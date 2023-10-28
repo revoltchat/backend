@@ -25,7 +25,7 @@ mod server_fetch;
 
 pub fn routes() -> (Vec<Route>, OpenApi) {
     openapi_get_routes_spec![
-        server_create::req,
+        server_create::create_server,
         server_delete::req,
         server_fetch::req,
         server_edit::req,
