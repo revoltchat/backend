@@ -98,17 +98,19 @@ auto_derived!(
     /// Name and / or avatar override information
     #[cfg_attr(feature = "validator", derive(Validate))]
     pub struct Masquerade {
-        // FIXME: missing validation
         /// Replace the display name shown on this message
         #[serde(skip_serializing_if = "Option::is_none")]
+        #[validate(length(min = 1, max = 32))]
         pub name: Option<String>,
         /// Replace the avatar shown on this message (URL to image file)
         #[serde(skip_serializing_if = "Option::is_none")]
+        #[validate(length(min = 1, max = 256))]
         pub avatar: Option<String>,
         /// Replace the display role colour shown on this message
         ///
         /// Must have `ManageRole` permission to use
         #[serde(skip_serializing_if = "Option::is_none")]
+        #[validate(length(min = 1, max = 128), regex = "RE_COLOUR")]
         pub colour: Option<String>,
     }
 
