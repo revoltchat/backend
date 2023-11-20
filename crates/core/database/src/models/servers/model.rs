@@ -175,6 +175,7 @@ impl Server {
             vec![]
         };
 
+        server.channels = channels.iter().map(|c| c.id()).collect();
         db.insert_server(&server).await?;
         Ok((server, channels))
     }
