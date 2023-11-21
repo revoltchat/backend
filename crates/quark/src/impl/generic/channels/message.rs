@@ -382,11 +382,16 @@ impl BulkMessageResponse {
         db: &Database,
         channel: Option<&Channel>,
         messages: Vec<Message>,
+        user: &User,
         include_users: Option<bool>,
     ) -> Result<BulkMessageResponse> {
         if let Some(true) = include_users {
             let user_ids = messages.get_user_ids();
-            let users = User::fetch_foreign_users(db, &user_ids).await?;
+            let users = User::fetch_foreign_users(db, &user_ids)
+                .await?
+                .into_iter()
+                .map(|x| x.with_relationship(user))
+                .collect();
 
             Ok(match channel {
                 Some(Channel::TextChannel { server, .. })
