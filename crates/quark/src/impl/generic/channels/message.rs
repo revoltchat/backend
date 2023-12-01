@@ -192,7 +192,7 @@ impl Message {
     /// Add a reaction to a message
     pub async fn add_reaction(&self, db: &Database, user: &User, emoji: &str) -> Result<()> {
         // Check how many reactions are already on the message
-        if self.reactions.len() >= 20 {
+        if self.reactions.len() >= 20 && !self.reactions.contains_key(emoji) {
             return Err(Error::InvalidOperation);
         }
 
