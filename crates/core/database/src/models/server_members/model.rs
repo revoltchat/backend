@@ -119,6 +119,8 @@ impl Member {
             }
         }
 
+        let emojis = db.fetch_emoji_by_parent_id(&server.id).await?;
+
         EventV1::ServerMemberJoin {
             id: server.id.clone(),
             user: user.id.clone(),
@@ -134,6 +136,7 @@ impl Member {
                 .into_iter()
                 .map(|channel| channel.into())
                 .collect(),
+            emojis: emojis.into_iter().map(|emoji| emoji.into()).collect(),
         }
         .private(user.id.clone())
         .await;

@@ -143,6 +143,7 @@ pub enum EventV1 {
         id: String,
         server: Server,
         channels: Vec<Channel>,
+        emojis: Vec<Emoji>,
     },
 
     /// Update existing server

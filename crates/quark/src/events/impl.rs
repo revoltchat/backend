@@ -401,6 +401,7 @@ impl State {
                 id,
                 server,
                 channels,
+                emojis: _,
             } => {
                 self.insert_subscription(id.clone());
                 self.cache.servers.insert(id.clone(), server.clone());
