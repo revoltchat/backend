@@ -17,6 +17,7 @@ mod permissions_set_default;
 mod roles_create;
 mod roles_delete;
 mod roles_edit;
+mod roles_fetch;
 mod server_ack;
 mod server_create;
 mod server_delete;
@@ -42,6 +43,7 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         invites_fetch::req,
         roles_create::req,
         roles_edit::req,
+        roles_fetch::req,
         roles_delete::req,
         permissions_set::req,
         permissions_set_default::req,

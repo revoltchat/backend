@@ -1,10 +1,14 @@
-use crate::models::server_member::{FieldsMember, Member, MemberCompositeKey, PartialMember};
+use crate::models::server_member::{
+    FieldsMember, Member, MemberCompositeKey, MemberWithRoles, PartialMember,
+};
 use crate::Result;
 
 #[async_trait]
 pub trait AbstractServerMember: Sync + Send {
     /// Fetch a server member by their id
     async fn fetch_member(&self, server: &str, user: &str) -> Result<Member>;
+
+    async fn fetch_member_with_roles(&self, server: &str, user: &str) -> Result<MemberWithRoles>;
 
     /// Insert a new server member into the database
     async fn insert_member(&self, member: &Member) -> Result<()>;

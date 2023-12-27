@@ -1,4 +1,6 @@
-use crate::models::server_member::{FieldsMember, Member, MemberCompositeKey, PartialMember};
+use crate::models::server_member::{
+    FieldsMember, Member, MemberCompositeKey, MemberWithRoles, PartialMember,
+};
 use crate::{AbstractServerMember, Result};
 
 use super::super::DummyDb;
@@ -7,6 +9,9 @@ use super::super::DummyDb;
 impl AbstractServerMember for DummyDb {
     async fn fetch_member(&self, server: &str, user: &str) -> Result<Member> {
         Ok(Member::new(server.into(), user.into()))
+    }
+    async fn fetch_member_with_roles(&self, server: &str, user: &str) -> Result<MemberWithRoles> {
+        Ok(MemberWithRoles::new(server.into(), user.into()))
     }
 
     async fn insert_member(&self, member: &Member) -> Result<()> {
