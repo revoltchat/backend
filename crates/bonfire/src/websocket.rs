@@ -187,7 +187,7 @@ async fn listener(
         }) else {
             return;
         };
-        match *REDIS_PAYLOAD_TYPE {
+        let event = match *REDIS_PAYLOAD_TYPE {
             PayloadType::Json => message
                 .value
                 .as_str()
@@ -201,12 +201,7 @@ async fn listener(
                 .as_bytes()
                 .and_then(|b| bincode::deserialize::<EventV1>(b).ok()),
         };
-
-        let Some(mut event) = message
-            .value
-            .as_str()
-            .and_then(|s| serde_json::from_str::<EventV1>(s.as_ref()).ok())
-        else {
+        let Some(mut event) = event else {
             warn!("Failed to deserialise an event for {}!", message.channel);
             return;
         };
