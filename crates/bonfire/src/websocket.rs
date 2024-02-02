@@ -1,7 +1,10 @@
 use std::net::SocketAddr;
 
 use async_tungstenite::WebSocketStream;
-use fred::interfaces::{ClientLike, EventInterface, PubsubInterface};
+use fred::{
+    interfaces::{ClientLike, EventInterface, PubsubInterface},
+    types::RedisConfig,
+};
 use futures::{
     channel::oneshot,
     pin_mut, select,
@@ -16,7 +19,7 @@ use revolt_quark::{
         state::{State, SubscriptionStateChange},
     },
     models::{user::UserHint, User},
-    redis_kiss::{PayloadType, REDIS_PAYLOAD_TYPE},
+    redis_kiss::{PayloadType, REDIS_PAYLOAD_TYPE, REDIS_URI},
     Database,
 };
 
@@ -142,7 +145,8 @@ async fn listener(
     config: &ProtocolConfiguration,
     write: &Mutex<WsWriter>,
 ) {
-    let Ok(subscriber) = fred::prelude::Builder::default_centralized().build_subscriber_client()
+    let redis_config = RedisConfig::from_url(&REDIS_URI).unwrap();
+    let Ok(subscriber) = fred::types::Builder::from_config(redis_config).build_subscriber_client()
     else {
         return;
     };
