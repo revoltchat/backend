@@ -18,6 +18,7 @@ querystring = "1.1.0"
 revolt-quark = { path = "../quark" }
 
 # serde
+bincode = "1.3.3"
 serde_json = "1.0.79"
 rmp-serde = "1.0.0"
 serde = "1.0.136"
@@ -34,3 +35,6 @@ async-std = { version = "1.8.0", features = [
 # core
 revolt-presence = { path = "../core/presence", features = ["redis-is-patched"] }
 sentry = "0.31.5"
+
+# redis
+fred = { version = "8.0.1", features = ["subscriber-client"] }

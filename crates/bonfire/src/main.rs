@@ -29,6 +29,10 @@ async fn main() {
 
     // Start accepting new connections and spawn a client for each connection.
     while let Ok((stream, addr)) = listener.accept().await {
-        websocket::spawn_client(database::get_db(), stream, addr);
+        async_std::task::spawn(async move {
+            info!("User connected from {addr:?}");
+            websocket::client(database::get_db(), stream, addr).await;
+            info!("User disconnected from {addr:?}");
+        });
     }
 }
