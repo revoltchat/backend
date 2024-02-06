@@ -5,9 +5,8 @@ use schemars::schema::{InstanceType, Schema, SchemaObject, SingleOrVec};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::models::{
-    Channel, Emoji, Invite, Member, Message, Report, Server, ServerBan, User,
-};
+use crate::models::server_member::MemberWithRoles;
+use crate::models::{Channel, Emoji, Invite, Member, Message, Report, Server, ServerBan, User};
 use crate::{Database, Error, Result};
 
 /// Reference to some object in the database
@@ -64,6 +63,14 @@ impl Ref {
     /// Fetch member from Ref
     pub async fn as_member(&self, db: &Database, server: &str) -> Result<Member> {
         db.fetch_member(server, &self.id).await
+    }
+
+    pub async fn as_member_with_roles(
+        &self,
+        db: &Database,
+        server: &str,
+    ) -> Result<MemberWithRoles> {
+        db.fetch_member_with_roles(server, &self.id).await
     }
 
     /// Fetch ban from Ref

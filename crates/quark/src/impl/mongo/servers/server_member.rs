@@ -1,10 +1,10 @@
 use bson::Document;
 
+use super::super::MongoDb;
+use crate::models::server_member::MemberWithRoles;
 use crate::models::server_member::{FieldsMember, Member, MemberCompositeKey, PartialMember};
 use crate::r#impl::mongo::IntoDocumentPath;
-use crate::{AbstractServerMember, Error, Result};
-
-use super::super::MongoDb;
+use crate::{AbstractServer, AbstractServerMember, Error, Result};
 
 static COL: &str = "server_members";
 
@@ -19,6 +19,13 @@ impl AbstractServerMember for MongoDb {
             },
         )
         .await
+    }
+
+    async fn fetch_member_with_roles(&self, server: &str, user: &str) -> Result<MemberWithRoles> {
+        Ok(self
+            .fetch_member(server, user)
+            .await?
+            .with_roles(self.fetch_server(server).await?.roles))
     }
 
     async fn insert_member(&self, member: &Member) -> Result<()> {
