@@ -180,7 +180,7 @@ impl Ratelimiter {
     pub fn from(
         identifier: &str,
         (bucket, resource): (&str, Option<&str>),
-    ) -> Result<Ratelimiter, u128> {
+    ) -> Result<Ratelimiter, Ratelimiter> {
         let mut key = DefaultHasher::new();
         key.write(identifier.as_bytes());
         key.write(bucket.as_bytes());
@@ -194,27 +194,29 @@ impl Ratelimiter {
         let mut entry = Entry::from(key);
 
         let remaining = entry.get_remaining(limit);
-        if remaining > 0 {
-            entry.deduct();
-
-            let reset = entry.left_until_reset();
-            entry.save(key);
-
-            Ok(Ratelimiter {
-                key,
-                limit,
-                remaining: remaining - 1,
-                reset,
-            })
-        } else {
-            Err(entry.left_until_reset())
+        let reset = entry.left_until_reset();
+        let mut ratelimiter = Ratelimiter {
+            key,
+            limit,
+            remaining,
+            reset,
+        };
+        if remaining == 0 {
+            return Err(ratelimiter);
         }
+
+        entry.deduct();
+        entry.save(key);
+        ratelimiter.remaining -= 1;
+        ratelimiter.reset = entry.left_until_reset();
+
+        Ok(ratelimiter)
     }
 }
 
 #[async_trait]
 impl<'r> FromRequest<'r> for Ratelimiter {
-    type Error = u128;
+    type Error = Ratelimiter;
 
     async fn from_request(request: &'r rocket::Request<'_>) -> Outcome<Self, Self::Error> {
         let ratelimiter = request
@@ -233,7 +235,7 @@ impl<'r> FromRequest<'r> for Ratelimiter {
 
         match ratelimiter {
             Ok(ratelimiter) => Outcome::Success(*ratelimiter),
-            Err(retry_after) => Outcome::Failure((Status::TooManyRequests, *retry_after)),
+            Err(ratelimiter) => Outcome::Failure((Status::TooManyRequests, *ratelimiter)),
         }
     }
 }
@@ -275,23 +277,24 @@ impl Fairing for RatelimitFairing {
     }
 
     async fn on_response<'r>(&self, request: &'r Request<'_>, response: &mut Response<'r>) {
-        use rocket::outcome::Outcome;
-        match request.guard::<Ratelimiter>().await {
-            Outcome::Success(ratelimiter) => {
-                let Ratelimiter {
-                    key,
-                    limit,
-                    remaining,
-                    reset,
-                } = ratelimiter;
+        let guard = request.guard::<Ratelimiter>().await;
+        let (Outcome::Success(ratelimiter) | Outcome::Failure((_, ratelimiter))) = guard else {
+            unreachable!()
+        };
+        let Ratelimiter {
+            key,
+            limit,
+            remaining,
+            reset,
+        } = ratelimiter;
 
-                response.set_raw_header("X-RateLimit-Limit", limit.to_string());
-                response.set_raw_header("X-RateLimit-Bucket", key.to_string());
-                response.set_raw_header("X-RateLimit-Remaining", remaining.to_string());
-                response.set_raw_header("X-RateLimit-Reset-After", reset.to_string());
-            }
-            Outcome::Failure(_) => response.set_status(Status::TooManyRequests),
-            Outcome::Forward(_) => unreachable!(),
+        response.set_raw_header("X-RateLimit-Limit", limit.to_string());
+        response.set_raw_header("X-RateLimit-Bucket", key.to_string());
+        response.set_raw_header("X-RateLimit-Remaining", remaining.to_string());
+        response.set_raw_header("X-RateLimit-Reset-After", reset.to_string());
+
+        if guard.is_failure() {
+            response.set_status(Status::TooManyRequests);
         }
     }
 }
@@ -308,11 +311,14 @@ impl<'r> FromRequest<'r> for RatelimitInformation {
     type Error = u128;
 
     async fn from_request(request: &'r rocket::Request<'_>) -> Outcome<Self, Self::Error> {
-        Outcome::Success(match request.guard::<Ratelimiter>().await {
+        let info = match request.guard::<Ratelimiter>().await {
             Outcome::Success(ratelimiter) => RatelimitInformation::Success(ratelimiter),
-            Outcome::Failure((_, retry_after)) => RatelimitInformation::Failure { retry_after },
+            Outcome::Failure((_, ratelimiter)) => RatelimitInformation::Failure {
+                retry_after: ratelimiter.reset,
+            },
             _ => unreachable!(),
-        })
+        };
+        Outcome::Success(info)
     }
 }
 
