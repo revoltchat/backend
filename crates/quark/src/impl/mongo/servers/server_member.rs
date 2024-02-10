@@ -22,10 +22,14 @@ impl AbstractServerMember for MongoDb {
     }
 
     async fn fetch_member_with_roles(&self, server: &str, user: &str) -> Result<MemberWithRoles> {
-        Ok(self
-            .fetch_member(server, user)
-            .await?
-            .with_roles(self.fetch_server(server).await?.roles))
+        let member = self.fetch_member(server, user).await?;
+        let server_roles = self.fetch_server(server).await?.roles;
+        let roles = member
+            .roles
+            .iter()
+            .filter_map(|id| server_roles.get(id).map(|r| (id.clone(), r.clone())))
+            .collect();
+        Ok(MemberWithRoles { member, roles })
     }
 
     async fn insert_member(&self, member: &Member) -> Result<()> {
