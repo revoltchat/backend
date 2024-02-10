@@ -47,47 +47,27 @@ pub struct Member {
 }
 
 /// Representation of a member of a server on Revolt With Role Data
-#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, OptionalStruct)]
-#[optional_derive(Serialize, Deserialize, JsonSchema, Debug, Default, Clone)]
-#[opt_skip_serializing_none]
-#[opt_some_priority]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
 pub struct MemberWithRoles {
-    /// Unique member id
-    #[serde(rename = "_id")]
-    pub id: MemberCompositeKey,
-
-    /// Time at which this user joined the server
-    pub joined_at: Timestamp,
-
-    /// Member's nickname
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub nickname: Option<String>,
-    /// Avatar attachment
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub avatar: Option<File>,
-
-    /// Member's roles
-    #[serde(skip_serializing_if = "HashMap::is_empty", default)]
+    pub member: Member,
     pub roles: HashMap<String, Role>,
-    /// Timestamp this member is timed out until
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub timeout: Option<Timestamp>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
+#[serde(untagged)]
 pub enum MemberResponse {
-    Members(Member),
-    MembersWithRoles(MemberWithRoles),
+    Member(Member),
+    MemberWithRoles(MemberWithRoles),
 }
 
 impl From<Member> for MemberResponse {
     fn from(value: Member) -> Self {
-        Self::Members(value)
+        Self::Member(value)
     }
 }
 impl From<MemberWithRoles> for MemberResponse {
     fn from(value: MemberWithRoles) -> Self {
-        Self::MembersWithRoles(value)
+        Self::MemberWithRoles(value)
     }
 }
 /// Optional fields on server member object

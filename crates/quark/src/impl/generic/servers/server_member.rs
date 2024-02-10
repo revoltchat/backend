@@ -5,7 +5,6 @@ use iso8601_timestamp::Timestamp;
 use crate::{
     events::client::EventV1,
     models::{
-        server::Role,
         server_member::{FieldsMember, MemberCompositeKey, MemberWithRoles, PartialMember},
         Member, Server,
     },
@@ -84,30 +83,13 @@ impl Member {
             FieldsMember::Timeout => self.timeout = None,
         }
     }
-
-    pub fn with_roles(&self, roles: HashMap<String, Role>) -> MemberWithRoles {
-        MemberWithRoles {
-            id: self.id.clone(),
-            joined_at: self.joined_at,
-            nickname: self.nickname.clone(),
-            avatar: self.avatar.clone(),
-            roles,
-            timeout: self.timeout,
-        }
-    }
 }
+
 impl MemberWithRoles {
     pub fn new(server_id: String, user_id: String) -> Self {
         Self {
-            id: MemberCompositeKey {
-                server: server_id,
-                user: user_id,
-            },
-            joined_at: Timestamp::now_utc(),
-            nickname: None,
-            avatar: None,
+            member: Member::new(server_id, user_id),
             roles: HashMap::new(),
-            timeout: None,
         }
     }
 }
