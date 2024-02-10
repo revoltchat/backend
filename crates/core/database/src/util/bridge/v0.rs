@@ -341,11 +341,7 @@ impl From<crate::Message> for Message {
             embeds: value.embeds,
             mentions: value.mentions,
             replies: value.replies,
-            reactions: value
-                .reactions
-                .into_iter()
-                .map(|(k, v)| (k, v.into_iter().collect()))
-                .collect(),
+            reactions: value.reactions,
             interactions: value.interactions.into(),
             masquerade: value.masquerade.map(|masq| masq.into()),
         }
@@ -369,12 +365,7 @@ impl From<crate::PartialMessage> for PartialMessage {
             embeds: value.embeds,
             mentions: value.mentions,
             replies: value.replies,
-            reactions: value.reactions.map(|reactions| {
-                reactions
-                    .into_iter()
-                    .map(|(k, v)| (k, v.into_iter().collect()))
-                    .collect()
-            }),
+            reactions: value.reactions,
             interactions: value.interactions.map(|interactions| interactions.into()),
             masquerade: value.masquerade.map(|masq| masq.into()),
         }

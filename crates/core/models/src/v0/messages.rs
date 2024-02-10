@@ -1,8 +1,6 @@
-use std::{
-    collections::{HashMap, HashSet},
-    time::SystemTime,
-};
+use std::time::SystemTime;
 
+use indexmap::{IndexMap, IndexSet};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use revolt_config::config;
@@ -55,8 +53,8 @@ auto_derived_partial!(
         #[serde(skip_serializing_if = "Option::is_none")]
         pub replies: Option<Vec<String>>,
         /// Hashmap of emoji IDs to array of user IDs
-        #[serde(skip_serializing_if = "HashMap::is_empty", default)]
-        pub reactions: HashMap<String, HashSet<String>>,
+        #[serde(skip_serializing_if = "IndexMap::is_empty", default)]
+        pub reactions: IndexMap<String, IndexSet<String>>,
         /// Information about how this message should be interacted with
         #[serde(skip_serializing_if = "Interactions::is_default", default)]
         pub interactions: Interactions,
@@ -119,7 +117,7 @@ auto_derived!(
     pub struct Interactions {
         /// Reactions which should always appear and be distinct
         #[serde(skip_serializing_if = "Option::is_none", default)]
-        pub reactions: Option<HashSet<String>>,
+        pub reactions: Option<IndexSet<String>>,
         /// Whether reactions should be restricted to the given list
         ///
         /// Can only be set to true if reactions list is of at least length 1
