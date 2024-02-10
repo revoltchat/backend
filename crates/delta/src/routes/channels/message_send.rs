@@ -1,3 +1,4 @@
+use chrono::{Duration, Utc};
 use revolt_database::util::permissions::DatabasePermissionQuery;
 use revolt_database::{
     util::idempotency::IdempotencyKey, util::reference::Reference, Database, User,
@@ -61,6 +62,23 @@ pub async fn message_send(
         interactions.validate(db, &permissions).await?;
     }
 
+    // Disallow mentions for new users (TRUST-0: <12 hours age) in public servers
+    let allow_mentions = if let Some(server) = query.server_ref() {
+        if server.discoverable {
+            if (Utc::now() - ulid::Ulid::from_string(&user.id).unwrap().datetime())
+                < Duration::hours(12)
+            {
+                false
+            } else {
+                true
+            }
+        } else {
+            true
+        }
+    } else {
+        true
+    };
+
     // Create the message
     let author: v0::User = user.clone().into(db, Some(&user)).await;
     Ok(Json(
@@ -71,6 +89,7 @@ pub async fn message_send(
             v0::MessageAuthor::User(&author),
             idempotency,
             permissions.has_channel_permission(ChannelPermission::SendEmbeds),
+            allow_mentions,
         )
         .await?
         .into(),

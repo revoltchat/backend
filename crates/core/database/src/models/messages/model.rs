@@ -212,6 +212,7 @@ impl Message {
         author: MessageAuthor<'_>,
         mut idempotency: IdempotencyKey,
         generate_embeds: bool,
+        allow_mentions: bool,
     ) -> Result<Message> {
         let config = config().await;
 
@@ -272,10 +273,12 @@ impl Message {
 
         // Parse mentions in message.
         let mut mentions = HashSet::new();
-        if let Some(content) = &data.content {
-            for capture in RE_MENTION.captures_iter(content) {
-                if let Some(mention) = capture.get(1) {
-                    mentions.insert(mention.as_str().to_string());
+        if allow_mentions {
+            if let Some(content) = &data.content {
+                for capture in RE_MENTION.captures_iter(content) {
+                    if let Some(mention) = capture.get(1) {
+                        mentions.insert(mention.as_str().to_string());
+                    }
                 }
             }
         }
@@ -292,7 +295,7 @@ impl Message {
             for ReplyIntent { id, mention } in entries {
                 let message = db.fetch_message(&id).await?;
 
-                if mention {
+                if mention && allow_mentions {
                     mentions.insert(message.author.to_owned());
                 }
 

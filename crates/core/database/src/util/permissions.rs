@@ -444,6 +444,26 @@ impl<'a> DatabasePermissionQuery<'a> {
             ..self
         }
     }
+
+    /// Access the underlying user
+    pub fn user_ref(&self) -> &Option<Cow<User>> {
+        &self.user
+    }
+
+    /// Access the underlying server
+    pub fn channel_ref(&self) -> &Option<Cow<Channel>> {
+        &self.channel
+    }
+
+    /// Access the underlying server
+    pub fn server_ref(&self) -> &Option<Cow<Server>> {
+        &self.server
+    }
+
+    /// Access the underlying member
+    pub fn member_ref(&self) -> &Option<Cow<Member>> {
+        &self.member
+    }
 }
 
 /// Short-hand for creating a permission calculator
