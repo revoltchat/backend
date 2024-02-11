@@ -57,7 +57,7 @@ jobs:
         env:
           TEST_DB: REFERENCE
         run: |
-          cargo build --bin revolt-delta && cargo run --bin revolt-delta &
+          cargo build --bin revolt-delta && (cargo run --bin revolt-delta &)
 
       - name: Wait for API to go up
         if: github.event_name != 'pull_request' && github.ref_name == 'master'
