@@ -696,6 +696,32 @@ mod tests {
     use crate::{fixture, util::permissions::DatabasePermissionQuery};
 
     #[async_std::test]
+    async fn permissions_group_channel() {
+        database_test!(|db| async move {
+            fixture!(db, "group_with_members",
+                owner user 0
+                member1 user 1
+                member2 user 2
+                channel channel 3);
+
+            let mut query = DatabasePermissionQuery::new(&db, &owner).channel(&channel);
+            assert!(calculate_channel_permissions(&mut query)
+                .await
+                .has_channel_permission(ChannelPermission::SendMessage));
+
+            let mut query = DatabasePermissionQuery::new(&db, &member1).channel(&channel);
+            assert!(calculate_channel_permissions(&mut query)
+                .await
+                .has_channel_permission(ChannelPermission::SendMessage));
+
+            let mut query = DatabasePermissionQuery::new(&db, &member2).channel(&channel);
+            assert!(!calculate_channel_permissions(&mut query)
+                .await
+                .has_channel_permission(ChannelPermission::SendMessage));
+        });
+    }
+
+    #[async_std::test]
     async fn permissions_text_channel() {
         database_test!(|db| async move {
             fixture!(db, "server_with_roles",

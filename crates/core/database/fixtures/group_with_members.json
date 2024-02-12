@@ -1,0 +1,28 @@
+[
+  {
+    "_object_type": "User",
+    "_id": "__ID:0__",
+    "username": "Owner",
+    "discriminator": "0001"
+  },
+  {
+    "_object_type": "User",
+    "_id": "__ID:1__",
+    "username": "Member",
+    "discriminator": "0001"
+  },
+  {
+    "_object_type": "User",
+    "_id": "__ID:2__",
+    "username": "Member",
+    "discriminator": "0002"
+  },
+  {
+    "_object_type": "Channel",
+    "_id": "__ID:3__",
+    "channel_type": "Group",
+    "name": "My Group",
+    "owner": "__ID:0__",
+    "recipients": ["__ID:0__", "__ID:1__", "__ID:2__"]
+  }
+]
