@@ -111,7 +111,7 @@ pub async fn calculate_channel_permissions<P: PermissionQuery>(query: &mut P) ->
             query.set_server_from_channel().await;
 
             if query.are_we_server_owner().await {
-                return ChannelPermission::GrantAllSafe.into();
+                ChannelPermission::GrantAllSafe.into()
             } else if query.are_we_a_member().await {
                 let mut permissions = calculate_server_permissions(query).await;
                 permissions.apply(query.get_default_channel_permissions().await);

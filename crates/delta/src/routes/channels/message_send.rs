@@ -65,13 +65,8 @@ pub async fn message_send(
     // Disallow mentions for new users (TRUST-0: <12 hours age) in public servers
     let allow_mentions = if let Some(server) = query.server_ref() {
         if server.discoverable {
-            if (Utc::now() - ulid::Ulid::from_string(&user.id).unwrap().datetime())
-                < Duration::hours(12)
-            {
-                false
-            } else {
-                true
-            }
+            (Utc::now() - ulid::Ulid::from_string(&user.id).unwrap().datetime())
+                >= Duration::hours(12)
         } else {
             true
         }
