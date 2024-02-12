@@ -14,3 +14,6 @@ minor:
 
 major:
     cargo release version major --execute
+
+release:
+    scripts/try-tag-and-release.sh
