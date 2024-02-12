@@ -23,6 +23,6 @@
     "channel_type": "Group",
     "name": "My Group",
     "owner": "__ID:0__",
-    "recipients": ["__ID:0__", "__ID:1__", "__ID:2__"]
+    "recipients": ["__ID:0__", "__ID:1__"]
   }
 ]

@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use revolt_permissions::{
     calculate_user_permissions, ChannelType, Override, PermissionQuery, PermissionValue,
-    RelationshipStatus,
+    RelationshipStatus, DEFAULT_PERMISSION_DIRECT_MESSAGE,
 };
 
 use crate::{Channel, Database, Member, Server, User};
@@ -209,7 +209,7 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
             match channel {
                 Cow::Borrowed(Channel::Group { permissions, .. })
                 | Cow::Owned(Channel::Group { permissions, .. }) => Override {
-                    allow: permissions.unwrap_or_default() as u64,
+                    allow: permissions.unwrap_or(*DEFAULT_PERMISSION_DIRECT_MESSAGE as i64) as u64,
                     deny: 0,
                 },
                 Cow::Borrowed(Channel::TextChannel {
