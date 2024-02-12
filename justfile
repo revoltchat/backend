@@ -5,3 +5,12 @@ publish:
     cargo publish --package revolt-models
     cargo publish --package revolt-presence
     cargo publish --package revolt-database
+
+patch:
+    cargo release version patch --execute
+
+minor:
+    cargo release version minor --execute
+
+major:
+    cargo release version major --execute
