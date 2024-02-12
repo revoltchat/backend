@@ -1,6 +1,6 @@
 [package]
 name = "revolt-result"
-version = "0.6.12"
+version = "0.6.13"
 edition = "2021"
 license = "AGPL-3.0-or-later"
 authors = ["Paul Makles <me@insrt.uk>"]
