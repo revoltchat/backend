@@ -118,7 +118,7 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
         // Create a PubSub connection to poll on.
         let listener = listener(db, &mut state, addr, &config, &write).fuse();
         // Read from WebSocket stream.
-        let worker = worker(user_id.clone(), &config, read, &write).fuse();
+        let worker = worker(addr, user_id.clone(), &config, read, &write).fuse();
 
         // Pin both tasks.
         pin_mut!(listener, worker);
@@ -186,7 +186,7 @@ async fn listener(
 
         // Handle incoming events.
         let Ok(message) = message_rx.recv().await.map_err(|e| {
-            info!("Error while consuming pub/sub messages: {e:?}");
+            warn!("Error while consuming pub/sub messages: {e:?}");
             sentry::capture_error(&e);
         }) else {
             return;
@@ -210,27 +210,42 @@ async fn listener(
             return;
         };
         let should_send = state.handle_incoming_event_v1(db, &mut event).await;
+        if !should_send {
+            continue;
+        }
 
-        if should_send
-            && write
-                .lock()
-                .await
-                .send(config.encode(&event))
-                .await
-                .is_err()
-        {
+        let result = write.lock().await.send(config.encode(&event)).await;
+        if let Err(e) = result {
+            use async_tungstenite::tungstenite::Error;
+            if !matches!(e, Error::AlreadyClosed | Error::ConnectionClosed) {
+                warn!("Error while sending an event to {addr:?}: {e:?}");
+            }
             return;
         }
     }
 }
 
 async fn worker(
+    addr: SocketAddr,
     user_id: String,
     config: &ProtocolConfiguration,
     mut read: WsReader,
     write: &Mutex<WsWriter>,
 ) {
-    while let Ok(Some(msg)) = read.try_next().await {
+    loop {
+        let result = read.try_next().await;
+        let msg = match result {
+            Ok(Some(msg)) => msg,
+            Ok(None) => return,
+            Err(e) => {
+                use async_tungstenite::tungstenite::Error;
+                if !matches!(e, Error::AlreadyClosed | Error::ConnectionClosed) {
+                    warn!("Error while reading an event from {addr:?}: {e:?}");
+                }
+                return;
+            }
+        };
+
         let Ok(payload) = config.decode(&msg) else {
             continue;
         };
