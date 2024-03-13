@@ -77,6 +77,34 @@ yarn dev --port 3001
 
 Then go to https://local.revolt.chat:3001
 
+## Deployment Guide
+
+### Cutting new crate releases
+
+Begin by bumping crate versions:
+
+```bash
+just patch # 0.0.X
+just minor # 0.X.0
+just major # X.0.0
+```
+
+Then commit the changes to package files.
+
+Proceed to publish all the new crates:
+
+```bash
+just publish
+```
+
+### Cutting new binary releases
+
+Tag and push a new release by running:
+
+```bash
+just release
+```
+
 ## License
 
 The Revolt backend is generally licensed under the [GNU Affero General Public License v3.0](https://github.com/revoltchat/backend/blob/master/LICENSE).
