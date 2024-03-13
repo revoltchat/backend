@@ -3,7 +3,7 @@ name: Docker Test & Publish
 on:
   push:
     branches:
-      - "master"
+      - "main"
     tags:
       - "*"
     paths-ignore:
@@ -15,7 +15,7 @@ on:
       - "README"
   pull_request:
     branches:
-      - "master"
+      - "main"
     paths:
       - "Dockerfile"
   workflow_dispatch:

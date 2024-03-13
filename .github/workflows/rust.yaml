@@ -3,7 +3,7 @@ name: Rust build, test, and generate specification
 on:
   push:
   pull_request:
-    branches: [master]
+    branches: [main]
 
 env:
   CARGO_TERM_COLOR: always
