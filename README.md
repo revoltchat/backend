@@ -45,6 +45,7 @@ If you want to run the API and event servers:
 ```bash
 # create environment file (will be deprecated in future)
 cp .env.example .env
+
 # (optionally) copy the default configuration file
 cp crates/core/config/Revolt.toml Revolt.toml
 # configure as necessary...
