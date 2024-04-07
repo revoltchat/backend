@@ -1,32 +1,42 @@
-use revolt_permissions::DataPermissionsValue;
-use revolt_quark::{
-    models::{server::PartialServer, Server, User},
-    perms, Db, Permission, Ref, Result,
+use revolt_database::{
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Database, PartialServer, Server, User,
 };
-use rocket::serde::json::Json;
+use revolt_models::v0;
+use revolt_permissions::{
+    calculate_server_permissions, ChannelPermission, DataPermissionsValue, Override,
+};
+use revolt_result::Result;
+use rocket::{serde::json::Json, State};
+
 /// # Set Default Permission
 ///
 /// Sets permissions for the default role in this server.
 #[openapi(tag = "Server Permissions")]
 #[put("/<target>/permissions/default", data = "<data>", rank = 1)]
-pub async fn req(
-    db: &Db,
+pub async fn set_default_permissions(
+    db: &State<Database>,
     user: User,
-    target: Ref,
+    target: Reference,
     data: Json<DataPermissionsValue>,
-) -> Result<Json<Server>> {
+) -> Result<Json<v0::Server>> {
     let data = data.into_inner();
 
     let mut server = target.as_server(db).await?;
-    let mut permissions = perms(&user).server(&server);
+    let mut query = DatabasePermissionQuery::new(db, &user).server(&server);
+    let permissions = calculate_server_permissions(&mut query).await;
 
-    permissions
-        .throw_permission(db, Permission::ManagePermissions)
-        .await?;
+    permissions.throw_if_lacking_channel_permission(ChannelPermission::ManagePermissions)?;
 
     // Ensure we have permissions to grant these permissions forwards
     permissions
-        .throw_permission_value(db, data.permissions)
+        .throw_permission_override(
+            None,
+            &Override {
+                allow: data.permissions,
+                deny: 0,
+            },
+        )
         .await?;
 
     server
@@ -40,5 +50,5 @@ pub async fn req(
         )
         .await?;
 
-    Ok(Json(server))
+    Ok(Json(server.into()))
 }

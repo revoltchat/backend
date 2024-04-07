@@ -1,6 +1,6 @@
 use super::{Channel, File};
 
-use revolt_permissions::OverrideField;
+use revolt_permissions::{Override, OverrideField};
 use std::collections::HashMap;
 
 #[cfg(feature = "validator")]
@@ -158,6 +158,12 @@ auto_derived!(
         /// Whether this server is age-restricted
         #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub nsfw: Option<bool>,
+    }
+
+    /// New role permissions
+    pub struct DataSetServerRolePermission {
+        /// Allow / deny values for the role in this server.
+        pub permissions: Override,
     }
 
     /// Information returned when creating server

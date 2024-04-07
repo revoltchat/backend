@@ -1,8 +1,16 @@
-use super::File;
+use std::collections::HashMap;
+
+use super::{File, Role, User};
 
 use iso8601_timestamp::Timestamp;
 use once_cell::sync::Lazy;
 use regex::Regex;
+
+#[cfg(feature = "validator")]
+use validator::Validate;
+
+#[cfg(feature = "rocket")]
+use rocket::FromForm;
 
 /// Regex for valid role colours
 ///
@@ -76,5 +84,47 @@ auto_derived!(
         Leave,
         Kick,
         Ban,
+    }
+
+    /// Member response
+    #[serde(untagged)]
+    pub enum MemberResponse {
+        Member(Member),
+        MemberWithRoles {
+            member: Member,
+            roles: HashMap<String, Role>,
+        },
+    }
+
+    /// Options for fetching all members
+    #[cfg_attr(feature = "rocket", derive(FromForm))]
+    pub struct OptionsFetchAllMembers {
+        /// Whether to exclude offline users
+        pub exclude_offline: Option<bool>,
+    }
+
+    /// Response with all members
+    pub struct AllMemberResponse {
+        /// List of members
+        pub members: Vec<Member>,
+        /// List of users
+        pub users: Vec<User>,
+    }
+
+    /// New member information
+    #[cfg_attr(feature = "validator", derive(Validate))]
+    pub struct DataMemberEdit {
+        /// Member nickname
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
+        pub nickname: Option<String>,
+        /// Attachment Id to set for avatar
+        pub avatar: Option<String>,
+        /// Array of role ids
+        pub roles: Option<Vec<String>>,
+        /// Timestamp this member is timed out until
+        pub timeout: Option<Timestamp>,
+        /// Fields to remove from channel object
+        #[cfg_attr(feature = "validator", validate(length(min = 1)))]
+        pub remove: Option<Vec<FieldsMember>>,
     }
 );

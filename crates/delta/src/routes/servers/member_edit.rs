@@ -1,69 +1,55 @@
 use std::collections::HashSet;
 
-use revolt_quark::{
-    models::{
-        server_member::{FieldsMember, PartialMember},
-        File, Member, User,
-    },
-    perms, Db, Error, Permission, Ref, Result, Timestamp,
+use revolt_database::{
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Database, File, PartialMember, User,
 };
+use revolt_models::v0;
 
-use rocket::serde::json::Json;
-use serde::{Deserialize, Serialize};
+use revolt_permissions::{calculate_server_permissions, ChannelPermission};
+use revolt_result::{create_error, Result};
+use rocket::{serde::json::Json, State};
 use validator::Validate;
-
-/// # Member Data
-#[derive(Validate, Serialize, Deserialize, JsonSchema)]
-pub struct DataMemberEdit {
-    /// Member nickname
-    #[validate(length(min = 1, max = 32))]
-    nickname: Option<String>,
-    /// Attachment Id to set for avatar
-    avatar: Option<String>,
-    /// Array of role ids
-    roles: Option<Vec<String>>,
-    /// Timestamp this member is timed out until
-    timeout: Option<Timestamp>,
-    /// Fields to remove from channel object
-    #[validate(length(min = 1))]
-    remove: Option<Vec<FieldsMember>>,
-}
 
 /// # Edit Member
 ///
 /// Edit a member by their id.
 #[openapi(tag = "Server Members")]
 #[patch("/<server>/members/<target>", data = "<data>")]
-pub async fn req(
-    db: &Db,
+pub async fn edit(
+    db: &State<Database>,
     user: User,
-    server: Ref,
-    target: Ref,
-    data: Json<DataMemberEdit>,
-) -> Result<Json<Member>> {
+    server: Reference,
+    target: Reference,
+    data: Json<v0::DataMemberEdit>,
+) -> Result<Json<v0::Member>> {
     let data = data.into_inner();
-    data.validate()
-        .map_err(|error| Error::FailedValidation { error })?;
+    data.validate().map_err(|error| {
+        create_error!(FailedValidation {
+            error: error.to_string()
+        })
+    })?;
 
     // Fetch server, target member and current permissions
     let mut server = server.as_server(db).await?;
     let mut member = target.as_member(db, &server.id).await?;
-    let mut permissions = perms(&user).server(&server);
+    let mut query = DatabasePermissionQuery::new(db, &user)
+        .server(&server)
+        .member(&member);
+    let permissions = calculate_server_permissions(&mut query).await;
 
     // Check permissions in server
-    let mut required = vec![];
-
     if data.nickname.is_some()
         || data
             .remove
             .as_ref()
-            .map(|x| x.contains(&FieldsMember::Nickname))
+            .map(|x| x.contains(&v0::FieldsMember::Nickname))
             .unwrap_or_default()
     {
         if user.id == member.id.user {
-            required.push(Permission::ChangeNickname);
+            permissions.throw_if_lacking_channel_permission(ChannelPermission::ChangeNickname)?;
         } else {
-            required.push(Permission::ManageNicknames);
+            permissions.throw_if_lacking_channel_permission(ChannelPermission::ManageNicknames)?;
         }
     }
 
@@ -71,13 +57,13 @@ pub async fn req(
         || data
             .remove
             .as_ref()
-            .map(|x| x.contains(&FieldsMember::Avatar))
+            .map(|x| x.contains(&v0::FieldsMember::Avatar))
             .unwrap_or_default()
     {
         if user.id == member.id.user {
-            required.push(Permission::ChangeAvatar);
+            permissions.throw_if_lacking_channel_permission(ChannelPermission::ChangeAvatar)?;
         } else {
-            return Err(Error::InvalidOperation);
+            return Err(create_error!(InvalidOperation));
         }
     }
 
@@ -85,34 +71,30 @@ pub async fn req(
         || data
             .remove
             .as_ref()
-            .map(|x| x.contains(&FieldsMember::Roles))
+            .map(|x| x.contains(&v0::FieldsMember::Roles))
             .unwrap_or_default()
     {
-        required.push(Permission::AssignRoles);
+        permissions.throw_if_lacking_channel_permission(ChannelPermission::AssignRoles)?;
     }
 
     if data.timeout.is_some()
         || data
             .remove
             .as_ref()
-            .map(|x| x.contains(&FieldsMember::Timeout))
+            .map(|x| x.contains(&v0::FieldsMember::Timeout))
             .unwrap_or_default()
     {
-        required.push(Permission::TimeoutMembers);
-    }
-
-    for permission in required {
-        permissions.throw_permission(db, permission).await?;
+        permissions.throw_if_lacking_channel_permission(ChannelPermission::TimeoutMembers)?;
     }
 
     // Resolve our ranking
-    let our_ranking = permissions.get_member_rank().unwrap_or(i64::MIN);
+    let our_ranking = query.get_member_rank().unwrap_or(i64::MIN);
 
     // Check that we have permissions to act against this member
     if member.id.user != user.id
-        && member.get_ranking(permissions.server.get().unwrap()) <= our_ranking
+        && member.get_ranking(query.server_ref().as_ref().unwrap()) <= our_ranking
     {
-        return Err(Error::NotElevated);
+        return Err(create_error!(NotElevated));
     }
 
     // Check permissions against roles in diff
@@ -125,16 +107,16 @@ pub async fn req(
         for role_id in added_roles {
             if let Some(role) = server.roles.remove(*role_id) {
                 if role.rank <= our_ranking {
-                    return Err(Error::NotElevated);
+                    return Err(create_error!(NotElevated));
                 }
             } else {
-                return Err(Error::InvalidRole);
+                return Err(create_error!(InvalidRole));
             }
         }
     }
 
     // Apply edits to the member object
-    let DataMemberEdit {
+    let v0::DataMemberEdit {
         nickname,
         avatar,
         roles,
@@ -151,7 +133,7 @@ pub async fn req(
 
     // 1. Remove fields from object
     if let Some(fields) = &remove {
-        if fields.contains(&FieldsMember::Avatar) {
+        if fields.contains(&v0::FieldsMember::Avatar) {
             if let Some(avatar) = &member.avatar {
                 db.mark_attachment_as_deleted(&avatar.id).await?;
             }
@@ -164,8 +146,14 @@ pub async fn req(
     }
 
     member
-        .update(db, partial, remove.unwrap_or_default())
+        .update(
+            db,
+            partial,
+            remove
+                .map(|v| v.into_iter().map(Into::into).collect())
+                .unwrap_or_default(),
+        )
         .await?;
 
-    Ok(Json(member))
+    Ok(Json(member.into()))
 }

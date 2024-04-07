@@ -32,10 +32,10 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         server_edit::req,
         server_ack::req,
         channel_create::create_server_channel,
-        member_fetch_all::req,
-        member_remove::req,
-        member_fetch::req,
-        member_edit::req,
+        member_fetch_all::fetch_all,
+        member_remove::kick,
+        member_fetch::fetch,
+        member_edit::edit,
         member_experimental_query::member_experimental_query,
         ban_create::ban,
         ban_remove::unban,
@@ -45,8 +45,8 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         roles_edit::req,
         roles_fetch::req,
         roles_delete::req,
-        permissions_set::req,
-        permissions_set_default::req,
+        permissions_set::set_role_permission,
+        permissions_set_default::set_default_permissions,
         emoji_list::list_emoji
     ]
 }

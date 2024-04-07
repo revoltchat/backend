@@ -1,40 +1,47 @@
-use revolt_quark::{
-    models::{server_member::RemovalIntention, User},
-    perms, Db, EmptyResponse, Error, Permission, Ref, Result,
+use revolt_database::{
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Database, RemovalIntention, User,
 };
+use revolt_permissions::{calculate_server_permissions, ChannelPermission};
+use revolt_result::{create_error, Result};
+use rocket::State;
+use rocket_empty::EmptyResponse;
 
 /// # Kick Member
 ///
 /// Removes a member from the server.
 #[openapi(tag = "Server Members")]
 #[delete("/<target>/members/<member>")]
-pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyResponse> {
+pub async fn kick(
+    db: &State<Database>,
+    user: User,
+    target: Reference,
+    member: Reference,
+) -> Result<EmptyResponse> {
     let server = target.as_server(db).await?;
 
     if member.id == user.id {
-        return Err(Error::CannotRemoveYourself);
+        return Err(create_error!(CannotRemoveYourself));
     }
 
     if member.id == server.owner {
-        return Err(Error::InvalidOperation);
+        return Err(create_error!(InvalidOperation));
     }
 
-    let mut permissions = perms(&user).server(&server);
-
-    permissions
-        .throw_permission(db, Permission::KickMembers)
-        .await?;
+    let mut query = DatabasePermissionQuery::new(db, &user).server(&server);
+    calculate_server_permissions(&mut query)
+        .await
+        .throw_if_lacking_channel_permission(ChannelPermission::KickMembers)?;
 
     let member = member.as_member(db, &server.id).await?;
-
-    if member.get_ranking(permissions.server.get().unwrap())
-        <= permissions.get_member_rank().unwrap_or(i64::MIN)
+    if member.get_ranking(query.server_ref().as_ref().unwrap())
+        <= query.get_member_rank().unwrap_or(i64::MIN)
     {
-        return Err(Error::NotElevated);
+        return Err(create_error!(NotElevated));
     }
 
-    server
-        .remove_member(db, member, RemovalIntention::Kick, false)
+    member
+        .remove(db, &server, RemovalIntention::Kick, false)
         .await
         .map(|_| EmptyResponse)
 }

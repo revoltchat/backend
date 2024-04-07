@@ -1,25 +1,42 @@
-use revolt_quark::models::server_member::MemberResponse;
-use revolt_quark::{models::User, perms, Db, Ref, Result};
-use rocket::serde::json::Json;
+use revolt_database::{
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Database, User,
+};
+use revolt_models::v0;
+use revolt_permissions::PermissionQuery;
+use revolt_result::{create_error, Result};
+use rocket::{serde::json::Json, State};
+
 /// # Fetch Member
 ///
 /// Retrieve a member.
 #[openapi(tag = "Server Members")]
 #[get("/<target>/members/<member>?<roles>")]
-pub async fn req(
-    db: &Db,
+pub async fn fetch(
+    db: &State<Database>,
     user: User,
-    target: Ref,
-    member: Ref,
+    target: Reference,
+    member: Reference,
     roles: Option<bool>,
-) -> Result<Json<MemberResponse>> {
+) -> Result<Json<v0::MemberResponse>> {
     let server = target.as_server(db).await?;
-    perms(&user).server(&server).calc(db).await?;
+    let mut query = DatabasePermissionQuery::new(db, &user).server(&server);
+    if !query.are_we_a_member().await {
+        return Err(create_error!(NotFound));
+    }
 
-    let member_response: MemberResponse = match roles {
-        Some(true) => member.as_member_with_roles(db, &server.id).await?.into(),
-        _ => member.as_member(db, &server.id).await?.into(),
-    };
-
-    Ok(Json(member_response))
+    let member = member.as_member(db, &server.id).await?;
+    if let Some(true) = roles {
+        Ok(Json(v0::MemberResponse::MemberWithRoles {
+            roles: server
+                .roles
+                .into_iter()
+                .filter(|(k, _)| member.roles.contains(k))
+                .map(|(k, v)| (k, v.into()))
+                .collect(),
+            member: member.into(),
+        }))
+    } else {
+        Ok(Json(v0::MemberResponse::Member(member.into())))
+    }
 }

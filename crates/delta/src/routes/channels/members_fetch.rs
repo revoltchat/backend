@@ -28,13 +28,7 @@ pub async fn fetch_members(
 
     if let Channel::Group { recipients, .. } = channel {
         Ok(Json(
-            join_all(
-                db.fetch_users(&recipients)
-                    .await?
-                    .into_iter()
-                    .map(|other_user| other_user.into_known(&user)),
-            )
-            .await,
+            User::fetch_many_ids_as_mutuals(db, &user, &recipients).await?,
         ))
     } else {
         Err(create_error!(InvalidOperation))

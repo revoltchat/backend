@@ -5,6 +5,8 @@ use crate::{events::client::EventV1, Database, File, RatelimitEvent};
 use once_cell::sync::Lazy;
 use rand::seq::SliceRandom;
 use revolt_config::config;
+use revolt_models::v0;
+use revolt_presence::filter_online;
 use revolt_result::{create_error, Error, ErrorType, Result};
 use ulid::Ulid;
 
@@ -264,7 +266,27 @@ impl User {
         Ok(username)
     }
 
-    // Find a free discriminator for a given username
+    /// Helper function to fetch many users as a mutually connected user
+    /// (while optimising the online ID query)
+    pub async fn fetch_many_ids_as_mutuals(
+        db: &Database,
+        perspective: &User,
+        ids: &[String],
+    ) -> Result<Vec<v0::User>> {
+        let online_ids = filter_online(ids).await;
+
+        Ok(db
+            .fetch_users(ids)
+            .await?
+            .into_iter()
+            .map(|user| {
+                let is_online = online_ids.contains(&user.id);
+                user.into_known(perspective, is_online)
+            })
+            .collect())
+    }
+
+    /// Find a free discriminator for a given username
     pub async fn find_discriminator(
         db: &Database,
         username: &str,

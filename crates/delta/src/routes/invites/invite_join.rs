@@ -1,4 +1,3 @@
-use futures::future::join_all;
 use revolt_database::{util::reference::Reference, Channel, Database, Invite, Member, User};
 use revolt_models::v0::{self, InviteJoinResponse};
 use revolt_result::{create_error, Result};
@@ -37,13 +36,7 @@ pub async fn join(
             channel.add_user_to_group(db, &user, creator).await?;
             if let Channel::Group { recipients, .. } = &channel {
                 Ok(Json(InviteJoinResponse::Group {
-                    users: join_all(
-                        db.fetch_users(&recipients)
-                            .await?
-                            .into_iter()
-                            .map(|other_user| other_user.into_known(&user)),
-                    )
-                    .await,
+                    users: User::fetch_many_ids_as_mutuals(db, &user, &recipients).await?,
                     channel: channel.into(),
                 }))
             } else {

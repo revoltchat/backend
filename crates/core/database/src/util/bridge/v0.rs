@@ -500,6 +500,17 @@ impl From<crate::FieldsMember> for FieldsMember {
     }
 }
 
+impl From<FieldsMember> for crate::FieldsMember {
+    fn from(value: FieldsMember) -> crate::FieldsMember {
+        match value {
+            FieldsMember::Avatar => crate::FieldsMember::Avatar,
+            FieldsMember::Nickname => crate::FieldsMember::Nickname,
+            FieldsMember::Roles => crate::FieldsMember::Roles,
+            FieldsMember::Timeout => crate::FieldsMember::Timeout,
+        }
+    }
+}
+
 impl From<crate::RemovalIntention> for RemovalIntention {
     fn from(value: crate::RemovalIntention) -> Self {
         match value {
@@ -702,7 +713,8 @@ impl crate::User {
         }
     }
 
-    pub async fn into_known<'a, P>(self, perspective: P) -> User
+    /// Convert user object into user model assuming mutual connection
+    pub fn into_known<'a, P>(self, perspective: P, is_online: bool) -> User
     where
         P: Into<Option<&'a crate::User>>,
     {
@@ -725,10 +737,7 @@ impl crate::User {
                     })
                     .unwrap_or_default();
 
-                // TODO: refactor all of this to be less code? (as in with the method above)
-                // TODO: also not sure if this is the best solution, but we don't want to
-                // TODO: fetch mutual information again here
-                let can_see_profile = relationship == RelationshipStatus::Friend;
+                let can_see_profile = relationship != RelationshipStatus::BlockedOther;
                 (relationship, can_see_profile)
             }
         } else {
@@ -768,7 +777,7 @@ impl crate::User {
             privileged: self.privileged,
             bot: self.bot.map(|bot| bot.into()),
             relationship,
-            online: can_see_profile && revolt_presence::is_online(&self.id).await,
+            online: can_see_profile && is_online,
             id: self.id,
         }
     }
