@@ -36,10 +36,12 @@ pub async fn req(
             .throw_permission(db, Permission::ManagePermissions)
             .await?;
 
+        // Prevent us from editing roles above us
         if rank <= permissions.get_member_rank().unwrap_or(i64::MIN) {
             return Err(Error::NotElevated);
         }
 
+        // Ensure we have access to grant these permissions forwards
         let current_value: Override = current_value.into();
         permissions
             .throw_permission_override(db, current_value, data.permissions)

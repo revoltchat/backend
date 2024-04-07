@@ -58,6 +58,11 @@ pub async fn req(
     let member_rank = permissions.get_member_rank().unwrap_or(i64::MIN);
 
     if let Some(mut role) = server.roles.remove(&role_id) {
+        // Prevent us from editing roles above us
+        if role.rank <= member_rank {
+            return Err(Error::NotElevated);
+        }
+
         let DataEditRole {
             name,
             colour,
@@ -66,6 +71,7 @@ pub async fn req(
             remove,
         } = data;
 
+        // Prevent us from moving a role above other roles
         if let Some(rank) = &rank {
             if rank <= &member_rank {
                 return Err(Error::NotElevated);

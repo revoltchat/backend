@@ -24,6 +24,7 @@ pub async fn req(
         .throw_permission(db, Permission::ManagePermissions)
         .await?;
 
+    // Ensure we have permissions to grant these permissions forwards
     permissions
         .throw_permission_value(db, data.permissions)
         .await?;
