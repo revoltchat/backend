@@ -32,10 +32,10 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         open_dm::req,
         // Relationships
         find_mutual::req,
-        add_friend::req,
-        remove_friend::req,
-        block_user::req,
-        unblock_user::req,
-        send_friend_request::req,
+        add_friend::add,
+        remove_friend::remove,
+        block_user::block,
+        unblock_user::unblock,
+        send_friend_request::send_friend_request,
     ]
 }

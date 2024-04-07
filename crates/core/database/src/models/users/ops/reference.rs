@@ -28,12 +28,14 @@ impl AbstractUsers for ReferenceDb {
     }
 
     /// Fetch a user from the database by their username
-    async fn fetch_user_by_username(&self, username: &str) -> Result<User> {
+    async fn fetch_user_by_username(&self, username: &str, discriminator: &str) -> Result<User> {
         let users = self.users.lock().await;
         let lowercase = username.to_lowercase();
         users
             .values()
-            .find(|user| user.username.to_lowercase() == lowercase)
+            .find(|user| {
+                user.username.to_lowercase() == lowercase && user.discriminator == discriminator
+            })
             .cloned()
             .ok_or_else(|| create_error!(NotFound))
     }

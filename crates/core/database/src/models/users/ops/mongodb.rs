@@ -25,13 +25,14 @@ impl AbstractUsers for MongoDb {
     }
 
     /// Fetch a user from the database by their username
-    async fn fetch_user_by_username(&self, username: &str) -> Result<User> {
+    async fn fetch_user_by_username(&self, username: &str, discriminator: &str) -> Result<User> {
         query!(
             self,
             find_one_with_options,
             COL,
             doc! {
-                "username": username
+                "username": username,
+                "discriminator": discriminator
             },
             FindOneOptions::builder()
                 .collation(

@@ -1,6 +1,9 @@
+use authifier::models::Account;
 use once_cell::sync::Lazy;
 use regex::Regex;
-use revolt_quark::{authifier::models::Account, models::User, Database, Error, Result};
+use revolt_database::{Database, User};
+use revolt_models::v0;
+use revolt_result::{create_error, Result};
 use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -32,15 +35,18 @@ pub async fn req(
     account: Account,
     mut user: User,
     data: Json<DataChangeUsername>,
-) -> Result<Json<User>> {
+) -> Result<Json<v0::User>> {
     let data = data.into_inner();
-    data.validate()
-        .map_err(|error| Error::FailedValidation { error })?;
+    data.validate().map_err(|error| {
+        create_error!(FailedValidation {
+            error: error.to_string()
+        })
+    })?;
 
     account
         .verify_password(&data.password)
-        .map_err(|_| Error::InvalidCredentials)?;
+        .map_err(|_| create_error!(InvalidCredentials))?;
 
     user.update_username(db, data.username).await?;
-    Ok(Json(user.foreign()))
+    Ok(Json(user.into(db, None).await))
 }

@@ -188,6 +188,12 @@ auto_derived!(
         #[cfg_attr(feature = "serde", serde(rename = "owner"))]
         pub owner_id: String,
     }
+
+    /// User lookup information
+    pub struct DataSendFriendRequest {
+        /// Username and discriminator combo separated by #
+        pub username: String,
+    }
 );
 
 pub trait CheckRelationship {
