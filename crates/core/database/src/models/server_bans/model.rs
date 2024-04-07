@@ -1,4 +1,6 @@
-use crate::MemberCompositeKey;
+use revolt_result::Result;
+
+use crate::{Database, MemberCompositeKey, Server};
 
 auto_derived!(
     /// Server Ban
@@ -10,3 +12,24 @@ auto_derived!(
         pub reason: Option<String>,
     }
 );
+
+impl ServerBan {
+    /// Create ban
+    pub async fn create(
+        db: &Database,
+        server: &Server,
+        user_id: &str,
+        reason: Option<String>,
+    ) -> Result<ServerBan> {
+        let ban = ServerBan {
+            id: MemberCompositeKey {
+                server: server.id.to_string(),
+                user: user_id.to_string(),
+            },
+            reason,
+        };
+
+        db.insert_ban(&ban).await?;
+        Ok(ban)
+    }
+}

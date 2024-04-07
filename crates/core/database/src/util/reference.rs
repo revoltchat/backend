@@ -7,7 +7,9 @@ use schemars::{
     JsonSchema,
 };
 
-use crate::{Bot, Channel, Database, Emoji, Invite, Message, Server, User, Webhook};
+use crate::{
+    Bot, Channel, Database, Emoji, Invite, Member, Message, Server, ServerBan, User, Webhook,
+};
 
 /// Reference to some object in the database
 #[derive(Serialize, Deserialize)]
@@ -20,6 +22,11 @@ impl Reference {
     /// Create a Ref from an unchecked string
     pub fn from_unchecked(id: String) -> Reference {
         Reference { id }
+    }
+
+    /// Fetch ban from Ref
+    pub async fn as_ban(&self, db: &Database, server: &str) -> Result<ServerBan> {
+        db.fetch_ban(server, &self.id).await
     }
 
     /// Fetch bot from Ref
@@ -55,6 +62,11 @@ impl Reference {
         }
 
         Ok(msg)
+    }
+
+    /// Fetch member from Ref
+    pub async fn as_member(&self, db: &Database, server: &str) -> Result<Member> {
+        db.fetch_member(server, &self.id).await
     }
 
     /// Fetch server from Ref

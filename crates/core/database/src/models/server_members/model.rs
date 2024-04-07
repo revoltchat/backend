@@ -215,4 +215,47 @@ impl Member {
             false
         }
     }
+
+    /// Remove member from server
+    pub async fn remove(
+        self,
+        db: &Database,
+        server: &Server,
+        intention: RemovalIntention,
+        silent: bool,
+    ) -> Result<()> {
+        db.delete_member(&self.id).await?;
+
+        EventV1::ServerMemberLeave {
+            id: self.id.server.to_string(),
+            user: self.id.user.to_string(),
+        }
+        .p(self.id.server.to_string())
+        .await;
+
+        if !silent {
+            if let Some(id) = server
+                .system_messages
+                .as_ref()
+                .and_then(|x| match intention {
+                    RemovalIntention::Leave => x.user_left.as_ref(),
+                    RemovalIntention::Kick => x.user_kicked.as_ref(),
+                    RemovalIntention::Ban => x.user_banned.as_ref(),
+                })
+            {
+                match intention {
+                    RemovalIntention::Leave => SystemMessage::UserLeft { id: self.id.user },
+                    RemovalIntention::Kick => SystemMessage::UserKicked { id: self.id.user },
+                    RemovalIntention::Ban => SystemMessage::UserBanned { id: self.id.user },
+                }
+                .into_message(id.to_string())
+                // TODO: support notifications here in the future?
+                .send_without_notifications(db, false, false)
+                .await
+                .ok();
+            }
+        }
+
+        Ok(())
+    }
 }
