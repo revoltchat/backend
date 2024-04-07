@@ -1,71 +1,43 @@
-use revolt_quark::{
-    models::{
-        message::{
-            BulkMessageResponse, MessageFilter, MessageQuery, MessageSort, MessageTimePeriod,
-        },
-        User,
-    },
-    perms, Db, Error, Permission, Ref, Result,
+use revolt_database::{
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Channel, Database, Message, MessageFilter, MessageQuery, MessageTimePeriod, User,
 };
-
-use rocket::serde::json::Json;
-use serde::{Deserialize, Serialize};
+use revolt_models::v0;
+use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
+use revolt_result::{create_error, Result};
+use rocket::{serde::json::Json, State};
 use validator::Validate;
-
-/// # Search Parameters
-#[derive(Validate, Serialize, Deserialize, JsonSchema)]
-pub struct OptionsMessageSearch {
-    /// Full-text search query
-    ///
-    /// See [MongoDB documentation](https://docs.mongodb.com/manual/text-search/#-text-operator) for more information.
-    #[validate(length(min = 1, max = 64))]
-    query: String,
-
-    /// Maximum number of messages to fetch
-    #[validate(range(min = 1, max = 100))]
-    limit: Option<i64>,
-    /// Message id before which messages should be fetched
-    #[validate(length(min = 26, max = 26))]
-    before: Option<String>,
-    /// Message id after which messages should be fetched
-    #[validate(length(min = 26, max = 26))]
-    after: Option<String>,
-    /// Message sort direction
-    ///
-    /// By default, it will be sorted by latest.
-    #[serde(default = "MessageSort::default")]
-    sort: MessageSort,
-    /// Whether to include user (and member, if server channel) objects
-    include_users: Option<bool>,
-}
 
 /// # Search for Messages
 ///
 /// This route searches for messages within the given parameters.
 #[openapi(tag = "Messaging")]
 #[post("/<target>/search", data = "<options>")]
-pub async fn req(
-    db: &Db,
+pub async fn search(
+    db: &State<Database>,
     user: User,
-    target: Ref,
-    options: Json<OptionsMessageSearch>,
-) -> Result<Json<BulkMessageResponse>> {
+    target: Reference,
+    options: Json<v0::DataMessageSearch>,
+) -> Result<Json<v0::BulkMessageResponse>> {
     if user.bot.is_some() {
-        return Err(Error::IsBot);
+        return Err(create_error!(IsBot));
     }
 
     let options = options.into_inner();
-    options
-        .validate()
-        .map_err(|error| Error::FailedValidation { error })?;
+    options.validate().map_err(|error| {
+        create_error!(FailedValidation {
+            error: error.to_string()
+        })
+    })?;
 
     let channel = target.as_channel(db).await?;
-    perms(&user)
-        .channel(&channel)
-        .throw_permission_and_view_channel(db, Permission::ReadMessageHistory)
-        .await?;
 
-    let OptionsMessageSearch {
+    let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
+    calculate_channel_permissions(&mut query)
+        .await
+        .throw_if_lacking_channel_permission(ChannelPermission::ReadMessageHistory)?;
+
+    let v0::DataMessageSearch {
         query,
         limit,
         before,
@@ -74,8 +46,9 @@ pub async fn req(
         include_users,
     } = options;
 
-    let messages = db
-        .fetch_messages(MessageQuery {
+    Message::fetch_with_users(
+        db,
+        MessageQuery {
             filter: MessageFilter {
                 channel: Some(channel.id().to_string()),
                 query: Some(query),
@@ -87,10 +60,16 @@ pub async fn req(
                 sort: Some(sort),
             },
             limit,
-        })
-        .await?;
-
-    BulkMessageResponse::transform(db, Some(&channel), messages, &user, include_users)
-        .await
-        .map(Json)
+        },
+        &user,
+        include_users,
+        match channel {
+            Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => {
+                Some(server)
+            }
+            _ => None,
+        },
+    )
+    .await
+    .map(Json)
 }

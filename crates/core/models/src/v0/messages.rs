@@ -250,13 +250,13 @@ auto_derived!(
         /// Maximum number of messages to fetch
         ///
         /// For fetching nearby messages, this is \`(limit + 1)\`.
-        #[validate(range(min = 1, max = 100))]
+        #[cfg_attr(feature = "validator", validate(range(min = 1, max = 100)))]
         pub limit: Option<i64>,
         /// Message id before which messages should be fetched
-        #[validate(length(min = 26, max = 26))]
+        #[cfg_attr(feature = "validator", validate(length(min = 26, max = 26)))]
         pub before: Option<String>,
         /// Message id after which messages should be fetched
-        #[validate(length(min = 26, max = 26))]
+        #[cfg_attr(feature = "validator", validate(length(min = 26, max = 26)))]
         pub after: Option<String>,
         /// Message sort direction
         pub sort: Option<MessageSort>,
@@ -265,33 +265,34 @@ auto_derived!(
         /// Specifying 'nearby' ignores 'before', 'after' and 'sort'.
         /// It will also take half of limit rounded as the limits to each side.
         /// It also fetches the message ID specified.
-        #[validate(length(min = 26, max = 26))]
+        #[cfg_attr(feature = "validator", validate(length(min = 26, max = 26)))]
         pub nearby: Option<String>,
         /// Whether to include user (and member, if server channel) objects
         pub include_users: Option<bool>,
     }
 
     /// Options for searching for messages
+    #[cfg_attr(feature = "validator", derive(Validate))]
     pub struct DataMessageSearch {
         /// Full-text search query
         ///
         /// See [MongoDB documentation](https://docs.mongodb.com/manual/text-search/#-text-operator) for more information.
-        #[validate(length(min = 1, max = 64))]
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
         pub query: String,
 
         /// Maximum number of messages to fetch
-        #[validate(range(min = 1, max = 100))]
+        #[cfg_attr(feature = "validator", validate(range(min = 1, max = 100)))]
         pub limit: Option<i64>,
         /// Message id before which messages should be fetched
-        #[validate(length(min = 26, max = 26))]
+        #[cfg_attr(feature = "validator", validate(length(min = 26, max = 26)))]
         pub before: Option<String>,
         /// Message id after which messages should be fetched
-        #[validate(length(min = 26, max = 26))]
+        #[cfg_attr(feature = "validator", validate(length(min = 26, max = 26)))]
         pub after: Option<String>,
         /// Message sort direction
         ///
         /// By default, it will be sorted by latest.
-        #[serde(default = "MessageSort::default")]
+        #[cfg_attr(feature = "serde", serde(default = "MessageSort::default"))]
         pub sort: MessageSort,
         /// Whether to include user (and member, if server channel) objects
         pub include_users: Option<bool>,

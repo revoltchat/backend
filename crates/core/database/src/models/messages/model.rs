@@ -5,8 +5,8 @@ use iso8601_timestamp::Timestamp;
 use revolt_config::config;
 use revolt_models::{
     v0::{
-        self, DataMessageSend, Embed, MessageAuthor, MessageSort, MessageWebhook, PushNotification,
-        ReplyIntent, SendableEmbed, Text, RE_MENTION,
+        self, BulkMessageResponse, DataMessageSend, Embed, MessageAuthor, MessageSort,
+        MessageWebhook, PushNotification, ReplyIntent, SendableEmbed, Text, RE_MENTION,
     },
     validator::Validate,
 };
@@ -486,6 +486,50 @@ impl Message {
         .await;
 
         Ok(())
+    }
+
+    /// Helper function to fetch many messages with users
+    pub async fn fetch_with_users(
+        db: &Database,
+        query: MessageQuery,
+        perspective: &User,
+        include_users: Option<bool>,
+        server_id: Option<String>,
+    ) -> Result<BulkMessageResponse> {
+        let messages: Vec<v0::Message> = db
+            .fetch_messages(query)
+            .await?
+            .into_iter()
+            .map(Into::into)
+            .collect();
+
+        if let Some(true) = include_users {
+            let user_ids = messages
+                .iter()
+                .map(|m| m.author.clone())
+                .collect::<HashSet<String>>()
+                .into_iter()
+                .collect::<Vec<String>>();
+            let users = User::fetch_many_ids_as_mutuals(db, perspective, &user_ids).await?;
+
+            Ok(BulkMessageResponse::MessagesAndUsers {
+                messages,
+                users,
+                members: if let Some(server_id) = server_id {
+                    Some(
+                        db.fetch_members(&server_id, &user_ids)
+                            .await?
+                            .into_iter()
+                            .map(Into::into)
+                            .collect(),
+                    )
+                } else {
+                    None
+                },
+            })
+        } else {
+            Ok(BulkMessageResponse::JustMessages(messages))
+        }
     }
 
     /// Append content to message
