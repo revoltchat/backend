@@ -147,7 +147,7 @@ macro_rules! create_error {
 #[macro_export]
 macro_rules! create_database_error {
     ( $operation: expr, $collection: expr ) => {
-        create_error!(DatabaseError {
+        $crate::create_error!(DatabaseError {
             operation: $operation.to_string(),
             collection: $collection.to_string()
         })
