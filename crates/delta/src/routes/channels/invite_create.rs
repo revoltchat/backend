@@ -1,9 +1,12 @@
-use revolt_quark::{
-    models::{Invite, User},
-    perms, Db, Error, Permission, Ref, Result,
+use revolt_database::{
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Database, Invite, User,
 };
+use revolt_models::v0;
+use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 
-use rocket::serde::json::Json;
+use revolt_result::{create_error, Result};
+use rocket::{serde::json::Json, State};
 
 /// # Create Invite
 ///
@@ -12,16 +15,23 @@ use rocket::serde::json::Json;
 /// Channel must be a `TextChannel`.
 #[openapi(tag = "Channel Invites")]
 #[post("/<target>/invites")]
-pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<Invite>> {
+pub async fn create_invite(
+    db: &State<Database>,
+    user: User,
+    target: Reference,
+) -> Result<Json<v0::Invite>> {
     if user.bot.is_some() {
-        return Err(Error::IsBot);
+        return Err(create_error!(IsBot));
     }
 
     let channel = target.as_channel(db).await?;
-    perms(&user)
-        .channel(&channel)
-        .throw_permission_and_view_channel(db, Permission::InviteOthers)
-        .await?;
+    let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
+    calculate_channel_permissions(&mut query)
+        .await
+        .throw_if_lacking_channel_permission(ChannelPermission::InviteOthers)?;
 
-    Invite::create(db, &user, &channel).await.map(Json)
+    Invite::create_channel_invite(db, &user, &channel)
+        .await
+        .map(|invite| invite.into())
+        .map(Json)
 }

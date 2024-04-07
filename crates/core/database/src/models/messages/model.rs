@@ -441,6 +441,22 @@ impl Message {
         Ok(())
     }
 
+    /// Update message data
+    pub async fn update(&mut self, db: &Database, partial: PartialMessage) -> Result<()> {
+        self.apply_options(partial.clone());
+        db.update_message(&self.id, &partial).await?;
+
+        EventV1::MessageUpdate {
+            id: self.id.clone(),
+            channel: self.channel.clone(),
+            data: partial.into(),
+        }
+        .p(self.channel.clone())
+        .await;
+
+        Ok(())
+    }
+
     /// Append content to message
     pub async fn append(
         db: &Database,
@@ -517,6 +533,48 @@ impl Message {
         } else {
             Err(create_error!(PayloadTooLarge))
         }
+    }
+
+    /// Delete a message
+    pub async fn delete(self, db: &Database) -> Result<()> {
+        let file_ids: Vec<String> = self
+            .attachments
+            .map(|files| files.iter().map(|file| file.id.to_string()).collect())
+            .unwrap_or_default();
+
+        if !file_ids.is_empty() {
+            db.mark_attachments_as_deleted(&file_ids).await?;
+        }
+
+        db.delete_message(&self.id).await?;
+
+        EventV1::MessageDelete {
+            id: self.id,
+            channel: self.channel.clone(),
+        }
+        .p(self.channel)
+        .await;
+        Ok(())
+    }
+
+    /// Bulk delete messages
+    pub async fn bulk_delete(db: &Database, channel: &str, ids: Vec<String>) -> Result<()> {
+        let valid_ids = db
+            .fetch_messages_by_id(&ids)
+            .await?
+            .into_iter()
+            .filter(|msg| msg.channel == channel)
+            .map(|msg| msg.id)
+            .collect::<Vec<String>>();
+
+        db.delete_messages(channel, &valid_ids).await?;
+        EventV1::BulkMessageDelete {
+            channel: channel.to_string(),
+            ids: valid_ids,
+        }
+        .p(channel.to_string())
+        .await;
+        Ok(())
     }
 }
 

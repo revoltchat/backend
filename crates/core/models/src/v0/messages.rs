@@ -169,16 +169,19 @@ auto_derived!(
     #[derive(Default)]
     #[cfg_attr(feature = "validator", derive(Validate))]
     pub struct SendableEmbed {
-        #[validate(length(min = 1, max = 128))]
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
         pub icon_url: Option<String>,
-        #[validate(length(min = 1, max = 256))]
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
         pub url: Option<String>,
-        #[validate(length(min = 1, max = 100))]
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 100)))]
         pub title: Option<String>,
-        #[validate(length(min = 1, max = 2000))]
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2000)))]
         pub description: Option<String>,
         pub media: Option<String>,
-        #[validate(length(min = 1, max = 128), regex = "RE_COLOUR")]
+        #[cfg_attr(
+            feature = "validator",
+            validate(length(min = 1, max = 128), regex = "RE_COLOUR")
+        )]
         pub colour: Option<String>,
     }
 
@@ -196,11 +199,11 @@ auto_derived!(
         /// Unique token to prevent duplicate message sending
         ///
         /// **This is deprecated and replaced by `Idempotency-Key`!**
-        #[validate(length(min = 1, max = 64))]
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
         pub nonce: Option<String>,
 
         /// Message content to send
-        #[validate(length(min = 0, max = 2000))]
+        #[cfg_attr(feature = "validator", validate(length(min = 0, max = 2000)))]
         pub content: Option<String>,
         /// Attachments to include in message
         pub attachments: Option<Vec<String>>,
@@ -209,13 +212,24 @@ auto_derived!(
         /// Embeds to include in message
         ///
         /// Text embed content contributes to the content length cap
-        #[validate]
+        #[cfg_attr(feature = "validator", validate)]
         pub embeds: Option<Vec<SendableEmbed>>,
         /// Masquerade to apply to this message
-        #[validate]
+        #[cfg_attr(feature = "validator", validate)]
         pub masquerade: Option<Masquerade>,
         /// Information about how this message should be interacted with
         pub interactions: Option<Interactions>,
+    }
+
+    /// Options for bulk deleting messages
+    #[cfg_attr(
+        feature = "validator",
+        cfg_attr(feature = "validator", derive(Validate))
+    )]
+    pub struct OptionsBulkDelete {
+        /// Message IDs
+        #[validate(length(min = 1, max = 100))]
+        pub ids: Vec<String>,
     }
 );
 

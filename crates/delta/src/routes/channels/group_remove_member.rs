@@ -1,16 +1,23 @@
-use revolt_quark::{
-    models::{Channel, User},
-    Db, EmptyResponse, Error, Permission, Ref, Result,
-};
+use revolt_database::{util::reference::Reference, Channel, Database, User};
+use revolt_permissions::ChannelPermission;
+use revolt_result::{create_error, Result};
+
+use rocket::State;
+use rocket_empty::EmptyResponse;
 
 /// # Remove Member from Group
 ///
 /// Removes a user from the group.
 #[openapi(tag = "Groups")]
 #[delete("/<target>/recipients/<member>")]
-pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyResponse> {
+pub async fn remove_member(
+    db: &State<Database>,
+    user: User,
+    target: Reference,
+    member: Reference,
+) -> Result<EmptyResponse> {
     if user.bot.is_some() {
-        return Err(Error::IsBot);
+        return Err(create_error!(IsBot));
     }
 
     let channel = target.as_channel(db).await?;
@@ -20,24 +27,26 @@ pub async fn req(db: &Db, user: User, target: Ref, member: Ref) -> Result<EmptyR
             owner, recipients, ..
         } => {
             if &user.id != owner {
-                return Error::from_permission(Permission::ManageChannel);
+                return Err(create_error!(MissingPermission {
+                    permission: ChannelPermission::ManageChannel.to_string()
+                }));
             }
 
             let member = member.as_user(db).await?;
             if user.id == member.id {
-                return Err(Error::CannotRemoveYourself);
+                return Err(create_error!(CannotRemoveYourself));
             }
 
             if !recipients.iter().any(|x| *x == member.id) {
-                return Err(Error::NotInGroup);
+                return Err(create_error!(NotInGroup));
             }
 
             channel
-                .remove_user_from_group(db, &member.id, Some(&user.id), false)
+                .remove_user_from_group(db, &member, Some(&user.id), false)
                 .await
                 .map(|_| EmptyResponse)
         }
-        _ => Err(Error::InvalidOperation),
+        _ => Err(create_error!(InvalidOperation)),
     }
 }
 

@@ -74,7 +74,11 @@ revolt-database = { path = "../core/database", features = [
     "rocket-impl",
     "redis-is-patched",
 ] }
-revolt-models = { path = "../core/models", features = ["schemas", "validator"] }
+revolt-models = { path = "../core/models", features = [
+    "schemas",
+    "validator",
+    "rocket",
+] }
 revolt-result = { path = "../core/result", features = ["rocket", "okapi"] }
 revolt-permissions = { path = "../core/permissions", features = ["schemas"] }
 

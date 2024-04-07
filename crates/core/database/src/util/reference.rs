@@ -42,6 +42,16 @@ impl Reference {
         db.fetch_message(&self.id).await
     }
 
+    /// Fetch message from Ref and validate channel
+    pub async fn as_message_in_channel(&self, db: &Database, channel: &str) -> Result<Message> {
+        let msg = db.fetch_message(&self.id).await?;
+        if msg.channel != channel {
+            return Err(create_error!(NotFound));
+        }
+
+        Ok(msg)
+    }
+
     /// Fetch server from Ref
     pub async fn as_server(&self, db: &Database) -> Result<Server> {
         db.fetch_server(&self.id).await

@@ -727,6 +727,13 @@ impl crate::User {
             id: self.id,
         }
     }
+
+    pub fn as_author_for_system(&self) -> MessageAuthor {
+        MessageAuthor::System {
+            username: &self.username,
+            avatar: self.avatar.as_ref().map(|file| file.id.as_ref()),
+        }
+    }
 }
 
 impl From<crate::PartialUser> for PartialUser {

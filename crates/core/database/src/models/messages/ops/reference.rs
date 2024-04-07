@@ -1,3 +1,4 @@
+use futures::future::try_join_all;
 use indexmap::IndexSet;
 use revolt_result::Result;
 
@@ -174,6 +175,11 @@ impl AbstractMessages for ReferenceDb {
                 .map_err(|_| create_database_error!("find", COL))
             }
         }*/
+    }
+
+    /// Fetch multiple messages by given IDs
+    async fn fetch_messages_by_id(&self, ids: &[String]) -> Result<Vec<Message>> {
+        try_join_all(ids.iter().map(|id| self.fetch_message(id))).await
     }
 
     /// Update a given message with new information

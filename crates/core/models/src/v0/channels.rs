@@ -3,6 +3,9 @@ use super::File;
 use revolt_permissions::OverrideField;
 use std::collections::{HashMap, HashSet};
 
+#[cfg(feature = "rocket")]
+use rocket::FromForm;
+
 auto_derived!(
     /// Channel
     #[serde(tag = "channel_type")]
@@ -257,6 +260,13 @@ auto_derived!(
         /// Whether this channel is age restricted
         #[serde(skip_serializing_if = "Option::is_none")]
         pub nsfw: Option<bool>,
+    }
+
+    /// Options when deleting a channel
+    #[cfg_attr(feature = "rocket", derive(FromForm))]
+    pub struct OptionsChannelDelete {
+        /// Whether to not send a leave message
+        pub leave_silently: Option<bool>,
     }
 );
 

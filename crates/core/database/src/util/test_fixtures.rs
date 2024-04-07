@@ -92,7 +92,7 @@ macro_rules! fixture {
 
         let fixtures = $crate::util::test_fixtures::load_fixture(
             &$database,
-            include_str!(concat!("../../../fixtures/", $name, ".json")),
+            include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/", $name, ".json")),
         )
         .await;
 

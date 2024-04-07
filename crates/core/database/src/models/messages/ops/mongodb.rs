@@ -159,6 +159,21 @@ impl AbstractMessages for MongoDb {
         }
     }
 
+    /// Fetch multiple messages by given IDs
+    async fn fetch_messages_by_id(&self, ids: &[String]) -> Result<Vec<Message>> {
+        self.find_with_options(
+            COL,
+            doc! {
+                "ids": {
+                    "$in": ids
+                }
+            },
+            None,
+        )
+        .await
+        .map_err(|_| create_database_error!("find", COL))
+    }
+
     /// Update a given message with new information
     async fn update_message(&self, id: &str, message: &PartialMessage) -> Result<()> {
         query!(self, update_one_by_id, COL, id, message, vec![], None).map(|_| ())

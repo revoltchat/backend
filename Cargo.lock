@@ -3712,6 +3712,7 @@ dependencies = [
  "revolt-config",
  "revolt-permissions",
  "revolt_optional_struct",
+ "rocket",
  "schemars",
  "serde",
  "validator 0.16.0",

@@ -16,6 +16,9 @@ pub trait AbstractMessages: Sync + Send {
     /// Fetch multiple messages by given query
     async fn fetch_messages(&self, query: MessageQuery) -> Result<Vec<Message>>;
 
+    /// Fetch multiple messages by given IDs
+    async fn fetch_messages_by_id(&self, ids: &[String]) -> Result<Vec<Message>>;
+
     /// Update a given message with new information
     async fn update_message(&self, id: &str, message: &PartialMessage) -> Result<()>;
 

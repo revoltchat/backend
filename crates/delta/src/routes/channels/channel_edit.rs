@@ -1,60 +1,36 @@
-use revolt_quark::{
-    models::{
-        channel::{Channel, FieldsChannel, PartialChannel},
-        message::SystemMessage,
-        File, User,
-    },
-    perms, Database, Error, Permission, Ref, Result,
+use revolt_database::{
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Channel, Database, File, PartialChannel, SystemMessage, User,
 };
-
+use revolt_models::v0;
+use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
+use revolt_result::{create_error, Result};
 use rocket::{serde::json::Json, State};
-use serde::{Deserialize, Serialize};
 use validator::Validate;
-
-/// # Channel Details
-#[derive(Validate, Serialize, Deserialize, JsonSchema)]
-pub struct DataEditChannel {
-    /// Channel name
-    #[validate(length(min = 1, max = 32))]
-    name: Option<String>,
-    /// Channel description
-    #[validate(length(min = 0, max = 1024))]
-    description: Option<String>,
-    /// Group owner
-    owner: Option<String>,
-    /// Icon
-    ///
-    /// Provide an Autumn attachment Id.
-    #[validate(length(min = 1, max = 128))]
-    icon: Option<String>,
-    /// Whether this channel is age-restricted
-    nsfw: Option<bool>,
-    /// Whether this channel is archived
-    archived: Option<bool>,
-    #[validate(length(min = 1))]
-    remove: Option<Vec<FieldsChannel>>,
-}
 
 /// # Edit Channel
 ///
 /// Edit a channel object by its id.
 #[openapi(tag = "Channel Information")]
 #[patch("/<target>", data = "<data>")]
-pub async fn req(
+pub async fn edit(
     db: &State<Database>,
     user: User,
-    target: Ref,
-    data: Json<DataEditChannel>,
-) -> Result<Json<Channel>> {
+    target: Reference,
+    data: Json<v0::DataEditChannel>,
+) -> Result<Json<v0::Channel>> {
     let data = data.into_inner();
-    data.validate()
-        .map_err(|error| Error::FailedValidation { error })?;
+    data.validate().map_err(|error| {
+        create_error!(FailedValidation {
+            error: error.to_string()
+        })
+    })?;
 
     let mut channel = target.as_channel(db).await?;
-    perms(&user)
-        .channel(&channel)
-        .throw_permission_and_view_channel(db, Permission::ManageChannel)
-        .await?;
+    let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
+    calculate_channel_permissions(&mut query)
+        .await
+        .throw_if_lacking_channel_permission(ChannelPermission::ManageChannel)?;
 
     if data.name.is_none()
         && data.description.is_none()
@@ -63,7 +39,7 @@ pub async fn req(
         && data.owner.is_none()
         && data.remove.is_none()
     {
-        return Ok(Json(channel));
+        return Ok(Json(channel.into()));
     }
 
     let mut partial: PartialChannel = Default::default();
@@ -76,12 +52,12 @@ pub async fn req(
         {
             // Make sure we are the owner of this group
             if owner != &user.id {
-                return Err(Error::NotOwner);
+                return Err(create_error!(NotOwner));
             }
 
             // Ensure user is part of group
             if !recipients.contains(&new_owner) {
-                return Err(Error::NotInGroup);
+                return Err(create_error!(NotInGroup));
             }
 
             // Transfer ownership
@@ -94,10 +70,10 @@ pub async fn req(
                 to: new_owner,
             }
         } else {
-            return Err(Error::InvalidOperation);
+            return Err(create_error!(InvalidOperation));
         }
         .into_message(channel.id().to_string())
-        .create(db, &channel, None)
+        .send(db, user.as_author_for_system(), &channel, false)
         .await
         .ok();
     }
@@ -128,7 +104,7 @@ pub async fn req(
             ..
         } => {
             if let Some(fields) = &data.remove {
-                if fields.contains(&FieldsChannel::Icon) {
+                if fields.contains(&v0::FieldsChannel::Icon) {
                     if let Some(icon) = &icon {
                         db.mark_attachment_as_deleted(&icon.id).await?;
                     }
@@ -136,10 +112,10 @@ pub async fn req(
 
                 for field in fields {
                     match field {
-                        FieldsChannel::Description => {
+                        v0::FieldsChannel::Description => {
                             description.take();
                         }
-                        FieldsChannel::Icon => {
+                        v0::FieldsChannel::Icon => {
                             icon.take();
                         }
                         _ => {}
@@ -175,7 +151,7 @@ pub async fn req(
                         by: user.id.clone(),
                     }
                     .into_message(channel.id().to_string())
-                    .create(db, &channel, None)
+                    .send(db, user.as_author_for_system(), &channel, false)
                     .await
                     .ok();
                 }
@@ -185,26 +161,36 @@ pub async fn req(
                         by: user.id.clone(),
                     }
                     .into_message(channel.id().to_string())
-                    .create(db, &channel, None)
+                    .send(db, user.as_author_for_system(), &channel, false)
                     .await
                     .ok();
                 }
 
                 if partial.icon.is_some() {
-                    SystemMessage::ChannelIconChanged { by: user.id }
-                        .into_message(channel.id().to_string())
-                        .create(db, &channel, None)
-                        .await
-                        .ok();
+                    SystemMessage::ChannelIconChanged {
+                        by: user.id.clone(),
+                    }
+                    .into_message(channel.id().to_string())
+                    .send(db, user.as_author_for_system(), &channel, false)
+                    .await
+                    .ok();
                 }
             }
 
             channel
-                .update(db, partial, data.remove.unwrap_or_default())
+                .update(
+                    db,
+                    partial,
+                    data.remove
+                        .unwrap_or_default()
+                        .into_iter()
+                        .map(|f| f.into())
+                        .collect(),
+                )
                 .await?;
         }
-        _ => return Err(Error::InvalidOperation),
+        _ => return Err(create_error!(InvalidOperation)),
     };
 
-    Ok(Json(channel))
+    Ok(Json(channel.into()))
 }

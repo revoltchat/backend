@@ -7,8 +7,8 @@ use revolt_result::Result;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    events::client::EventV1, Database, File, IntoDocumentPath, PartialServer, Server,
-    SystemMessage, User,
+    events::client::EventV1, tasks::ack::AckEvent, Database, File, IntoDocumentPath, PartialServer,
+    Server, SystemMessage, User,
 };
 
 auto_derived!(
@@ -582,6 +582,28 @@ impl Channel {
         }
     }
 
+    /// Acknowledge a message
+    pub async fn ack(&self, user: &str, message: &str) -> Result<()> {
+        EventV1::ChannelAck {
+            id: self.id().to_string(),
+            user: user.to_string(),
+            message_id: message.to_string(),
+        }
+        .private(user.to_string())
+        .await;
+
+        crate::tasks::ack::queue(
+            self.id().to_string(),
+            user.to_string(),
+            AckEvent::AckMessage {
+                id: message.to_string(),
+            },
+        )
+        .await;
+
+        Ok(())
+    }
+
     /// Remove user from a group
     pub async fn remove_user_from_group(
         &self,
@@ -627,8 +649,7 @@ impl Channel {
                         .await
                         .ok();
                     } else {
-                        db.delete_channel(self).await?;
-                        return Ok(());
+                        return self.delete(db).await;
                     }
                 }
 
