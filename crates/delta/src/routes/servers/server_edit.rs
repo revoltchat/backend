@@ -1,74 +1,36 @@
 use std::collections::HashSet;
 
-use revolt_quark::{
-    models::{
-        server::{Category, FieldsServer, PartialServer, SystemMessageChannels},
-        File, Server, User,
-    },
-    perms, Db, Error, Permission, Ref, Result,
+use revolt_database::{
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Database, File, PartialServer, User,
 };
-
-use rocket::serde::json::Json;
-use serde::{Deserialize, Serialize};
+use revolt_models::v0;
+use revolt_permissions::{calculate_server_permissions, ChannelPermission};
+use revolt_result::{create_error, Result};
+use rocket::{serde::json::Json, State};
 use validator::Validate;
-
-/// # Server Data
-#[derive(Validate, Serialize, Deserialize, JsonSchema)]
-pub struct DataEditServer {
-    /// Server name
-    #[validate(length(min = 1, max = 32))]
-    name: Option<String>,
-    /// Server description
-    #[validate(length(min = 0, max = 1024))]
-    description: Option<String>,
-
-    /// Attachment Id for icon
-    icon: Option<String>,
-    /// Attachment Id for banner
-    banner: Option<String>,
-
-    /// Category structure for server
-    #[validate]
-    categories: Option<Vec<Category>>,
-    /// System message configuration
-    system_messages: Option<SystemMessageChannels>,
-
-    /// Bitfield of server flags
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub flags: Option<i32>,
-
-    // Whether this server is age-restricted
-    // nsfw: Option<bool>,
-    /// Whether this server is public and should show up on [Revolt Discover](https://rvlt.gg)
-    discoverable: Option<bool>,
-    /// Whether analytics should be collected for this server
-    ///
-    /// Must be enabled in order to show up on [Revolt Discover](https://rvlt.gg).
-    analytics: Option<bool>,
-
-    /// Fields to remove from server object
-    #[validate(length(min = 1))]
-    remove: Option<Vec<FieldsServer>>,
-}
 
 /// # Edit Server
 ///
 /// Edit a server by its id.
 #[openapi(tag = "Server Information")]
 #[patch("/<target>", data = "<data>")]
-pub async fn req(
-    db: &Db,
+pub async fn edit(
+    db: &State<Database>,
     user: User,
-    target: Ref,
-    data: Json<DataEditServer>,
-) -> Result<Json<Server>> {
+    target: Reference,
+    data: Json<v0::DataEditServer>,
+) -> Result<Json<v0::Server>> {
     let data = data.into_inner();
-    data.validate()
-        .map_err(|error| Error::FailedValidation { error })?;
+    data.validate().map_err(|error| {
+        create_error!(FailedValidation {
+            error: error.to_string()
+        })
+    })?;
 
     let mut server = target.as_server(db).await?;
-    let mut permissions = perms(&user).server(&server);
-    permissions.calc(db).await?;
+    let mut query = DatabasePermissionQuery::new(db, &user).server(&server);
+    let permissions = calculate_server_permissions(&mut query).await;
 
     // Check permissions
     if data.name.is_none()
@@ -83,7 +45,7 @@ pub async fn req(
         && data.discoverable.is_none()
         && data.remove.is_none()
     {
-        return Ok(Json(server));
+        return Ok(Json(server.into()));
     } else if data.name.is_some()
         || data.description.is_some()
         || data.icon.is_some()
@@ -92,26 +54,22 @@ pub async fn req(
         || data.analytics.is_some()
         || data.remove.is_some()
     {
-        permissions
-            .throw_permission(db, Permission::ManageServer)
-            .await?;
+        permissions.throw_if_lacking_channel_permission(ChannelPermission::ManageServer)?;
     }
 
     // Check we are privileged if changing sensitive fields
     if (data.flags.is_some() /*|| data.nsfw.is_some()*/ || data.discoverable.is_some())
         && !user.privileged
     {
-        return Err(Error::NotPrivileged);
+        return Err(create_error!(NotPrivileged));
     }
 
     // Changing categories requires manage channel
     if data.categories.is_some() {
-        permissions
-            .throw_permission(db, Permission::ManageChannel)
-            .await?;
+        permissions.throw_if_lacking_channel_permission(ChannelPermission::ManageChannel)?;
     }
 
-    let DataEditServer {
+    let v0::DataEditServer {
         name,
         description,
         icon,
@@ -128,8 +86,8 @@ pub async fn req(
     let mut partial = PartialServer {
         name,
         description,
-        categories,
-        system_messages,
+        categories: categories.map(|v| v.into_iter().map(Into::into).collect()),
+        system_messages: system_messages.map(Into::into),
         flags,
         // nsfw,
         discoverable,
@@ -139,13 +97,13 @@ pub async fn req(
 
     // 1. Remove fields from object
     if let Some(fields) = &remove {
-        if fields.contains(&FieldsServer::Banner) {
+        if fields.contains(&v0::FieldsServer::Banner) {
             if let Some(banner) = &server.banner {
                 db.mark_attachment_as_deleted(&banner.id).await?;
             }
         }
 
-        if fields.contains(&FieldsServer::Icon) {
+        if fields.contains(&v0::FieldsServer::Icon) {
             if let Some(icon) = &server.icon {
                 db.mark_attachment_as_deleted(&icon.id).await?;
             }
@@ -156,7 +114,7 @@ pub async fn req(
     if let Some(system_messages) = &partial.system_messages {
         for id in system_messages.clone().into_channel_ids() {
             if !server.channels.contains(&id) {
-                return Err(Error::NotFound);
+                return Err(create_error!(NotFound));
             }
         }
     }
@@ -166,7 +124,7 @@ pub async fn req(
         for category in categories {
             for channel in &category.channels {
                 if channel_ids.contains(channel) {
-                    return Err(Error::InvalidOperation);
+                    return Err(create_error!(InvalidOperation));
                 }
 
                 channel_ids.insert(channel.to_string());
@@ -191,8 +149,14 @@ pub async fn req(
     }
 
     server
-        .update(db, partial, remove.unwrap_or_default())
+        .update(
+            db,
+            partial,
+            remove
+                .map(|v| v.into_iter().map(Into::into).collect())
+                .unwrap_or_default(),
+        )
         .await?;
 
-    Ok(Json(server))
+    Ok(Json(server.into()))
 }

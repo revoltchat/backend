@@ -1,29 +1,40 @@
-use revolt_quark::{models::User, perms, Db, EmptyResponse, Error, Permission, Ref, Result};
+use revolt_database::{
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Database, User,
+};
+use revolt_permissions::{calculate_server_permissions, ChannelPermission};
+use revolt_result::{create_error, Result};
+use rocket::State;
+use rocket_empty::EmptyResponse;
 
 /// # Delete Role
 ///
 /// Delete a server role by its id.
 #[openapi(tag = "Server Permissions")]
 #[delete("/<target>/roles/<role_id>")]
-pub async fn req(db: &Db, user: User, target: Ref, role_id: String) -> Result<EmptyResponse> {
+pub async fn delete(
+    db: &State<Database>,
+    user: User,
+    target: Reference,
+    role_id: String,
+) -> Result<EmptyResponse> {
     let mut server = target.as_server(db).await?;
-    let mut permissions = perms(&user).server(&server);
+    let mut query = DatabasePermissionQuery::new(db, &user).server(&server);
+    calculate_server_permissions(&mut query)
+        .await
+        .throw_if_lacking_channel_permission(ChannelPermission::ManageRole);
 
-    permissions
-        .throw_permission(db, Permission::ManageRole)
-        .await?;
-
-    let member_rank = permissions.get_member_rank().unwrap_or(i64::MIN);
+    let member_rank = query.get_member_rank().unwrap_or(i64::MIN);
 
     if let Some(role) = server.roles.remove(&role_id) {
         if role.rank <= member_rank {
-            return Err(Error::NotElevated);
+            return Err(create_error!(NotElevated));
         }
 
         role.delete(db, &server.id, &role_id)
             .await
             .map(|_| EmptyResponse)
     } else {
-        Err(Error::NotFound)
+        Err(create_error!(NotFound))
     }
 }

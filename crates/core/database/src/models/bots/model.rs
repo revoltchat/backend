@@ -93,7 +93,7 @@ impl Bot {
             Some(id.to_string()),
             Some(PartialUser {
                 bot: Some(BotInformation {
-                    owner: id.to_string(),
+                    owner: owner.id.to_string(),
                 }),
                 ..Default::default()
             }),

@@ -1,65 +1,48 @@
-use revolt_quark::{
-    models::{Channel, Server, User},
-    perms, Db, Ref, Result,
+use revolt_database::{
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Database, User,
 };
-use rocket::serde::json::Json;
-use serde::{Deserialize, Serialize};
-
-/// # Query Parameters
-#[derive(Deserialize, JsonSchema, FromForm)]
-pub struct OptionsFetchServer {
-    /// Whether to include channels
-    include_channels: Option<bool>,
-}
-
-/// # Fetch server route response
-#[derive(Serialize, JsonSchema)]
-#[serde(untagged)]
-pub enum FetchServerResponse {
-    JustServer(Server),
-    ServerWithChannels {
-        #[serde(flatten)]
-        server: Server,
-        channels: Vec<Channel>,
-    },
-}
+use revolt_models::v0;
+use revolt_permissions::{calculate_channel_permissions, ChannelPermission, PermissionQuery};
+use revolt_result::{create_error, Result};
+use rocket::{serde::json::Json, State};
 
 /// # Fetch Server
 ///
 /// Fetch a server by its id.
 #[openapi(tag = "Server Information")]
 #[get("/<target>?<options..>")]
-pub async fn req(
-    db: &Db,
+pub async fn fetch(
+    db: &State<Database>,
     user: User,
-    target: Ref,
-    options: OptionsFetchServer,
-) -> Result<Json<FetchServerResponse>> {
+    target: Reference,
+    options: v0::OptionsFetchServer,
+) -> Result<Json<v0::FetchServerResponse>> {
     let server = target.as_server(db).await?;
-    let mut perms = perms(&user).server(&server);
-    perms.calc(db).await?;
+    let mut query = DatabasePermissionQuery::new(db, &user).server(&server);
+    if !query.are_we_a_member().await {
+        return Err(create_error!(NotFound));
+    }
 
     if let Some(true) = options.include_channels {
         let all_channels = db.fetch_channels(&server.channels).await?;
-        let mut visible_channels = vec![];
+        let mut visible_channels: Vec<v0::Channel> = vec![];
 
         for channel in all_channels {
-            if perms
-                .clone()
-                .channel(&channel)
-                .calc(db)
-                .await?
-                .can_view_channel()
+            let mut channel_query = query.clone().channel(&channel);
+            if calculate_channel_permissions(&mut channel_query)
+                .await
+                .has_channel_permission(ChannelPermission::ViewChannel)
             {
-                visible_channels.push(channel);
+                visible_channels.push(channel.into());
             }
         }
 
-        Ok(Json(FetchServerResponse::ServerWithChannels {
-            server,
+        Ok(Json(v0::FetchServerResponse::ServerWithChannels {
+            server: server.into(),
             channels: visible_channels,
         }))
     } else {
-        Ok(Json(FetchServerResponse::JustServer(server)))
+        Ok(Json(v0::FetchServerResponse::JustServer(server.into())))
     }
 }

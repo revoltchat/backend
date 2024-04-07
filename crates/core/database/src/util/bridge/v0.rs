@@ -587,6 +587,18 @@ impl From<crate::FieldsServer> for FieldsServer {
     }
 }
 
+impl From<FieldsServer> for crate::FieldsServer {
+    fn from(value: FieldsServer) -> crate::FieldsServer {
+        match value {
+            FieldsServer::Banner => crate::FieldsServer::Banner,
+            FieldsServer::Categories => crate::FieldsServer::Categories,
+            FieldsServer::Description => crate::FieldsServer::Description,
+            FieldsServer::Icon => crate::FieldsServer::Icon,
+            FieldsServer::SystemMessages => crate::FieldsServer::SystemMessages,
+        }
+    }
+}
+
 impl From<crate::Category> for Category {
     fn from(value: crate::Category) -> Self {
         Category {
@@ -597,9 +609,30 @@ impl From<crate::Category> for Category {
     }
 }
 
+impl From<Category> for crate::Category {
+    fn from(value: Category) -> Self {
+        crate::Category {
+            id: value.id,
+            title: value.title,
+            channels: value.channels,
+        }
+    }
+}
+
 impl From<crate::SystemMessageChannels> for SystemMessageChannels {
     fn from(value: crate::SystemMessageChannels) -> Self {
         SystemMessageChannels {
+            user_joined: value.user_joined,
+            user_left: value.user_left,
+            user_kicked: value.user_kicked,
+            user_banned: value.user_banned,
+        }
+    }
+}
+
+impl From<SystemMessageChannels> for crate::SystemMessageChannels {
+    fn from(value: SystemMessageChannels) -> Self {
+        crate::SystemMessageChannels {
             user_joined: value.user_joined,
             user_left: value.user_left,
             user_kicked: value.user_kicked,
@@ -636,6 +669,14 @@ impl From<crate::FieldsRole> for FieldsRole {
     fn from(value: crate::FieldsRole) -> Self {
         match value {
             crate::FieldsRole::Colour => FieldsRole::Colour,
+        }
+    }
+}
+
+impl From<FieldsRole> for crate::FieldsRole {
+    fn from(value: FieldsRole) -> Self {
+        match value {
+            FieldsRole::Colour => crate::FieldsRole::Colour,
         }
     }
 }

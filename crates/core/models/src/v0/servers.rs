@@ -1,10 +1,13 @@
-use super::{Channel, File};
+use super::{Channel, File, RE_COLOUR};
 
 use revolt_permissions::{Override, OverrideField};
 use std::collections::HashMap;
 
 #[cfg(feature = "validator")]
 use validator::Validate;
+
+#[cfg(feature = "rocket")]
+use rocket::FromForm;
 
 auto_derived_partial!(
     /// Server
@@ -120,10 +123,13 @@ auto_derived!(
     }
 
     /// Channel category
+    #[cfg_attr(feature = "validator", derive(Validate))]
     pub struct Category {
         /// Unique ID for this category
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
         pub id: String,
         /// Title for this category
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
         pub title: String,
         /// Channels in this category
         pub channels: Vec<String>,
@@ -160,10 +166,24 @@ auto_derived!(
         pub nsfw: Option<bool>,
     }
 
-    /// New role permissions
-    pub struct DataSetServerRolePermission {
-        /// Allow / deny values for the role in this server.
-        pub permissions: Override,
+    /// Information about new role to create
+    #[cfg_attr(feature = "validator", derive(Validate))]
+    pub struct DataCreateRole {
+        /// Role name
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
+        pub name: String,
+        /// Ranking position
+        ///
+        /// Smaller values take priority.
+        pub rank: Option<i64>,
+    }
+
+    /// Response after creating new role
+    pub struct NewRoleResponse {
+        /// Id of the role
+        pub id: String,
+        /// New role
+        pub role: Role,
     }
 
     /// Information returned when creating server
@@ -172,5 +192,98 @@ auto_derived!(
         pub server: Server,
         /// Default channels
         pub channels: Vec<Channel>,
+    }
+
+    /// Options when fetching server
+    #[cfg_attr(feature = "rocket", derive(FromForm))]
+    pub struct OptionsFetchServer {
+        /// Whether to include channels
+        pub include_channels: Option<bool>,
+    }
+
+    /// Fetch server information
+    #[serde(untagged)]
+    pub enum FetchServerResponse {
+        JustServer(Server),
+        ServerWithChannels {
+            #[serde(flatten)]
+            server: Server,
+            channels: Vec<Channel>,
+        },
+    }
+
+    /// New server information
+    #[cfg_attr(feature = "validator", derive(Validate))]
+    pub struct DataEditServer {
+        /// Server name
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
+        pub name: Option<String>,
+        /// Server description
+        #[cfg_attr(feature = "validator", validate(length(min = 0, max = 1024)))]
+        pub description: Option<String>,
+
+        /// Attachment Id for icon
+        pub icon: Option<String>,
+        /// Attachment Id for banner
+        pub banner: Option<String>,
+
+        /// Category structure for server
+        #[cfg_attr(feature = "validator", validate)]
+        pub categories: Option<Vec<Category>>,
+        /// System message configuration
+        pub system_messages: Option<SystemMessageChannels>,
+
+        /// Bitfield of server flags
+        #[cfg_attr(feature = "validator", serde(skip_serializing_if = "Option::is_none"))]
+        pub flags: Option<i32>,
+
+        // Whether this server is age-restricted
+        // nsfw: Option<bool>,
+        /// Whether this server is public and should show up on [Revolt Discover](https://rvlt.gg)
+        pub discoverable: Option<bool>,
+        /// Whether analytics should be collected for this server
+        ///
+        /// Must be enabled in order to show up on [Revolt Discover](https://rvlt.gg).
+        pub analytics: Option<bool>,
+
+        /// Fields to remove from server object
+        #[cfg_attr(feature = "validator", validate(length(min = 1)))]
+        pub remove: Option<Vec<FieldsServer>>,
+    }
+
+    /// New role information
+    #[cfg_attr(feature = "validator", derive(Validate))]
+    pub struct DataEditRole {
+        /// Role name
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
+        pub name: Option<String>,
+        /// Role colour
+        #[cfg_attr(
+            feature = "validator",
+            validate(length(min = 1, max = 128), regex = "RE_COLOUR")
+        )]
+        pub colour: Option<String>,
+        /// Whether this role should be displayed separately
+        pub hoist: Option<bool>,
+        /// Ranking position
+        ///
+        /// Smaller values take priority.
+        pub rank: Option<i64>,
+        /// Fields to remove from role object
+        #[cfg_attr(feature = "validator", validate(length(min = 1)))]
+        pub remove: Option<Vec<FieldsRole>>,
+    }
+
+    /// New role permissions
+    pub struct DataSetServerRolePermission {
+        /// Allow / deny values for the role in this server.
+        pub permissions: Override,
+    }
+
+    /// Options when leaving a server
+    #[cfg_attr(feature = "rocket", derive(FromForm))]
+    pub struct OptionsServerDelete {
+        /// Whether to not send a leave message
+        pub leave_silently: Option<bool>,
     }
 );
