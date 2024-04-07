@@ -307,6 +307,13 @@ impl Channel {
                 return Err(create_error!(AlreadyInGroup));
             }
 
+            let config = config().await;
+            if recipients.len() >= config.features.limits.default.group_size {
+                return Err(create_error!(GroupTooLarge {
+                    max: config.features.limits.default.group_size
+                }));
+            }
+
             recipients.push(String::from(&user.id));
         }
 
@@ -696,6 +703,9 @@ impl Channel {
     pub async fn delete(&self, db: &Database) -> Result<()> {
         let id = self.id().to_string();
         EventV1::ChannelDelete { id: id.clone() }.p(id).await;
+        // TODO: missing functionality:
+        // - group invites
+        // - channels list / categories list on server
         db.delete_channel(self).await
     }
 }

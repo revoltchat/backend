@@ -11,6 +11,8 @@ use rocket::{serde::json::Json, State};
 /// # Fetch Group Members
 ///
 /// Retrieves all users who are part of this group.
+///
+/// This may not return full user information if users are not friends but have mutual connections.
 #[openapi(tag = "Groups")]
 #[get("/<target>/members")]
 pub async fn fetch_members(
@@ -30,7 +32,7 @@ pub async fn fetch_members(
                 db.fetch_users(&recipients)
                     .await?
                     .into_iter()
-                    .map(|other_user| other_user.into(db, &user)),
+                    .map(|other_user| other_user.into_known(&user)),
             )
             .await,
         ))

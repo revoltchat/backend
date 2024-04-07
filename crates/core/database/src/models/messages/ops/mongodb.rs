@@ -4,7 +4,9 @@ use mongodb::options::FindOptions;
 use revolt_models::v0::MessageSort;
 use revolt_result::Result;
 
-use crate::{AppendMessage, Message, MessageQuery, MessageTimePeriod, MongoDb, PartialMessage};
+use crate::{
+    AppendMessage, DocumentId, Message, MessageQuery, MessageTimePeriod, MongoDb, PartialMessage,
+};
 
 use super::AbstractMessages;
 
@@ -288,6 +290,60 @@ impl AbstractMessages for MongoDb {
                 },
                 None,
             )
+            .await
+            .map(|_| ())
+            .map_err(|_| create_database_error!("delete_many", COL))
+    }
+}
+
+impl MongoDb {
+    pub async fn delete_bulk_messages(&self, projection: Document) -> Result<()> {
+        let mut for_attachments = projection.clone();
+        for_attachments.insert(
+            "attachments",
+            doc! {
+                "$exists": 1_i32
+            },
+        );
+
+        // Check if there are any attachments we need to delete.
+        let message_ids_with_attachments = self
+            .find_with_options::<_, DocumentId>(
+                COL,
+                for_attachments,
+                FindOptions::builder()
+                    .projection(doc! { "_id": 1_i32 })
+                    .build(),
+            )
+            .await
+            .map_err(|_| create_database_error!("find_many", "attachments"))?
+            .into_iter()
+            .map(|x| x.id)
+            .collect::<Vec<String>>();
+
+        // If we found any, mark them as deleted.
+        if !message_ids_with_attachments.is_empty() {
+            self.col::<Document>("attachments")
+                .update_many(
+                    doc! {
+                        "message_id": {
+                            "$in": message_ids_with_attachments
+                        }
+                    },
+                    doc! {
+                        "$set": {
+                            "deleted": true
+                        }
+                    },
+                    None,
+                )
+                .await
+                .map_err(|_| create_database_error!("update_many", "attachments"))?;
+        }
+
+        // And then delete said messages.
+        self.col::<Document>(COL)
+            .delete_many(projection, None)
             .await
             .map(|_| ())
             .map_err(|_| create_database_error!("delete_many", COL))

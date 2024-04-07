@@ -1,6 +1,6 @@
 use super::AbstractChannels;
-use crate::{Channel, FieldsChannel, IntoDocumentPath, MongoDb, PartialChannel};
-use bson::Document;
+use crate::{AbstractServers, Channel, FieldsChannel, IntoDocumentPath, MongoDb, PartialChannel};
+use bson::{Bson, Document};
 use futures::StreamExt;
 use revolt_permissions::OverrideField;
 use revolt_result::Result;
@@ -188,6 +188,125 @@ impl AbstractChannels for MongoDb {
 
     // Delete a channel
     async fn delete_channel(&self, channel: &Channel) -> Result<()> {
+        let id = channel.id().to_string();
+        let server_id = match channel {
+            Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => {
+                Some(server)
+            }
+            _ => None,
+        };
+
+        // Delete invites and unreads.
+        self.delete_associated_channel_objects(Bson::String(id.to_string()))
+            .await?;
+
+        // Delete messages.
+        self.delete_bulk_messages(doc! {
+            "channel": &id
+        })
+        .await?;
+
+        // Remove from server object.
+        if let Some(server) = server_id {
+            let server = self.fetch_server(server).await?;
+            let mut update = doc! {
+                "$pull": {
+                    "channels": &id
+                }
+            };
+
+            if let Some(sys) = &server.system_messages {
+                let mut unset = doc! {};
+
+                if let Some(cid) = &sys.user_joined {
+                    if &id == cid {
+                        unset.insert("system_messages.user_joined", 1_i32);
+                    }
+                }
+
+                if let Some(cid) = &sys.user_left {
+                    if &id == cid {
+                        unset.insert("system_messages.user_left", 1_i32);
+                    }
+                }
+
+                if let Some(cid) = &sys.user_kicked {
+                    if &id == cid {
+                        unset.insert("system_messages.user_kicked", 1_i32);
+                    }
+                }
+
+                if let Some(cid) = &sys.user_banned {
+                    if &id == cid {
+                        unset.insert("system_messages.user_banned", 1_i32);
+                    }
+                }
+
+                if !unset.is_empty() {
+                    update.insert("$unset", unset);
+                }
+            }
+
+            self.col::<Document>("servers")
+                .update_one(
+                    doc! {
+                        "_id": server.id
+                    },
+                    update,
+                    None,
+                )
+                .await
+                .map_err(|_| create_database_error!("update_one", "servers"))?;
+        }
+
+        // Delete associated attachments
+        self.delete_many_attachments(doc! {
+            "object_id": &id
+        })
+        .await?;
+
+        // Delete the channel itself
         query!(self, delete_one_by_id, COL, &channel.id()).map(|_| ())
+    }
+}
+
+impl MongoDb {
+    pub async fn delete_associated_channel_objects(&self, id: Bson) -> Result<()> {
+        // Delete all invites to these channels.
+        self.col::<Document>("channel_invites")
+            .delete_many(
+                doc! {
+                    "channel": &id
+                },
+                None,
+            )
+            .await
+            .map_err(|_| create_database_error!("delete_many", "channel_invites"))?;
+
+        // Delete unread message objects on channels.
+        self.col::<Document>("channel_unreads")
+            .delete_many(
+                doc! {
+                    "_id.channel": &id
+                },
+                None,
+            )
+            .await
+            .map_err(|_| create_database_error!("delete_many", "channel_unreads"))
+            .map(|_| ())?;
+
+        // update many attachments with parent id
+
+        // Delete all webhooks on this channel.
+        self.col::<Document>("webhooks")
+            .delete_many(
+                doc! {
+                    "channel": &id
+                },
+                None,
+            )
+            .await
+            .map_err(|_| create_database_error!("delete_many", "webhooks"))
+            .map(|_| ())
     }
 }

@@ -701,6 +701,77 @@ impl crate::User {
         }
     }
 
+    pub async fn into_known<'a, P>(self, perspective: P) -> User
+    where
+        P: Into<Option<&'a crate::User>>,
+    {
+        let perspective = perspective.into();
+        let (relationship, can_see_profile) = if self.bot.is_some() {
+            (RelationshipStatus::None, true)
+        } else if let Some(perspective) = perspective {
+            if perspective.id == self.id {
+                (RelationshipStatus::User, true)
+            } else {
+                let relationship = perspective
+                    .relations
+                    .as_ref()
+                    .map(|relations| {
+                        relations
+                            .iter()
+                            .find(|relationship| relationship.id == self.id)
+                            .map(|relationship| relationship.status.clone().into())
+                            .unwrap_or_default()
+                    })
+                    .unwrap_or_default();
+
+                // TODO: refactor all of this to be less code? (as in with the method above)
+                // TODO: also not sure if this is the best solution, but we don't want to
+                // TODO: fetch mutual information again here
+                let can_see_profile = relationship == RelationshipStatus::Friend;
+                (relationship, can_see_profile)
+            }
+        } else {
+            (RelationshipStatus::None, false)
+        };
+
+        User {
+            username: self.username,
+            discriminator: self.discriminator,
+            display_name: self.display_name,
+            avatar: self.avatar.map(|file| file.into()),
+            relations: if let Some(crate::User { id, .. }) = perspective {
+                if id == &self.id {
+                    self.relations
+                        .unwrap_or_default()
+                        .into_iter()
+                        .map(|relation| relation.into())
+                        .collect()
+                } else {
+                    vec![]
+                }
+            } else {
+                vec![]
+            },
+            badges: self.badges.unwrap_or_default() as u32,
+            status: if can_see_profile {
+                self.status.map(|status| status.into())
+            } else {
+                None
+            },
+            profile: if can_see_profile {
+                self.profile.map(|profile| profile.into())
+            } else {
+                None
+            },
+            flags: self.flags.unwrap_or_default() as u32,
+            privileged: self.privileged,
+            bot: self.bot.map(|bot| bot.into()),
+            relationship,
+            online: can_see_profile && revolt_presence::is_online(&self.id).await,
+            id: self.id,
+        }
+    }
+
     pub async fn into_self(self) -> User {
         User {
             username: self.username,
