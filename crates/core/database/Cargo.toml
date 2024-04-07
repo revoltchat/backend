@@ -25,7 +25,9 @@ default = ["mongodb", "async-std-runtime", "tasks"]
 # Core
 revolt-config = { version = "0.7.0", path = "../config" }
 revolt-result = { version = "0.7.0", path = "../result" }
-revolt-models = { version = "0.7.0", path = "../models" }
+revolt-models = { version = "0.7.0", path = "../models", features = [
+    "validator",
+] }
 revolt-presence = { version = "0.7.0", path = "../presence" }
 revolt-permissions = { version = "0.7.0", path = "../permissions", features = [
     "serde",
@@ -45,6 +47,7 @@ decancer = "1.6.2"
 deadqueue = "0.2.4"
 linkify = { optional = true, version = "0.8.1" }
 url-escape = { optional = true, version = "0.1.1" }
+validator = { version = "0.16", features = ["derive"] }
 isahc = { optional = true, version = "1.7", features = ["json"] }
 
 # Serialisation

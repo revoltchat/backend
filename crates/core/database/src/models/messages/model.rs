@@ -3,16 +3,14 @@ use std::collections::HashSet;
 use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
 use revolt_config::config;
-use revolt_models::{
-    v0::{
-        self, BulkMessageResponse, DataMessageSend, Embed, MessageAuthor, MessageSort,
-        MessageWebhook, PushNotification, ReplyIntent, SendableEmbed, Text, RE_MENTION,
-    },
-    validator::Validate,
+use revolt_models::v0::{
+    self, BulkMessageResponse, DataMessageSend, Embed, MessageAuthor, MessageSort, MessageWebhook,
+    PushNotification, ReplyIntent, SendableEmbed, Text, RE_MENTION,
 };
 use revolt_permissions::{ChannelPermission, PermissionValue};
 use revolt_result::Result;
 use ulid::Ulid;
+use validator::Validate;
 
 use crate::{
     events::client::EventV1,
