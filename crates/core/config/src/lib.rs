@@ -56,6 +56,9 @@ pub struct ApiSmtp {
     pub username: String,
     pub password: String,
     pub from_address: String,
+    pub reply_to: Option<String>,
+    pub port: Option<i32>,
+    pub use_tls: Option<bool>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -80,6 +83,7 @@ pub struct ApiSecurity {
     pub authifier_shield_key: String,
     pub voso_legacy_token: String,
     pub captcha: ApiSecurityCaptcha,
+    pub trust_cloudflare: bool,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -131,6 +135,7 @@ pub struct FeaturesLimitsCollection {
 #[derive(Deserialize, Debug, Clone)]
 pub struct Features {
     pub limits: FeaturesLimitsCollection,
+    pub webhooks_enabled: bool,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -139,6 +144,31 @@ pub struct Settings {
     pub hosts: Hosts,
     pub api: Api,
     pub features: Features,
+    pub sentry_dsn: String,
+}
+
+impl Settings {
+    pub fn preflight_checks(&self) {
+        if self.api.smtp.host.is_empty() {
+            #[cfg(not(debug_assertions))]
+            if !env::var("REVOLT_UNSAFE_NO_EMAIL").map_or(false, |v| v == *"1") {
+                panic!("Running in production without email is not recommended, set REVOLT_UNSAFE_NO_EMAIL=1 to override.");
+            }
+
+            #[cfg(debug_assertions)]
+            log::warn!("No SMTP settings specified! Remember to configure email.");
+        }
+
+        if self.api.security.captcha.hcaptcha_key.is_empty() {
+            #[cfg(not(debug_assertions))]
+            if !env::var("REVOLT_UNSAFE_NO_CAPTCHA").map_or(false, |v| v == *"1") {
+                panic!("Running in production without CAPTCHA is not recommended, set REVOLT_UNSAFE_NO_CAPTCHA=1 to override.");
+            }
+
+            #[cfg(debug_assertions)]
+            log::warn!("No Captcha key specified! Remember to add hCaptcha key.");
+        }
+    }
 }
 
 pub async fn init() {
@@ -155,6 +185,47 @@ pub async fn read() -> Config {
 #[cached(time = 30)]
 pub async fn config() -> Settings {
     read().await.try_deserialize::<Settings>().unwrap()
+}
+
+/// Configure logging and common Rust variables
+pub async fn setup_logging(release: &'static str) -> Option<sentry::ClientInitGuard> {
+    dotenv::dotenv().ok();
+
+    if std::env::var("RUST_LOG").is_err() {
+        std::env::set_var("RUST_LOG", "info");
+    }
+
+    if std::env::var("ROCKET_ADDRESS").is_err() {
+        std::env::set_var("ROCKET_ADDRESS", "0.0.0.0");
+    }
+
+    pretty_env_logger::init();
+    log::info!("Starting {release}");
+
+    let config = config().await;
+    if config.sentry_dsn.is_empty() {
+        None
+    } else {
+        Some(sentry::init((
+            config.sentry_dsn,
+            sentry::ClientOptions {
+                release: Some(release.into()),
+                ..Default::default()
+            },
+        )))
+    }
+}
+
+#[macro_export]
+macro_rules! configure {
+    () => {
+        let _sentry = $crate::setup_logging(concat!(
+            env!("CARGO_PKG_NAME"),
+            "@",
+            env!("CARGO_PKG_VERSION")
+        ))
+        .await;
+    };
 }
 
 #[cfg(feature = "test")]

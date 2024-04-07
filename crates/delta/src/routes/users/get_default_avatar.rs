@@ -59,6 +59,14 @@ impl revolt_rocket_okapi::response::OpenApiResponderInner for CachedFile {
 pub async fn default_avatar(target: String) -> CachedFile {
     CachedFile((
         ContentType::PNG,
-        revolt_quark::util::pfp::avatar(target.chars().last().unwrap()),
+        match target.chars().last().unwrap() {
+            '0' | '1' | '2' | '3' | 'S' | 'Z' => include_bytes!("avatars/2.png").to_vec(),
+            '4' | '5' | '6' | '7' | 'T' => include_bytes!("avatars/3.png").to_vec(),
+            '8' | '9' | 'A' | 'B' => include_bytes!("avatars/4.png").to_vec(),
+            'C' | 'D' | 'E' | 'F' | 'V' => include_bytes!("avatars/5.png").to_vec(),
+            'G' | 'H' | 'J' | 'K' | 'W' => include_bytes!("avatars/6.png").to_vec(),
+            'M' | 'N' | 'P' | 'Q' | 'X' => include_bytes!("avatars/7.png").to_vec(),
+            _ => include_bytes!("avatars/1.png").to_vec(),
+        },
     ))
 }

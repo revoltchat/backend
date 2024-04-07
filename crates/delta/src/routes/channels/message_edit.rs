@@ -1,6 +1,7 @@
 use iso8601_timestamp::Timestamp;
 use revolt_config::config;
 use revolt_database::{
+    tasks,
     util::{permissions::DatabasePermissionQuery, reference::Reference},
     Database, Message, PartialMessage, User,
 };
@@ -88,7 +89,7 @@ pub async fn edit(
     // Queue up a task for processing embeds if the we have sufficient permissions
     if permissions.has_channel_permission(ChannelPermission::SendEmbeds) {
         if let Some(content) = edit.content {
-            revolt_quark::tasks::process_embeds::queue(
+            tasks::process_embeds::queue(
                 message.channel.to_string(),
                 message.id.to_string(),
                 content,

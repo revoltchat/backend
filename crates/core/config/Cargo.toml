@@ -14,6 +14,7 @@ default = ["test"]
 
 [dependencies]
 # Utility
+dotenv = "0.15.0"
 config = "0.13.3"
 cached = "0.44.0"
 once_cell = "1.18.0"
@@ -24,3 +25,10 @@ serde = { version = "1", features = ["derive"] }
 # Async
 futures-locks = "0.7.1"
 async-std = { version = "1.8.0", features = ["attributes"], optional = true }
+
+# Logging
+log = "0.4.14"
+pretty_env_logger = "0.4.0"
+
+# Sentry
+sentry = "0.31.5"

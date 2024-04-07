@@ -65,9 +65,6 @@ rocket_prometheus = "0.10.0-rc.3"
 schemars = "0.8.8"
 revolt_rocket_okapi = { version = "0.9.1", features = ["swagger"] }
 
-# quark
-revolt-quark = { path = "../quark" }
-
 # core
 authifier = "1.0.8"
 revolt-config = { path = "../core/config" }

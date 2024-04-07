@@ -3605,8 +3605,12 @@ dependencies = [
  "async-std",
  "cached",
  "config",
+ "dotenv",
  "futures-locks",
+ "log",
  "once_cell",
+ "pretty_env_logger",
+ "sentry",
  "serde",
 ]
 
@@ -3685,7 +3689,6 @@ dependencies = [
  "revolt-database",
  "revolt-models",
  "revolt-permissions",
- "revolt-quark",
  "revolt-result",
  "revolt_rocket_okapi",
  "rocket",

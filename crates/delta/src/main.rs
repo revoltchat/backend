@@ -8,6 +8,8 @@ extern crate serde_json;
 pub mod routes;
 pub mod util;
 
+use revolt_config::config;
+use revolt_database::events::client::EventV1;
 use revolt_database::{Database, MongoDb};
 use rocket::{Build, Rocket};
 use rocket_cors::{AllowedOrigins, CorsOptions};
@@ -16,18 +18,23 @@ use std::net::Ipv4Addr;
 use std::str::FromStr;
 
 use async_std::channel::unbounded;
-use revolt_quark::authifier::{Authifier, AuthifierEvent};
-use revolt_quark::events::client::EventV1;
-use revolt_quark::DatabaseInfo;
+use authifier::config::{
+    Captcha, Config as AuthifierConfig, EmailVerificationConfig, ResolveIp, SMTPSettings, Shield,
+    Template, Templates,
+};
+use authifier::{Authifier, AuthifierEvent};
 use rocket::data::ToByteUnit;
 
 pub async fn web() -> Rocket<Build> {
+    // Get settings
+    let config = config().await;
+
+    // Ensure environment variables are present
+    config.preflight_checks();
+
     // Setup database
     let db = revolt_database::DatabaseInfo::Auto.connect().await.unwrap();
     db.migrate_database().await.unwrap();
-
-    // Legacy database setup from quark
-    let legacy_db = DatabaseInfo::Auto.connect().await.unwrap();
 
     // Setup Authifier event channel
     let (sender, receiver) = unbounded();
@@ -40,7 +47,8 @@ pub async fn web() -> Rocket<Build> {
                 authifier::database::MongoDb(client.database("revolt")),
             ),
         },
-        config: revolt_quark::util::authifier::config(),
+        config: Default::default(),
+        // config: authifier_config().await,
         event_channel: Some(sender),
     };
 
@@ -63,10 +71,6 @@ pub async fn web() -> Rocket<Build> {
     // Launch background task workers
     async_std::task::spawn(revolt_database::tasks::start_workers(
         db.clone(),
-        authifier.database.clone(),
-    ));
-    async_std::task::spawn(revolt_quark::tasks::start_workers(
-        legacy_db.clone(),
         authifier.database.clone(),
     ));
 
@@ -97,7 +101,7 @@ pub async fn web() -> Rocket<Build> {
     let rocket = rocket::build();
     let prometheus = PrometheusMetrics::new();
 
-    routes::mount(rocket)
+    routes::mount(config, rocket)
         .attach(prometheus.clone())
         .mount("/metrics", prometheus)
         .mount("/", rocket_cors::catch_all_options_routes())
@@ -105,7 +109,6 @@ pub async fn web() -> Rocket<Build> {
         .mount("/swagger/", swagger)
         .manage(authifier)
         .manage(db)
-        .manage(legacy_db)
         .manage(cors.clone())
         .attach(util::ratelimiter::RatelimitFairing)
         .attach(cors)
@@ -116,13 +119,82 @@ pub async fn web() -> Rocket<Build> {
         })
 }
 
+pub async fn authifier_config() -> AuthifierConfig {
+    let config = config().await;
+
+    let mut auth_config = AuthifierConfig {
+        email_verification: if !config.api.smtp.host.is_empty() {
+            EmailVerificationConfig::Enabled {
+                smtp: SMTPSettings {
+                    from: config.api.smtp.from_address,
+                    host: config.api.smtp.host,
+                    username: config.api.smtp.username,
+                    password: config.api.smtp.password,
+                    reply_to: Some(
+                        config
+                            .api
+                            .smtp
+                            .reply_to
+                            .unwrap_or("support@revolt.chat".into()),
+                    ),
+                    port: config.api.smtp.port,
+                    use_tls: config.api.smtp.use_tls,
+                },
+                expiry: Default::default(),
+                templates: Templates {
+                    verify: Template {
+                        title: "Verify your Revolt account.".into(),
+                        text: include_str!("templates/verify.txt").into(),
+                        url: format!("{}/login/verify/", config.hosts.app),
+                        html: Some(include_str!("templates/verify.html").into()),
+                    },
+                    reset: Template {
+                        title: "Reset your Revolt password.".into(),
+                        text: include_str!("templates/reset.txt").into(),
+                        url: format!("{}/login/reset/", config.hosts.app),
+                        html: Some(include_str!("templates/reset.html").into()),
+                    },
+                    deletion: Template {
+                        title: "Confirm account deletion.".into(),
+                        text: include_str!("templates/deletion.txt").into(),
+                        url: format!("{}/delete/", config.hosts.app),
+                        html: Some(include_str!("templates/deletion.html").into()),
+                    },
+                    welcome: None,
+                },
+            }
+        } else {
+            EmailVerificationConfig::Disabled
+        },
+        ..Default::default()
+    };
+
+    auth_config.invite_only = config.api.registration.invite_only;
+
+    if !config.api.security.captcha.hcaptcha_key.is_empty() {
+        auth_config.captcha = Captcha::HCaptcha {
+            secret: config.api.security.captcha.hcaptcha_key,
+        };
+    }
+
+    if !config.api.security.authifier_shield_key.is_empty() {
+        auth_config.shield = Shield::Enabled {
+            api_key: config.api.security.authifier_shield_key,
+            strict: false,
+        };
+    }
+
+    if config.api.security.trust_cloudflare {
+        auth_config.resolve_ip = ResolveIp::Cloudflare;
+    }
+
+    auth_config
+}
+
 #[launch]
 async fn rocket() -> _ {
     // Configure logging and environment
-    revolt_quark::configure!();
-
-    // Ensure environment variables are present
-    revolt_quark::variables::delta::preflight_checks();
+    revolt_config::configure!();
 
     // Start web server
     web().await

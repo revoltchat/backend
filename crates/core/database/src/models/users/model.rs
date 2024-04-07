@@ -7,7 +7,7 @@ use rand::seq::SliceRandom;
 use revolt_config::config;
 use revolt_models::v0;
 use revolt_presence::filter_online;
-use revolt_result::{create_error, Error, ErrorType, Result};
+use revolt_result::{create_error, Result};
 use ulid::Ulid;
 
 auto_derived_partial!(

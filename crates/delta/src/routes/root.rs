@@ -1,9 +1,5 @@
-use revolt_quark::variables::delta::{
-    APP_URL, AUTUMN_URL, EXTERNAL_WS_URL, HCAPTCHA_SITEKEY, INVITE_ONLY, JANUARY_URL, USE_AUTUMN,
-    USE_EMAIL, USE_HCAPTCHA, USE_JANUARY, USE_VOSO, VAPID_PUBLIC_KEY, VOSO_URL, VOSO_WS_HOST,
-};
-use revolt_quark::Result;
-
+use revolt_config::config;
+use revolt_result::Result;
 use rocket::serde::json::Json;
 use serde::Serialize;
 
@@ -91,32 +87,34 @@ pub struct RevoltConfig {
 #[openapi(tag = "Core")]
 #[get("/")]
 pub async fn root() -> Result<Json<RevoltConfig>> {
+    let config = config().await;
+
     Ok(Json(RevoltConfig {
         revolt: env!("CARGO_PKG_VERSION").to_string(),
         features: RevoltFeatures {
             captcha: CaptchaFeature {
-                enabled: *USE_HCAPTCHA,
-                key: HCAPTCHA_SITEKEY.to_string(),
+                enabled: !config.api.security.captcha.hcaptcha_key.is_empty(),
+                key: config.api.security.captcha.hcaptcha_sitekey,
             },
-            email: *USE_EMAIL,
-            invite_only: *INVITE_ONLY,
+            email: !config.api.smtp.host.is_empty(),
+            invite_only: config.api.registration.invite_only,
             autumn: Feature {
-                enabled: *USE_AUTUMN,
-                url: AUTUMN_URL.to_string(),
+                enabled: !config.hosts.autumn.is_empty(),
+                url: config.hosts.autumn,
             },
             january: Feature {
-                enabled: *USE_JANUARY,
-                url: JANUARY_URL.to_string(),
+                enabled: !config.hosts.january.is_empty(),
+                url: config.hosts.january,
             },
             voso: VoiceFeature {
-                enabled: *USE_VOSO,
-                url: VOSO_URL.to_string(),
-                ws: VOSO_WS_HOST.to_string(),
+                enabled: !config.hosts.voso_legacy.is_empty(),
+                url: config.hosts.voso_legacy,
+                ws: config.hosts.voso_legacy_ws,
             },
         },
-        ws: EXTERNAL_WS_URL.to_string(),
-        app: APP_URL.to_string(),
-        vapid: VAPID_PUBLIC_KEY.to_string(),
+        ws: config.hosts.events,
+        app: config.hosts.app,
+        vapid: config.api.vapid.public_key,
         build: BuildInformation {
             commit_sha: option_env!("VERGEN_GIT_SHA")
                 .unwrap_or_else(|| "<failed to generate>")
