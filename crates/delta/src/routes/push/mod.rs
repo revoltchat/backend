@@ -5,5 +5,5 @@ mod subscribe;
 mod unsubscribe;
 
 pub fn routes() -> (Vec<Route>, OpenApi) {
-    openapi_get_routes_spec![subscribe::req, unsubscribe::req]
+    openapi_get_routes_spec![subscribe::subscribe, unsubscribe::unsubscribe]
 }

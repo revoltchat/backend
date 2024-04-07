@@ -1,12 +1,10 @@
-use revolt_quark::{
-    authifier::{
-        models::{Session, WebPushSubscription},
-        Authifier,
-    },
-    EmptyResponse, Error, Result,
+use authifier::{
+    models::{Session, WebPushSubscription},
+    Authifier,
 };
-
+use revolt_result::{create_database_error, Result};
 use rocket::{serde::json::Json, State};
+use rocket_empty::EmptyResponse;
 
 /// # Push Subscribe
 ///
@@ -15,7 +13,7 @@ use rocket::{serde::json::Json, State};
 /// If an existing subscription exists on this session, it will be removed.
 #[openapi(tag = "Web Push")]
 #[post("/subscribe", data = "<data>")]
-pub async fn req(
+pub async fn subscribe(
     authifier: &State<Authifier>,
     mut session: Session,
     data: Json<WebPushSubscription>,
@@ -25,8 +23,5 @@ pub async fn req(
         .save(authifier)
         .await
         .map(|_| EmptyResponse)
-        .map_err(|_| Error::DatabaseError {
-            operation: "save",
-            with: "session",
-        })
+        .map_err(|_| create_database_error!("save", "session"))
 }

@@ -1,33 +1,24 @@
-use revolt_quark::models::User;
-use revolt_quark::r#impl::UserSettingsImpl;
-use revolt_quark::{Db, EmptyResponse, Result};
+use revolt_database::{Database, User, UserSettingsImpl};
+use revolt_models::v0;
 
 use chrono::prelude::*;
-use rocket::serde::json::Json;
-use serde::{Deserialize, Serialize};
+use revolt_result::Result;
+use rocket::{serde::json::Json, State};
+use rocket_empty::EmptyResponse;
 use std::collections::HashMap;
 
 type Data = HashMap<String, String>;
-
-/// # Set Options
-#[derive(FromForm, Serialize, Deserialize, JsonSchema)]
-pub struct OptionsSetSettings {
-    /// Timestamp of settings change.
-    ///
-    /// Used to avoid feedback loops.
-    timestamp: Option<i64>,
-}
 
 /// # Set Settings
 ///
 /// Upload data to save to settings.
 #[openapi(tag = "Sync")]
 #[post("/settings/set?<options..>", data = "<data>")]
-pub async fn req(
-    db: &Db,
+pub async fn set(
+    db: &State<Database>,
     user: User,
     data: Json<Data>,
-    options: OptionsSetSettings,
+    options: v0::OptionsSetSettings,
 ) -> Result<EmptyResponse> {
     let data = data.into_inner();
     let current_time = Utc::now().timestamp_millis();

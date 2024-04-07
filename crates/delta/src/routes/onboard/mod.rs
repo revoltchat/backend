@@ -5,5 +5,5 @@ mod complete;
 mod hello;
 
 pub fn routes() -> (Vec<Route>, OpenApi) {
-    openapi_get_routes_spec![hello::req, complete::req]
+    openapi_get_routes_spec![hello::hello, complete::complete]
 }
