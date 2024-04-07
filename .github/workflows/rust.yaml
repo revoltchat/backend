@@ -53,7 +53,7 @@ jobs:
           cargo nextest run
 
       - name: Start API in background
-        if: github.event_name != 'pull_request' && github.ref_name == 'master'
+        if: github.event_name != 'pull_request' && github.ref_name == 'main'
         env:
           TEST_DB: REFERENCE
         run: |
