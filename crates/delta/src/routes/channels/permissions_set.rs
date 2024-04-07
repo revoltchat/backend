@@ -1,17 +1,12 @@
-use rocket::serde::json::Json;
-use serde::Deserialize;
-
-use revolt_quark::{
-    models::{Channel, User},
-    perms, Db, Error, Override, Permission, Ref, Result,
+use revolt_database::{
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Channel, Database, User,
 };
-
-/// # Permission Value
-#[derive(Deserialize, JsonSchema)]
-pub struct Data {
-    /// Allow / deny values to set for this role
-    permissions: Override,
-}
+use revolt_models::v0;
+use revolt_permissions::{calculate_channel_permissions, ChannelPermission, Override};
+use revolt_result::{create_error, Result};
+use rocket::{serde::json::Json, State};
+use serde::Deserialize;
 
 /// # Set Role Permission
 ///
@@ -20,40 +15,39 @@ pub struct Data {
 /// Channel must be a `TextChannel` or `VoiceChannel`.
 #[openapi(tag = "Channel Permissions")]
 #[put("/<target>/permissions/<role_id>", data = "<data>", rank = 2)]
-pub async fn req(
-    db: &Db,
+pub async fn set_role_permissions(
+    db: &State<Database>,
     user: User,
-    target: Ref,
+    target: Reference,
     role_id: String,
-    data: Json<Data>,
-) -> Result<Json<Channel>> {
+    data: Json<v0::DataSetRolePermissions>,
+) -> Result<Json<v0::Channel>> {
     let mut channel = target.as_channel(db).await?;
-    let mut permissions = perms(&user).channel(&channel);
+    let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
+    let permissions = calculate_channel_permissions(&mut query).await;
 
-    permissions
-        .throw_permission_and_view_channel(db, Permission::ManagePermissions)
-        .await?;
+    permissions.throw_if_lacking_channel_permission(ChannelPermission::ManagePermissions)?;
 
-    if let Some(server) = permissions.server.get() {
+    if let Some(server) = query.server_ref() {
         if let Some(role) = server.roles.get(&role_id) {
-            if role.rank <= permissions.get_member_rank().unwrap_or(i64::MIN) {
-                return Err(Error::NotElevated);
+            if role.rank <= query.get_member_rank().unwrap_or(i64::MIN) {
+                return Err(create_error!(NotElevated));
             }
 
             let current_value: Override = role.permissions.into();
             permissions
-                .throw_permission_override(db, current_value, data.permissions)
+                .throw_permission_override(current_value, &data.permissions)
                 .await?;
 
             channel
-                .set_role_permission(db, &role_id, data.permissions.into())
+                .set_role_permission(db, &role_id, data.permissions.clone().into())
                 .await?;
 
-            Ok(Json(channel))
+            Ok(Json(channel.into()))
         } else {
-            Err(Error::NotFound)
+            Err(create_error!(NotFound))
         }
     } else {
-        Err(Error::InvalidOperation)
+        Err(create_error!(InvalidOperation))
     }
 }

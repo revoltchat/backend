@@ -272,7 +272,7 @@ auto_derived!(
     }
 
     /// Options for searching for messages
-    pub struct OptionsMessageSearch {
+    pub struct DataMessageSearch {
         /// Full-text search query
         ///
         /// See [MongoDB documentation](https://docs.mongodb.com/manual/text-search/#-text-operator) for more information.
@@ -317,6 +317,15 @@ auto_derived!(
         /// Message IDs
         #[validate(length(min = 1, max = 100))]
         pub ids: Vec<String>,
+    }
+
+    /// Options for removing reaction
+    #[cfg_attr(feature = "rocket", derive(FromForm))]
+    pub struct OptionsUnreact {
+        /// Remove a specific user's reaction
+        pub user_id: Option<String>,
+        /// Remove all reactions
+        pub remove_all: Option<bool>,
     }
 );
 

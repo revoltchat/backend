@@ -63,6 +63,37 @@ impl PermissionValue {
             }))
         }
     }
+
+    /// Throw an error if we cannot grant permissions on either allows or denies
+    /// going from the previous given value to the next given value.
+    ///
+    /// We need to check any:
+    /// - allows added (permissions now granted)
+    /// - denies removed (permissions now neutral or granted)
+    pub async fn throw_permission_override<C>(
+        &self,
+        current_value: C,
+        next_value: &Override,
+    ) -> Result<()>
+    where
+        C: Into<Option<Override>>,
+    {
+        let current_value = current_value.into();
+
+        if let Some(current_value) = current_value {
+            if !self.has(!current_value.allows() & next_value.allows())
+                || !self.has(current_value.denies() & !next_value.denies())
+            {
+                return Err(create_error!(CannotGiveMissingPermissions));
+            }
+        } else {
+            if !self.has(next_value.allows()) {
+                return Err(create_error!(CannotGiveMissingPermissions));
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl From<i64> for PermissionValue {

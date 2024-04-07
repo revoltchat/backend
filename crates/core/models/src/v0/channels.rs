@@ -1,6 +1,6 @@
 use super::File;
 
-use revolt_permissions::OverrideField;
+use revolt_permissions::{Override, OverrideField};
 use std::collections::{HashMap, HashSet};
 
 #[cfg(feature = "rocket")]
@@ -260,6 +260,25 @@ auto_derived!(
         /// Whether this channel is age restricted
         #[serde(skip_serializing_if = "Option::is_none")]
         pub nsfw: Option<bool>,
+    }
+
+    /// New default permissions
+    #[serde(untagged)]
+    pub enum DataDefaultChannelPermissions {
+        Value {
+            /// Permission values to set for members in a `Group`
+            permissions: u64,
+        },
+        Field {
+            /// Allow / deny values to set for members in this `TextChannel` or `VoiceChannel`
+            permissions: Override,
+        },
+    }
+
+    /// New role permissions
+    pub struct DataSetRolePermissions {
+        /// Allow / deny values to set for this role
+        pub permissions: Override,
     }
 
     /// Options when deleting a channel

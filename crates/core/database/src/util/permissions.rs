@@ -464,6 +464,13 @@ impl<'a> DatabasePermissionQuery<'a> {
     pub fn member_ref(&self) -> &Option<Cow<Member>> {
         &self.member
     }
+
+    /// Get the known member's current ranking
+    pub fn get_member_rank(&self) -> Option<i64> {
+        self.member
+            .as_ref()
+            .map(|member| member.get_ranking(self.server.as_ref().unwrap()))
+    }
 }
 
 /// Short-hand for creating a permission calculator

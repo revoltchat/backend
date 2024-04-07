@@ -1,4 +1,11 @@
-use revolt_quark::{models::User, perms, Db, EmptyResponse, Permission, Ref, Result};
+use revolt_database::{
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Database, User,
+};
+use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
+use revolt_result::Result;
+use rocket::State;
+use rocket_empty::EmptyResponse;
 
 /// # Add Reaction to Message
 ///
@@ -6,20 +13,20 @@ use revolt_quark::{models::User, perms, Db, EmptyResponse, Permission, Ref, Resu
 #[openapi(tag = "Interactions")]
 #[put("/<target>/messages/<msg>/reactions/<emoji>")]
 pub async fn react_message(
-    db: &Db,
+    db: &State<Database>,
     user: User,
-    target: Ref,
-    msg: Ref,
-    emoji: Ref,
+    target: Reference,
+    msg: Reference,
+    emoji: Reference,
 ) -> Result<EmptyResponse> {
     let channel = target.as_channel(db).await?;
-    perms(&user)
-        .channel(&channel)
-        .throw_permission_and_view_channel(db, Permission::React)
-        .await?;
+    let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
+    calculate_channel_permissions(&mut query)
+        .await
+        .throw_if_lacking_channel_permission(ChannelPermission::React)?;
 
     // Fetch relevant message
-    let message = msg.as_message_in(db, channel.id()).await?;
+    let message = msg.as_message_in_channel(db, &channel.id()).await?;
 
     // Add the reaction
     message

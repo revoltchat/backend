@@ -1,14 +1,12 @@
-use revolt_quark::{models::User, perms, Db, EmptyResponse, Permission, Ref, Result};
-use serde::{Deserialize, Serialize};
-
-/// # Query Parameters
-#[derive(Serialize, Deserialize, JsonSchema, FromForm)]
-pub struct OptionsUnreact {
-    /// Remove a specific user's reaction
-    user_id: Option<String>,
-    /// Remove all reactions
-    remove_all: Option<bool>,
-}
+use revolt_database::{
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Database, User,
+};
+use revolt_models::v0;
+use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
+use revolt_result::Result;
+use rocket::State;
+use rocket_empty::EmptyResponse;
 
 /// # Remove Reaction(s) to Message
 ///
@@ -18,29 +16,27 @@ pub struct OptionsUnreact {
 #[openapi(tag = "Interactions")]
 #[delete("/<target>/messages/<msg>/reactions/<emoji>?<options..>")]
 pub async fn unreact_message(
-    db: &Db,
+    db: &State<Database>,
     user: User,
-    target: Ref,
-    msg: Ref,
-    emoji: Ref,
-    options: OptionsUnreact,
+    target: Reference,
+    msg: Reference,
+    emoji: Reference,
+    options: v0::OptionsUnreact,
 ) -> Result<EmptyResponse> {
     let channel = target.as_channel(db).await?;
-    let mut permissions = perms(&user).channel(&channel);
-    permissions
-        .throw_permission_and_view_channel(db, Permission::React)
-        .await?;
+    let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
+    let permissions = calculate_channel_permissions(&mut query).await;
+
+    permissions.throw_if_lacking_channel_permission(ChannelPermission::React)?;
 
     // Check if we need to escalate permissions
     let remove_all = options.remove_all.unwrap_or_default();
     if options.user_id.is_some() || remove_all {
-        permissions
-            .throw_permission(db, Permission::ManageMessages)
-            .await?;
+        permissions.throw_if_lacking_channel_permission(ChannelPermission::ManageMessages)?;
     }
 
     // Fetch relevant message
-    let message = msg.as_message_in(db, channel.id()).await?;
+    let message = msg.as_message_in_channel(db, &channel.id()).await?;
 
     // Check if we should wipe all of this reaction
     if remove_all {

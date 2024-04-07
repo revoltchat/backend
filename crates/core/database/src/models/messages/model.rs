@@ -18,7 +18,7 @@ use crate::{
     events::client::EventV1,
     tasks::{self, ack::AckEvent},
     util::idempotency::IdempotencyKey,
-    Channel, Database, Emoji, File,
+    Channel, Database, Emoji, File, User,
 };
 
 auto_derived_partial!(
@@ -542,6 +542,40 @@ impl Message {
         Ok(())
     }
 
+    /// Add a reaction to a message
+    pub async fn add_reaction(&self, db: &Database, user: &User, emoji: &str) -> Result<()> {
+        // Check how many reactions are already on the message
+        let config = config().await;
+        if self.reactions.len() >= config.features.limits.default.message_reactions
+            && !self.reactions.contains_key(emoji)
+        {
+            return Err(create_error!(InvalidOperation));
+        }
+
+        // Check if the emoji is whitelisted
+        if !self.interactions.can_use(emoji) {
+            return Err(create_error!(InvalidOperation));
+        }
+
+        // Check if the emoji is usable by us
+        if !Emoji::can_use(db, emoji).await? {
+            return Err(create_error!(InvalidOperation));
+        }
+
+        // Send reaction event
+        EventV1::MessageReact {
+            id: self.id.to_string(),
+            channel_id: self.channel.to_string(),
+            user_id: user.id.to_string(),
+            emoji_id: emoji.to_string(),
+        }
+        .p(self.channel.to_string())
+        .await;
+
+        // Add emoji
+        db.add_reaction(&self.id, emoji, &user.id).await
+    }
+
     /// Validate the sum of content of a message is under threshold
     pub fn validate_sum(
         content: &Option<String>,
@@ -606,6 +640,53 @@ impl Message {
         .p(channel.to_string())
         .await;
         Ok(())
+    }
+
+    /// Remove a reaction from a message
+    pub async fn remove_reaction(&self, db: &Database, user: &str, emoji: &str) -> Result<()> {
+        // Check if it actually exists
+        let empty = if let Some(users) = self.reactions.get(emoji) {
+            if !users.contains(user) {
+                return Err(create_error!(NotFound));
+            }
+
+            users.len() == 1
+        } else {
+            return Err(create_error!(NotFound));
+        };
+
+        // Send reaction event
+        EventV1::MessageUnreact {
+            id: self.id.to_string(),
+            channel_id: self.channel.to_string(),
+            user_id: user.to_string(),
+            emoji_id: emoji.to_string(),
+        }
+        .p(self.channel.to_string())
+        .await;
+
+        if empty {
+            // If empty, remove the reaction entirely
+            db.clear_reaction(&self.id, emoji).await
+        } else {
+            // Otherwise only remove that one reaction
+            db.remove_reaction(&self.id, emoji, user).await
+        }
+    }
+
+    /// Remove a reaction from a message
+    pub async fn clear_reaction(&self, db: &Database, emoji: &str) -> Result<()> {
+        // Send reaction event
+        EventV1::MessageRemoveReaction {
+            id: self.id.to_string(),
+            channel_id: self.channel.to_string(),
+            emoji_id: emoji.to_string(),
+        }
+        .p(self.channel.to_string())
+        .await;
+
+        // Write to database
+        db.clear_reaction(&self.id, emoji).await
     }
 }
 
