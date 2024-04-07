@@ -8,6 +8,8 @@ mod emojis;
 mod files;
 mod messages;
 mod ratelimit_events;
+mod safety_reports;
+mod safety_snapshots;
 mod server_bans;
 mod server_members;
 mod servers;
@@ -24,6 +26,8 @@ pub use emojis::*;
 pub use files::*;
 pub use messages::*;
 pub use ratelimit_events::*;
+pub use safety_reports::*;
+pub use safety_snapshots::*;
 pub use server_bans::*;
 pub use server_members::*;
 pub use servers::*;
@@ -45,6 +49,8 @@ pub trait AbstractDatabase:
     + files::AbstractAttachments
     + messages::AbstractMessages
     + ratelimit_events::AbstractRatelimitEvents
+    + safety_reports::AbstractReport
+    + safety_snapshots::AbstractSnapshot
     + server_bans::AbstractServerBans
     + server_members::AbstractServerMembers
     + servers::AbstractServers
