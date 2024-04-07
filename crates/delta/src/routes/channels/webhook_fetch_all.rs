@@ -12,7 +12,7 @@ use rocket::{serde::json::Json, State};
 /// Gets all webhooks inside the channel
 #[openapi(tag = "Webhooks")]
 #[get("/<channel_id>/webhooks")]
-pub async fn req(
+pub async fn fetch_webhooks(
     db: &State<Database>,
     user: User,
     channel_id: Reference,

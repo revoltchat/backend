@@ -16,7 +16,7 @@ use validator::Validate;
 /// Creates a webhook which 3rd party platforms can use to send messages
 #[openapi(tag = "Webhooks")]
 #[post("/<target>/webhooks", data = "<data>")]
-pub async fn req(
+pub async fn create_webhook(
     db: &State<Database>,
     user: User,
     target: Reference,

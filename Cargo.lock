@@ -3669,6 +3669,7 @@ dependencies = [
  "env_logger",
  "futures",
  "impl_ops",
+ "iso8601-timestamp 0.2.11",
  "lettre",
  "linkify 0.6.0",
  "log",

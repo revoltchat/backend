@@ -12,14 +12,13 @@ use rocket::{serde::json::Json, State};
 /// Retrieves a message by its id.
 #[openapi(tag = "Messaging")]
 #[get("/<target>/messages/<msg>")]
-pub async fn req(
+pub async fn fetch(
     db: &State<Database>,
     user: User,
     target: Reference,
     msg: Reference,
 ) -> Result<Json<v0::Message>> {
     let channel = target.as_channel(db).await?;
-
     let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
     calculate_channel_permissions(&mut query)
         .await

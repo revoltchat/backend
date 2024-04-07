@@ -8,9 +8,12 @@ use revolt_config::config;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
+#[cfg(feature = "rocket")]
+use rocket::{FromForm, FromFormField};
+
 use iso8601_timestamp::Timestamp;
 
-use super::{Embed, File, MessageWebhook, User, Webhook, RE_COLOUR};
+use super::{Embed, File, Member, MessageWebhook, User, Webhook, RE_COLOUR};
 
 pub static RE_MENTION: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"<@([0-9A-HJKMNP-TV-Z]{26})>").unwrap());
@@ -66,6 +69,24 @@ auto_derived_partial!(
 );
 
 auto_derived!(
+    /// Bulk Message Response
+    #[serde(untagged)]
+    pub enum BulkMessageResponse {
+        JustMessages(
+            /// List of messages
+            Vec<Message>,
+        ),
+        MessagesAndUsers {
+            /// List of messages
+            messages: Vec<Message>,
+            /// List of users
+            users: Vec<User>,
+            /// List of members
+            #[serde(skip_serializing_if = "Option::is_none")]
+            members: Option<Vec<Member>>,
+        },
+    }
+
     /// System Event
     #[serde(tag = "type")]
     pub enum SystemMessage {
@@ -136,6 +157,7 @@ auto_derived!(
     ///
     /// Sort used for retrieving messages
     #[derive(Default)]
+    #[cfg_attr(feature = "rocket", derive(FromFormField))]
     pub enum MessageSort {
         /// Sort by the most relevant messages
         #[default]
@@ -219,6 +241,71 @@ auto_derived!(
         pub masquerade: Option<Masquerade>,
         /// Information about how this message should be interacted with
         pub interactions: Option<Interactions>,
+    }
+
+    /// Options for querying messages
+    #[cfg_attr(feature = "validator", derive(Validate))]
+    #[cfg_attr(feature = "rocket", derive(FromForm))]
+    pub struct OptionsQueryMessages {
+        /// Maximum number of messages to fetch
+        ///
+        /// For fetching nearby messages, this is \`(limit + 1)\`.
+        #[validate(range(min = 1, max = 100))]
+        pub limit: Option<i64>,
+        /// Message id before which messages should be fetched
+        #[validate(length(min = 26, max = 26))]
+        pub before: Option<String>,
+        /// Message id after which messages should be fetched
+        #[validate(length(min = 26, max = 26))]
+        pub after: Option<String>,
+        /// Message sort direction
+        pub sort: Option<MessageSort>,
+        /// Message id to search around
+        ///
+        /// Specifying 'nearby' ignores 'before', 'after' and 'sort'.
+        /// It will also take half of limit rounded as the limits to each side.
+        /// It also fetches the message ID specified.
+        #[validate(length(min = 26, max = 26))]
+        pub nearby: Option<String>,
+        /// Whether to include user (and member, if server channel) objects
+        pub include_users: Option<bool>,
+    }
+
+    /// Options for searching for messages
+    pub struct OptionsMessageSearch {
+        /// Full-text search query
+        ///
+        /// See [MongoDB documentation](https://docs.mongodb.com/manual/text-search/#-text-operator) for more information.
+        #[validate(length(min = 1, max = 64))]
+        pub query: String,
+
+        /// Maximum number of messages to fetch
+        #[validate(range(min = 1, max = 100))]
+        pub limit: Option<i64>,
+        /// Message id before which messages should be fetched
+        #[validate(length(min = 26, max = 26))]
+        pub before: Option<String>,
+        /// Message id after which messages should be fetched
+        #[validate(length(min = 26, max = 26))]
+        pub after: Option<String>,
+        /// Message sort direction
+        ///
+        /// By default, it will be sorted by latest.
+        #[serde(default = "MessageSort::default")]
+        pub sort: MessageSort,
+        /// Whether to include user (and member, if server channel) objects
+        pub include_users: Option<bool>,
+    }
+
+    /// Changes to make to message
+    #[cfg_attr(feature = "validator", derive(Validate))]
+    pub struct DataEditMessage {
+        /// New message content
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2000)))]
+        pub content: Option<String>,
+        /// Embeds to include in the message
+        #[cfg_attr(feature = "validator", validate(length(min = 0, max = 10)))]
+        pub embeds: Option<Vec<SendableEmbed>>,
     }
 
     /// Options for bulk deleting messages

@@ -36,6 +36,7 @@ nanoid = "0.4.0"
 serde_json = "1.0.57"
 serde = { version = "1.0.115", features = ["derive"] }
 validator = { version = "0.16", features = ["derive"] }
+iso8601-timestamp = { version = "0.2.11", features = [] }
 
 # async
 futures = "0.3.8"

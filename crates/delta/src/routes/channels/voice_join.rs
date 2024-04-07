@@ -1,40 +1,37 @@
-use revolt_quark::{
-    models::{Channel, User},
-    perms,
-    variables::delta::{USE_VOSO, VOSO_MANAGE_TOKEN, VOSO_URL},
-    Db, Error, Permission, Ref, Result,
+use revolt_config::config;
+use revolt_database::{
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Channel, Database, User,
 };
-
-use rocket::serde::json::Json;
-use serde::{Deserialize, Serialize};
-
-/// # Voice Server Token Response
-#[derive(Serialize, Deserialize, JsonSchema)]
-pub struct CreateVoiceUserResponse {
-    /// Token for authenticating with the voice server
-    token: String,
-}
+use revolt_models::v0;
+use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
+use revolt_result::{create_error, Result};
+use rocket::{serde::json::Json, State};
 
 /// # Join Call
 ///
 /// Asks the voice server for a token to join the call.
 #[openapi(tag = "Voice")]
 #[post("/<target>/join_call")]
-pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<CreateVoiceUserResponse>> {
+pub async fn call(
+    db: &State<Database>,
+    user: User,
+    target: Reference,
+) -> Result<Json<v0::LegacyCreateVoiceUserResponse>> {
     let channel = target.as_channel(db).await?;
-    let mut permissions = perms(&user).channel(&channel);
+    let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
+    calculate_channel_permissions(&mut query)
+        .await
+        .throw_if_lacking_channel_permission(ChannelPermission::Connect)?;
 
-    permissions
-        .throw_permission_and_view_channel(db, Permission::Connect)
-        .await?;
-
-    if !*USE_VOSO {
-        return Err(Error::VosoUnavailable);
+    let config = config().await;
+    if config.api.security.voso_legacy_token.is_empty() {
+        return Err(create_error!(VosoUnavailable));
     }
 
     match channel {
         Channel::SavedMessages { .. } | Channel::TextChannel { .. } => {
-            return Err(Error::CannotJoinCall)
+            return Err(create_error!(CannotJoinCall))
         }
         _ => {}
     }
@@ -44,33 +41,41 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<CreateVoiceUse
     // - If not, create it.
     let client = reqwest::Client::new();
     let result = client
-        .get(&format!("{}/room/{}", *VOSO_URL, channel.id()))
+        .get(&format!(
+            "{}/room/{}",
+            config.hosts.voso_legacy,
+            channel.id()
+        ))
         .header(
             reqwest::header::AUTHORIZATION,
-            VOSO_MANAGE_TOKEN.to_string(),
+            config.api.security.voso_legacy_token.clone(),
         )
         .send()
         .await;
 
     match result {
-        Err(_) => return Err(Error::VosoUnavailable),
+        Err(_) => return Err(create_error!(VosoUnavailable)),
         Ok(result) => match result.status() {
             reqwest::StatusCode::OK => (),
             reqwest::StatusCode::NOT_FOUND => {
                 if (client
-                    .post(&format!("{}/room/{}", *VOSO_URL, channel.id()))
+                    .post(&format!(
+                        "{}/room/{}",
+                        config.hosts.voso_legacy,
+                        channel.id()
+                    ))
                     .header(
                         reqwest::header::AUTHORIZATION,
-                        VOSO_MANAGE_TOKEN.to_string(),
+                        config.api.security.voso_legacy_token.clone(),
                     )
                     .send()
                     .await)
                     .is_err()
                 {
-                    return Err(Error::VosoUnavailable);
+                    return Err(create_error!(VosoUnavailable));
                 }
             }
-            _ => return Err(Error::VosoUnavailable),
+            _ => return Err(create_error!(VosoUnavailable)),
         },
     }
 
@@ -78,13 +83,13 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<CreateVoiceUse
     if let Ok(response) = client
         .post(&format!(
             "{}/room/{}/user/{}",
-            *VOSO_URL,
+            config.hosts.voso_legacy,
             channel.id(),
             user.id
         ))
         .header(
             reqwest::header::AUTHORIZATION,
-            VOSO_MANAGE_TOKEN.to_string(),
+            config.api.security.voso_legacy_token,
         )
         .send()
         .await
@@ -92,9 +97,9 @@ pub async fn req(db: &Db, user: User, target: Ref) -> Result<Json<CreateVoiceUse
         response
             .json()
             .await
-            .map_err(|_| Error::InvalidOperation)
+            .map_err(|_| create_error!(InvalidOperation))
             .map(Json)
     } else {
-        Err(Error::VosoUnavailable)
+        Err(create_error!(VosoUnavailable))
     }
 }

@@ -3,9 +3,12 @@ use std::collections::HashSet;
 use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
 use revolt_config::config;
-use revolt_models::v0::{
-    self, DataMessageSend, Embed, MessageAuthor, MessageSort, MessageWebhook, PushNotification,
-    ReplyIntent, SendableEmbed, RE_MENTION,
+use revolt_models::{
+    v0::{
+        self, DataMessageSend, Embed, MessageAuthor, MessageSort, MessageWebhook, PushNotification,
+        ReplyIntent, SendableEmbed, Text, RE_MENTION,
+    },
+    validator::Validate,
 };
 use revolt_permissions::{ChannelPermission, PermissionValue};
 use revolt_result::Result;
@@ -155,6 +158,7 @@ auto_derived!(
     }
 
     /// Message Filter
+    #[derive(Default)]
     pub struct MessageFilter {
         /// Parent channel ID
         pub channel: Option<String>,
@@ -439,6 +443,33 @@ impl Message {
         .await;
 
         Ok(())
+    }
+
+    /// Create text embed from sendable embed
+    pub async fn create_embed(&self, db: &Database, embed: SendableEmbed) -> Result<Embed> {
+        embed.validate().map_err(|error| {
+            create_error!(FailedValidation {
+                error: error.to_string()
+            })
+        })?;
+
+        let media = if let Some(id) = embed.media {
+            Some(
+                db.find_and_use_attachment(&id, "attachments", "message", &self.id)
+                    .await?,
+            )
+        } else {
+            None
+        };
+
+        Ok(Embed::Text(Text {
+            icon_url: embed.icon_url,
+            url: embed.url,
+            title: embed.title,
+            description: embed.description,
+            media: media.map(|m| m.into()),
+            colour: embed.colour,
+        }))
     }
 
     /// Update message data

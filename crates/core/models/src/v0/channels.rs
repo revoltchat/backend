@@ -268,6 +268,12 @@ auto_derived!(
         /// Whether to not send a leave message
         pub leave_silently: Option<bool>,
     }
+
+    /// Voice server token response
+    pub struct LegacyCreateVoiceUserResponse {
+        /// Token for authenticating with the voice server
+        token: String,
+    }
 );
 
 impl Channel {
