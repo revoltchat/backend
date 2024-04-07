@@ -48,7 +48,7 @@ pub async fn ban(
 
     // If member exists, check privileges against them
     if let Ok(member) = target.as_member(db, &server.id).await {
-        if member.get_ranking(&query.server_ref().as_ref().unwrap())
+        if member.get_ranking(query.server_ref().as_ref().unwrap())
             <= query.get_member_rank().unwrap_or(i64::MIN)
         {
             return Err(create_error!(NotElevated));

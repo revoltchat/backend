@@ -31,7 +31,7 @@ pub async fn create(
     let mut query = DatabasePermissionQuery::new(db, &user).server(&server);
     calculate_server_permissions(&mut query)
         .await
-        .throw_if_lacking_channel_permission(ChannelPermission::ManageRole);
+        .throw_if_lacking_channel_permission(ChannelPermission::ManageRole)?;
 
     let config = config().await;
     if server.roles.len() >= config.features.limits.default.server_roles {

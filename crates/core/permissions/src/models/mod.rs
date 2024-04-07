@@ -97,10 +97,8 @@ impl PermissionValue {
             {
                 return Err(create_error!(CannotGiveMissingPermissions));
             }
-        } else {
-            if !self.has(next_value.allows()) {
-                return Err(create_error!(CannotGiveMissingPermissions));
-            }
+        } else if !self.has(next_value.allows()) {
+            return Err(create_error!(CannotGiveMissingPermissions));
         }
 
         Ok(())

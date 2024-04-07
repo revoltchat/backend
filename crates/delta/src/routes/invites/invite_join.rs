@@ -36,7 +36,7 @@ pub async fn join(
             channel.add_user_to_group(db, &user, creator).await?;
             if let Channel::Group { recipients, .. } = &channel {
                 Ok(Json(InviteJoinResponse::Group {
-                    users: User::fetch_many_ids_as_mutuals(db, &user, &recipients).await?,
+                    users: User::fetch_many_ids_as_mutuals(db, &user, recipients).await?,
                     channel: channel.into(),
                 }))
             } else {

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use revolt_models::v0::{
     AppendMessage, Channel, Emoji, FieldsChannel, FieldsMember, FieldsRole, FieldsServer,
     FieldsUser, FieldsWebhook, MemberCompositeKey, Message, PartialChannel, PartialMember,
-    PartialMessage, PartialRole, PartialServer, PartialUser, PartialWebhook, Server, User,
+    PartialMessage, PartialRole, PartialServer, PartialUser, PartialWebhook, Report, Server, User,
     UserSettings, Webhook,
 };
 use revolt_result::Error;
@@ -176,8 +176,8 @@ pub enum EventV1 {
     /// Delete emoji
     EmojiDelete { id: String },
 
-    /*/// New report
-    ReportCreate(Report), */
+    /// New report
+    ReportCreate(Report),
     /// New channel
     ChannelCreate(Channel),
 

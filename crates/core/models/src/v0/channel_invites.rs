@@ -84,6 +84,7 @@ auto_derived!(
 
     /// Invite join response
     #[serde(tag = "type")]
+    #[allow(clippy::large_enum_variant)]
     pub enum InviteJoinResponse {
         Server {
             /// Channels in the server

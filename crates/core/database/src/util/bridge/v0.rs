@@ -445,6 +445,19 @@ impl From<Masquerade> for crate::Masquerade {
     }
 }
 
+impl From<crate::Report> for Report {
+    fn from(value: crate::Report) -> Self {
+        Report {
+            id: value.id,
+            author_id: value.author_id,
+            content: value.content,
+            additional_context: value.additional_context,
+            status: value.status,
+            notes: value.notes,
+        }
+    }
+}
+
 impl From<crate::ServerBan> for ServerBan {
     fn from(value: crate::ServerBan) -> Self {
         ServerBan {
