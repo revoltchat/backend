@@ -1,4 +1,4 @@
-use bson::{to_document, Document};
+use bson::{to_document, Bson, Document};
 use futures::StreamExt;
 use revolt_result::Result;
 
@@ -67,6 +67,7 @@ impl AbstractServers for MongoDb {
 
     /// Delete a server by its id
     async fn delete_server(&self, id: &str) -> Result<()> {
+        self.delete_associated_server_objects(id).await?;
         query!(self, delete_one_by_id, COL, id).map(|_| ())
     }
 
@@ -179,5 +180,83 @@ impl IntoDocumentPath for FieldsRole {
         Some(match self {
             FieldsRole::Colour => "colour",
         })
+    }
+}
+
+impl MongoDb {
+    pub async fn delete_associated_server_objects(&self, server_id: &str) -> Result<()> {
+        // Find all channels
+        let channels: Vec<String> = self
+            .col::<Document>("channels")
+            .find(
+                doc! {
+                    "server": server_id
+                },
+                None,
+            )
+            .await
+            .map_err(|_| create_database_error!("find", "channels"))?
+            .filter_map(|s| async {
+                s.map(|d| d.get_str("_id").map(|s| s.to_string()).ok())
+                    .ok()
+                    .flatten()
+            })
+            .collect()
+            .await;
+
+        // Check if there are any attachments we need to delete.
+        self.delete_bulk_messages(doc! {
+            "channel": {
+                "$in": &channels
+            }
+        })
+        .await?;
+
+        // Delete all emoji.
+        self.col::<Document>("emojis")
+            .delete_many(
+                doc! {
+                    "parent.id": &server_id
+                },
+                None,
+            )
+            .await
+            .map_err(|_| create_database_error!("delete_many", "emojis"))?;
+
+        // Delete all channels.
+        self.col::<Document>("channels")
+            .delete_many(
+                doc! {
+                    "server": &server_id
+                },
+                None,
+            )
+            .await
+            .map_err(|_| create_database_error!("delete_many", "channels"))?;
+
+        // Delete any associated objects, e.g. unreads and invites.
+        self.delete_associated_channel_objects(Bson::Document(doc! { "$in": &channels }))
+            .await?;
+
+        // Delete members and bans.
+        for with in &["server_members", "server_bans"] {
+            self.col::<Document>(with)
+                .delete_many(
+                    doc! {
+                        "_id.server": &server_id
+                    },
+                    None,
+                )
+                .await
+                .map_err(|_| create_database_error!("delete_many", with))?;
+        }
+
+        // Update many attachments with parent id.
+        self.delete_many_attachments(doc! {
+            "object_id": &server_id
+        })
+        .await?;
+
+        Ok(())
     }
 }

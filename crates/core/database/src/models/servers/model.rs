@@ -214,8 +214,6 @@ impl Server {
         .p(self.id.clone())
         .await;
 
-        // TODO: missing functionality
-
         db.delete_server(&self.id).await
     }
 
