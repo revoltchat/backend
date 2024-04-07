@@ -1,8 +1,10 @@
-use revolt_quark::{
-    models::{user::UserProfile, User},
-    perms, Database, Error, Ref, Result,
+use revolt_database::{
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Database, User,
 };
-
+use revolt_models::v0;
+use revolt_permissions::{calculate_user_permissions, UserPermission};
+use revolt_result::Result;
 use rocket::{serde::json::Json, State};
 
 /// # Fetch User Profile
@@ -12,17 +14,21 @@ use rocket::{serde::json::Json, State};
 /// Will fail if you do not have permission to access the other user's profile.
 #[openapi(tag = "User Information")]
 #[get("/<target>/profile")]
-pub async fn req(db: &State<Database>, user: User, target: Ref) -> Result<Json<UserProfile>> {
+pub async fn profile(
+    db: &State<Database>,
+    user: User,
+    target: Reference,
+) -> Result<Json<v0::UserProfile>> {
+    if user.id == target.id {
+        return Ok(Json(user.profile.map(Into::into).unwrap_or_default()));
+    }
+
     let target = target.as_user(db).await?;
 
-    if perms(&user)
-        .user(&target)
-        .calc_user(db)
+    let mut query = DatabasePermissionQuery::new(db, &user).user(&target);
+    calculate_user_permissions(&mut query)
         .await
-        .get_view_profile()
-    {
-        Ok(Json(target.profile.unwrap_or_default()))
-    } else {
-        Err(Error::NotFound)
-    }
+        .throw_if_lacking_user_permission(UserPermission::ViewProfile)?;
+
+    Ok(Json(target.profile.map(Into::into).unwrap_or_default()))
 }

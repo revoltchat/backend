@@ -20,18 +20,18 @@ mod unblock_user;
 pub fn routes() -> (Vec<Route>, OpenApi) {
     openapi_get_routes_spec![
         // User Information
-        fetch_self::req,
-        fetch_user::req,
+        fetch_self::fetch,
+        fetch_user::fetch,
         fetch_user_flags::fetch_user_flags,
-        edit_user::req,
-        change_username::req,
-        get_default_avatar::req,
-        fetch_profile::req,
+        edit_user::edit,
+        change_username::change_username,
+        get_default_avatar::default_avatar,
+        fetch_profile::profile,
         // Direct Messaging
-        fetch_dms::req,
-        open_dm::req,
+        fetch_dms::direct_messages,
+        open_dm::open_dm,
         // Relationships
-        find_mutual::req,
+        find_mutual::mutual,
         add_friend::add,
         remove_friend::remove,
         block_user::block,

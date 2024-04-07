@@ -15,6 +15,7 @@ impl crate::Bot {
             description: user
                 .profile
                 .map(|profile| profile.content)
+                .flatten()
                 .unwrap_or_default(),
         }
     }
@@ -888,6 +889,18 @@ impl From<crate::Presence> for Presence {
             crate::Presence::Focus => Presence::Focus,
             crate::Presence::Busy => Presence::Busy,
             crate::Presence::Invisible => Presence::Invisible,
+        }
+    }
+}
+
+impl From<Presence> for crate::Presence {
+    fn from(value: Presence) -> crate::Presence {
+        match value {
+            Presence::Online => crate::Presence::Online,
+            Presence::Idle => crate::Presence::Idle,
+            Presence::Focus => crate::Presence::Focus,
+            Presence::Busy => crate::Presence::Busy,
+            Presence::Invisible => crate::Presence::Invisible,
         }
     }
 }

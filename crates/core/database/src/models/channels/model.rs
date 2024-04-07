@@ -5,6 +5,7 @@ use revolt_models::v0::{self, MessageAuthor};
 use revolt_permissions::OverrideField;
 use revolt_result::Result;
 use serde::{Deserialize, Serialize};
+use ulid::Ulid;
 
 use crate::{
     events::client::EventV1, tasks::ack::AckEvent, Database, File, IntoDocumentPath, PartialServer,
@@ -293,6 +294,43 @@ impl Channel {
         }
 
         Ok(channel)
+    }
+
+    /// Create a DM (or return the existing one / saved messages)
+    pub async fn create_dm(db: &Database, user_a: &User, user_b: &User) -> Result<Channel> {
+        // Try to find existing channel
+        if let Ok(channel) = db.find_direct_message_channel(&user_a.id, &user_b.id).await {
+            Ok(channel)
+        } else {
+            let channel = if user_a.id == user_b.id {
+                // Create a new saved messages channel
+                Channel::SavedMessages {
+                    id: Ulid::new().to_string(),
+                    user: user_a.id.to_string(),
+                }
+            } else {
+                // Create a new DM channel
+                Channel::DirectMessage {
+                    id: Ulid::new().to_string(),
+                    active: true, // show by default
+                    recipients: vec![user_a.id.clone(), user_b.id.clone()],
+                    last_message_id: None,
+                }
+            };
+
+            db.insert_channel(&channel).await?;
+
+            match &channel {
+                Channel::DirectMessage { .. } => {
+                    let event = EventV1::ChannelCreate(channel.clone().into());
+                    event.clone().private(user_a.id.clone()).await;
+                    event.private(user_b.id.clone()).await;
+                }
+                _ => {}
+            };
+
+            Ok(channel)
+        }
     }
 
     /// Add user to a group

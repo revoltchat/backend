@@ -3,11 +3,20 @@ use regex::Regex;
 
 use super::File;
 
+#[cfg(feature = "validator")]
+use validator::Validate;
+
 /// Regex for valid usernames
 ///
 /// Block zero width space
 /// Block lookalike characters
 pub static RE_USERNAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\p{L}|[\d_.-])+$").unwrap());
+
+/// Regex for valid display names
+///
+/// Block zero width space
+/// Block newline and carriage return
+pub static RE_DISPLAY_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[^\u200B\n\r]+$").unwrap());
 
 auto_derived_partial!(
     /// User
@@ -123,20 +132,26 @@ auto_derived!(
     }
 
     /// User's active status
+    #[derive(Default)]
+    #[cfg_attr(feature = "validator", derive(Validate))]
     pub struct UserStatus {
         /// Custom status text
-        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "String::is_empty"))]
-        pub text: String,
+        #[validate(length(min = 0, max = 128))]
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub text: Option<String>,
         /// Current presence option
         #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub presence: Option<Presence>,
     }
 
     /// User's profile
+    #[derive(Default)]
+    #[cfg_attr(feature = "validator", derive(Validate))]
     pub struct UserProfile {
         /// Text content on user's profile
-        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "String::is_empty"))]
-        pub content: String,
+        #[validate(length(min = 0, max = 2000))]
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub content: Option<String>,
         /// Background visible on user's profile
         #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub background: Option<File>,
@@ -180,6 +195,67 @@ auto_derived!(
         Banned = 4,
         /// User was marked as spam and removed from platform
         Spam = 8,
+    }
+
+    /// New user profile data
+    #[cfg_attr(feature = "validator", derive(Validate))]
+    pub struct DataUserProfile {
+        /// Text to set as user profile description
+        #[cfg_attr(feature = "validator", validate(length(min = 0, max = 2000)))]
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub content: Option<String>,
+        /// Attachment Id for background
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
+        pub background: Option<String>,
+    }
+
+    /// New user information
+    #[cfg_attr(feature = "validator", derive(Validate))]
+    pub struct DataEditUser {
+        /// New display name
+        #[cfg_attr(
+            feature = "validator",
+            validate(length(min = 2, max = 32), regex = "RE_DISPLAY_NAME")
+        )]
+        pub display_name: Option<String>,
+        /// Attachment Id for avatar
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
+        pub avatar: Option<String>,
+
+        /// New user status
+        #[cfg_attr(feature = "validator", validate)]
+        pub status: Option<UserStatus>,
+        /// New user profile data
+        ///
+        /// This is applied as a partial.
+        #[cfg_attr(feature = "validator", validate)]
+        pub profile: Option<DataUserProfile>,
+
+        /// Bitfield of user badges
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub badges: Option<i32>,
+        /// Enum of user flags
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub flags: Option<i32>,
+
+        /// Fields to remove from user object
+        #[cfg_attr(feature = "validator", validate(length(min = 1)))]
+        pub remove: Option<Vec<FieldsUser>>,
+    }
+
+    /// User flag reponse
+    pub struct FlagResponse {
+        /// Flags
+        pub flags: i32,
+    }
+
+    /// Mutual friends and servers response
+    pub struct MutualResponse {
+        /// Array of mutual user IDs that both users are friends with
+        pub users: Vec<String>,
+        /// Array of mutual server IDs that both users are in
+        pub servers: Vec<String>,
     }
 
     /// Bot information for if the user is a bot

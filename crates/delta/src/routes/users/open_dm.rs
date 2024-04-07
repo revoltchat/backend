@@ -1,10 +1,11 @@
-use revolt_quark::{
-    models::{Channel, User},
-    perms, Database, Error, Ref, Result, UserPermission,
+use revolt_database::{
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Channel, Database, User,
 };
-
+use revolt_models::v0;
+use revolt_permissions::{calculate_user_permissions, UserPermission};
+use revolt_result::Result;
 use rocket::{serde::json::Json, State};
-use ulid::Ulid;
 
 /// # Open Direct Message
 ///
@@ -13,43 +14,20 @@ use ulid::Ulid;
 /// If the target is oneself, a saved messages channel is returned.
 #[openapi(tag = "Direct Messaging")]
 #[get("/<target>/dm")]
-pub async fn req(db: &State<Database>, user: User, target: Ref) -> Result<Json<Channel>> {
+pub async fn open_dm(
+    db: &State<Database>,
+    user: User,
+    target: Reference,
+) -> Result<Json<v0::Channel>> {
     let target = target.as_user(db).await?;
 
-    // If the target is oneself, open saved messages.
-    if target.id == user.id {
-        return if let Ok(channel) = db.find_direct_message_channel(&user.id, &target.id).await {
-            Ok(Json(channel))
-        } else {
-            let new_channel = Channel::SavedMessages {
-                id: Ulid::new().to_string(),
-                user: user.id,
-            };
-
-            new_channel.create(db).await?;
-            Ok(Json(new_channel))
-        };
-    }
-
-    // Otherwise try to find or create a DM.
-    if let Ok(channel) = db.find_direct_message_channel(&user.id, &target.id).await {
-        Ok(Json(channel))
-    } else if perms(&user)
-        .user(&target)
-        .calc_user(db)
+    let mut query = DatabasePermissionQuery::new(db, &user).user(&target);
+    calculate_user_permissions(&mut query)
         .await
-        .get_send_message()
-    {
-        let new_channel = Channel::DirectMessage {
-            id: Ulid::new().to_string(),
-            active: false,
-            recipients: vec![user.id, target.id],
-            last_message_id: None,
-        };
+        .throw_if_lacking_user_permission(UserPermission::SendMessage)?;
 
-        new_channel.create(db).await?;
-        Ok(Json(new_channel))
-    } else {
-        Error::from_user_permission(UserPermission::SendMessage)
-    }
+    Channel::create_dm(db, &user, &target)
+        .await
+        .map(Into::into)
+        .map(Json)
 }

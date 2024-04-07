@@ -1,79 +1,28 @@
-use once_cell::sync::Lazy;
-use regex::Regex;
-use revolt_quark::models::user::{FieldsUser, PartialUser, User};
-use revolt_quark::models::File;
-use revolt_quark::{Database, Error, Ref, Result};
-
-use revolt_quark::models::user::UserStatus;
+use revolt_database::FieldsUser;
+use revolt_database::{util::reference::Reference, Database, File, PartialUser, User};
+use revolt_models::v0;
+use revolt_result::{create_error, Result};
 use rocket::serde::json::Json;
 use rocket::State;
-use serde::{Deserialize, Serialize};
 use validator::Validate;
-
-/// Regex for valid display names
-///
-/// Block zero width space
-/// Block newline and carriage return
-pub static RE_DISPLAY_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[^\u200B\n\r]+$").unwrap());
-
-/// # Profile Data
-#[derive(Validate, Serialize, Deserialize, Debug, JsonSchema)]
-pub struct UserProfileData {
-    /// Text to set as user profile description
-    #[validate(length(min = 0, max = 2000))]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    content: Option<String>,
-    /// Attachment Id for background
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[validate(length(min = 1, max = 128))]
-    background: Option<String>,
-}
-
-/// # User Data
-#[derive(Validate, Serialize, Deserialize, JsonSchema)]
-pub struct DataEditUser {
-    /// New display name
-    #[validate(length(min = 2, max = 32), regex = "RE_DISPLAY_NAME")]
-    display_name: Option<String>,
-    /// Attachment Id for avatar
-    #[validate(length(min = 1, max = 128))]
-    avatar: Option<String>,
-
-    /// New user status
-    #[validate]
-    status: Option<UserStatus>,
-    /// New user profile data
-    ///
-    /// This is applied as a partial.
-    #[validate]
-    profile: Option<UserProfileData>,
-
-    /// Bitfield of user badges
-    #[serde(skip_serializing_if = "Option::is_none")]
-    badges: Option<i32>,
-    /// Enum of user flags
-    #[serde(skip_serializing_if = "Option::is_none")]
-    flags: Option<i32>,
-
-    /// Fields to remove from user object
-    #[validate(length(min = 1))]
-    remove: Option<Vec<FieldsUser>>,
-}
 
 /// # Edit User
 ///
 /// Edit currently authenticated user.
 #[openapi(tag = "User Information")]
 #[patch("/<target>", data = "<data>")]
-pub async fn req(
+pub async fn edit(
     db: &State<Database>,
     mut user: User,
-    target: Ref,
-    data: Json<DataEditUser>,
-) -> Result<Json<User>> {
+    target: Reference,
+    data: Json<v0::DataEditUser>,
+) -> Result<Json<v0::User>> {
     let data = data.into_inner();
-    data.validate()
-        .map_err(|error| Error::FailedValidation { error })?;
+    data.validate().map_err(|error| {
+        create_error!(FailedValidation {
+            error: error.to_string()
+        })
+    })?;
 
     // If we want to edit a different user than self, ensure we have
     // permissions and subsequently replace the user in question
@@ -85,13 +34,13 @@ pub async fn req(
             .unwrap_or_default();
 
         if !is_bot_owner && !user.privileged {
-            return Err(Error::NotPrivileged);
+            return Err(create_error!(NotPrivileged));
         }
     }
 
     // Otherwise, filter out invalid edit fields
     if !user.privileged && (data.badges.is_some() || data.flags.is_some()) {
-        return Err(Error::NotPrivileged);
+        return Err(create_error!(NotPrivileged));
     }
 
     // Exit out early if nothing is changed
@@ -103,18 +52,18 @@ pub async fn req(
         && data.flags.is_none()
         && data.remove.is_none()
     {
-        return Ok(Json(user));
+        return Ok(Json(user.into_self().await));
     }
 
     // 1. Remove fields from object
     if let Some(fields) = &data.remove {
-        if fields.contains(&FieldsUser::Avatar) {
+        if fields.contains(&v0::FieldsUser::Avatar) {
             if let Some(avatar) = &user.avatar {
                 db.mark_attachment_as_deleted(&avatar.id).await?;
             }
         }
 
-        if fields.contains(&FieldsUser::ProfileBackground) {
+        if fields.contains(&v0::FieldsUser::ProfileBackground) {
             if let Some(profile) = &user.profile {
                 if let Some(background) = &profile.background {
                     db.mark_attachment_as_deleted(&background.id).await?;
@@ -123,7 +72,8 @@ pub async fn req(
         }
 
         for field in fields {
-            user.remove(field);
+            let field: FieldsUser = field.clone().into();
+            user.remove_field(&field);
         }
     }
 
@@ -147,7 +97,7 @@ pub async fn req(
         }
 
         if let Some(presence) = status.presence {
-            new_status.presence = Some(presence);
+            new_status.presence = Some(presence.into());
         }
 
         partial.status = Some(new_status);
@@ -167,8 +117,14 @@ pub async fn req(
         partial.profile = Some(new_profile);
     }
 
-    user.update(db, partial, data.remove.unwrap_or_default())
-        .await?;
+    user.update(
+        db,
+        partial,
+        data.remove
+            .map(|v| v.into_iter().map(Into::into).collect())
+            .unwrap_or_default(),
+    )
+    .await?;
 
-    Ok(Json(user.foreign()))
+    Ok(Json(user.into_self().await))
 }

@@ -30,7 +30,7 @@ pub struct DataChangeUsername {
 /// Change your username.
 #[openapi(tag = "User Information")]
 #[patch("/@me/username", data = "<data>")]
-pub async fn req(
+pub async fn change_username(
     db: &State<Database>,
     account: Account,
     mut user: User,

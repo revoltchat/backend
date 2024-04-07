@@ -1,6 +1,6 @@
-use revolt_quark::models::User;
-use revolt_quark::Result;
-
+use revolt_database::User;
+use revolt_models::v0;
+use revolt_result::Result;
 use rocket::serde::json::Json;
 
 /// # Fetch Self
@@ -8,6 +8,6 @@ use rocket::serde::json::Json;
 /// Retrieve your user information.
 #[openapi(tag = "User Information")]
 #[get("/@me")]
-pub async fn req(user: User) -> Result<Json<User>> {
-    Ok(Json(user.foreign()))
+pub async fn fetch(user: User) -> Result<Json<v0::User>> {
+    Ok(Json(user.into_self().await))
 }

@@ -53,6 +53,17 @@ impl PermissionValue {
         self.has(permission as u64)
     }
 
+    /// Throw if missing user permission
+    pub fn throw_if_lacking_user_permission(&self, permission: UserPermission) -> Result<()> {
+        if self.has_user_permission(permission) {
+            Ok(())
+        } else {
+            Err(create_error!(MissingPermission {
+                permission: permission.to_string()
+            }))
+        }
+    }
+
     /// Throw if missing channel permission
     pub fn throw_if_lacking_channel_permission(&self, permission: ChannelPermission) -> Result<()> {
         if self.has_channel_permission(permission) {

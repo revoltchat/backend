@@ -94,20 +94,22 @@ auto_derived!(
     }
 
     /// User's active status
+    #[derive(Default)]
     pub struct UserStatus {
         /// Custom status text
-        #[serde(skip_serializing_if = "String::is_empty", default)]
-        pub text: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub text: Option<String>,
         /// Current presence option
         #[serde(skip_serializing_if = "Option::is_none")]
         pub presence: Option<Presence>,
     }
 
     /// User's profile
+    #[derive(Default)]
     pub struct UserProfile {
         /// Text content on user's profile
-        #[serde(skip_serializing_if = "String::is_empty", default)]
-        pub content: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub content: Option<String>,
         /// Background visible on user's profile
         #[serde(skip_serializing_if = "Option::is_none")]
         pub background: Option<File>,
@@ -541,7 +543,7 @@ impl User {
             FieldsUser::Avatar => self.avatar = None,
             FieldsUser::StatusText => {
                 if let Some(x) = self.status.as_mut() {
-                    x.text = String::new();
+                    x.text = None;
                 }
             }
             FieldsUser::StatusPresence => {
@@ -551,7 +553,7 @@ impl User {
             }
             FieldsUser::ProfileContent => {
                 if let Some(x) = self.profile.as_mut() {
-                    x.content = String::new();
+                    x.content = None;
                 }
             }
             FieldsUser::ProfileBackground => {
