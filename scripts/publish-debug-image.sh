@@ -11,7 +11,7 @@ echo "[profile.release]" >> Cargo.toml
 echo "debug = true" >> Cargo.toml
 
 TAG=$1-debug
-echo "Building images, will tag for ghcr.io with $TAG-debug!"
+echo "Building images, will tag for ghcr.io with $TAG!"
 docker build -t ghcr.io/revoltchat/base:latest -f Dockerfile.useCurrentArch .
 docker build -t ghcr.io/revoltchat/server:$TAG - < crates/delta/Dockerfile
 docker build -t ghcr.io/revoltchat/bonfire:$TAG - < crates/bonfire/Dockerfile

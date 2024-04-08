@@ -6,6 +6,9 @@ use futures_locks::RwLock;
 use once_cell::sync::Lazy;
 use serde::Deserialize;
 
+#[cfg(not(debug_assertions))]
+use std::env;
+
 static CONFIG_BUILDER: Lazy<RwLock<Config>> = Lazy::new(|| {
     RwLock::new({
         let mut builder = Config::builder().add_source(File::from_str(
