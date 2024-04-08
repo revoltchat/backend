@@ -60,7 +60,7 @@ impl AbstractUsers for MongoDb {
             .map_err(|_| create_database_error!("find_one", "sessions"))?
             .ok_or_else(|| create_error!(InvalidSession))?;
 
-        self.fetch_user(&session.id).await
+        self.fetch_user(&session.user_id).await
     }
 
     /// Fetch multiple users by their ids
