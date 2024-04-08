@@ -194,7 +194,7 @@ pub async fn authifier_config() -> AuthifierConfig {
 #[launch]
 async fn rocket() -> _ {
     // Configure logging and environment
-    revolt_config::configure!();
+    revolt_config::configure!(api);
 
     // Start web server
     web().await

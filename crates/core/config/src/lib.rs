@@ -96,7 +96,6 @@ pub struct ApiWorkers {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Api {
-    pub staging: bool,
     pub registration: ApiRegistration,
     pub smtp: ApiSmtp,
     pub vapid: ApiVapid,
@@ -142,12 +141,18 @@ pub struct Features {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+pub struct Sentry {
+    pub api: String,
+    pub events: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct Settings {
     pub database: Database,
     pub hosts: Hosts,
     pub api: Api,
     pub features: Features,
-    pub sentry_dsn: String,
+    pub sentry: Sentry,
 }
 
 impl Settings {
@@ -191,7 +196,7 @@ pub async fn config() -> Settings {
 }
 
 /// Configure logging and common Rust variables
-pub async fn setup_logging(release: &'static str) -> Option<sentry::ClientInitGuard> {
+pub async fn setup_logging(release: &'static str, dsn: String) -> Option<sentry::ClientInitGuard> {
     dotenv::dotenv().ok();
 
     if std::env::var("RUST_LOG").is_err() {
@@ -205,12 +210,11 @@ pub async fn setup_logging(release: &'static str) -> Option<sentry::ClientInitGu
     pretty_env_logger::init();
     log::info!("Starting {release}");
 
-    let config = config().await;
-    if config.sentry_dsn.is_empty() {
+    if dsn.is_empty() {
         None
     } else {
         Some(sentry::init((
-            config.sentry_dsn,
+            dsn,
             sentry::ClientOptions {
                 release: Some(release.into()),
                 ..Default::default()
@@ -221,12 +225,12 @@ pub async fn setup_logging(release: &'static str) -> Option<sentry::ClientInitGu
 
 #[macro_export]
 macro_rules! configure {
-    () => {
-        let _sentry = $crate::setup_logging(concat!(
-            env!("CARGO_PKG_NAME"),
-            "@",
-            env!("CARGO_PKG_VERSION")
-        ))
+    ($application: ident) => {
+        let config = $crate::config().await;
+        let _sentry = $crate::setup_logging(
+            concat!(env!("CARGO_PKG_NAME"), "@", env!("CARGO_PKG_VERSION")),
+            config.sentry.$application,
+        )
         .await;
     };
 }
