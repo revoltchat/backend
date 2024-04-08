@@ -220,9 +220,106 @@ impl From<crate::Channel> for Channel {
     }
 }
 
+impl From<Channel> for crate::Channel {
+    fn from(value: Channel) -> crate::Channel {
+        match value {
+            Channel::SavedMessages { id, user } => crate::Channel::SavedMessages { id, user },
+            Channel::DirectMessage {
+                id,
+                active,
+                recipients,
+                last_message_id,
+            } => crate::Channel::DirectMessage {
+                id,
+                active,
+                recipients,
+                last_message_id,
+            },
+            Channel::Group {
+                id,
+                name,
+                owner,
+                description,
+                recipients,
+                icon,
+                last_message_id,
+                permissions,
+                nsfw,
+            } => crate::Channel::Group {
+                id,
+                name,
+                owner,
+                description,
+                recipients,
+                icon: icon.map(|file| file.into()),
+                last_message_id,
+                permissions,
+                nsfw,
+            },
+            Channel::TextChannel {
+                id,
+                server,
+                name,
+                description,
+                icon,
+                last_message_id,
+                default_permissions,
+                role_permissions,
+                nsfw,
+            } => crate::Channel::TextChannel {
+                id,
+                server,
+                name,
+                description,
+                icon: icon.map(|file| file.into()),
+                last_message_id,
+                default_permissions,
+                role_permissions,
+                nsfw,
+            },
+            Channel::VoiceChannel {
+                id,
+                server,
+                name,
+                description,
+                icon,
+                default_permissions,
+                role_permissions,
+                nsfw,
+            } => crate::Channel::VoiceChannel {
+                id,
+                server,
+                name,
+                description,
+                icon: icon.map(|file| file.into()),
+                default_permissions,
+                role_permissions,
+                nsfw,
+            },
+        }
+    }
+}
+
 impl From<crate::PartialChannel> for PartialChannel {
     fn from(value: crate::PartialChannel) -> Self {
         PartialChannel {
+            name: value.name,
+            owner: value.owner,
+            description: value.description,
+            icon: value.icon.map(|file| file.into()),
+            nsfw: value.nsfw,
+            active: value.active,
+            permissions: value.permissions,
+            role_permissions: value.role_permissions,
+            default_permissions: value.default_permissions,
+            last_message_id: value.last_message_id,
+        }
+    }
+}
+
+impl From<PartialChannel> for crate::PartialChannel {
+    fn from(value: PartialChannel) -> crate::PartialChannel {
+        crate::PartialChannel {
             name: value.name,
             owner: value.owner,
             description: value.description,
@@ -307,6 +404,25 @@ impl From<crate::File> for File {
     }
 }
 
+impl From<File> for crate::File {
+    fn from(value: File) -> crate::File {
+        crate::File {
+            id: value.id,
+            tag: value.tag,
+            filename: value.filename,
+            metadata: value.metadata.into(),
+            content_type: value.content_type,
+            size: value.size,
+            deleted: value.deleted,
+            reported: value.reported,
+            message_id: value.message_id,
+            user_id: value.user_id,
+            server_id: value.server_id,
+            object_id: value.object_id,
+        }
+    }
+}
+
 impl From<crate::Metadata> for Metadata {
     fn from(value: crate::Metadata) -> Self {
         match value {
@@ -321,6 +437,24 @@ impl From<crate::Metadata> for Metadata {
                 height: height as usize,
             },
             crate::Metadata::Audio => Metadata::Audio,
+        }
+    }
+}
+
+impl From<Metadata> for crate::Metadata {
+    fn from(value: Metadata) -> crate::Metadata {
+        match value {
+            Metadata::File => crate::Metadata::File,
+            Metadata::Text => crate::Metadata::Text,
+            Metadata::Image { width, height } => crate::Metadata::Image {
+                width: width as isize,
+                height: height as isize,
+            },
+            Metadata::Video { width, height } => crate::Metadata::Video {
+                width: width as isize,
+                height: height as isize,
+            },
+            Metadata::Audio => crate::Metadata::Audio,
         }
     }
 }
@@ -480,6 +614,19 @@ impl From<crate::Member> for Member {
     }
 }
 
+impl From<Member> for crate::Member {
+    fn from(value: Member) -> crate::Member {
+        crate::Member {
+            id: value.id.into(),
+            joined_at: value.joined_at,
+            nickname: value.nickname,
+            avatar: value.avatar.map(|f| f.into()),
+            roles: value.roles,
+            timeout: value.timeout,
+        }
+    }
+}
+
 impl From<crate::PartialMember> for PartialMember {
     fn from(value: crate::PartialMember) -> Self {
         PartialMember {
@@ -493,9 +640,31 @@ impl From<crate::PartialMember> for PartialMember {
     }
 }
 
+impl From<PartialMember> for crate::PartialMember {
+    fn from(value: PartialMember) -> crate::PartialMember {
+        crate::PartialMember {
+            id: value.id.map(|id| id.into()),
+            joined_at: value.joined_at,
+            nickname: value.nickname,
+            avatar: value.avatar.map(|f| f.into()),
+            roles: value.roles,
+            timeout: value.timeout,
+        }
+    }
+}
+
 impl From<crate::MemberCompositeKey> for MemberCompositeKey {
     fn from(value: crate::MemberCompositeKey) -> Self {
         MemberCompositeKey {
+            server: value.server,
+            user: value.user,
+        }
+    }
+}
+
+impl From<MemberCompositeKey> for crate::MemberCompositeKey {
+    fn from(value: MemberCompositeKey) -> crate::MemberCompositeKey {
+        crate::MemberCompositeKey {
             server: value.server,
             user: value.user,
         }
@@ -562,6 +731,34 @@ impl From<crate::Server> for Server {
     }
 }
 
+impl From<Server> for crate::Server {
+    fn from(value: Server) -> crate::Server {
+        crate::Server {
+            id: value.id,
+            owner: value.owner,
+            name: value.name,
+            description: value.description,
+            channels: value.channels,
+            categories: value
+                .categories
+                .map(|categories| categories.into_iter().map(|v| v.into()).collect()),
+            system_messages: value.system_messages.map(|v| v.into()),
+            roles: value
+                .roles
+                .into_iter()
+                .map(|(k, v)| (k, v.into()))
+                .collect(),
+            default_permissions: value.default_permissions,
+            icon: value.icon.map(|f| f.into()),
+            banner: value.banner.map(|f| f.into()),
+            flags: Some(value.flags as i32),
+            nsfw: value.nsfw,
+            analytics: value.analytics,
+            discoverable: value.discoverable,
+        }
+    }
+}
+
 impl From<crate::PartialServer> for PartialServer {
     fn from(value: crate::PartialServer) -> Self {
         PartialServer {
@@ -581,6 +778,32 @@ impl From<crate::PartialServer> for PartialServer {
             icon: value.icon.map(|f| f.into()),
             banner: value.banner.map(|f| f.into()),
             flags: value.flags.map(|v| v as u32),
+            nsfw: value.nsfw,
+            analytics: value.analytics,
+            discoverable: value.discoverable,
+        }
+    }
+}
+
+impl From<PartialServer> for crate::PartialServer {
+    fn from(value: PartialServer) -> crate::PartialServer {
+        crate::PartialServer {
+            id: value.id,
+            owner: value.owner,
+            name: value.name,
+            description: value.description,
+            channels: value.channels,
+            categories: value
+                .categories
+                .map(|categories| categories.into_iter().map(|v| v.into()).collect()),
+            system_messages: value.system_messages.map(|v| v.into()),
+            roles: value
+                .roles
+                .map(|roles| roles.into_iter().map(|(k, v)| (k, v.into())).collect()),
+            default_permissions: value.default_permissions,
+            icon: value.icon.map(|f| f.into()),
+            banner: value.banner.map(|f| f.into()),
+            flags: value.flags.map(|v| v as i32),
             nsfw: value.nsfw,
             analytics: value.analytics,
             discoverable: value.discoverable,
@@ -666,9 +889,33 @@ impl From<crate::Role> for Role {
     }
 }
 
+impl From<Role> for crate::Role {
+    fn from(value: Role) -> crate::Role {
+        crate::Role {
+            name: value.name,
+            permissions: value.permissions,
+            colour: value.colour,
+            hoist: value.hoist,
+            rank: value.rank,
+        }
+    }
+}
+
 impl From<crate::PartialRole> for PartialRole {
     fn from(value: crate::PartialRole) -> Self {
         PartialRole {
+            name: value.name,
+            permissions: value.permissions,
+            colour: value.colour,
+            hoist: value.hoist,
+            rank: value.rank,
+        }
+    }
+}
+
+impl From<PartialRole> for crate::PartialRole {
+    fn from(value: PartialRole) -> crate::PartialRole {
+        crate::PartialRole {
             name: value.name,
             permissions: value.permissions,
             colour: value.colour,
@@ -871,6 +1118,25 @@ impl crate::User {
     }
 }
 
+impl From<User> for crate::User {
+    fn from(value: User) -> crate::User {
+        crate::User {
+            id: value.id,
+            username: value.username,
+            discriminator: value.discriminator,
+            display_name: value.display_name,
+            avatar: value.avatar.map(Into::into),
+            relations: None,
+            badges: Some(value.badges as i32),
+            status: value.status.map(Into::into),
+            profile: value.profile.map(Into::into),
+            flags: Some(value.flags as i32),
+            privileged: value.privileged,
+            bot: value.bot.map(Into::into),
+        }
+    }
+}
+
 impl From<crate::PartialUser> for PartialUser {
     fn from(value: crate::PartialUser) -> Self {
         PartialUser {
@@ -977,9 +1243,27 @@ impl From<crate::UserStatus> for UserStatus {
     }
 }
 
+impl From<UserStatus> for crate::UserStatus {
+    fn from(value: UserStatus) -> crate::UserStatus {
+        crate::UserStatus {
+            text: value.text,
+            presence: value.presence.map(|presence| presence.into()),
+        }
+    }
+}
+
 impl From<crate::UserProfile> for UserProfile {
     fn from(value: crate::UserProfile) -> Self {
         UserProfile {
+            content: value.content,
+            background: value.background.map(|file| file.into()),
+        }
+    }
+}
+
+impl From<UserProfile> for crate::UserProfile {
+    fn from(value: UserProfile) -> crate::UserProfile {
+        crate::UserProfile {
             content: value.content,
             background: value.background.map(|file| file.into()),
         }
@@ -990,6 +1274,14 @@ impl From<crate::BotInformation> for BotInformation {
     fn from(value: crate::BotInformation) -> Self {
         BotInformation {
             owner_id: value.owner,
+        }
+    }
+}
+
+impl From<BotInformation> for crate::BotInformation {
+    fn from(value: BotInformation) -> crate::BotInformation {
+        crate::BotInformation {
+            owner: value.owner_id,
         }
     }
 }

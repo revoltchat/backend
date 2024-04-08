@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use revolt_models::v0::{
     AppendMessage, Channel, Emoji, FieldsChannel, FieldsMember, FieldsRole, FieldsServer,
-    FieldsUser, FieldsWebhook, MemberCompositeKey, Message, PartialChannel, PartialMember,
+    FieldsUser, FieldsWebhook, Member, MemberCompositeKey, Message, PartialChannel, PartialMember,
     PartialMessage, PartialRole, PartialServer, PartialUser, PartialWebhook, Report, Server, User,
     UserSettings, Webhook,
 };
@@ -48,17 +48,17 @@ pub enum EventV1 {
 
     /// Successfully authenticated
     Authenticated,
-    /* /// Basic data to cache
+    /// Basic data to cache
     Ready {
         users: Vec<User>,
         servers: Vec<Server>,
         channels: Vec<Channel>,
         members: Vec<Member>,
-        emojis: Option<Vec<Emoji>>,
+        emojis: Vec<Emoji>,
     },
 
     /// Ping response
-    Pong { data: Ping }, */
+    Pong { data: Ping },
     /// New message
     Message(Message),
 

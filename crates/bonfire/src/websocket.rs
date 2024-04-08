@@ -11,21 +11,17 @@ use futures::{
     stream::{SplitSink, SplitStream},
     FutureExt, SinkExt, StreamExt, TryStreamExt,
 };
-use revolt_presence::{create_session, delete_session};
-use revolt_quark::{
-    events::{
-        client::EventV1,
-        server::ClientMessage,
-        state::{State, SubscriptionStateChange},
-    },
-    models::{user::UserHint, User},
-    redis_kiss::{PayloadType, REDIS_PAYLOAD_TYPE, REDIS_URI},
-    Database,
+use redis_kiss::{PayloadType, REDIS_PAYLOAD_TYPE, REDIS_URI};
+use revolt_database::{
+    events::{client::EventV1, server::ClientMessage},
+    Database, User, UserHint,
 };
+use revolt_presence::{create_session, delete_session};
 
 use async_std::{net::TcpStream, sync::Mutex};
 
 use crate::config::{ProtocolConfiguration, WebsocketHandshakeCallback};
+use crate::events::state::{State, SubscriptionStateChange};
 
 type WsReader = SplitStream<WebSocketStream<TcpStream>>;
 type WsWriter = SplitSink<WebSocketStream<TcpStream>, async_tungstenite::tungstenite::Message>;

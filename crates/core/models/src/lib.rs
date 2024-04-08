@@ -30,7 +30,16 @@ macro_rules! auto_derived_partial {
         #[derive(
             OptionalStruct, Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema,
         )]
-        #[optional_derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
+        #[optional_derive(
+            Debug,
+            Clone,
+            Eq,
+            PartialEq,
+            Serialize,
+            Deserialize,
+            JsonSchema,
+            Default
+        )]
         #[optional_name = $name]
         #[opt_skip_serializing_none]
         #[opt_some_priority]

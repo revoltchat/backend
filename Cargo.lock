@@ -3588,14 +3588,21 @@ dependencies = [
  "fred",
  "futures",
  "log",
+ "lru 0.7.6",
  "once_cell",
  "querystring",
+ "redis-kiss",
+ "revolt-config",
+ "revolt-database",
+ "revolt-models",
+ "revolt-permissions",
  "revolt-presence",
- "revolt-quark",
+ "revolt-result",
  "rmp-serde",
  "sentry",
  "serde",
  "serde_json",
+ "ulid 0.5.0",
 ]
 
 [[package]]

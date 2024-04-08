@@ -7,6 +7,7 @@ use revolt_presence::clear_region;
 extern crate log;
 
 pub mod config;
+pub mod events;
 
 mod database;
 mod websocket;
@@ -14,7 +15,7 @@ mod websocket;
 #[async_std::main]
 async fn main() {
     // Configure requirements for Bonfire.
-    revolt_quark::configure!();
+    revolt_config::configure!();
     database::connect().await;
 
     // Clean up the current region information.

@@ -9,13 +9,14 @@ edition = "2021"
 [dependencies]
 # util
 log = "*"
+sentry = "0.31.5"
+lru = "0.7.6"
+ulid = "0.5.0"
 once_cell = "1.9.0"
+redis-kiss = "0.1.4"
 
 # parsing
 querystring = "1.1.0"
-
-# quark
-revolt-quark = { path = "../quark" }
 
 # serde
 bincode = "1.3.3"
@@ -33,8 +34,12 @@ async-std = { version = "1.8.0", features = [
 ] }
 
 # core
+revolt-result = { path = "../core/result" }
+revolt-models = { path = "../core/models" }
+revolt-config = { path = "../core/config" }
+revolt-database = { path = "../core/database" }
+revolt-permissions = { version = "0.7.0", path = "../core/permissions" }
 revolt-presence = { path = "../core/presence", features = ["redis-is-patched"] }
-sentry = "0.31.5"
 
 # redis
 fred = { version = "8.0.1", features = ["subscriber-client"] }

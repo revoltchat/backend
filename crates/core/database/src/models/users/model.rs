@@ -122,6 +122,16 @@ auto_derived!(
         /// Id of the owner of this bot
         pub owner: String,
     }
+
+    /// Enumeration providing a hint to the type of user we are handling
+    pub enum UserHint {
+        /// Could be either a user or a bot
+        Any,
+        /// Only match bots
+        Bot,
+        /// Only match users
+        User,
+    }
 );
 
 pub static DISCRIMINATOR_SEARCH_SPACE: Lazy<HashSet<String>> = Lazy::new(|| {
@@ -264,6 +274,30 @@ impl User {
         }
 
         Ok(username)
+    }
+
+    /// Find a user from a given token and hint
+    #[async_recursion]
+    pub async fn from_token(db: &Database, token: &str, hint: UserHint) -> Result<User> {
+        match hint {
+            UserHint::Bot => {
+                db.fetch_user(
+                    &db.fetch_bot_by_token(token)
+                        .await
+                        .map_err(|_| create_error!(InternalError))?
+                        .id,
+                )
+                .await
+            }
+            UserHint::User => db.fetch_user_by_token(token).await,
+            UserHint::Any => {
+                if let Ok(user) = User::from_token(db, token, UserHint::User).await {
+                    Ok(user)
+                } else {
+                    User::from_token(db, token, UserHint::Bot).await
+                }
+            }
+        }
     }
 
     /// Helper function to fetch many users as a mutually connected user
