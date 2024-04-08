@@ -284,7 +284,7 @@ impl User {
                 db.fetch_user(
                     &db.fetch_bot_by_token(token)
                         .await
-                        .map_err(|_| create_error!(InternalError))?
+                        .map_err(|_| create_error!(InvalidSession))?
                         .id,
                 )
                 .await
