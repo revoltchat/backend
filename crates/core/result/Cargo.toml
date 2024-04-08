@@ -1,6 +1,6 @@
 [package]
 name = "revolt-result"
-version = "0.7.0"
+version = "0.7.1"
 edition = "2021"
 license = "AGPL-3.0-or-later"
 authors = ["Paul Makles <me@insrt.uk>"]
@@ -12,7 +12,7 @@ description = "Revolt Backend: Result and Error types"
 serde = ["dep:serde"]
 schemas = ["dep:schemars"]
 rocket = ["dep:rocket", "dep:serde_json"]
-okapi = ["dep:revolt_rocket_okapi", "dep:revolt_okapi"]
+okapi = ["dep:revolt_rocket_okapi", "dep:revolt_okapi", "schemas"]
 
 default = ["serde"]
 
