@@ -19,7 +19,6 @@ RUN sh /tmp/build-image-layer.sh tools
 COPY Cargo.toml Cargo.lock ./
 COPY crates/bonfire/Cargo.toml ./crates/bonfire/
 COPY crates/delta/Cargo.toml ./crates/delta/
-COPY crates/quark/Cargo.toml ./crates/quark/
 COPY crates/core/config/Cargo.toml ./crates/core/config/
 COPY crates/core/database/Cargo.toml ./crates/core/database/
 COPY crates/core/models/Cargo.toml ./crates/core/models/

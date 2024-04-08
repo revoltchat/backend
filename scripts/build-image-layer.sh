@@ -24,7 +24,6 @@ deps() {
   mkdir -p \
     crates/bonfire/src \
     crates/delta/src \
-    crates/quark/src \
     crates/core/config/src \
     crates/core/database/src \
     crates/core/models/src \
@@ -35,7 +34,6 @@ deps() {
     tee crates/bonfire/src/main.rs |
     tee crates/delta/src/main.rs
   echo '' |
-    tee crates/quark/src/lib.rs |
     tee crates/core/config/src/lib.rs |
     tee crates/core/database/src/lib.rs |
     tee crates/core/models/src/lib.rs |
@@ -54,7 +52,6 @@ apps() {
   touch -am \
     crates/bonfire/src/main.rs \
     crates/delta/src/main.rs \
-    crates/quark/src/lib.rs \
     crates/core/config/src/lib.rs \
     crates/core/database/src/lib.rs \
     crates/core/models/src/lib.rs \

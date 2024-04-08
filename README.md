@@ -2,17 +2,16 @@
 
 This is a monorepo for the Revolt backend.
 
-| Crate              | Path                                               | Description                       |
-| ------------------ | -------------------------------------------------- | --------------------------------- |
-| `core/config`      | [crates/core/config](crates/core/config)           | Core: Configuration               |
-| `core/database`    | [crates/core/database](crates/core/database)       | Core: Database Implementation     |
-| `core/models`      | [crates/core/models](crates/core/models)           | Core: API Models                  |
-| `core/permissions` | [crates/core/permissions](crates/core/permissions) | Core: Permission Logic            |
-| `core/presence`    | [crates/core/presence](crates/core/presence)       | Core: User Presence               |
-| `core/result`      | [crates/core/result](crates/core/result)           | Core: Result and Error types      |
-| `delta`            | [crates/delta](crates/delta)                       | REST API server                   |
-| `bonfire`          | [crates/bonfire](crates/bonfire)                   | WebSocket events server           |
-| `quark`            | [crates/quark](crates/quark)                       | Models and logic (**DEPRECATED**) |
+| Crate              | Path                                               | Description                   |
+| ------------------ | -------------------------------------------------- | ----------------------------- |
+| `core/config`      | [crates/core/config](crates/core/config)           | Core: Configuration           |
+| `core/database`    | [crates/core/database](crates/core/database)       | Core: Database Implementation |
+| `core/models`      | [crates/core/models](crates/core/models)           | Core: API Models              |
+| `core/permissions` | [crates/core/permissions](crates/core/permissions) | Core: Permission Logic        |
+| `core/presence`    | [crates/core/presence](crates/core/presence)       | Core: User Presence           |
+| `core/result`      | [crates/core/result](crates/core/result)           | Core: Result and Error types  |
+| `delta`            | [crates/delta](crates/delta)                       | REST API server               |
+| `bonfire`          | [crates/bonfire](crates/bonfire)                   | WebSocket events server       |
 
 Note: `january`, `autumn`, and `vortex` are yet to be moved into this monorepo.
 
