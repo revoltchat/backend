@@ -1,4 +1,4 @@
-use super::File;
+use super::{File, UserVoiceState};
 
 use revolt_permissions::{Override, OverrideField};
 use std::collections::{HashMap, HashSet};
@@ -306,10 +306,18 @@ auto_derived!(
     }
 
     /// Voice server token response
-    pub struct LegacyCreateVoiceUserResponse {
+    pub struct CreateVoiceUserResponse {
         /// Token for authenticating with the voice server
-        token: String,
+        pub token: String,
     }
+
+    /// Voice state for a channel
+    pub struct ChannelVoiceState {
+        pub id: String,
+        /// The states of the users who are connected to the channel
+        pub participants: Vec<UserVoiceState>
+    }
+
 );
 
 impl Channel {

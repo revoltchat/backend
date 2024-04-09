@@ -2,27 +2,19 @@ use std::borrow::Cow;
 
 use revolt_config::config;
 use revolt_models::v0;
-use revolt_database::{events::client::EventV1, util::{permissions::perms, reference::Reference}, Channel, Database, User};
+use revolt_database::{util::{permissions::perms, reference::Reference}, Channel, Database, User};
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
 
 use livekit_api::{access_token::{AccessToken, VideoGrants}, services::room::{CreateRoomOptions, RoomClient}};
 use rocket::{serde::json::Json, State};
-use serde::{Deserialize, Serialize};
-
-/// # Voice Server Token Response
-#[derive(Serialize, Deserialize, JsonSchema)]
-pub struct CreateVoiceUserResponse {
-    /// Token for authenticating with the voice server
-    token: String,
-}
 
 /// # Join Call
 ///
 /// Asks the voice server for a token to join the call.
 #[openapi(tag = "Voice")]
 #[post("/<target>/join_call")]
-pub async fn call(db: &State<Database>, rooms: &State<RoomClient>, user: User, target: Reference) -> Result<Json<CreateVoiceUserResponse>> {
+pub async fn call(db: &State<Database>, rooms: &State<RoomClient>, user: User, target: Reference) -> Result<Json<v0::CreateVoiceUserResponse>> {
     let channel = target.as_channel(db).await?;
 
     let mut permissions = perms(db, &user).channel(&channel);
@@ -71,5 +63,5 @@ pub async fn call(db: &State<Database>, rooms: &State<RoomClient>, user: User, t
 
     log::info!("created room {room:?}");
 
-    Ok(Json(CreateVoiceUserResponse { token }))
+    Ok(Json(v0::CreateVoiceUserResponse { token }))
 }

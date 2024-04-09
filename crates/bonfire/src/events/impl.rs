@@ -1,15 +1,15 @@
 use std::collections::HashSet;
 
 use revolt_database::{
-    events::client::{ChannelVoiceState, EventV1, ReadyServer, UserVoiceState}, util::permissions::DatabasePermissionQuery, Channel, Database, Member,
+    events::client::EventV1, util::permissions::DatabasePermissionQuery, Channel, Database, Member,
     MemberCompositeKey, Presence, RelationshipStatus,
 };
 use revolt_models::v0;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_presence::filter_online;
-use revolt_result::Result;
+use revolt_result::{create_error, Result};
 
-use redis_kiss::{get_connection, AsyncCommands};
+use redis_kiss::{get_connection, AsyncCommands, Conn};
 
 use super::state::{Cache, State};
 
@@ -127,11 +127,18 @@ impl State {
         // Filter server channels by permission.
         let channels = self.cache.filter_accessible_channels(db, channels).await;
 
+        let mut voice_states = Vec::new();
+        let mut conn = get_connection().await.unwrap();
+
         // Append known user IDs from DMs.
         for channel in &channels {
             match channel {
-                Channel::DirectMessage { recipients, .. } | Channel::Group { recipients, .. } => {
+                Channel::DirectMessage { id, recipients, .. } | Channel::Group { id, recipients, .. } => {
                     user_ids.extend(&mut recipients.clone().into_iter());
+
+                    if let Ok(Some(voice_state)) = self.fetch_voice_state(&mut conn, id).await {
+                        voice_states.push(voice_state)
+                    }
                 }
                 _ => {}
             }
@@ -199,32 +206,21 @@ impl State {
             self.insert_subscription(channel.id().to_string());
         }
 
-        let mut conn = get_connection().await.unwrap();
-        let mut new_servers = Vec::with_capacity(servers.len());
-
-        for server in servers {
-            let mut voice_states = vec![];
-
+        for server in &servers {
             for channel in &server.channels {
-                let members = conn.smembers::<_, Vec<String>>(format!("vc-members-{channel}")).await.unwrap();
-
-                if !members.is_empty() {
-                    voice_states.push(ChannelVoiceState {
-                        id: channel.clone(),
-                        participants: members.into_iter().map(|id| UserVoiceState { id }).collect()
-                    })
+                if let Ok(Some(voice_state)) = self.fetch_voice_state(&mut conn, channel).await {
+                    voice_states.push(voice_state)
                 }
             }
-
-            new_servers.push(ReadyServer { server: server.into(), voice_states })
         }
 
         Ok(EventV1::Ready {
             users,
-            servers: new_servers,
+            servers: servers.into_iter().map(Into::into).collect(),
             channels: channels.into_iter().map(Into::into).collect(),
             members: members.into_iter().map(Into::into).collect(),
             emojis: emojis.into_iter().map(Into::into).collect(),
+            voice_states
         })
     }
 
@@ -570,5 +566,20 @@ impl State {
         }
 
         true
+    }
+
+    async fn fetch_voice_state(&self, conn: &mut Conn, channel: &str) -> Result<Option<v0::ChannelVoiceState>> {
+        let members = conn.smembers::<_, Vec<String>>(format!("vc-members-{channel}"))
+            .await
+            .map_err(|_| create_error!(InternalError))?;
+
+        if !members.is_empty() {
+            Ok(Some(v0::ChannelVoiceState {
+                id: channel.to_string(),
+                participants: members.into_iter().map(|id| v0::UserVoiceState { id }).collect()
+            }))
+        } else {
+            Ok(None)
+        }
     }
 }

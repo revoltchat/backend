@@ -3,6 +3,7 @@ use std::env;
 use redis_kiss::{get_connection, AsyncCommands};
 
 use revolt_database::events::client::EventV1;
+use revolt_models::v0::UserVoiceState;
 use rocket::{build, post, routes, serde::json::Json, Config};
 use rocket_empty::EmptyResponse;
 use livekit_protocol::WebhookEvent;
@@ -47,9 +48,13 @@ async fn ingress(body: Json<WebhookEvent>) -> Result<EmptyResponse> {
             redis.sadd::<_, _, u64>(format!("vc-members-{}", channel_id), user_id).await.unwrap();
             redis.set::<_, _, String>(format!("vc-{}", user_id), &channel_id).await.unwrap();
 
+            let voice_state = UserVoiceState {
+                id: user_id.clone()
+            };
+
             EventV1::VoiceChannelJoin {
                 id: channel_id.clone(),
-                user: user_id.clone()
+                state: voice_state
             }
             .p(channel_id.clone())
             .await

@@ -270,6 +270,13 @@ auto_derived!(
         /// Username and discriminator combo separated by #
         pub username: String,
     }
+
+    /// Voice State information for a user
+    pub struct UserVoiceState {
+        pub id: String
+        // TODO - muted, etc
+    }
+
 );
 
 pub trait CheckRelationship {
