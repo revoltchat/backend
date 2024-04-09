@@ -1,13 +1,15 @@
 use std::collections::HashSet;
 
 use revolt_database::{
-    events::client::EventV1, util::permissions::DatabasePermissionQuery, Channel, Database, Member,
+    events::client::{ChannelVoiceState, EventV1, ReadyServer, UserVoiceState}, util::permissions::DatabasePermissionQuery, Channel, Database, Member,
     MemberCompositeKey, Presence, RelationshipStatus,
 };
 use revolt_models::v0;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_presence::filter_online;
 use revolt_result::Result;
+
+use redis_kiss::{get_connection, AsyncCommands};
 
 use super::state::{Cache, State};
 
@@ -197,9 +199,29 @@ impl State {
             self.insert_subscription(channel.id().to_string());
         }
 
+        let mut conn = get_connection().await.unwrap();
+        let mut new_servers = Vec::with_capacity(servers.len());
+
+        for server in servers {
+            let mut voice_states = vec![];
+
+            for channel in &server.channels {
+                let members = conn.smembers::<_, Vec<String>>(format!("vc-members-{channel}")).await.unwrap();
+
+                if !members.is_empty() {
+                    voice_states.push(ChannelVoiceState {
+                        id: channel.clone(),
+                        participants: members.into_iter().map(|id| UserVoiceState { id }).collect()
+                    })
+                }
+            }
+
+            new_servers.push(ReadyServer { server: server.into(), voice_states })
+        }
+
         Ok(EventV1::Ready {
             users,
-            servers: servers.into_iter().map(Into::into).collect(),
+            servers: new_servers,
             channels: channels.into_iter().map(Into::into).collect(),
             members: members.into_iter().map(Into::into).collect(),
             emojis: emojis.into_iter().map(Into::into).collect(),

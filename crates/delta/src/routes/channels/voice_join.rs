@@ -1,105 +1,75 @@
+use std::borrow::Cow;
+
 use revolt_config::config;
-use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Channel, Database, User,
-};
 use revolt_models::v0;
+use revolt_database::{events::client::EventV1, util::{permissions::perms, reference::Reference}, Channel, Database, User};
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
+
+use livekit_api::{access_token::{AccessToken, VideoGrants}, services::room::{CreateRoomOptions, RoomClient}};
 use rocket::{serde::json::Json, State};
+use serde::{Deserialize, Serialize};
+
+/// # Voice Server Token Response
+#[derive(Serialize, Deserialize, JsonSchema)]
+pub struct CreateVoiceUserResponse {
+    /// Token for authenticating with the voice server
+    token: String,
+}
 
 /// # Join Call
 ///
 /// Asks the voice server for a token to join the call.
 #[openapi(tag = "Voice")]
 #[post("/<target>/join_call")]
-pub async fn call(
-    db: &State<Database>,
-    user: User,
-    target: Reference,
-) -> Result<Json<v0::LegacyCreateVoiceUserResponse>> {
+pub async fn call(db: &State<Database>, rooms: &State<RoomClient>, user: User, target: Reference) -> Result<Json<CreateVoiceUserResponse>> {
     let channel = target.as_channel(db).await?;
-    let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
-    calculate_channel_permissions(&mut query)
+
+    let mut permissions = perms(db, &user).channel(&channel);
+
+    calculate_channel_permissions(&mut permissions)
         .await
         .throw_if_lacking_channel_permission(ChannelPermission::Connect)?;
 
+    if user.current_voice_channel().await?.is_some() {
+        return Err(create_error!(AlreadyInVoiceChannel))
+    }
+
     let config = config().await;
-    if config.api.security.voso_legacy_token.is_empty() {
-        return Err(create_error!(VosoUnavailable));
-    }
 
-    match channel {
-        Channel::SavedMessages { .. } | Channel::TextChannel { .. } => {
-            return Err(create_error!(CannotJoinCall))
-        }
-        _ => {}
-    }
+    if config.api.livekit.url.is_empty() {
+        return Err(create_error!(LiveKitUnavailable));
+    };
 
-    // To join a call:
-    // - Check if the room exists.
-    // - If not, create it.
-    let client = reqwest::Client::new();
-    let result = client
-        .get(&format!(
-            "{}/room/{}",
-            config.hosts.voso_legacy,
-            channel.id()
-        ))
-        .header(
-            reqwest::header::AUTHORIZATION,
-            config.api.security.voso_legacy_token.clone(),
-        )
-        .send()
-        .await;
+    let voice = match &channel {
+        Channel::DirectMessage { .. } | Channel::VoiceChannel { .. } => Cow::Owned(v0::VoiceInformation::default()),
+        Channel::TextChannel { voice: Some(voice), .. } => Cow::Borrowed(voice),
+        _ => return Err(create_error!(CannotJoinCall))
+    };
 
-    match result {
-        Err(_) => return Err(create_error!(VosoUnavailable)),
-        Ok(result) => match result.status() {
-            reqwest::StatusCode::OK => (),
-            reqwest::StatusCode::NOT_FOUND => {
-                if (client
-                    .post(&format!(
-                        "{}/room/{}",
-                        config.hosts.voso_legacy,
-                        channel.id()
-                    ))
-                    .header(
-                        reqwest::header::AUTHORIZATION,
-                        config.api.security.voso_legacy_token.clone(),
-                    )
-                    .send()
-                    .await)
-                    .is_err()
-                {
-                    return Err(create_error!(VosoUnavailable));
-                }
-            }
-            _ => return Err(create_error!(VosoUnavailable)),
-        },
-    }
+    let token = AccessToken::with_api_key(&config.api.livekit.key, &config.api.livekit.secret)
+        .with_name(&format!("{}#{}", user.username, user.discriminator))
+        .with_identity(&user.id)
+        .with_metadata(&serde_json::to_string(&user).map_err(|_| create_error!(InternalError))?)
+        .with_grants(VideoGrants {
+            room_join: true,
+            room: channel.id().to_string(),
+            ..Default::default()
+        })
+        .to_jwt()
+        .inspect_err(|e| log::error!("{e:?}"))
+        .map_err(|_| create_error!(InternalError))?;
 
-    // Then create a user for the room.
-    if let Ok(response) = client
-        .post(&format!(
-            "{}/room/{}/user/{}",
-            config.hosts.voso_legacy,
-            channel.id(),
-            user.id
-        ))
-        .header(
-            reqwest::header::AUTHORIZATION,
-            config.api.security.voso_legacy_token,
-        )
-        .send()
-        .await
-    {
-        response
-            .json()
-            .await
-            .map_err(|_| create_error!(InvalidOperation))
-            .map(Json)
-    } else {
-        Err(create_error!(VosoUnavailable))
-    }
+    let room = rooms.create_room(&channel.id(), CreateRoomOptions {
+        max_participants: voice.max_users.unwrap_or(u32::MAX),
+        empty_timeout: 5 * 60,  // 5 minutes
+        ..Default::default()
+    })
+    .await
+    .inspect_err(|e| log::error!("{e:?}"))
+    .map_err(|_| create_error!(InternalError))?;
+
+    log::info!("created room {room:?}");
+
+    Ok(Json(CreateVoiceUserResponse { token }))
 }

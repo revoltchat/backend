@@ -186,6 +186,7 @@ impl From<crate::Channel> for Channel {
                 default_permissions,
                 role_permissions,
                 nsfw,
+                voice
             } => Channel::TextChannel {
                 id,
                 server,
@@ -196,6 +197,7 @@ impl From<crate::Channel> for Channel {
                 default_permissions,
                 role_permissions,
                 nsfw,
+                voice
             },
             crate::Channel::VoiceChannel {
                 id,
@@ -266,6 +268,7 @@ impl From<Channel> for crate::Channel {
                 default_permissions,
                 role_permissions,
                 nsfw,
+                voice
             } => crate::Channel::TextChannel {
                 id,
                 server,
@@ -276,6 +279,7 @@ impl From<Channel> for crate::Channel {
                 default_permissions,
                 role_permissions,
                 nsfw,
+                voice
             },
             Channel::VoiceChannel {
                 id,

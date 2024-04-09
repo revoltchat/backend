@@ -24,6 +24,7 @@ use authifier::config::{
 };
 use authifier::{Authifier, AuthifierEvent};
 use rocket::data::ToByteUnit;
+use livekit_api::services::room::RoomClient;
 
 pub async fn web() -> Rocket<Build> {
     // Get settings
@@ -34,6 +35,7 @@ pub async fn web() -> Rocket<Build> {
 
     // Setup database
     let db = revolt_database::DatabaseInfo::Auto.connect().await.unwrap();
+    log::info!("database_here {db:?}");
     db.migrate_database().await.unwrap();
 
     // Setup Authifier event channel
@@ -97,6 +99,11 @@ pub async fn web() -> Rocket<Build> {
     )
     .into();
 
+
+    log::info!("{:?}", &config.api.livekit);
+
+    let room_client = RoomClient::with_api_key(&config.api.livekit.url, &config.api.livekit.key, &config.api.livekit.secret);
+
     // Configure Rocket
     let rocket = rocket::build();
     let prometheus = PrometheusMetrics::new();
@@ -110,6 +117,7 @@ pub async fn web() -> Rocket<Build> {
         .manage(authifier)
         .manage(db)
         .manage(cors.clone())
+        .manage(room_client)
         .attach(util::ratelimiter::RatelimitFairing)
         .attach(cors)
         .configure(rocket::Config {

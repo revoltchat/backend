@@ -5,7 +5,7 @@ use revolt_models::v0::{
     AppendMessage, Channel, Emoji, FieldsChannel, FieldsMember, FieldsRole, FieldsServer,
     FieldsUser, FieldsWebhook, Member, MemberCompositeKey, Message, PartialChannel, PartialMember,
     PartialMessage, PartialRole, PartialServer, PartialUser, PartialWebhook, Report, Server, User,
-    UserSettings, Webhook,
+    UserSettings, Webhook
 };
 use revolt_result::Error;
 
@@ -39,6 +39,25 @@ pub enum ErrorEvent {
     APIError(Error),
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct UserVoiceState {
+    pub id: String
+    // TODO - muted, etc
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ChannelVoiceState {
+    pub id: String,
+    pub participants: Vec<UserVoiceState>
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ReadyServer {
+    #[serde(flatten)]
+    pub server: Server,
+    pub voice_states: Vec<ChannelVoiceState>
+}
+
 /// Protocol Events
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
@@ -51,7 +70,7 @@ pub enum EventV1 {
     /// Basic data to cache
     Ready {
         users: Vec<User>,
-        servers: Vec<Server>,
+        servers: Vec<ReadyServer>,
         channels: Vec<Channel>,
         members: Vec<Member>,
         emojis: Vec<Emoji>,
@@ -225,6 +244,16 @@ pub enum EventV1 {
 
     /// Auth events
     Auth(AuthifierEvent),
+
+    /// Voice events
+    VoiceChannelJoin {
+        id: String,
+        user: String,
+    },
+    VoiceChannelLeave {
+        id: String,
+        user: String,
+    }
 }
 
 impl EventV1 {

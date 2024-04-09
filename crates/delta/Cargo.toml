@@ -80,5 +80,8 @@ revolt-models = { path = "../core/models", features = [
 revolt-result = { path = "../core/result", features = ["rocket", "okapi"] }
 revolt-permissions = { path = "../core/permissions", features = ["schemas"] }
 
+# voice
+livekit-api = "0.3.2"
+
 [build-dependencies]
 vergen = "7.5.0"

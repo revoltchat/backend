@@ -4,6 +4,7 @@ use crate::{events::client::EventV1, Database, File, RatelimitEvent};
 
 use once_cell::sync::Lazy;
 use rand::seq::SliceRandom;
+use redis_kiss::{get_connection, AsyncCommands};
 use revolt_config::config;
 use revolt_models::v0;
 use revolt_presence::filter_online;
@@ -565,6 +566,15 @@ impl User {
             },
             _ => Err(create_error!(NoEffect)),
         }
+    }
+
+    /// Gets current voice channel
+    pub async fn current_voice_channel(&self) -> Result<Option<String>> {
+        let mut conn = get_connection().await.map_err(|_| create_error!(InternalError))?;
+
+        conn.get::<_, Option<String>>(format!("vc-{}", &self.id))
+            .await
+            .map_err(|_| create_error!(InternalError))
     }
 
     /// Update user data

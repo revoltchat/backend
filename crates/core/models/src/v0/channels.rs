@@ -107,8 +107,12 @@ auto_derived!(
                 serde(skip_serializing_if = "crate::if_false", default)
             )]
             nsfw: bool,
+
+            /// Voice Information for when this channel is also a voice channel
+            #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+            voice: Option<VoiceInformation>
         },
-        /// Voice channel belonging to a server
+        /// DEPRECATED (use TextChannel { voice }): Voice channel belonging to a server
         VoiceChannel {
             /// Unique Id
             #[cfg_attr(feature = "serde", serde(rename = "_id"))]
@@ -145,6 +149,15 @@ auto_derived!(
             )]
             nsfw: bool,
         },
+    }
+
+    /// Voice information for a channel
+    #[derive(Default)]
+    #[cfg_attr(feature = "validator", derive(validator::Validate))]
+    pub struct VoiceInformation {
+        /// Maximium amount of users allowed in the voice channel at once
+        #[cfg_attr(feature = "validator", validate(range(min = 1)))]
+        pub max_users: Option<u32>
     }
 
     /// Partial representation of a channel
@@ -260,6 +273,10 @@ auto_derived!(
         /// Whether this channel is age restricted
         #[serde(skip_serializing_if = "Option::is_none")]
         pub nsfw: Option<bool>,
+
+        /// Voice Information for when this channel is also a voice channel
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub voice: Option<VoiceInformation>
     }
 
     /// New default permissions

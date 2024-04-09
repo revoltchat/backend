@@ -130,8 +130,9 @@ pub enum ErrorType {
         error: String,
     },
 
-    // ? Legacy errors
-    VosoUnavailable,
+    // ? Voice errors
+    LiveKitUnavailable,
+    AlreadyInVoiceChannel
 }
 
 #[macro_export]
