@@ -19,13 +19,17 @@ pub async fn call(db: &State<Database>, rooms: &State<RoomClient>, user: User, t
 
     let mut permissions = perms(db, &user).channel(&channel);
 
-    calculate_channel_permissions(&mut permissions)
-        .await
-        .throw_if_lacking_channel_permission(ChannelPermission::Connect)?;
+    let current_permissions = calculate_channel_permissions(&mut permissions).await;
+    current_permissions.throw_if_lacking_channel_permission(ChannelPermission::Connect)?;
 
-    if user.current_voice_channel().await?.is_some() {
-        return Err(create_error!(AlreadyInVoiceChannel))
-    }
+    // TODO - decide if we should allow being in multiple voice channels for users
+
+    // if user.current_voice_channel(&channel.server().unwrap_or_else(|| channel.id()))
+    //     .await?
+    //     .is_some()
+    // {
+    //     return Err(create_error!(AlreadyInVoiceChannel))
+    // }
 
     let config = config().await;
 
@@ -39,12 +43,23 @@ pub async fn call(db: &State<Database>, rooms: &State<RoomClient>, user: User, t
         _ => return Err(create_error!(CannotJoinCall))
     };
 
+    let mut allowed_sources = Vec::new();
+
+    if current_permissions.has(ChannelPermission::Speak as u64) {
+        allowed_sources.push("MICROPHONE".to_string())
+    };
+
+    if current_permissions.has(ChannelPermission::Video as u64) {
+        allowed_sources.extend(["CAMERA".to_string(), "SCREEN_SHARE".to_string(), "SCREEN_SHARE_AUDIO".to_string()]);
+    };
+
     let token = AccessToken::with_api_key(&config.api.livekit.key, &config.api.livekit.secret)
         .with_name(&format!("{}#{}", user.username, user.discriminator))
         .with_identity(&user.id)
         .with_metadata(&serde_json::to_string(&user).map_err(|_| create_error!(InternalError))?)
         .with_grants(VideoGrants {
             room_join: true,
+            can_publish_sources: allowed_sources,
             room: channel.id().to_string(),
             ..Default::default()
         })

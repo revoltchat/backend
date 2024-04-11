@@ -270,13 +270,18 @@ auto_derived!(
         /// Username and discriminator combo separated by #
         pub username: String,
     }
+);
 
+auto_derived_partial!(
     /// Voice State information for a user
     pub struct UserVoiceState {
-        pub id: String
-        // TODO - muted, etc
-    }
-
+        pub id: String,
+        pub audio: bool,
+        pub deafened: bool,
+        pub screensharing: bool,
+        pub camera: bool
+    },
+    "PartialUserVoiceState"
 );
 
 pub trait CheckRelationship {

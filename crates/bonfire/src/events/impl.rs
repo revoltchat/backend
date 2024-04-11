@@ -133,12 +133,8 @@ impl State {
         // Append known user IDs from DMs.
         for channel in &channels {
             match channel {
-                Channel::DirectMessage { id, recipients, .. } | Channel::Group { id, recipients, .. } => {
+                Channel::DirectMessage { recipients, .. } | Channel::Group { recipients, .. } => {
                     user_ids.extend(&mut recipients.clone().into_iter());
-
-                    if let Ok(Some(voice_state)) = self.fetch_voice_state(&mut conn, id).await {
-                        voice_states.push(voice_state)
-                    }
                 }
                 _ => {}
             }
@@ -206,11 +202,9 @@ impl State {
             self.insert_subscription(channel.id().to_string());
         }
 
-        for server in &servers {
-            for channel in &server.channels {
-                if let Ok(Some(voice_state)) = self.fetch_voice_state(&mut conn, channel).await {
-                    voice_states.push(voice_state)
-                }
+        for channel in &channels {
+            if let Ok(Some(voice_state)) = self.fetch_voice_state(&mut conn, channel).await {
+                voice_states.push(voice_state)
             }
         }
 
@@ -220,7 +214,7 @@ impl State {
             channels: channels.into_iter().map(Into::into).collect(),
             members: members.into_iter().map(Into::into).collect(),
             emojis: emojis.into_iter().map(Into::into).collect(),
-            voice_states
+            voice_states,
         })
     }
 
@@ -568,15 +562,44 @@ impl State {
         true
     }
 
-    async fn fetch_voice_state(&self, conn: &mut Conn, channel: &str) -> Result<Option<v0::ChannelVoiceState>> {
-        let members = conn.smembers::<_, Vec<String>>(format!("vc-members-{channel}"))
+    async fn fetch_voice_state(
+        &self,
+        conn: &mut Conn,
+        channel: &Channel,
+    ) -> Result<Option<v0::ChannelVoiceState>> {
+        let members = conn
+            .smembers::<_, Vec<String>>(format!("vc-members-{}", channel.id()))
             .await
             .map_err(|_| create_error!(InternalError))?;
 
+        let channel_or_server_id = channel.server().unwrap_or_else(|| channel.id());
+
+
         if !members.is_empty() {
+            let mut participants = Vec::with_capacity(members.len());
+
+            for id in members {
+                let unique_key = format!("{channel_or_server_id}-{id}");
+
+                let (audio, deafened, screensharing, camera) = conn
+                    .mget::<_, (bool, bool, bool, bool)>(&[
+                        format!("audio-{unique_key}"),
+                        format!("deafened-{unique_key}"),
+                        format!("screensharing-{unique_key}"),
+                        format!("camera-{unique_key}")
+
+                    ])
+                    .await
+                    .map_err(|_| create_error!(InternalError))?;
+
+                let voice_state = v0::UserVoiceState { id, audio, deafened, screensharing, camera };
+
+                participants.push(voice_state);
+            }
+
             Ok(Some(v0::ChannelVoiceState {
-                id: channel.to_string(),
-                participants: members.into_iter().map(|id| v0::UserVoiceState { id }).collect()
+                id: channel.id(),
+                participants,
             }))
         } else {
             Ok(None)

@@ -569,10 +569,14 @@ impl User {
     }
 
     /// Gets current voice channel
-    pub async fn current_voice_channel(&self) -> Result<Option<String>> {
-        let mut conn = get_connection().await.map_err(|_| create_error!(InternalError))?;
+    ///
+    /// current_context: Either the channel id if a dm or group, or server_id if in a server
+    pub async fn current_voice_channel(&self, current_context: &str) -> Result<Option<String>> {
+        let mut conn = get_connection()
+            .await
+            .map_err(|_| create_error!(InternalError))?;
 
-        conn.get::<_, Option<String>>(format!("vc-{}", &self.id))
+        conn.get::<_, Option<String>>(format!("vc-{}-{current_context}", &self.id))
             .await
             .map_err(|_| create_error!(InternalError))
     }
