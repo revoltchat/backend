@@ -143,13 +143,13 @@ pub async fn authifier_config() -> AuthifierConfig {
                 expiry: Default::default(),
                 templates: Templates {
                     verify: Template {
-                        title: "Verify your Revolt account.".into(),
+                        title: "Verify your Kimani Life account.".into(),
                         text: include_str!("templates/verify.txt").into(),
                         url: format!("{}/login/verify/", config.hosts.app),
                         html: Some(include_str!("templates/verify.html").into()),
                     },
                     reset: Template {
-                        title: "Reset your Revolt password.".into(),
+                        title: "Reset your Kimani Life password.".into(),
                         text: include_str!("templates/reset.txt").into(),
                         url: format!("{}/login/reset/", config.hosts.app),
                         html: Some(include_str!("templates/reset.html").into()),
