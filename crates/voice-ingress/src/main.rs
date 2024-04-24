@@ -60,8 +60,8 @@ async fn ingress(db: &State<Database>, body: Json<WebhookEvent>) -> Result<Empty
             Pipeline::new()
                 .sadd(format!("vc-members-{channel_id}"), user_id)
                 .set(format!("vc-{unique_key}"), channel_id)
-                .set(format!("publish-{unique_key}"), true)
-                .set(format!("subscribe-{unique_key}"), false)
+                .set(format!("can_publish-{unique_key}"), true)
+                .set(format!("can_receive-{unique_key}"), true)
                 .set(format!("screensharing-{unique_key}"), false)
                 .set(format!("camera-{unique_key}"), false)
                 .query_async(&mut conn.into_inner())
@@ -70,7 +70,7 @@ async fn ingress(db: &State<Database>, body: Json<WebhookEvent>) -> Result<Empty
 
             let voice_state = UserVoiceState {
                 id: user_id.clone(),
-                can_receive: false,
+                can_receive: true,
                 can_publish: false,
                 screensharing: false,
                 camera: false,
@@ -102,8 +102,8 @@ async fn ingress(db: &State<Database>, body: Json<WebhookEvent>) -> Result<Empty
 
             conn.del::<_, Vec<u64>>(&[
                 format!("vc-{unique_key}"),
-                format!("audio-{unique_key}"),
-                format!("deafened-{unique_key}"),
+                format!("can_publish-{unique_key}"),
+                format!("can_receive-{unique_key}"),
                 format!("screensharing-{unique_key}"),
                 format!("camera-{unique_key}"),
             ])
@@ -156,7 +156,7 @@ async fn ingress(db: &State<Database>, body: Json<WebhookEvent>) -> Result<Empty
                 }
                 /* TrackSource::Microphone */
                 2 => {
-                    conn.set::<_, _, String>(format!("audio-{unique_key}"), value)
+                    conn.set::<_, _, String>(format!("can_receive-{unique_key}"), value)
                         .await
                         .to_internal_error()?;
 

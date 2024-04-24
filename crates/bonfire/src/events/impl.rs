@@ -580,10 +580,10 @@ impl State {
             for id in members {
                 let unique_key = format!("{channel_or_server_id}-{id}");
 
-                let (audio, deafened, screensharing, camera) = conn
+                let (can_publish, can_receive, screensharing, camera) = conn
                     .mget::<_, (bool, bool, bool, bool)>(&[
-                        format!("audio-{unique_key}"),
-                        format!("deafened-{unique_key}"),
+                        format!("can_publish-{unique_key}"),
+                        format!("can_receive-{unique_key}"),
                         format!("screensharing-{unique_key}"),
                         format!("camera-{unique_key}"),
                     ])
@@ -592,8 +592,8 @@ impl State {
 
                 let voice_state = v0::UserVoiceState {
                     id,
-                    can_receive: audio,
-                    can_publish: deafened,
+                    can_receive,
+                    can_publish,
                     screensharing,
                     camera,
                 };
