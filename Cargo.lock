@@ -4103,6 +4103,7 @@ dependencies = [
  "lettre",
  "linkify 0.6.0",
  "livekit-api",
+ "livekit-protocol",
  "log",
  "lru 0.7.8",
  "nanoid",

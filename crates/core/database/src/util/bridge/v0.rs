@@ -186,7 +186,7 @@ impl From<crate::Channel> for Channel {
                 default_permissions,
                 role_permissions,
                 nsfw,
-                voice
+                voice,
             } => Channel::TextChannel {
                 id,
                 server,
@@ -197,7 +197,7 @@ impl From<crate::Channel> for Channel {
                 default_permissions,
                 role_permissions,
                 nsfw,
-                voice
+                voice,
             },
             crate::Channel::VoiceChannel {
                 id,
@@ -268,7 +268,7 @@ impl From<Channel> for crate::Channel {
                 default_permissions,
                 role_permissions,
                 nsfw,
-                voice
+                voice,
             } => crate::Channel::TextChannel {
                 id,
                 server,
@@ -279,7 +279,7 @@ impl From<Channel> for crate::Channel {
                 default_permissions,
                 role_permissions,
                 nsfw,
-                voice
+                voice,
             },
             Channel::VoiceChannel {
                 id,
@@ -614,6 +614,8 @@ impl From<crate::Member> for Member {
             avatar: value.avatar.map(|f| f.into()),
             roles: value.roles,
             timeout: value.timeout,
+            can_publish: value.can_publish,
+            can_receive: value.can_receive,
         }
     }
 }
@@ -627,6 +629,8 @@ impl From<Member> for crate::Member {
             avatar: value.avatar.map(|f| f.into()),
             roles: value.roles,
             timeout: value.timeout,
+            can_publish: value.can_publish,
+            can_receive: value.can_receive,
         }
     }
 }
@@ -640,6 +644,8 @@ impl From<crate::PartialMember> for PartialMember {
             avatar: value.avatar.map(|f| f.into()),
             roles: value.roles,
             timeout: value.timeout,
+            can_publish: value.can_publish,
+            can_receive: value.can_receive,
         }
     }
 }
@@ -653,6 +659,8 @@ impl From<PartialMember> for crate::PartialMember {
             avatar: value.avatar.map(|f| f.into()),
             roles: value.roles,
             timeout: value.timeout,
+            can_publish: value.can_publish,
+            can_receive: value.can_receive,
         }
     }
 }

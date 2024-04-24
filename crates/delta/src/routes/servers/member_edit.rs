@@ -1,5 +1,8 @@
 use std::collections::HashSet;
 
+use livekit_api::services::room::{RoomClient, UpdateParticipantOptions};
+use livekit_protocol::ParticipantPermission;
+use redis_kiss::{get_connection, redis::Pipeline, AsyncCommands};
 use revolt_database::{
     util::{permissions::DatabasePermissionQuery, reference::Reference},
     Database, File, PartialMember, User,
@@ -7,7 +10,7 @@ use revolt_database::{
 use revolt_models::v0;
 
 use revolt_permissions::{calculate_server_permissions, ChannelPermission};
-use revolt_result::{create_error, Result};
+use revolt_result::{create_error, Result, ToRevoltError};
 use rocket::{serde::json::Json, State};
 use validator::Validate;
 
@@ -17,6 +20,7 @@ use validator::Validate;
 #[openapi(tag = "Server Members")]
 #[patch("/<server>/members/<target>", data = "<data>")]
 pub async fn edit(
+    room_client: &State<RoomClient>,
     db: &State<Database>,
     user: User,
     server: Reference,
@@ -87,6 +91,14 @@ pub async fn edit(
         permissions.throw_if_lacking_channel_permission(ChannelPermission::TimeoutMembers)?;
     }
 
+    if data.can_publish.is_some() {
+        permissions.throw_if_lacking_channel_permission(ChannelPermission::MuteMembers)?;
+    }
+
+    if data.can_receive.is_some() {
+        permissions.throw_if_lacking_channel_permission(ChannelPermission::DeafenMembers)?;
+    }
+
     // Resolve our ranking
     let our_ranking = query.get_member_rank().unwrap_or(i64::MIN);
 
@@ -122,12 +134,16 @@ pub async fn edit(
         roles,
         timeout,
         remove,
+        can_publish,
+        can_receive,
     } = data;
 
     let mut partial = PartialMember {
         nickname,
         roles,
         timeout,
+        can_publish,
+        can_receive,
         ..Default::default()
     };
 
@@ -154,6 +170,58 @@ pub async fn edit(
                 .unwrap_or_default(),
         )
         .await?;
+
+    if can_publish.is_some() || can_receive.is_some() {
+        let mut conn = get_connection().await.to_internal_error()?;
+
+        // if we edit the member while they are in a voice channel we need to also update the perms
+        // otherwise it wont take place until they leave and rejoin
+        if let Some(channel) = conn
+            .get::<_, Option<String>>(format!("vc-{}-{}", &member.id.user, &member.id.server))
+            .await
+            .to_internal_error()?
+        {
+            let mut pipeline = Pipeline::new();
+            let mut new_perms = ParticipantPermission::default();
+
+            if let Some(can_publish) = can_publish {
+                pipeline.set(
+                    format!("can_publish-{}-{}", &channel, &member.id.user),
+                    can_publish,
+                );
+
+                new_perms.can_publish = can_publish;
+                new_perms.can_publish_data = can_publish;
+            };
+
+            if let Some(can_receive) = can_receive {
+                pipeline.set(
+                    format!("can_receive-{}-{}", &channel, &member.id.user),
+                    can_receive,
+                );
+
+                new_perms.can_subscribe = can_receive;
+            };
+
+            pipeline
+                .query_async(&mut conn.into_inner())
+                .await
+                .to_internal_error()?;
+
+            room_client
+                .update_participant(
+                    &channel,
+                    &member.id.user,
+                    UpdateParticipantOptions {
+                        permission: Some(new_perms),
+                        name: "".to_string(),
+                        metadata: "".to_string(),
+                    },
+                )
+                .await
+                .to_internal_error()?;
+        };
+    };
 
     Ok(Json(member.into()))
 }

@@ -574,7 +574,6 @@ impl State {
 
         let channel_or_server_id = channel.server().unwrap_or_else(|| channel.id());
 
-
         if !members.is_empty() {
             let mut participants = Vec::with_capacity(members.len());
 
@@ -586,13 +585,18 @@ impl State {
                         format!("audio-{unique_key}"),
                         format!("deafened-{unique_key}"),
                         format!("screensharing-{unique_key}"),
-                        format!("camera-{unique_key}")
-
+                        format!("camera-{unique_key}"),
                     ])
                     .await
                     .map_err(|_| create_error!(InternalError))?;
 
-                let voice_state = v0::UserVoiceState { id, audio, deafened, screensharing, camera };
+                let voice_state = v0::UserVoiceState {
+                    id,
+                    can_receive: audio,
+                    can_publish: deafened,
+                    screensharing,
+                    camera,
+                };
 
                 participants.push(voice_state);
             }

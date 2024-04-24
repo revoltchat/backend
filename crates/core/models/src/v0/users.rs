@@ -276,10 +276,10 @@ auto_derived_partial!(
     /// Voice State information for a user
     pub struct UserVoiceState {
         pub id: String,
-        pub audio: bool,
-        pub deafened: bool,
+        pub can_receive: bool,
+        pub can_publish: bool,
         pub screensharing: bool,
-        pub camera: bool
+        pub camera: bool,
     },
     "PartialUserVoiceState"
 );
