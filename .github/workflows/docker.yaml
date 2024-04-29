@@ -50,7 +50,7 @@ jobs:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/aeris011/base:latest
+          tags: ghcr.io/KimaniLife/base:latest
           cache-from: type=gha,scope=buildx-base-multi-arch
           cache-to: type=gha,scope=buildx-base-multi-arch,mode=max
 
@@ -113,5 +113,5 @@ jobs:
           file: ${{ steps.export.outputs.path }}/Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
-            BASE_IMAGE=ghcr.io/aeris011/base:latest
+            BASE_IMAGE=ghcr.io/KimaniLife/base:latest
           labels: ${{ steps.meta.outputs.labels }}
