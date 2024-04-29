@@ -90,7 +90,6 @@ pub async fn complete(
     let occupation = profile.occupation;
     new_profile.occupation = Some(occupation);
     partial.profile = Some(new_profile);
-
     Ok(Json(
         User::create_onboarding(db, data.username, session.user_id, partial)
             .await?
