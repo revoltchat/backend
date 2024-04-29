@@ -1257,6 +1257,12 @@ impl From<crate::UserProfile> for UserProfile {
         UserProfile {
             content: value.content,
             background: value.background.map(|file| file.into()),
+            first_name: value.first_name,
+            last_name: value.last_name,
+            phone_number: value.phone_number,
+            country: value.country,
+            city: value.city,
+            occupation: value.occupation,
         }
     }
 }
@@ -1266,6 +1272,12 @@ impl From<UserProfile> for crate::UserProfile {
         crate::UserProfile {
             content: value.content,
             background: value.background.map(|file| file.into()),
+            first_name: value.first_name,
+            last_name: value.last_name,
+            phone_number: value.phone_number,
+            country: value.country,
+            city: value.city,
+            occupation: value.occupation,
         }
     }
 }

@@ -155,6 +155,23 @@ auto_derived!(
         /// Background visible on user's profile
         #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub background: Option<File>,
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub first_name: Option<String>,
+        /// Last name
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub last_name: Option<String>,
+        /// Phone number
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub phone_number: Option<String>,
+        /// Country
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub country: Option<String>,
+        /// City
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub city: Option<String>,
+        /// Occupation
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub occupation: Option<String>,
     }
 
     /// User badge bitfield
@@ -208,6 +225,29 @@ auto_derived!(
         #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
         pub background: Option<String>,
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
+        pub first_name: Option<String>,
+        /// Last name
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
+        pub last_name: Option<String>,
+        /// Phone number
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 20)))]
+        pub phone_number: Option<String>,
+        /// Country
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
+        pub country: Option<String>,
+        /// City
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
+        pub city: Option<String>,
+        /// Occupation
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
+        pub occupation: Option<String>,
     }
 
     /// New user information

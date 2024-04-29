@@ -115,6 +115,24 @@ auto_derived!(
         /// Background visible on user's profile
         #[serde(skip_serializing_if = "Option::is_none")]
         pub background: Option<File>,
+        /// First name
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub first_name: Option<String>,
+        /// Last name
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub last_name: Option<String>,
+        /// Phone number
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub phone_number: Option<String>,
+        /// Country
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub country: Option<String>,
+        /// City
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub city: Option<String>,
+        /// Occupation
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub occupation: Option<String>,
     }
 
     /// Bot information for if the user is a bot
@@ -192,6 +210,29 @@ impl User {
         if let Some(data) = data.into() {
             user.apply_options(data);
         }
+
+        db.insert_user(&user).await?;
+        Ok(user)
+    }
+    /// Create a new user for onboarding
+    pub async fn create_onboarding<I>(
+        db: &Database,
+        username: String,
+        account_id: I,
+        data: PartialUser,
+    ) -> Result<User>
+    where
+        I: Into<Option<String>>,
+    {
+        let username = User::validate_username(username)?;
+        let mut user = User {
+            id: account_id.into().unwrap_or_else(|| Ulid::new().to_string()),
+            discriminator: User::find_discriminator(db, &username, None).await?,
+            username,
+            ..Default::default()
+        };
+
+        user.apply_options(data.clone());
 
         db.insert_user(&user).await?;
         Ok(user)

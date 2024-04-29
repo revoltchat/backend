@@ -114,6 +114,30 @@ pub async fn edit(
             new_profile.background = Some(File::use_background(db, &background, &user.id).await?);
         }
 
+        if let Some(first_name) = profile.first_name {
+            new_profile.first_name = Some(first_name);
+        }
+
+        if let Some(last_name) = profile.last_name {
+            new_profile.last_name = Some(last_name);
+        }
+
+        if let Some(phone_number) = profile.phone_number {
+            new_profile.phone_number = Some(phone_number);
+        }
+
+        if let Some(country) = profile.country {
+            new_profile.country = Some(country);
+        }
+
+        if let Some(city) = profile.city {
+            new_profile.city = Some(city);
+        }
+
+        if let Some(occupation) = profile.occupation {
+            new_profile.occupation = Some(occupation);
+        }
+
         partial.profile = Some(new_profile);
     }
 
