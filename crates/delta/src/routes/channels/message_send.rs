@@ -1,14 +1,12 @@
-use chrono::{Duration, Utc};
-use revolt_database::util::permissions::DatabasePermissionQuery;
-use revolt_database::{
-    util::idempotency::IdempotencyKey, util::reference::Reference, Database, User,
+use revolt_quark::{
+    models::{message::DataMessageSend, Message, User},
+    perms,
+    types::push::MessageAuthor,
+    web::idempotency::IdempotencyKey,
+    Db, Error, Permission, Ref, Result,
 };
-use revolt_database::{Interactions, Message};
-use revolt_models::v0;
-use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
-use revolt_result::{create_error, Result};
+
 use rocket::serde::json::Json;
-use rocket::State;
 use validator::Validate;
 
 /// # Send Message
@@ -17,75 +15,68 @@ use validator::Validate;
 #[openapi(tag = "Messaging")]
 #[post("/<target>/messages", data = "<data>")]
 pub async fn message_send(
-    db: &State<Database>,
+    db: &Db,
     user: User,
-    target: Reference,
-    data: Json<v0::DataMessageSend>,
+    target: Ref,
+    data: Json<DataMessageSend>,
     idempotency: IdempotencyKey,
-) -> Result<Json<v0::Message>> {
+) -> Result<Json<Message>> {
     let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    data.validate()
+        .map_err(|error| Error::FailedValidation { error })?;
 
     // Ensure we have permissions to send a message
     let channel = target.as_channel(db).await?;
-    let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
-    let permissions = calculate_channel_permissions(&mut query).await;
-    permissions.throw_if_lacking_channel_permission(ChannelPermission::SendMessage)?;
+
+    let mut permissions = perms(&user).channel(&channel);
+    permissions
+        .throw_permission_and_view_channel(db, Permission::SendMessage)
+        .await?;
 
     // Verify permissions for masquerade
     if let Some(masq) = &data.masquerade {
-        permissions.throw_if_lacking_channel_permission(ChannelPermission::Masquerade)?;
+        permissions
+            .throw_permission(db, Permission::Masquerade)
+            .await?;
 
         if masq.colour.is_some() {
-            permissions.throw_if_lacking_channel_permission(ChannelPermission::ManageRole)?;
+            permissions
+                .throw_permission(db, Permission::ManageRole)
+                .await?;
         }
     }
 
     // Check permissions for embeds
     if data.embeds.as_ref().is_some_and(|v| !v.is_empty()) {
-        permissions.throw_if_lacking_channel_permission(ChannelPermission::SendEmbeds)?;
+        permissions
+            .throw_permission(db, Permission::SendEmbeds)
+            .await?;
     }
 
     // Check permissions for files
     if data.attachments.as_ref().is_some_and(|v| !v.is_empty()) {
-        permissions.throw_if_lacking_channel_permission(ChannelPermission::UploadFiles)?;
+        permissions
+            .throw_permission(db, Permission::UploadFiles)
+            .await?;
     }
 
     // Ensure interactions information is correct
     if let Some(interactions) = &data.interactions {
-        let interactions: Interactions = interactions.clone().into();
-        interactions.validate(db, &permissions).await?;
+        interactions.validate(db, &mut permissions).await?;
     }
 
-    // Disallow mentions for new users (TRUST-0: <12 hours age) in public servers
-    let allow_mentions = if let Some(server) = query.server_ref() {
-        if server.discoverable {
-            (Utc::now() - ulid::Ulid::from_string(&user.id).unwrap().datetime())
-                >= Duration::hours(12)
-        } else {
-            true
-        }
-    } else {
-        true
-    };
-
     // Create the message
-    let author: v0::User = user.clone().into(db, Some(&user)).await;
-    Ok(Json(
-        Message::create_from_api(
+    let message = channel
+        .send_message(
             db,
-            channel,
             data,
-            v0::MessageAuthor::User(&author),
+            MessageAuthor::User(&user),
             idempotency,
-            permissions.has_channel_permission(ChannelPermission::SendEmbeds),
-            allow_mentions,
+            permissions
+                .has_permission(db, Permission::SendEmbeds)
+                .await?,
         )
-        .await?
-        .into(),
-    ))
+        .await?;
+
+    Ok(Json(message))
 }

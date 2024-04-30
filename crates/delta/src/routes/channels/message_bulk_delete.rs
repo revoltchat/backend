@@ -1,15 +1,19 @@
 use chrono::Utc;
-use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Database, Message, User,
+use revolt_quark::{
+    models::{Message, User},
+    perms, Db, EmptyResponse, Error, Permission, Ref, Result,
 };
-use revolt_models::v0;
-use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
-use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
-use rocket_empty::EmptyResponse;
+use rocket::serde::json::Json;
 use serde::Deserialize;
 use validator::Validate;
+
+/// # Search Parameters
+#[derive(Validate, Deserialize, JsonSchema)]
+pub struct OptionsBulkDelete {
+    /// Message IDs
+    #[validate(length(min = 1, max = 100))]
+    ids: Vec<String>,
+}
 
 /// # Bulk Delete Messages
 ///
@@ -20,37 +24,34 @@ use validator::Validate;
 /// Messages must have been sent within the past 1 week.
 #[openapi(tag = "Messaging")]
 #[delete("/<target>/messages/bulk", data = "<options>", rank = 1)]
-pub async fn bulk_delete_messages(
-    db: &State<Database>,
+pub async fn req(
+    db: &Db,
     user: User,
-    target: Reference,
-    options: Json<v0::OptionsBulkDelete>,
+    target: Ref,
+    options: Json<OptionsBulkDelete>,
 ) -> Result<EmptyResponse> {
     let options = options.into_inner();
-    options.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    options
+        .validate()
+        .map_err(|error| Error::FailedValidation { error })?;
 
     for id in &options.ids {
         if ulid::Ulid::from_string(id)
-            .map_err(|_| create_error!(InvalidOperation))?
+            .map_err(|_| Error::InvalidOperation)?
             .datetime()
             .signed_duration_since(Utc::now())
             .num_days()
             .abs()
             > 7
         {
-            return Err(create_error!(InvalidOperation));
+            return Err(Error::InvalidOperation);
         }
     }
 
-    let channel = target.as_channel(db).await?;
-    let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
-    calculate_channel_permissions(&mut query)
-        .await
-        .throw_if_lacking_channel_permission(ChannelPermission::ManageMessages)?;
+    perms(&user)
+        .channel(&target.as_channel(db).await?)
+        .throw_permission(db, Permission::ManageMessages)
+        .await?;
 
     Message::bulk_delete(db, &target.id, options.ids)
         .await

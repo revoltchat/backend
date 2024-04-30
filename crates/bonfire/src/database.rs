@@ -1,5 +1,5 @@
 use once_cell::sync::OnceCell;
-use revolt_database::{Database, DatabaseInfo};
+use revolt_quark::{Database, DatabaseInfo};
 
 static DBCONN: OnceCell<Database> = OnceCell::new();
 
@@ -10,9 +10,7 @@ pub async fn connect() {
         .await
         .expect("Failed to connect to the database.");
 
-    if DBCONN.set(database).is_err() {
-        panic!("couldn't set database")
-    }
+    DBCONN.set(database).expect("Setting `Database`");
 }
 
 /// Get a reference to the current database.

@@ -1,11 +1,13 @@
-use revolt_database::{events::client::EventV1, Database, Report, Snapshot, SnapshotContent, User};
-use revolt_models::v0::{ReportStatus, ReportedContent};
-use revolt_result::{create_error, Result};
+use revolt_quark::events::client::EventV1;
+use revolt_quark::models::report::{ReportStatus, ReportedContent};
+use revolt_quark::models::snapshot::{Snapshot, SnapshotContent};
+use revolt_quark::models::{Report, User};
+use revolt_quark::{Db, Error, Result};
 use serde::Deserialize;
 use ulid::Ulid;
 use validator::Validate;
 
-use rocket::{serde::json::Json, State};
+use rocket::serde::json::Json;
 
 /// # Report Data
 #[derive(Validate, Deserialize, JsonSchema)]
@@ -23,21 +25,14 @@ pub struct DataReportContent {
 /// Report a piece of content to the moderation team.
 #[openapi(tag = "User Safety")]
 #[post("/report", data = "<data>")]
-pub async fn report_content(
-    db: &State<Database>,
-    user: User,
-    data: Json<DataReportContent>,
-) -> Result<()> {
+pub async fn report_content(db: &Db, user: User, data: Json<DataReportContent>) -> Result<()> {
     let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    data.validate()
+        .map_err(|error| Error::FailedValidation { error })?;
 
     // Bots cannot create reports
     if user.bot.is_some() {
-        return Err(create_error!(IsBot));
+        return Err(Error::IsBot);
     }
 
     // Find the content and create a snapshot of it
@@ -48,7 +43,7 @@ pub async fn report_content(
 
             // Users cannot report themselves
             if message.author == user.id {
-                return Err(create_error!(CannotReportYourself));
+                return Err(Error::CannotReportYourself);
             }
 
             let (snapshot, files) = SnapshotContent::generate_from_message(db, message).await?;
@@ -59,7 +54,7 @@ pub async fn report_content(
 
             // Users cannot report their own server
             if server.owner == user.id {
-                return Err(create_error!(CannotReportYourself));
+                return Err(Error::CannotReportYourself);
             }
 
             let (snapshot, files) = SnapshotContent::generate_from_server(server)?;
@@ -70,7 +65,7 @@ pub async fn report_content(
 
             // Users cannot report themselves
             if reported_user.id == user.id {
-                return Err(create_error!(CannotReportYourself));
+                return Err(Error::CannotReportYourself);
             }
 
             // Determine if there is a message provided as context
@@ -127,7 +122,7 @@ pub async fn report_content(
 
     db.insert_report(&report).await?;
 
-    EventV1::ReportCreate(report.into()).global().await;
+    EventV1::ReportCreate(report).global().await;
 
     Ok(())
 }

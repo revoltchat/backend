@@ -2,7 +2,7 @@
 use schemars::JsonSchema;
 
 /// Representation of a single permission override
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
 pub struct Override {
@@ -51,9 +51,9 @@ pub enum DataPermissionPoly {
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
 pub struct OverrideField {
     /// Allow bit flags
-    pub a: i64,
+    a: i64,
     /// Disallow bit flags
-    pub d: i64,
+    d: i64,
 }
 
 impl Override {

@@ -1,28 +1,96 @@
-use revolt_database::FieldsUser;
-use revolt_database::{util::reference::Reference, Database, File, PartialUser, User};
-use revolt_models::v0;
-use revolt_result::{create_error, Result};
+use revolt_quark::models::user::{FieldsUser, PartialUser, User};
+use revolt_quark::models::File;
+use revolt_quark::{Database, Error, Ref, Result};
+
+use revolt_quark::models::user::UserStatus;
 use rocket::serde::json::Json;
 use rocket::State;
+use serde::{Deserialize, Serialize};
 use validator::Validate;
+
+use crate::util::regex::RE_DISPLAY_NAME;
+
+/// # Profile Data
+#[derive(Validate, Serialize, Deserialize, Debug, JsonSchema)]
+pub struct UserProfileData {
+    /// Text to set as user profile description
+    #[validate(length(min = 0, max = 2000))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    content: Option<String>,
+    /// Attachment Id for background
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(length(min = 1, max = 128))]
+    background: Option<String>,
+     #[validate(length(min = 0, max = 2000))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    first_name: Option<String>,
+    /// Last name
+    #[validate(length(min = 0, max = 2000))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    last_name: Option<String>,
+    /// Phone number
+     #[validate(length(min = 0, max = 2000))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    phone_number: Option<String>,
+    /// Country
+     #[validate(length(min = 0, max = 2000))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    country: Option<String>,
+    /// City
+     #[validate(length(min = 0, max = 2000))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    city: Option<String>,
+    /// Occupation
+     #[validate(length(min = 0, max = 2000))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    occupation: Option<String>,
+}
+
+/// # User Data
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataEditUser {
+    /// New display name
+    #[validate(length(min = 2, max = 32), regex = "RE_DISPLAY_NAME")]
+    display_name: Option<String>,
+    /// Attachment Id for avatar
+    #[validate(length(min = 1, max = 128))]
+    avatar: Option<String>,
+
+    /// New user status
+    #[validate]
+    status: Option<UserStatus>,
+    /// New user profile data
+    ///
+    /// This is applied as a partial.
+    #[validate]
+    profile: Option<UserProfileData>,
+
+    /// Bitfield of user badges
+    #[serde(skip_serializing_if = "Option::is_none")]
+    badges: Option<i32>,
+    /// Enum of user flags
+    #[serde(skip_serializing_if = "Option::is_none")]
+    flags: Option<i32>,
+
+    /// Fields to remove from user object
+    #[validate(length(min = 1))]
+    remove: Option<Vec<FieldsUser>>,
+}
 
 /// # Edit User
 ///
 /// Edit currently authenticated user.
 #[openapi(tag = "User Information")]
 #[patch("/<target>", data = "<data>")]
-pub async fn edit(
+pub async fn req(
     db: &State<Database>,
     mut user: User,
-    target: Reference,
-    data: Json<v0::DataEditUser>,
-) -> Result<Json<v0::User>> {
+    target: Ref,
+    data: Json<DataEditUser>,
+) -> Result<Json<User>> {
     let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    data.validate()
+        .map_err(|error| Error::FailedValidation { error })?;
 
     // If we want to edit a different user than self, ensure we have
     // permissions and subsequently replace the user in question
@@ -34,13 +102,13 @@ pub async fn edit(
             .unwrap_or_default();
 
         if !is_bot_owner && !user.privileged {
-            return Err(create_error!(NotPrivileged));
+            return Err(Error::NotPrivileged);
         }
     }
 
     // Otherwise, filter out invalid edit fields
     if !user.privileged && (data.badges.is_some() || data.flags.is_some()) {
-        return Err(create_error!(NotPrivileged));
+        return Err(Error::NotPrivileged);
     }
 
     // Exit out early if nothing is changed
@@ -52,18 +120,18 @@ pub async fn edit(
         && data.flags.is_none()
         && data.remove.is_none()
     {
-        return Ok(Json(user.into_self().await));
+        return Ok(Json(user));
     }
 
     // 1. Remove fields from object
     if let Some(fields) = &data.remove {
-        if fields.contains(&v0::FieldsUser::Avatar) {
+        if fields.contains(&FieldsUser::Avatar) {
             if let Some(avatar) = &user.avatar {
                 db.mark_attachment_as_deleted(&avatar.id).await?;
             }
         }
 
-        if fields.contains(&v0::FieldsUser::ProfileBackground) {
+        if fields.contains(&FieldsUser::ProfileBackground) {
             if let Some(profile) = &user.profile {
                 if let Some(background) = &profile.background {
                     db.mark_attachment_as_deleted(&background.id).await?;
@@ -72,8 +140,7 @@ pub async fn edit(
         }
 
         for field in fields {
-            let field: FieldsUser = field.clone().into();
-            user.remove_field(&field);
+            user.remove(field);
         }
     }
 
@@ -97,7 +164,7 @@ pub async fn edit(
         }
 
         if let Some(presence) = status.presence {
-            new_status.presence = Some(presence.into());
+            new_status.presence = Some(presence);
         }
 
         partial.status = Some(new_status);
@@ -141,14 +208,8 @@ pub async fn edit(
         partial.profile = Some(new_profile);
     }
 
-    user.update(
-        db,
-        partial,
-        data.remove
-            .map(|v| v.into_iter().map(Into::into).collect())
-            .unwrap_or_default(),
-    )
-    .await?;
+    user.update(db, partial, data.remove.unwrap_or_default())
+        .await?;
 
-    Ok(Json(user.into_self().await))
+    Ok(Json(user.foreign()))
 }

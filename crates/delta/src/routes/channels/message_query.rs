@@ -1,42 +1,69 @@
-use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Channel, Database, Message, MessageFilter, MessageQuery, MessageTimePeriod, User,
+use revolt_quark::{
+    models::{
+        message::{
+            BulkMessageResponse, MessageFilter, MessageQuery, MessageSort, MessageTimePeriod,
+        },
+        User,
+    },
+    perms, Db, Error, Permission, Ref, Result,
 };
-use revolt_models::v0::{self, MessageSort};
-use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
-use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
+use rocket::serde::json::Json;
+use serde::{Deserialize, Serialize};
 use validator::Validate;
+
+/// # Query Parameters
+#[derive(Validate, Serialize, Deserialize, JsonSchema, FromForm)]
+pub struct OptionsQueryMessages {
+    /// Maximum number of messages to fetch
+    ///
+    /// For fetching nearby messages, this is \`(limit + 1)\`.
+    #[validate(range(min = 1, max = 100))]
+    limit: Option<i64>,
+    /// Message id before which messages should be fetched
+    #[validate(length(min = 26, max = 26))]
+    before: Option<String>,
+    /// Message id after which messages should be fetched
+    #[validate(length(min = 26, max = 26))]
+    after: Option<String>,
+    /// Message sort direction
+    sort: Option<MessageSort>,
+    /// Message id to search around
+    ///
+    /// Specifying 'nearby' ignores 'before', 'after' and 'sort'.
+    /// It will also take half of limit rounded as the limits to each side.
+    /// It also fetches the message ID specified.
+    #[validate(length(min = 26, max = 26))]
+    nearby: Option<String>,
+    /// Whether to include user (and member, if server channel) objects
+    include_users: Option<bool>,
+}
 
 /// # Fetch Messages
 ///
 /// Fetch multiple messages.
 #[openapi(tag = "Messaging")]
 #[get("/<target>/messages?<options..>")]
-pub async fn query(
-    db: &State<Database>,
+pub async fn req(
+    db: &Db,
     user: User,
-    target: Reference,
-    options: v0::OptionsQueryMessages,
-) -> Result<Json<v0::BulkMessageResponse>> {
-    options.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    target: Ref,
+    options: OptionsQueryMessages,
+) -> Result<Json<BulkMessageResponse>> {
+    options
+        .validate()
+        .map_err(|error| Error::FailedValidation { error })?;
 
     if let Some(MessageSort::Relevance) = options.sort {
-        return Err(create_error!(InvalidOperation));
+        return Err(Error::InvalidOperation);
     }
 
     let channel = target.as_channel(db).await?;
+    perms(&user)
+        .channel(&channel)
+        .throw_permission_and_view_channel(db, Permission::ReadMessageHistory)
+        .await?;
 
-    let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
-    calculate_channel_permissions(&mut query)
-        .await
-        .throw_if_lacking_channel_permission(ChannelPermission::ReadMessageHistory)?;
-
-    let v0::OptionsQueryMessages {
+    let OptionsQueryMessages {
         limit,
         before,
         after,
@@ -45,9 +72,8 @@ pub async fn query(
         include_users,
     } = options;
 
-    Message::fetch_with_users(
-        db,
-        MessageQuery {
+    let messages = db
+        .fetch_messages(MessageQuery {
             filter: MessageFilter {
                 channel: Some(channel.id().to_string()),
                 ..Default::default()
@@ -62,16 +88,10 @@ pub async fn query(
                 }
             },
             limit,
-        },
-        &user,
-        include_users,
-        match channel {
-            Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => {
-                Some(server)
-            }
-            _ => None,
-        },
-    )
-    .await
-    .map(Json)
+        })
+        .await?;
+
+    BulkMessageResponse::transform(db, Some(&channel), messages, include_users)
+        .await
+        .map(Json)
 }

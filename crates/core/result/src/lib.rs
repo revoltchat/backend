@@ -43,7 +43,6 @@ pub enum ErrorType {
     // ? User related errors
     UsernameTaken,
     InvalidUsername,
-    DiscriminatorChangeRatelimited,
     UnknownUser,
     AlreadyFriends,
     AlreadySentRequest,
@@ -58,9 +57,6 @@ pub enum ErrorType {
     CannotEditMessage,
     CannotJoinCall,
     TooManyAttachments {
-        max: usize,
-    },
-    TooManyEmbeds {
         max: usize,
     },
     TooManyReplies {
@@ -91,7 +87,6 @@ pub enum ErrorType {
     TooManyRoles {
         max: usize,
     },
-    AlreadyInServer,
 
     // ? Bot related errors
     ReachedMaximumBots,
@@ -147,7 +142,7 @@ macro_rules! create_error {
 #[macro_export]
 macro_rules! create_database_error {
     ( $operation: expr, $collection: expr ) => {
-        $crate::create_error!(DatabaseError {
+        create_error!(DatabaseError {
             operation: $operation.to_string(),
             collection: $collection.to_string()
         })

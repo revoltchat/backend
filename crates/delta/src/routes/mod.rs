@@ -1,9 +1,10 @@
-use revolt_config::{config, Settings};
+use revolt_quark::variables::delta::IS_STAGING;
 use revolt_rocket_okapi::{revolt_okapi::openapi3::OpenApi, settings::OpenApiSettings};
 pub use rocket::http::Status;
 pub use rocket::response::Redirect;
 use rocket::{Build, Rocket};
 
+mod admin;
 mod bots;
 mod channels;
 mod customisation;
@@ -17,14 +18,15 @@ mod sync;
 mod users;
 mod webhooks;
 
-pub fn mount(config: Settings, mut rocket: Rocket<Build>) -> Rocket<Build> {
+pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
     let settings = OpenApiSettings::default();
 
-    if config.features.webhooks_enabled {
+    if *IS_STAGING {
         mount_endpoints_and_merged_docs! {
             rocket, "/".to_owned(), settings,
             "/" => (vec![], custom_openapi_spec()),
-            "" => openapi_get_routes_spec![root::root],
+            "" => openapi_get_routes_spec![root::root, root::ping],
+            "/admin" => admin::routes(),
             "/users" => users::routes(),
             "/bots" => bots::routes(),
             "/channels" => channels::routes(),
@@ -44,7 +46,8 @@ pub fn mount(config: Settings, mut rocket: Rocket<Build>) -> Rocket<Build> {
         mount_endpoints_and_merged_docs! {
             rocket, "/".to_owned(), settings,
             "/" => (vec![], custom_openapi_spec()),
-            "" => openapi_get_routes_spec![root::root],
+            "" => openapi_get_routes_spec![root::root, root::ping],
+            "/admin" => admin::routes(),
             "/users" => users::routes(),
             "/bots" => bots::routes(),
             "/channels" => channels::routes(),

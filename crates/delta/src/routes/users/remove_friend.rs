@@ -1,7 +1,6 @@
-use revolt_database::util::reference::Reference;
-use revolt_database::{Database, User};
-use revolt_models::v0;
-use revolt_result::{create_error, Result};
+use revolt_quark::models::User;
+use revolt_quark::{Database, Error, Result};
+
 use rocket::serde::json::Json;
 use rocket::State;
 
@@ -10,17 +9,13 @@ use rocket::State;
 /// Denies another user's friend request or removes an existing friend.
 #[openapi(tag = "Relationships")]
 #[delete("/<target>/friend")]
-pub async fn remove(
-    db: &State<Database>,
-    mut user: User,
-    target: Reference,
-) -> Result<Json<v0::User>> {
-    let mut target = target.as_user(db).await?;
+pub async fn req(db: &State<Database>, user: User, target: String) -> Result<Json<User>> {
+    let mut target = db.fetch_user(&target).await?;
 
     if user.bot.is_some() || target.bot.is_some() {
-        return Err(create_error!(IsBot));
+        return Err(Error::IsBot);
     }
 
     user.remove_friend(db, &mut target).await?;
-    Ok(Json(target.into(db, &user).await))
+    Ok(Json(target.with_auto_perspective(db, &user).await))
 }

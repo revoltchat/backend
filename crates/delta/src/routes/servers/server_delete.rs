@@ -1,20 +1,27 @@
-use revolt_database::{util::reference::Reference, Database, RemovalIntention, User};
-use revolt_models::v0;
-use revolt_result::Result;
-use rocket::State;
+use revolt_quark::{
+    models::{server_member::RemovalIntention, User},
+    Db, EmptyResponse, Ref, Result,
+};
+use serde::{Deserialize, Serialize};
+use validator::Validate;
 
-use rocket_empty::EmptyResponse;
+/// # Query Parameters
+#[derive(Validate, Serialize, Deserialize, JsonSchema, FromForm)]
+pub struct OptionsServerDelete {
+    /// Whether to not send a leave message
+    leave_silently: Option<bool>,
+}
 
 /// # Delete / Leave Server
 ///
 /// Deletes a server if owner otherwise leaves.
 #[openapi(tag = "Server Information")]
 #[delete("/<target>?<options..>")]
-pub async fn delete(
-    db: &State<Database>,
+pub async fn req(
+    db: &Db,
     user: User,
-    target: Reference,
-    options: v0::OptionsServerDelete,
+    target: Ref,
+    options: OptionsServerDelete,
 ) -> Result<EmptyResponse> {
     let server = target.as_server(db).await?;
     let member = db.fetch_member(&target.id, &user.id).await?;
@@ -22,10 +29,10 @@ pub async fn delete(
     if server.owner == user.id {
         server.delete(db).await
     } else {
-        member
-            .remove(
+        server
+            .remove_member(
                 db,
-                &server,
+                member,
                 RemovalIntention::Leave,
                 options.leave_silently.unwrap_or_default(),
             )

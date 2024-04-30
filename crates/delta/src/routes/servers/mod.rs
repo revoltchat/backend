@@ -17,7 +17,6 @@ mod permissions_set_default;
 mod roles_create;
 mod roles_delete;
 mod roles_edit;
-mod roles_fetch;
 mod server_ack;
 mod server_create;
 mod server_delete;
@@ -26,27 +25,26 @@ mod server_fetch;
 
 pub fn routes() -> (Vec<Route>, OpenApi) {
     openapi_get_routes_spec![
-        server_create::create_server,
-        server_delete::delete,
-        server_fetch::fetch,
-        server_edit::edit,
-        server_ack::ack,
-        channel_create::create_server_channel,
-        member_fetch_all::fetch_all,
-        member_remove::kick,
-        member_fetch::fetch,
-        member_edit::edit,
+        server_create::req,
+        server_delete::req,
+        server_fetch::req,
+        server_edit::req,
+        server_ack::req,
+        channel_create::req,
+        member_fetch_all::req,
+        member_remove::req,
+        member_fetch::req,
+        member_edit::req,
         member_experimental_query::member_experimental_query,
-        ban_create::ban,
-        ban_remove::unban,
-        ban_list::list,
-        invites_fetch::invites,
-        roles_create::create,
-        roles_edit::edit,
-        roles_fetch::fetch,
-        roles_delete::delete,
-        permissions_set::set_role_permission,
-        permissions_set_default::set_default_permissions,
+        ban_create::req,
+        ban_remove::req,
+        ban_list::req,
+        invites_fetch::req,
+        roles_create::req,
+        roles_edit::req,
+        roles_delete::req,
+        permissions_set::req,
+        permissions_set_default::req,
         emoji_list::list_emoji
     ]
 }

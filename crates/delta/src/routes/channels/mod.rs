@@ -16,6 +16,7 @@ mod message_delete;
 mod message_edit;
 mod message_fetch;
 mod message_query;
+mod message_query_stale;
 mod message_react;
 mod message_search;
 mod message_send;
@@ -28,29 +29,30 @@ mod webhook_fetch_all;
 
 pub fn routes() -> (Vec<Route>, OpenApi) {
     openapi_get_routes_spec![
-        channel_ack::ack,
-        channel_fetch::fetch,
-        members_fetch::fetch_members,
-        channel_delete::delete,
-        channel_edit::edit,
-        invite_create::create_invite,
+        channel_ack::req,
+        channel_fetch::req,
+        members_fetch::req,
+        channel_delete::req,
+        channel_edit::req,
+        invite_create::req,
         message_send::message_send,
-        message_query::query,
-        message_search::search,
-        message_fetch::fetch,
-        message_edit::edit,
-        message_bulk_delete::bulk_delete_messages,
-        message_delete::delete,
-        group_create::create_group,
-        group_add_member::add_member,
-        group_remove_member::remove_member,
-        voice_join::call,
-        permissions_set::set_role_permissions,
-        permissions_set_default::set_default_permissions,
+        message_query::req,
+        message_search::req,
+        message_query_stale::req,
+        message_fetch::req,
+        message_edit::req,
+        message_bulk_delete::req,
+        message_delete::req,
+        group_create::req,
+        group_add_member::req,
+        group_remove_member::req,
+        voice_join::req,
+        permissions_set::req,
+        permissions_set_default::req,
         message_react::react_message,
         message_unreact::unreact_message,
         message_clear_reactions::clear_reactions,
-        webhook_create::create_webhook,
-        webhook_fetch_all::fetch_webhooks,
+        webhook_create::req,
+        webhook_fetch_all::req,
     ]
 }

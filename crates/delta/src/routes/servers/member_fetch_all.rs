@@ -1,37 +1,51 @@
-use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Database, User,
+use revolt_quark::{
+    models::{Member, User},
+    perms, Db, Ref, Result,
 };
-use revolt_models::v0;
-use revolt_permissions::PermissionQuery;
-use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
+
+use rocket::serde::json::Json;
+use serde::{Deserialize, Serialize};
+
+/// # Query Parameters
+#[derive(Deserialize, JsonSchema, FromForm)]
+pub struct OptionsFetchAllMembers {
+    /// Whether to exclude offline users
+    exclude_offline: Option<bool>,
+}
+
+/// # Member List
+///
+/// Both lists are sorted by ID.
+#[derive(Serialize, JsonSchema)]
+pub struct AllMemberResponse {
+    /// List of members
+    members: Vec<Member>,
+    /// List of users
+    users: Vec<User>,
+}
 
 /// # Fetch Members
 ///
 /// Fetch all server members.
 #[openapi(tag = "Server Members")]
 #[get("/<target>/members?<options..>")]
-pub async fn fetch_all(
-    db: &State<Database>,
+pub async fn req(
+    db: &Db,
     user: User,
-    target: Reference,
-    options: v0::OptionsFetchAllMembers,
-) -> Result<Json<v0::AllMemberResponse>> {
+    target: Ref,
+    options: OptionsFetchAllMembers,
+) -> Result<Json<AllMemberResponse>> {
     let server = target.as_server(db).await?;
-    let mut query = DatabasePermissionQuery::new(db, &user).server(&server);
-    if !query.are_we_a_member().await {
-        return Err(create_error!(NotFound));
-    }
+    perms(&user).server(&server).calc(db).await?;
 
     let mut members = db.fetch_all_members(&server.id).await?;
 
-    let user_ids: Vec<String> = members
-        .iter()
-        .map(|member| member.id.user.clone())
-        .collect();
+    let mut user_ids = vec![];
+    for member in &members {
+        user_ids.push(member.id.user.clone());
+    }
 
-    let mut users = User::fetch_many_ids_as_mutuals(db, &user, &user_ids).await?;
+    let mut users = User::fetch_foreign_users(db, &user_ids).await?;
 
     // Ensure the lists match up exactly.
     members.sort_by(|a, b| a.id.user.cmp(&b.id.user));
@@ -40,12 +54,9 @@ pub async fn fetch_all(
     // Optionally, remove all offline user entries.
     if let Some(true) = options.exclude_offline {
         let mut iter = users.iter();
-        members.retain(|_| iter.next().unwrap().online);
-        users.retain(|user| user.online);
+        members.retain(|_| iter.next().unwrap().online.unwrap_or(false));
+        users.retain(|user| user.online.unwrap_or(false));
     }
 
-    Ok(Json(v0::AllMemberResponse {
-        members: members.into_iter().map(Into::into).collect(),
-        users,
-    }))
+    Ok(Json(AllMemberResponse { members, users }))
 }

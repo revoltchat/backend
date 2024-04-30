@@ -1,7 +1,7 @@
 use revolt_result::Result;
 
+use crate::ReferenceDb;
 use crate::{FieldsUser, PartialUser, RelationshipStatus, User};
-use crate::{ReferenceDb, Relationship};
 
 use super::AbstractUsers;
 
@@ -28,14 +28,12 @@ impl AbstractUsers for ReferenceDb {
     }
 
     /// Fetch a user from the database by their username
-    async fn fetch_user_by_username(&self, username: &str, discriminator: &str) -> Result<User> {
+    async fn fetch_user_by_username(&self, username: &str) -> Result<User> {
         let users = self.users.lock().await;
         let lowercase = username.to_lowercase();
         users
             .values()
-            .find(|user| {
-                user.username.to_lowercase() == lowercase && user.discriminator == discriminator
-            })
+            .find(|user| user.username.to_lowercase() == lowercase)
             .cloned()
             .ok_or_else(|| create_error!(NotFound))
     }
@@ -56,18 +54,6 @@ impl AbstractUsers for ReferenceDb {
                     .ok_or_else(|| create_error!(NotFound))
             })
             .collect()
-    }
-
-    /// Fetch all discriminators in use for a username
-    async fn fetch_discriminators_in_use(&self, username: &str) -> Result<Vec<String>> {
-        let users = self.users.lock().await;
-        let lowercase = username.to_lowercase();
-        Ok(users
-            .values()
-            .filter(|user| user.username.to_lowercase() == lowercase)
-            .map(|user| &user.discriminator)
-            .cloned()
-            .collect())
     }
 
     /// Fetch ids of users that both users are friends with
@@ -108,49 +94,19 @@ impl AbstractUsers for ReferenceDb {
 
     /// Set relationship with another user
     ///
-    /// This should use pull_relationship if relationship is None or User.
+    /// This should use pull_relationship if relationship is None.
     async fn set_relationship(
         &self,
-        user_id: &str,
-        target_id: &str,
-        relationship: &RelationshipStatus,
+        _user_id: &str,
+        _target_id: &str,
+        _relationship: &RelationshipStatus,
     ) -> Result<()> {
-        if let RelationshipStatus::User | RelationshipStatus::None = &relationship {
-            self.pull_relationship(user_id, target_id).await
-        } else {
-            let mut users = self.users.lock().await;
-            let user = users
-                .get_mut(user_id)
-                .ok_or_else(|| create_error!(NotFound))?;
-
-            let relation = Relationship {
-                id: target_id.to_string(),
-                status: relationship.clone(),
-            };
-
-            if let Some(relations) = &mut user.relations {
-                relations.retain(|relation| relation.id != target_id);
-                relations.push(relation);
-            } else {
-                user.relations = Some(vec![relation]);
-            }
-
-            Ok(())
-        }
+        todo!()
     }
 
     /// Remove relationship with another user
-    async fn pull_relationship(&self, user_id: &str, target_id: &str) -> Result<()> {
-        let mut users = self.users.lock().await;
-        let user = users
-            .get_mut(user_id)
-            .ok_or_else(|| create_error!(NotFound))?;
-
-        if let Some(relations) = &mut user.relations {
-            relations.retain(|relation| relation.id != target_id);
-        }
-
-        Ok(())
+    async fn pull_relationship(&self, _user_id: &str, _target_id: &str) -> Result<()> {
+        todo!()
     }
 
     /// Delete a user by their id

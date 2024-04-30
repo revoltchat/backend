@@ -1,14 +1,10 @@
 use super::File;
 
-use revolt_permissions::{Override, OverrideField};
-use std::collections::{HashMap, HashSet};
-
-#[cfg(feature = "rocket")]
-use rocket::FromForm;
+use revolt_permissions::OverrideField;
+use std::collections::HashMap;
 
 auto_derived!(
     /// Channel
-    #[serde(tag = "channel_type")]
     pub enum Channel {
         /// Personal "Saved Notes" channel which allows users to save messages
         SavedMessages {
@@ -209,101 +205,4 @@ auto_derived!(
         #[cfg_attr(feature = "serde", serde(default))]
         pub remove: Option<Vec<FieldsChannel>>,
     }
-
-    /// Create new group
-    #[derive(Default)]
-    #[cfg_attr(feature = "validator", derive(validator::Validate))]
-    pub struct DataCreateGroup {
-        /// Group name
-        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
-        pub name: String,
-        /// Group description
-        #[cfg_attr(feature = "validator", validate(length(min = 0, max = 1024)))]
-        pub description: Option<String>,
-        /// Group icon
-        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
-        pub icon: Option<String>,
-        /// Array of user IDs to add to the group
-        ///
-        /// Must be friends with these users.
-        #[cfg_attr(feature = "validator", validate(length(min = 0, max = 49)))]
-        #[serde(default)]
-        pub users: HashSet<String>,
-        /// Whether this group is age-restricted
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub nsfw: Option<bool>,
-    }
-
-    /// Server Channel Type
-    #[derive(Default)]
-    pub enum LegacyServerChannelType {
-        /// Text Channel
-        #[default]
-        Text,
-        /// Voice Channel
-        Voice,
-    }
-
-    /// Create new server channel
-    #[derive(Default)]
-    #[cfg_attr(feature = "validator", derive(validator::Validate))]
-    pub struct DataCreateServerChannel {
-        /// Channel type
-        #[serde(rename = "type", default = "LegacyServerChannelType::default")]
-        pub channel_type: LegacyServerChannelType,
-        /// Channel name
-        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
-        pub name: String,
-        /// Channel description
-        #[cfg_attr(feature = "validator", validate(length(min = 0, max = 1024)))]
-        pub description: Option<String>,
-        /// Whether this channel is age restricted
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub nsfw: Option<bool>,
-    }
-
-    /// New default permissions
-    #[serde(untagged)]
-    pub enum DataDefaultChannelPermissions {
-        Value {
-            /// Permission values to set for members in a `Group`
-            permissions: u64,
-        },
-        Field {
-            /// Allow / deny values to set for members in this `TextChannel` or `VoiceChannel`
-            permissions: Override,
-        },
-    }
-
-    /// New role permissions
-    pub struct DataSetRolePermissions {
-        /// Allow / deny values to set for this role
-        pub permissions: Override,
-    }
-
-    /// Options when deleting a channel
-    #[cfg_attr(feature = "rocket", derive(FromForm))]
-    pub struct OptionsChannelDelete {
-        /// Whether to not send a leave message
-        pub leave_silently: Option<bool>,
-    }
-
-    /// Voice server token response
-    pub struct LegacyCreateVoiceUserResponse {
-        /// Token for authenticating with the voice server
-        token: String,
-    }
 );
-
-impl Channel {
-    /// Get a reference to this channel's id
-    pub fn id(&self) -> &str {
-        match self {
-            Channel::DirectMessage { id, .. }
-            | Channel::Group { id, .. }
-            | Channel::SavedMessages { id, .. }
-            | Channel::TextChannel { id, .. }
-            | Channel::VoiceChannel { id, .. } => id,
-        }
-    }
-}

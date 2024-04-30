@@ -1,53 +1,59 @@
-use iso8601_timestamp::Timestamp;
-use revolt_config::config;
-use revolt_database::{
-    tasks,
-    util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Database, Message, PartialMessage, User,
+use revolt_quark::{
+    models::message::{PartialMessage, SendableEmbed},
+    models::{Message, User},
+    perms,
+    types::january::Embed,
+    Db, Error, Permission, Ref, Result, Timestamp,
 };
-use revolt_models::v0::{self, Embed};
-use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
-use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
+
+use rocket::serde::json::Json;
+use serde::{Deserialize, Serialize};
 use validator::Validate;
+
+/// # Message Details
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataEditMessage {
+    /// New message content
+    #[validate(length(min = 1, max = 2000))]
+    content: Option<String>,
+    /// Embeds to include in the message
+    #[validate(length(min = 0, max = 10))]
+    embeds: Option<Vec<SendableEmbed>>,
+}
 
 /// # Edit Message
 ///
 /// Edits a message that you've previously sent.
 #[openapi(tag = "Messaging")]
 #[patch("/<target>/messages/<msg>", data = "<edit>")]
-pub async fn edit(
-    db: &State<Database>,
+pub async fn req(
+    db: &Db,
     user: User,
-    target: Reference,
-    msg: Reference,
-    edit: Json<v0::DataEditMessage>,
-) -> Result<Json<v0::Message>> {
+    target: Ref,
+    msg: Ref,
+    edit: Json<DataEditMessage>,
+) -> Result<Json<Message>> {
     let edit = edit.into_inner();
-    edit.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
-
-    let config = config().await;
-    Message::validate_sum(
-        &edit.content,
-        edit.embeds.as_deref().unwrap_or_default(),
-        config.features.limits.default.message_length,
-    )?;
+    edit.validate()
+        .map_err(|error| Error::FailedValidation { error })?;
 
     // Ensure we have permissions to send a message
     let channel = target.as_channel(db).await?;
-    let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
-    let permissions = calculate_channel_permissions(&mut query).await;
+    let mut permissions = perms(&user).channel(&channel);
+    permissions
+        .throw_permission_and_view_channel(db, Permission::SendMessage)
+        .await?;
 
-    permissions.throw_if_lacking_channel_permission(ChannelPermission::SendMessage)?;
-
-    let mut message = msg.as_message_in_channel(db, &channel.id()).await?;
-    if message.author != user.id {
-        return Err(create_error!(CannotEditMessage));
+    let mut message = msg.as_message(db).await?;
+    if message.channel != channel.id() {
+        return Err(Error::NotFound);
     }
+
+    if message.author != user.id {
+        return Err(Error::CannotEditMessage);
+    }
+
+    Message::validate_sum(&edit.content, edit.embeds.as_deref().unwrap_or_default())?;
 
     message.edited = Some(Timestamp::now_utc());
     let mut partial = PartialMessage {
@@ -72,13 +78,10 @@ pub async fn edit(
 
     // 3. Replace if we are given new embeds
     if let Some(embeds) = edit.embeds {
-        // Ensure we have permissions to send embeds
-        permissions.throw_if_lacking_channel_permission(ChannelPermission::SendEmbeds)?;
-
         new_embeds.clear();
 
         for embed in embeds {
-            new_embeds.push(message.create_embed(db, embed).await?);
+            new_embeds.push(embed.clone().into_embed(db, &message.id).await?);
         }
     }
 
@@ -86,17 +89,15 @@ pub async fn edit(
 
     message.update(db, partial).await?;
 
-    // Queue up a task for processing embeds if the we have sufficient permissions
-    if permissions.has_channel_permission(ChannelPermission::SendEmbeds) {
-        if let Some(content) = edit.content {
-            tasks::process_embeds::queue(
-                message.channel.to_string(),
-                message.id.to_string(),
-                content,
-            )
-            .await;
-        }
+    // Queue up a task for processing embeds
+    if let Some(content) = edit.content {
+        revolt_quark::tasks::process_embeds::queue(
+            message.channel.to_string(),
+            message.id.to_string(),
+            content,
+        )
+        .await;
     }
 
-    Ok(Json(message.into()))
+    Ok(Json(message))
 }

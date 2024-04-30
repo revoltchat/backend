@@ -25,14 +25,13 @@ impl AbstractUsers for MongoDb {
     }
 
     /// Fetch a user from the database by their username
-    async fn fetch_user_by_username(&self, username: &str, discriminator: &str) -> Result<User> {
+    async fn fetch_user_by_username(&self, username: &str) -> Result<User> {
         query!(
             self,
             find_one_with_options,
             COL,
             doc! {
-                "username": username,
-                "discriminator": discriminator
+                "username": username
             },
             FindOneOptions::builder()
                 .collation(
@@ -60,7 +59,7 @@ impl AbstractUsers for MongoDb {
             .map_err(|_| create_database_error!("find_one", "sessions"))?
             .ok_or_else(|| create_error!(InvalidSession))?;
 
-        self.fetch_user(&session.user_id).await
+        self.fetch_user(&session.id).await
     }
 
     /// Fetch multiple users by their ids
@@ -86,39 +85,6 @@ impl AbstractUsers for MongoDb {
             })
             .collect()
             .await)
-    }
-
-    /// Fetch all discriminators in use for a username
-    async fn fetch_discriminators_in_use(&self, username: &str) -> Result<Vec<String>> {
-        #[derive(Deserialize)]
-        struct UserDocument {
-            discriminator: String,
-        }
-
-        Ok(self
-            .col::<UserDocument>(COL)
-            .find(
-                doc! {
-                    "username": username
-                },
-                FindOptions::builder()
-                    .collation(
-                        Collation::builder()
-                            .locale("en")
-                            .strength(CollationStrength::Secondary)
-                            .build(),
-                    )
-                    .projection(doc! { "_id": 0, "discriminator": 1 })
-                    .build(),
-            )
-            .await
-            .map_err(|_| create_database_error!("find", COL))?
-            .filter_map(|s| async { s.ok() })
-            .collect::<Vec<UserDocument>>()
-            .await
-            .into_iter()
-            .map(|user| user.discriminator)
-            .collect::<Vec<String>>())
     }
 
     /// Fetch ids of users that both users are friends with

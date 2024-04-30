@@ -1,5 +1,10 @@
-use revolt_config::config;
-use revolt_result::Result;
+use revolt_quark::variables::delta::{
+    APP_URL, AUTUMN_URL, EXTERNAL_WS_URL, HCAPTCHA_SITEKEY, INVITE_ONLY, JANUARY_URL, USE_AUTUMN,
+    USE_EMAIL, USE_HCAPTCHA, USE_JANUARY, USE_VOSO, VAPID_PUBLIC_KEY, VOSO_URL, VOSO_WS_HOST,
+};
+use revolt_quark::Result;
+
+use rocket::http::Status;
 use rocket::serde::json::Json;
 use serde::Serialize;
 
@@ -87,34 +92,32 @@ pub struct RevoltConfig {
 #[openapi(tag = "Core")]
 #[get("/")]
 pub async fn root() -> Result<Json<RevoltConfig>> {
-    let config = config().await;
-
     Ok(Json(RevoltConfig {
         revolt: env!("CARGO_PKG_VERSION").to_string(),
         features: RevoltFeatures {
             captcha: CaptchaFeature {
-                enabled: !config.api.security.captcha.hcaptcha_key.is_empty(),
-                key: config.api.security.captcha.hcaptcha_sitekey,
+                enabled: *USE_HCAPTCHA,
+                key: HCAPTCHA_SITEKEY.to_string(),
             },
-            email: !config.api.smtp.host.is_empty(),
-            invite_only: config.api.registration.invite_only,
+            email: *USE_EMAIL,
+            invite_only: *INVITE_ONLY,
             autumn: Feature {
-                enabled: !config.hosts.autumn.is_empty(),
-                url: config.hosts.autumn,
+                enabled: *USE_AUTUMN,
+                url: AUTUMN_URL.to_string(),
             },
             january: Feature {
-                enabled: !config.hosts.january.is_empty(),
-                url: config.hosts.january,
+                enabled: *USE_JANUARY,
+                url: JANUARY_URL.to_string(),
             },
             voso: VoiceFeature {
-                enabled: !config.hosts.voso_legacy.is_empty(),
-                url: config.hosts.voso_legacy,
-                ws: config.hosts.voso_legacy_ws,
+                enabled: *USE_VOSO,
+                url: VOSO_URL.to_string(),
+                ws: VOSO_WS_HOST.to_string(),
             },
         },
-        ws: config.hosts.events,
-        app: config.hosts.app,
-        vapid: config.api.vapid.public_key,
+        ws: EXTERNAL_WS_URL.to_string(),
+        app: APP_URL.to_string(),
+        vapid: VAPID_PUBLIC_KEY.to_string(),
         build: BuildInformation {
             commit_sha: option_env!("VERGEN_GIT_SHA")
                 .unwrap_or_else(|| "<failed to generate>")
@@ -135,23 +138,9 @@ pub async fn root() -> Result<Json<RevoltConfig>> {
     }))
 }
 
-#[cfg(test)]
-#[cfg(feature = "FIXME: THIS TEST CAUSES cargo test TO SEG FAULT, I HAVE NO CLUE HOW")]
-mod test {
-    use crate::rocket;
-    use rocket::http::Status;
-
-    #[rocket::async_test]
-    async fn hello_world() {
-        let harness = crate::util::test::TestHarness::new().await;
-        let response = harness.client.get("/").dispatch().await;
-        assert_eq!(response.status(), Status::Ok);
-    }
-
-    #[rocket::async_test]
-    async fn hello_world_concurrent() {
-        let harness = crate::util::test::TestHarness::new().await;
-        let response = harness.client.get("/").dispatch().await;
-        assert_eq!(response.status(), Status::Ok);
-    }
+/// Example endpoint.
+#[openapi(skip)]
+#[get("/ping")]
+pub async fn ping(/*_limitguard: Ratelimiter*/) -> Status {
+    Status::Ok
 }

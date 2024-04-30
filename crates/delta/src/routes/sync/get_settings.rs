@@ -1,8 +1,17 @@
-use revolt_database::{Database, User};
-use revolt_models::v0;
-use revolt_result::Result;
+use revolt_quark::{
+    models::{User, UserSettings},
+    Db, Result,
+};
+
 use rocket::serde::json::Json;
-use rocket::State;
+use serde::{Deserialize, Serialize};
+
+/// # Fetch Options
+#[derive(Serialize, Deserialize, JsonSchema)]
+pub struct OptionsFetchSettings {
+    /// Keys to fetch
+    keys: Vec<String>,
+}
 
 /// # Fetch Settings
 ///
@@ -11,11 +20,11 @@ use rocket::State;
 /// This will return an object with the requested keys, each value is a tuple of `(timestamp, value)`, the value is the previously uploaded data.
 #[openapi(tag = "Sync")]
 #[post("/settings/fetch", data = "<options>")]
-pub async fn fetch(
-    db: &State<Database>,
+pub async fn req(
+    db: &Db,
     user: User,
-    options: Json<v0::OptionsFetchSettings>,
-) -> Result<Json<v0::UserSettings>> {
+    options: Json<OptionsFetchSettings>,
+) -> Result<Json<UserSettings>> {
     db.fetch_user_settings(&user.id, &options.into_inner().keys)
         .await
         .map(Json)

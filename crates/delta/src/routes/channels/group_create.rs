@@ -1,102 +1,84 @@
-use revolt_database::{Channel, Database, RelationshipStatus, User};
-use revolt_models::v0;
-use revolt_result::{create_error, Result};
+use std::{collections::HashSet, iter::FromIterator};
+
+use revolt_quark::{
+    get_relationship,
+    models::{user::RelationshipStatus, Channel, User},
+    variables::delta::MAX_GROUP_SIZE,
+    Db, Error, Result,
+};
 
 use rocket::serde::json::Json;
-use rocket::State;
+use serde::{Deserialize, Serialize};
+use ulid::Ulid;
 use validator::Validate;
+
+/// # Group Data
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataCreateGroup {
+    /// Group name
+    #[validate(length(min = 1, max = 32))]
+    name: String,
+    /// Group description
+    #[validate(length(min = 0, max = 1024))]
+    description: Option<String>,
+    /// Array of user IDs to add to the group
+    ///
+    /// Must be friends with these users.
+    #[validate(length(min = 0, max = 49))]
+    users: Vec<String>,
+    /// Whether this group is age-restricted
+    #[serde(skip_serializing_if = "Option::is_none")]
+    nsfw: Option<bool>,
+}
 
 /// # Create Group
 ///
 /// Create a new group channel.
 #[openapi(tag = "Groups")]
-#[post("/create", data = "<data>")]
-pub async fn create_group(
-    db: &State<Database>,
-    user: User,
-    data: Json<v0::DataCreateGroup>,
-) -> Result<Json<v0::Channel>> {
+#[post("/create", data = "<info>")]
+pub async fn req(db: &Db, user: User, info: Json<DataCreateGroup>) -> Result<Json<Channel>> {
     if user.bot.is_some() {
-        return Err(create_error!(IsBot));
+        return Err(Error::IsBot);
     }
 
-    let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    let info = info.into_inner();
+    info.validate()
+        .map_err(|error| Error::FailedValidation { error })?;
 
-    for target in &data.users {
-        match user.relationship_with(target) {
+    let mut set: HashSet<String> = HashSet::from_iter(info.users.into_iter());
+    set.insert(user.id.clone());
+
+    if set.len() > *MAX_GROUP_SIZE {
+        return Err(Error::GroupTooLarge {
+            max: *MAX_GROUP_SIZE,
+        });
+    }
+
+    for target in &set {
+        match get_relationship(&user, target) {
             RelationshipStatus::Friend | RelationshipStatus::User => {}
             _ => {
-                return Err(create_error!(NotFriends));
+                return Err(Error::NotFriends);
             }
         }
     }
 
-    Ok(Json(Channel::create_group(db, data, user.id).await?.into()))
-}
+    let group = Channel::Group {
+        id: Ulid::new().to_string(),
 
-#[cfg(test)]
-mod test {
-    use crate::{rocket, util::test::TestHarness};
-    use revolt_database::events::client::EventV1;
-    use revolt_models::v0;
-    use rocket::http::{ContentType, Header, Status};
+        name: info.name,
+        owner: user.id,
+        description: info.description,
+        recipients: set.into_iter().collect::<Vec<String>>(),
 
-    #[rocket::async_test]
-    async fn create_group() {
-        let mut harness = TestHarness::new().await;
-        let (_, session, user) = harness.new_user().await;
+        icon: None,
+        last_message_id: None,
 
-        let response = harness
-            .client
-            .post("/channels/create")
-            .header(Header::new("x-session-token", session.token.to_string()))
-            .header(ContentType::JSON)
-            .body(
-                json!(v0::DataCreateBot {
-                    name: TestHarness::rand_string(),
-                })
-                .to_string(),
-            )
-            .dispatch()
-            .await;
+        permissions: None,
 
-        assert_eq!(response.status(), Status::Ok);
+        nsfw: info.nsfw.unwrap_or(false),
+    };
 
-        let channel: v0::Channel = response.into_json().await.expect("`Channel`");
-        match channel {
-            v0::Channel::Group {
-                id,
-                owner,
-                recipients,
-                ..
-            } => {
-                assert_eq!(owner, user.id);
-                assert_eq!(recipients.len(), 1);
-                assert!(harness.db.fetch_channel(&id).await.is_ok());
-
-                let event = harness
-                    .wait_for_event(&format!("{}!", user.id), |event| match event {
-                        EventV1::ChannelCreate(channel) => channel.id() == id,
-                        _ => false,
-                    })
-                    .await;
-
-                match event {
-                    EventV1::ChannelCreate(v0::Channel::Group {
-                        owner: channel_owner,
-                        ..
-                    }) => {
-                        assert_eq!(owner, channel_owner);
-                    }
-                    _ => unreachable!(),
-                }
-            }
-            _ => unreachable!(),
-        }
-    }
+    group.create(db).await?;
+    Ok(Json(group))
 }

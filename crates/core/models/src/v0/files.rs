@@ -2,7 +2,7 @@ auto_derived!(
     /// File
     pub struct File {
         /// Unique Id
-        #[cfg_attr(feature = "serde", serde(rename = "_id"))]
+        #[serde(rename = "_id")]
         pub id: String,
         /// Tag / bucket this file was uploaded to
         pub tag: String,
@@ -16,29 +16,29 @@ auto_derived!(
         pub size: isize,
 
         /// Whether this file was deleted
-        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        #[serde(skip_serializing_if = "Option::is_none")]
         pub deleted: Option<bool>,
         /// Whether this file was reported
-        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        #[serde(skip_serializing_if = "Option::is_none")]
         pub reported: Option<bool>,
 
         // TODO: migrate this mess to having:
         // - author_id
         // - parent: Parent { Message(id), User(id), etc }
-        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        #[serde(skip_serializing_if = "Option::is_none")]
         pub message_id: Option<String>,
-        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        #[serde(skip_serializing_if = "Option::is_none")]
         pub user_id: Option<String>,
-        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        #[serde(skip_serializing_if = "Option::is_none")]
         pub server_id: Option<String>,
 
         /// Id of the object this file is associated with
-        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        #[serde(skip_serializing_if = "Option::is_none")]
         pub object_id: Option<String>,
     }
 
     /// Metadata associated with a file
-    #[cfg_attr(feature = "serde", serde(tag = "type"))]
+    #[serde(tag = "type")]
     #[derive(Default)]
     pub enum Metadata {
         /// File is just a generic uncategorised file

@@ -1,16 +1,10 @@
 mod admin_migrations;
 mod bots;
-mod channel_invites;
-mod channel_unreads;
 mod channel_webhooks;
 mod channels;
-mod emojis;
 mod files;
-mod messages;
 mod ratelimit_events;
-mod safety_reports;
-mod safety_snapshots;
-mod server_bans;
+mod safety_strikes;
 mod server_members;
 mod servers;
 mod user_settings;
@@ -18,17 +12,11 @@ mod users;
 
 pub use admin_migrations::*;
 pub use bots::*;
-pub use channel_invites::*;
-pub use channel_unreads::*;
 pub use channel_webhooks::*;
 pub use channels::*;
-pub use emojis::*;
 pub use files::*;
-pub use messages::*;
 pub use ratelimit_events::*;
-pub use safety_reports::*;
-pub use safety_snapshots::*;
-pub use server_bans::*;
+pub use safety_strikes::*;
 pub use server_members::*;
 pub use servers::*;
 pub use user_settings::*;
@@ -42,16 +30,10 @@ pub trait AbstractDatabase:
     + admin_migrations::AbstractMigrations
     + bots::AbstractBots
     + channels::AbstractChannels
-    + channel_invites::AbstractChannelInvites
-    + channel_unreads::AbstractChannelUnreads
     + channel_webhooks::AbstractWebhooks
-    + emojis::AbstractEmojis
     + files::AbstractAttachments
-    + messages::AbstractMessages
     + ratelimit_events::AbstractRatelimitEvents
-    + safety_reports::AbstractReport
-    + safety_snapshots::AbstractSnapshot
-    + server_bans::AbstractServerBans
+    + safety_strikes::AbstractAccountStrikes
     + server_members::AbstractServerMembers
     + servers::AbstractServers
     + user_settings::AbstractUserSettings

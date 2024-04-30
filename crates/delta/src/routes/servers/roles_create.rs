@@ -1,49 +1,63 @@
-use revolt_config::config;
-use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Database, Role, User,
+use revolt_quark::{
+    models::{server::Role, User},
+    perms, Db, Error, Permission, Ref, Result, variables::delta::MAX_ROLE_COUNT,
 };
-use revolt_models::v0;
-use revolt_permissions::{calculate_server_permissions, ChannelPermission};
-use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
+
+use rocket::serde::json::Json;
+use serde::{Deserialize, Serialize};
 use validator::Validate;
+
+/// # Role Data
+#[derive(Validate, Deserialize, JsonSchema)]
+pub struct DataCreateRole {
+    /// Role name
+    #[validate(length(min = 1, max = 32))]
+    name: String,
+    /// Ranking position
+    ///
+    /// Smaller values take priority.
+    rank: Option<i64>,
+}
+
+/// # New Role Response
+#[derive(Serialize, JsonSchema)]
+pub struct NewRoleResponse {
+    /// Id of the role
+    id: String,
+    /// New role
+    role: Role,
+}
 
 /// # Create Role
 ///
 /// Creates a new server role.
 #[openapi(tag = "Server Permissions")]
 #[post("/<target>/roles", data = "<data>")]
-pub async fn create(
-    db: &State<Database>,
+pub async fn req(
+    db: &Db,
     user: User,
-    target: Reference,
-    data: Json<v0::DataCreateRole>,
-) -> Result<Json<v0::NewRoleResponse>> {
+    target: Ref,
+    data: Json<DataCreateRole>,
+) -> Result<Json<NewRoleResponse>> {
     let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    data.validate()
+        .map_err(|error| Error::FailedValidation { error })?;
 
     let server = target.as_server(db).await?;
-    let mut query = DatabasePermissionQuery::new(db, &user).server(&server);
-    calculate_server_permissions(&mut query)
-        .await
-        .throw_if_lacking_channel_permission(ChannelPermission::ManageRole)?;
+    let mut permissions = perms(&user).server(&server);
 
-    let config = config().await;
-    if server.roles.len() >= config.features.limits.default.server_roles {
-        return Err(create_error!(TooManyRoles {
-            max: config.features.limits.default.server_roles,
-        }));
+    permissions
+        .throw_permission(db, Permission::ManageRole)
+        .await?;
+
+    if server.roles.len() > *MAX_ROLE_COUNT {
+        return Err(Error::TooManyRoles { max: *MAX_ROLE_COUNT })
     };
 
-    let member_rank = query.get_member_rank();
+    let member_rank = permissions.get_member_rank();
     let rank = if let Some(given_rank) = data.rank {
         if given_rank <= member_rank.unwrap_or(i64::MIN) {
-            return Err(create_error!(NotElevated));
+            return Err(Error::NotElevated);
         }
 
         given_rank
@@ -54,13 +68,11 @@ pub async fn create(
     let role = Role {
         name: data.name,
         rank,
-        colour: None,
-        hoist: false,
-        permissions: Default::default(),
+        ..Default::default()
     };
 
-    Ok(Json(v0::NewRoleResponse {
+    Ok(Json(NewRoleResponse {
         id: role.create(db, &server.id).await?,
-        role: role.into(),
+        role,
     }))
 }

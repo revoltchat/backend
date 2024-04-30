@@ -7,7 +7,6 @@ use revolt_presence::clear_region;
 extern crate log;
 
 pub mod config;
-pub mod events;
 
 mod database;
 mod websocket;
@@ -15,7 +14,7 @@ mod websocket;
 #[async_std::main]
 async fn main() {
     // Configure requirements for Bonfire.
-    revolt_config::configure!(events);
+    revolt_quark::configure!();
     database::connect().await;
 
     // Clean up the current region information.
@@ -30,10 +29,6 @@ async fn main() {
 
     // Start accepting new connections and spawn a client for each connection.
     while let Ok((stream, addr)) = listener.accept().await {
-        async_std::task::spawn(async move {
-            info!("User connected from {addr:?}");
-            websocket::client(database::get_db(), stream, addr).await;
-            info!("User disconnected from {addr:?}");
-        });
+        websocket::spawn_client(database::get_db(), stream, addr);
     }
 }

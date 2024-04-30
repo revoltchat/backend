@@ -1,11 +1,7 @@
-use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Database, PartialMessage, User,
+use revolt_quark::{
+    models::{message::PartialMessage, User},
+    perms, Db, EmptyResponse, Permission, Ref, Result,
 };
-use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
-use revolt_result::Result;
-use rocket::State;
-use rocket_empty::EmptyResponse;
 
 /// # Remove All Reactions from Message
 ///
@@ -14,20 +10,15 @@ use rocket_empty::EmptyResponse;
 /// Requires `ManageMessages` permission.
 #[openapi(tag = "Interactions")]
 #[delete("/<target>/messages/<msg>/reactions")]
-pub async fn clear_reactions(
-    db: &State<Database>,
-    user: User,
-    target: Reference,
-    msg: Reference,
-) -> Result<EmptyResponse> {
+pub async fn clear_reactions(db: &Db, user: User, target: Ref, msg: Ref) -> Result<EmptyResponse> {
     let channel = target.as_channel(db).await?;
-    let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
-    calculate_channel_permissions(&mut query)
-        .await
-        .throw_if_lacking_channel_permission(ChannelPermission::ManageMessages)?;
+    perms(&user)
+        .channel(&channel)
+        .throw_permission_and_view_channel(db, Permission::ManageMessages)
+        .await?;
 
     // Fetch relevant message
-    let mut message = msg.as_message_in_channel(db, &channel.id()).await?;
+    let mut message = msg.as_message_in(db, channel.id()).await?;
 
     // Clear reactions
     message

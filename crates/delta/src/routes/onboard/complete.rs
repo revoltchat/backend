@@ -1,19 +1,12 @@
-use authifier::models::Session;
-use once_cell::sync::Lazy;
-use regex::Regex;
-use revolt_database::{Database, PartialUser, User};
-use revolt_models::v0;
-use revolt_result::{create_error, Result};
+use crate::util::regex::RE_USERNAME;
+use revolt_quark::{
+    authifier::models::Session, models::User, Database, EmptyResponse, Error, Result,
+};
 
 use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-/// Regex for valid usernames
-///
-/// Block zero width space
-/// Block lookalike characters
-pub static RE_USERNAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\p{L}|[\d_.-])+$").unwrap());
 /// # New User Data
 #[derive(Validate, Serialize, Deserialize, JsonSchema)]
 pub struct DataUserProfile {
@@ -54,27 +47,29 @@ pub struct DataOnboard {
 /// This sets a new username, completes onboarding and allows a user to start using Revolt.
 #[openapi(tag = "Onboarding")]
 #[post("/complete", data = "<data>")]
-pub async fn complete(
+pub async fn req(
     db: &State<Database>,
     session: Session,
     user: Option<User>,
     data: Json<DataOnboard>,
-) -> Result<Json<v0::User>> {
+) -> Result<EmptyResponse> {
     if user.is_some() {
-        return Err(create_error!(AlreadyOnboarded));
+        return Err(Error::AlreadyOnboarded);
     }
 
-    let data: DataOnboard = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
-    let mut partial: PartialUser = PartialUser {
+    let data = data.into_inner();
+    data.validate()
+        .map_err(|error| Error::FailedValidation { error })?;
+
+    let username = User::validate_username(data.username)?;
+    let mut user = User {
+        id: session.user_id,
+        discriminator: User::find_discriminator(db, &username, None).await?,
+        username,
         ..Default::default()
     };
     let profile = data.profile;
-    let mut new_profile = partial.profile.take().unwrap_or_default();
+    let mut new_profile = user.profile.take().unwrap_or_default();
     let content = profile.content;
     new_profile.content = Some(content);
     let first_name = profile.first_name;
@@ -89,11 +84,7 @@ pub async fn complete(
     new_profile.city = Some(city);
     let occupation = profile.occupation;
     new_profile.occupation = Some(occupation);
-    partial.profile = Some(new_profile);
-    Ok(Json(
-        User::create_onboarding(db, data.username, session.user_id, partial)
-            .await?
-            .into_self()
-            .await,
-    ))
+    user.profile = Some(new_profile);
+
+    db.insert_user(&user).await.map(|_| EmptyResponse)
 }

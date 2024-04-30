@@ -697,9 +697,7 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
     }
 
     if revision <= 19 {
-        info!(
-            "Running migration [revision 19 / 27-02-2023]: Create report / snapshot collections."
-        );
+        info!("Running migration [revision 19 / 27-02-2023]: Create report / snapshot collections, migrate to new model if applicable.");
 
         db.db()
             .create_collection("safety_reports", None)
@@ -708,6 +706,19 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
 
         db.db()
             .create_collection("safety_snapshots", None)
+            .await
+            .unwrap();
+
+        db.col::<Document>("safety_reports")
+            .update_many(
+                doc! {},
+                doc! {
+                    "$set": {
+                        "status": "Created"
+                    }
+                },
+                None,
+            )
             .await
             .unwrap();
     }

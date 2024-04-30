@@ -1,7 +1,6 @@
-use revolt_database::util::reference::Reference;
-use revolt_database::{Database, User};
-use revolt_models::v0;
-use revolt_result::{create_error, Result};
+use revolt_quark::models::User;
+use revolt_quark::{Database, Error, Ref, Result};
+
 use rocket::serde::json::Json;
 use rocket::State;
 
@@ -10,17 +9,13 @@ use rocket::State;
 /// Accept another user's friend request.
 #[openapi(tag = "Relationships")]
 #[put("/<target>/friend")]
-pub async fn add(
-    db: &State<Database>,
-    mut user: User,
-    target: Reference,
-) -> Result<Json<v0::User>> {
+pub async fn req(db: &State<Database>, user: User, target: Ref) -> Result<Json<User>> {
     let mut target = target.as_user(db).await?;
 
     if user.bot.is_some() || target.bot.is_some() {
-        return Err(create_error!(IsBot));
+        return Err(Error::IsBot);
     }
 
     user.add_friend(db, &mut target).await?;
-    Ok(Json(target.into(db, &user).await))
+    Ok(Json(target.with_auto_perspective(db, &user).await))
 }

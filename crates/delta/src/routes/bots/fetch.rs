@@ -1,6 +1,6 @@
-use revolt_database::{util::reference::Reference, Database, User};
+use revolt_database::{util::reference::Reference, Database};
 use revolt_models::v0::FetchBotResponse;
-use revolt_result::{create_error, Result};
+use revolt_quark::{models::User, Error, Result};
 use rocket::{serde::json::Json, State};
 
 /// # Fetch Bot
@@ -14,46 +14,21 @@ pub async fn fetch_bot(
     bot: Reference,
 ) -> Result<Json<FetchBotResponse>> {
     if user.bot.is_some() {
-        return Err(create_error!(IsBot));
+        return Err(Error::IsBot);
     }
 
-    let bot = bot.as_bot(db).await?;
+    let bot = bot.as_bot(db).await.map_err(Error::from_core)?;
     if bot.owner != user.id {
-        return Err(create_error!(NotFound));
+        return Err(Error::NotFound);
     }
 
     Ok(Json(FetchBotResponse {
-        user: db.fetch_user(&bot.id).await?.into(db, None).await,
+        user: db
+            .fetch_user(&bot.id)
+            .await
+            .map_err(Error::from_core)?
+            .into(None)
+            .await,
         bot: bot.into(),
     }))
-}
-
-#[cfg(test)]
-mod test {
-    use crate::{rocket, util::test::TestHarness};
-    use revolt_database::Bot;
-    use revolt_models::v0;
-    use rocket::http::{Header, Status};
-
-    #[rocket::async_test]
-    async fn fetch_bot() {
-        let harness = TestHarness::new().await;
-        let (_, session, user) = harness.new_user().await;
-
-        let bot = Bot::create(&harness.db, TestHarness::rand_string(), &user, None)
-            .await
-            .expect("`Bot`");
-
-        let response = harness
-            .client
-            .get(format!("/bots/{}", bot.id))
-            .header(Header::new("x-session-token", session.token.to_string()))
-            .dispatch()
-            .await;
-
-        assert_eq!(response.status(), Status::Ok);
-
-        let response: v0::FetchBotResponse = response.into_json().await.expect("`Bot`");
-        assert_eq!(response.bot, bot.into());
-    }
 }

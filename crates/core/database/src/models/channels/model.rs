@@ -1,19 +1,12 @@
 use std::collections::HashMap;
 
-use revolt_config::config;
-use revolt_models::v0::{self, MessageAuthor};
 use revolt_permissions::OverrideField;
 use revolt_result::Result;
 use serde::{Deserialize, Serialize};
-use ulid::Ulid;
 
-use crate::{
-    events::client::EventV1, tasks::ack::AckEvent, Database, File, IntoDocumentPath, PartialServer,
-    Server, SystemMessage, User,
-};
+use crate::{events::client::EventV1, Database, File, IntoDocumentPath};
 
 auto_derived!(
-    #[serde(tag = "channel_type")]
     pub enum Channel {
         /// Personal "Saved Notes" channel which allows users to save messages
         SavedMessages {
@@ -171,221 +164,52 @@ auto_derived!(
     }
 );
 
-#[allow(clippy::disallowed_methods)]
 impl Channel {
-    /* /// Create a channel
+    /// Create a channel
     pub async fn create(&self, db: &Database) -> Result<()> {
         db.insert_channel(self).await?;
 
-        let event = EventV1::ChannelCreate(self.clone().into());
-        match self {
-            Self::SavedMessages { user, .. } => event.private(user.clone()).await,
-            Self::DirectMessage { recipients, .. } | Self::Group { recipients, .. } => {
-                for recipient in recipients {
-                    event.clone().private(recipient.clone()).await;
-                }
-            }
-            Self::TextChannel { server, .. } | Self::VoiceChannel { server, .. } => {
-                event.p(server.clone()).await;
-            }
-        }
-
         Ok(())
-    }*/
-
-    /// Create a new server channel
-    pub async fn create_server_channel(
-        db: &Database,
-        server: &mut Server,
-        data: v0::DataCreateServerChannel,
-        update_server: bool,
-    ) -> Result<Channel> {
-        let config = config().await;
-        if server.channels.len() > config.features.limits.default.server_channels {
-            return Err(create_error!(TooManyChannels {
-                max: config.features.limits.default.server_channels,
-            }));
-        };
-
-        let id = ulid::Ulid::new().to_string();
-        let channel = match data.channel_type {
-            v0::LegacyServerChannelType::Text => Channel::TextChannel {
-                id: id.clone(),
-                server: server.id.to_owned(),
-                name: data.name,
-                description: data.description,
-                icon: None,
-                last_message_id: None,
-                default_permissions: None,
-                role_permissions: HashMap::new(),
-                nsfw: data.nsfw.unwrap_or(false),
-            },
-            v0::LegacyServerChannelType::Voice => Channel::VoiceChannel {
-                id: id.clone(),
-                server: server.id.to_owned(),
-                name: data.name,
-                description: data.description,
-                icon: None,
-                default_permissions: None,
-                role_permissions: HashMap::new(),
-                nsfw: data.nsfw.unwrap_or(false),
-            },
-        };
-
-        db.insert_channel(&channel).await?;
-
-        if update_server {
-            server
-                .update(
-                    db,
-                    PartialServer {
-                        channels: Some([server.channels.clone(), [id].into()].concat()),
-                        ..Default::default()
-                    },
-                    vec![],
-                )
-                .await?;
-
-            EventV1::ChannelCreate(channel.clone().into())
-                .p(server.id.clone())
-                .await;
-        }
-
-        Ok(channel)
-    }
-
-    /// Create a group
-    pub async fn create_group(
-        db: &Database,
-        mut data: v0::DataCreateGroup,
-        owner_id: String,
-    ) -> Result<Channel> {
-        data.users.insert(owner_id.to_string());
-
-        let config = config().await;
-        if data.users.len() > config.features.limits.default.group_size {
-            return Err(create_error!(GroupTooLarge {
-                max: config.features.limits.default.group_size,
-            }));
-        }
-
-        let recipients = data.users.into_iter().collect::<Vec<String>>();
-        let channel = Channel::Group {
-            id: ulid::Ulid::new().to_string(),
-
-            name: data.name,
-            owner: owner_id,
-            description: data.description,
-            recipients: recipients.clone(),
-
-            icon: None,
-            last_message_id: None,
-
-            permissions: None,
-
-            nsfw: data.nsfw.unwrap_or(false),
-        };
-
-        db.insert_channel(&channel).await?;
-
-        let event = EventV1::ChannelCreate(channel.clone().into());
-        for recipient in recipients {
-            event.clone().private(recipient).await;
-        }
-
-        Ok(channel)
-    }
-
-    /// Create a DM (or return the existing one / saved messages)
-    pub async fn create_dm(db: &Database, user_a: &User, user_b: &User) -> Result<Channel> {
-        // Try to find existing channel
-        if let Ok(channel) = db.find_direct_message_channel(&user_a.id, &user_b.id).await {
-            Ok(channel)
-        } else {
-            let channel = if user_a.id == user_b.id {
-                // Create a new saved messages channel
-                Channel::SavedMessages {
-                    id: Ulid::new().to_string(),
-                    user: user_a.id.to_string(),
-                }
-            } else {
-                // Create a new DM channel
-                Channel::DirectMessage {
-                    id: Ulid::new().to_string(),
-                    active: true, // show by default
-                    recipients: vec![user_a.id.clone(), user_b.id.clone()],
-                    last_message_id: None,
-                }
-            };
-
-            db.insert_channel(&channel).await?;
-
-            match &channel {
-                Channel::DirectMessage { .. } => {
-                    let event = EventV1::ChannelCreate(channel.clone().into());
-                    event.clone().private(user_a.id.clone()).await;
-                    event.private(user_b.id.clone()).await;
-                }
-                _ => {}
-            };
-
-            Ok(channel)
-        }
     }
 
     /// Add user to a group
     pub async fn add_user_to_group(
         &mut self,
         db: &Database,
-        user: &User,
-        by_id: &str,
+        user_id: &str,
+        _by_id: &str,
     ) -> Result<()> {
         if let Channel::Group { recipients, .. } = self {
-            if recipients.contains(&String::from(&user.id)) {
+            if recipients.contains(&String::from(user_id)) {
                 return Err(create_error!(AlreadyInGroup));
             }
 
-            let config = config().await;
-            if recipients.len() >= config.features.limits.default.group_size {
-                return Err(create_error!(GroupTooLarge {
-                    max: config.features.limits.default.group_size
-                }));
-            }
-
-            recipients.push(String::from(&user.id));
+            recipients.push(String::from(user_id));
         }
 
         match &self {
             Channel::Group { id, .. } => {
-                db.add_user_to_group(id, &user.id).await?;
+                db.add_user_to_group(id, user_id).await?;
 
                 EventV1::ChannelGroupJoin {
                     id: id.to_string(),
-                    user: user.id.to_string(),
+                    user: user_id.to_string(),
                 }
                 .p(id.to_string())
                 .await;
 
-                SystemMessage::UserAdded {
-                    id: user.id.to_string(),
-                    by: by_id.to_string(),
+                EventV1::ChannelCreate(self.clone().into())
+                    .private(user_id.to_string())
+                    .await;
+
+                /* TODO: SystemMessage::UserAdded {
+                    id: user.to_string(),
+                    by: by.to_string(),
                 }
                 .into_message(id.to_string())
-                .send(
-                    db,
-                    MessageAuthor::System {
-                        username: &user.username,
-                        avatar: user.avatar.as_ref().map(|file| file.id.as_ref()),
-                    },
-                    self,
-                    false,
-                )
+                .create(db, self, None)
                 .await
-                .ok();
-
-                EventV1::ChannelCreate(self.clone().into())
-                    .private(user.id.to_string())
-                    .await;
+                .ok(); */
 
                 Ok(())
             }
@@ -414,7 +238,7 @@ impl Channel {
         }
     }
 
-    /// Clone this channel's id
+    /// Get a reference to this channel's id
     pub fn id(&self) -> String {
         match self {
             Channel::DirectMessage { id, .. }
@@ -469,7 +293,7 @@ impl Channel {
     }
 
     /// Update channel data
-    pub async fn update(
+    pub async fn update<'a>(
         &mut self,
         db: &Database,
         partial: PartialChannel,
@@ -481,19 +305,8 @@ impl Channel {
 
         self.apply_options(partial.clone());
 
-        let id = self.id().to_string();
-        db.update_channel(&id, &partial, remove.clone()).await?;
-
-        EventV1::ChannelUpdate {
-            id: id.clone(),
-            data: partial.into(),
-            clear: remove.into_iter().map(|v| v.into()).collect(),
-        }
-        .p(match self {
-            Self::TextChannel { server, .. } | Self::VoiceChannel { server, .. } => server.clone(),
-            _ => id,
-        })
-        .await;
+        db.update_channel(&self.id(), &partial, remove.clone())
+            .await?;
 
         Ok(())
     }
@@ -627,46 +440,23 @@ impl Channel {
         }
     }
 
-    /// Acknowledge a message
-    pub async fn ack(&self, user: &str, message: &str) -> Result<()> {
-        EventV1::ChannelAck {
-            id: self.id().to_string(),
-            user: user.to_string(),
-            message_id: message.to_string(),
-        }
-        .private(user.to_string())
-        .await;
-
-        crate::tasks::ack::queue(
-            self.id().to_string(),
-            user.to_string(),
-            AckEvent::AckMessage {
-                id: message.to_string(),
-            },
-        )
-        .await;
-
-        Ok(())
-    }
-
     /// Remove user from a group
     pub async fn remove_user_from_group(
         &self,
         db: &Database,
-        user: &User,
-        by_id: Option<&str>,
+        user_id: &str,
+        _by_id: Option<&str>,
         silent: bool,
     ) -> Result<()> {
         match &self {
             Channel::Group {
                 id,
-                name,
                 owner,
                 recipients,
                 ..
             } => {
-                if &user.id == owner {
-                    if let Some(new_owner) = recipients.iter().find(|x| *x != &user.id) {
+                if user_id == owner {
+                    if let Some(new_owner) = recipients.iter().find(|x| *x != user_id) {
                         db.update_channel(
                             id,
                             &PartialChannel {
@@ -677,57 +467,42 @@ impl Channel {
                         )
                         .await?;
 
-                        SystemMessage::ChannelOwnershipChanged {
+                        /* TODO: SystemMessage::ChannelOwnershipChanged {
                             from: owner.to_string(),
-                            to: new_owner.to_string(),
+                            to: new_owner.into(),
                         }
                         .into_message(id.to_string())
-                        .send(
-                            db,
-                            MessageAuthor::System {
-                                username: name,
-                                avatar: None,
-                            },
-                            self,
-                            false,
-                        )
+                        .create(db, self, None)
                         .await
-                        .ok();
+                        .ok(); */
                     } else {
-                        return self.delete(db).await;
+                        db.delete_channel(self).await?;
+                        return Ok(());
                     }
                 }
 
                 EventV1::ChannelGroupLeave {
                     id: id.to_string(),
-                    user: user.id.to_string(),
+                    user: user_id.to_string(),
                 }
                 .p(id.to_string())
                 .await;
 
                 if !silent {
-                    if let Some(by) = by_id {
+                    /* TODO: if let Some(_by) = by_id {
                         SystemMessage::UserRemove {
-                            id: user.id.to_string(),
+                            id: user_id.to_string(),
                             by: by.to_string(),
                         }
                     } else {
                         SystemMessage::UserLeft {
-                            id: user.id.to_string(),
+                            id: user_id.to_string(),
                         }
                     }
                     .into_message(id.to_string())
-                    .send(
-                        db,
-                        MessageAuthor::System {
-                            username: &user.username,
-                            avatar: user.avatar.as_ref().map(|file| file.id.as_ref()),
-                        },
-                        self,
-                        false,
-                    )
+                    .create(db, self, None)
                     .await
-                    .ok();
+                    .ok(); */
                 }
 
                 Ok(())
@@ -739,11 +514,6 @@ impl Channel {
 
     /// Delete a channel
     pub async fn delete(&self, db: &Database) -> Result<()> {
-        let id = self.id().to_string();
-        EventV1::ChannelDelete { id: id.clone() }.p(id).await;
-        // TODO: missing functionality:
-        // - group invites
-        // - channels list / categories list on server
         db.delete_channel(self).await
     }
 }
@@ -755,64 +525,5 @@ impl IntoDocumentPath for FieldsChannel {
             FieldsChannel::Icon => "icon",
             FieldsChannel::DefaultPermissions => "default_permissions",
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
-
-    use crate::{fixture, util::permissions::DatabasePermissionQuery};
-
-    #[async_std::test]
-    async fn permissions_group_channel() {
-        database_test!(|db| async move {
-            fixture!(db, "group_with_members",
-                owner user 0
-                member1 user 1
-                member2 user 2
-                channel channel 3);
-
-            let mut query = DatabasePermissionQuery::new(&db, &owner).channel(&channel);
-            assert!(calculate_channel_permissions(&mut query)
-                .await
-                .has_channel_permission(ChannelPermission::SendMessage));
-
-            let mut query = DatabasePermissionQuery::new(&db, &member1).channel(&channel);
-            assert!(calculate_channel_permissions(&mut query)
-                .await
-                .has_channel_permission(ChannelPermission::SendMessage));
-
-            let mut query = DatabasePermissionQuery::new(&db, &member2).channel(&channel);
-            assert!(!calculate_channel_permissions(&mut query)
-                .await
-                .has_channel_permission(ChannelPermission::SendMessage));
-        });
-    }
-
-    #[async_std::test]
-    async fn permissions_text_channel() {
-        database_test!(|db| async move {
-            fixture!(db, "server_with_roles",
-                owner user 0
-                moderator user 1
-                user user 2
-                channel channel 3);
-
-            let mut query = DatabasePermissionQuery::new(&db, &owner).channel(&channel);
-            assert!(calculate_channel_permissions(&mut query)
-                .await
-                .has_channel_permission(ChannelPermission::SendMessage));
-
-            let mut query = DatabasePermissionQuery::new(&db, &moderator).channel(&channel);
-            assert!(calculate_channel_permissions(&mut query)
-                .await
-                .has_channel_permission(ChannelPermission::SendMessage));
-
-            let mut query = DatabasePermissionQuery::new(&db, &user).channel(&channel);
-            assert!(!calculate_channel_permissions(&mut query)
-                .await
-                .has_channel_permission(ChannelPermission::SendMessage));
-        });
     }
 }

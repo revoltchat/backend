@@ -6,7 +6,7 @@ use crate::MongoDb;
 
 use super::AbstractAttachments;
 
-static COL: &str = "attachments";
+static COL: &str = "bots";
 
 #[async_trait]
 impl AbstractAttachments for MongoDb {
@@ -113,23 +113,5 @@ impl AbstractAttachments for MongoDb {
             .await
             .map(|_| ())
             .map_err(|_| create_database_error!("update_one", COL))
-    }
-}
-
-impl MongoDb {
-    pub async fn delete_many_attachments(&self, projection: Document) -> Result<()> {
-        self.col::<Document>(COL)
-            .update_many(
-                projection,
-                doc! {
-                    "$set": {
-                        "deleted": true
-                    }
-                },
-                None,
-            )
-            .await
-            .map(|_| ())
-            .map_err(|_| create_database_error!("update_many", COL))
     }
 }

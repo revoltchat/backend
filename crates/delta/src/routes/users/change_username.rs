@@ -1,18 +1,8 @@
-use authifier::models::Account;
-use once_cell::sync::Lazy;
-use regex::Regex;
-use revolt_database::{Database, User};
-use revolt_models::v0;
-use revolt_result::{create_error, Result};
+use crate::util::regex::RE_USERNAME;
+use revolt_quark::{authifier::models::Account, models::User, Database, Error, Result};
 use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
-
-/// Regex for valid usernames
-///
-/// Block zero width space
-/// Block lookalike characters
-pub static RE_USERNAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\p{L}|[\d_.-])+$").unwrap());
 
 /// # Username Information
 #[derive(Validate, Serialize, Deserialize, JsonSchema)]
@@ -30,23 +20,20 @@ pub struct DataChangeUsername {
 /// Change your username.
 #[openapi(tag = "User Information")]
 #[patch("/@me/username", data = "<data>")]
-pub async fn change_username(
+pub async fn req(
     db: &State<Database>,
     account: Account,
     mut user: User,
     data: Json<DataChangeUsername>,
-) -> Result<Json<v0::User>> {
+) -> Result<Json<User>> {
     let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    data.validate()
+        .map_err(|error| Error::FailedValidation { error })?;
 
     account
         .verify_password(&data.password)
-        .map_err(|_| create_error!(InvalidCredentials))?;
+        .map_err(|_| Error::InvalidCredentials)?;
 
     user.update_username(db, data.username).await?;
-    Ok(Json(user.into(db, None).await))
+    Ok(Json(user.foreign()))
 }

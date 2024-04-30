@@ -1,48 +1,64 @@
-use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Database, PartialRole, User,
+use revolt_quark::{
+    models::{
+        server::{FieldsRole, PartialRole, Role},
+        User,
+    },
+    perms,
+    util::regex::RE_COLOUR,
+    Db, Error, Permission, Ref, Result,
 };
-use revolt_models::v0;
-use revolt_permissions::{calculate_server_permissions, ChannelPermission};
-use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
+
+use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
+
+/// # Role Data
+#[derive(Validate, Serialize, Deserialize, JsonSchema)]
+pub struct DataEditRole {
+    /// Role name
+    #[validate(length(min = 1, max = 32))]
+    name: Option<String>,
+    /// Role colour
+    #[validate(length(min = 1, max = 128), regex = "RE_COLOUR")]
+    colour: Option<String>,
+    /// Whether this role should be displayed separately
+    hoist: Option<bool>,
+    /// Ranking position
+    ///
+    /// Smaller values take priority.
+    rank: Option<i64>,
+    /// Fields to remove from role object
+    #[validate(length(min = 1))]
+    remove: Option<Vec<FieldsRole>>,
+}
 
 /// # Edit Role
 ///
 /// Edit a role by its id.
 #[openapi(tag = "Server Permissions")]
 #[patch("/<target>/roles/<role_id>", data = "<data>")]
-pub async fn edit(
-    db: &State<Database>,
+pub async fn req(
+    db: &Db,
     user: User,
-    target: Reference,
+    target: Ref,
     role_id: String,
-    data: Json<v0::DataEditRole>,
-) -> Result<Json<v0::Role>> {
+    data: Json<DataEditRole>,
+) -> Result<Json<Role>> {
     let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    data.validate()
+        .map_err(|error| Error::FailedValidation { error })?;
 
     let mut server = target.as_server(db).await?;
-    let mut query = DatabasePermissionQuery::new(db, &user).server(&server);
-    calculate_server_permissions(&mut query)
-        .await
-        .throw_if_lacking_channel_permission(ChannelPermission::ManageRole)?;
+    let mut permissions = perms(&user).server(&server);
 
-    let member_rank = query.get_member_rank().unwrap_or(i64::MIN);
+    permissions
+        .throw_permission(db, Permission::ManageRole)
+        .await?;
+
+    let member_rank = permissions.get_member_rank().unwrap_or(i64::MIN);
 
     if let Some(mut role) = server.roles.remove(&role_id) {
-        // Prevent us from editing roles above us
-        if role.rank <= member_rank {
-            return Err(create_error!(NotElevated));
-        }
-
-        let v0::DataEditRole {
+        let DataEditRole {
             name,
             colour,
             hoist,
@@ -50,10 +66,9 @@ pub async fn edit(
             remove,
         } = data;
 
-        // Prevent us from moving a role above other roles
         if let Some(rank) = &rank {
             if rank <= &member_rank {
-                return Err(create_error!(NotElevated));
+                return Err(Error::NotElevated);
             }
         }
 
@@ -70,14 +85,12 @@ pub async fn edit(
             &server.id,
             &role_id,
             partial,
-            remove
-                .map(|v| v.into_iter().map(Into::into).collect())
-                .unwrap_or_default(),
+            remove.unwrap_or_default(),
         )
         .await?;
 
-        Ok(Json(role.into()))
+        Ok(Json(role))
     } else {
-        Err(create_error!(NotFound))
+        Err(Error::NotFound)
     }
 }

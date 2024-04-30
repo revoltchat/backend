@@ -1,10 +1,10 @@
-use revolt_database::{
-    util::{idempotency::IdempotencyKey, reference::Reference},
-    Database, Message,
+use revolt_database::{util::reference::Reference, Database};
+use revolt_quark::{
+    models::message::{DataMessageSend, Message},
+    types::push::MessageAuthor,
+    web::idempotency::IdempotencyKey,
+    Db, Error, Result,
 };
-use revolt_models::v0;
-use revolt_permissions::{ChannelPermission, PermissionValue};
-use revolt_result::{create_error, Result};
 use rocket::{serde::json::Json, State};
 
 use validator::Validate;
@@ -16,53 +16,31 @@ use validator::Validate;
 #[post("/<webhook_id>/<token>", data = "<data>")]
 pub async fn webhook_execute(
     db: &State<Database>,
+    legacy_db: &Db,
     webhook_id: Reference,
     token: String,
-    data: Json<v0::DataMessageSend>,
+    data: Json<DataMessageSend>,
     idempotency: IdempotencyKey,
-) -> Result<Json<v0::Message>> {
+) -> Result<Json<Message>> {
     let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    data.validate()
+        .map_err(|error| Error::FailedValidation { error })?;
 
-    let webhook = webhook_id.as_webhook(db).await?;
-    webhook.assert_token(&token)?;
+    let webhook = webhook_id.as_webhook(db).await.map_err(Error::from_core)?;
+    webhook.assert_token(&token).map_err(Error::from_core)?;
 
-    let permissions: PermissionValue = webhook.permissions.into();
-    permissions.throw_if_lacking_channel_permission(ChannelPermission::SendMessage)?;
+    data.validate_webhook_permissions(webhook.permissions)?;
 
-    if data.attachments.as_ref().map_or(false, |v| !v.is_empty()) {
-        permissions.throw_if_lacking_channel_permission(ChannelPermission::UploadFiles)?;
-    }
-
-    if data.embeds.as_ref().map_or(false, |v| !v.is_empty()) {
-        permissions.throw_if_lacking_channel_permission(ChannelPermission::SendEmbeds)?;
-    }
-
-    if data.masquerade.is_some() {
-        permissions.throw_if_lacking_channel_permission(ChannelPermission::Masquerade)?;
-    }
-
-    if data.interactions.is_some() {
-        permissions.throw_if_lacking_channel_permission(ChannelPermission::React)?;
-    }
-
-    let channel = db.fetch_channel(&webhook.channel_id).await?;
-
-    Ok(Json(
-        Message::create_from_api(
-            db,
-            channel,
+    let channel = legacy_db.fetch_channel(&webhook.channel_id).await?;
+    let message = channel
+        .send_message(
+            legacy_db,
             data,
-            v0::MessageAuthor::Webhook(&webhook.into()),
+            MessageAuthor::Webhook(&webhook.into()),
             idempotency,
             true,
-            true,
         )
-        .await?
-        .into(),
-    ))
+        .await?;
+
+    Ok(Json(message))
 }

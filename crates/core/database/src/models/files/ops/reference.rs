@@ -22,25 +22,15 @@ impl AbstractAttachments for ReferenceDb {
     async fn find_and_use_attachment(
         &self,
         id: &str,
-        tag: &str,
-        parent_type: &str,
-        parent_id: &str,
+        _tag: &str,
+        _parent_type: &str,
+        _parent_id: &str,
     ) -> Result<File> {
         let mut files = self.files.lock().await;
         if let Some(file) = files.get_mut(id) {
-            if file.tag == tag {
-                match parent_type {
-                    "message" => file.message_id = Some(parent_id.to_owned()),
-                    "user" => file.user_id = Some(parent_id.to_owned()),
-                    "object" => file.object_id = Some(parent_id.to_owned()),
-                    "server" => file.server_id = Some(parent_id.to_owned()),
-                    _ => unreachable!(),
-                }
-
-                Ok(file.clone())
-            } else {
-                Err(create_error!(NotFound))
-            }
+            // TODO: check tag
+            // TODO: set parent ID
+            Ok(file.clone())
         } else {
             Err(create_error!(NotFound))
         }

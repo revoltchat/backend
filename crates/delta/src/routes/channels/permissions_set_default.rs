@@ -1,11 +1,24 @@
-use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Channel, Database, PartialChannel, User,
+use rocket::serde::json::Json;
+use serde::Deserialize;
+
+use revolt_quark::{
+    models::{channel::PartialChannel, Channel, User},
+    perms, Db, Error, Override, Permission, Ref, Result,
 };
-use revolt_models::v0::{self, DataDefaultChannelPermissions};
-use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
-use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
+
+/// # Permission Value
+#[derive(Deserialize, JsonSchema)]
+#[serde(untagged)]
+pub enum DataDefaultChannelPermissions {
+    Value {
+        /// Permission values to set for members in a `Group`
+        permissions: u64,
+    },
+    Field {
+        /// Allow / deny values to set for members in this `TextChannel` or `VoiceChannel`
+        permissions: Override,
+    },
+}
 
 /// # Set Default Permission
 ///
@@ -14,19 +27,19 @@ use rocket::{serde::json::Json, State};
 /// Channel must be a `Group`, `TextChannel` or `VoiceChannel`.
 #[openapi(tag = "Channel Permissions")]
 #[put("/<target>/permissions/default", data = "<data>", rank = 1)]
-pub async fn set_default_permissions(
-    db: &State<Database>,
+pub async fn req(
+    db: &Db,
     user: User,
-    target: Reference,
-    data: Json<v0::DataDefaultChannelPermissions>,
-) -> Result<Json<v0::Channel>> {
+    target: Ref,
+    data: Json<DataDefaultChannelPermissions>,
+) -> Result<Json<Channel>> {
     let data = data.into_inner();
 
     let mut channel = target.as_channel(db).await?;
-    let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
-    let permissions = calculate_channel_permissions(&mut query).await;
+    let mut perm = perms(&user).channel(&channel);
 
-    permissions.throw_if_lacking_channel_permission(ChannelPermission::ManagePermissions)?;
+    perm.throw_permission_and_view_channel(db, Permission::ManagePermissions)
+        .await?;
 
     match &channel {
         Channel::Group { .. } => {
@@ -42,7 +55,7 @@ pub async fn set_default_permissions(
                     )
                     .await?;
             } else {
-                return Err(create_error!(InvalidOperation));
+                return Err(Error::InvalidOperation);
             }
         }
         Channel::TextChannel {
@@ -53,27 +66,30 @@ pub async fn set_default_permissions(
             default_permissions,
             ..
         } => {
-            if let DataDefaultChannelPermissions::Field { permissions: field } = data {
-                permissions
-                    .throw_permission_override(default_permissions.map(|x| x.into()), &field)
-                    .await?;
+            if let DataDefaultChannelPermissions::Field { permissions } = data {
+                perm.throw_permission_override(
+                    db,
+                    default_permissions.map(|x| x.into()),
+                    permissions,
+                )
+                .await?;
 
                 channel
                     .update(
                         db,
                         PartialChannel {
-                            default_permissions: Some(field.into()),
+                            default_permissions: Some(permissions.into()),
                             ..Default::default()
                         },
                         vec![],
                     )
                     .await?;
             } else {
-                return Err(create_error!(InvalidOperation));
+                return Err(Error::InvalidOperation);
             }
         }
-        _ => return Err(create_error!(InvalidOperation)),
+        _ => return Err(Error::InvalidOperation),
     }
 
-    Ok(Json(channel.into()))
+    Ok(Json(channel))
 }

@@ -7,9 +7,7 @@ use schemars::{
     JsonSchema,
 };
 
-use crate::{
-    Bot, Channel, Database, Emoji, Invite, Member, Message, Server, ServerBan, User, Webhook,
-};
+use crate::{Bot, Database, Webhook};
 
 /// Reference to some object in the database
 #[derive(Serialize, Deserialize)]
@@ -24,59 +22,9 @@ impl Reference {
         Reference { id }
     }
 
-    /// Fetch ban from Ref
-    pub async fn as_ban(&self, db: &Database, server: &str) -> Result<ServerBan> {
-        db.fetch_ban(server, &self.id).await
-    }
-
     /// Fetch bot from Ref
     pub async fn as_bot(&self, db: &Database) -> Result<Bot> {
         db.fetch_bot(&self.id).await
-    }
-
-    /// Fetch emoji from Ref
-    pub async fn as_emoji(&self, db: &Database) -> Result<Emoji> {
-        db.fetch_emoji(&self.id).await
-    }
-
-    /// Fetch channel from Ref
-    pub async fn as_channel(&self, db: &Database) -> Result<Channel> {
-        db.fetch_channel(&self.id).await
-    }
-
-    /// Fetch invite from Ref
-    pub async fn as_invite(&self, db: &Database) -> Result<Invite> {
-        db.fetch_invite(&self.id).await
-    }
-
-    /// Fetch message from Ref
-    pub async fn as_message(&self, db: &Database) -> Result<Message> {
-        db.fetch_message(&self.id).await
-    }
-
-    /// Fetch message from Ref and validate channel
-    pub async fn as_message_in_channel(&self, db: &Database, channel: &str) -> Result<Message> {
-        let msg = db.fetch_message(&self.id).await?;
-        if msg.channel != channel {
-            return Err(create_error!(NotFound));
-        }
-
-        Ok(msg)
-    }
-
-    /// Fetch member from Ref
-    pub async fn as_member(&self, db: &Database, server: &str) -> Result<Member> {
-        db.fetch_member(server, &self.id).await
-    }
-
-    /// Fetch server from Ref
-    pub async fn as_server(&self, db: &Database) -> Result<Server> {
-        db.fetch_server(&self.id).await
-    }
-
-    /// Fetch user from Ref
-    pub async fn as_user(&self, db: &Database) -> Result<User> {
-        db.fetch_user(&self.id).await
     }
 
     /// Fetch webhook from Ref

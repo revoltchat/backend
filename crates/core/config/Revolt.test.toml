@@ -1,3 +1,0 @@
-[database]
-mongodb = "mongodb://localhost"
-redis = "redis://localhost/"

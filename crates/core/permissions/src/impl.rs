@@ -5,44 +5,38 @@ use crate::{
 };
 
 /// Calculate permissions against a user
-pub async fn calculate_user_permissions<P: PermissionQuery>(query: &mut P) -> PermissionValue {
+pub async fn calculate_user_permissions<P: PermissionQuery>(query: &mut P) -> u32 {
     if query.are_we_privileged().await {
-        return u64::MAX.into();
+        return u32::MAX;
     }
 
     if query.are_the_users_same().await {
-        return u64::MAX.into();
+        return u32::MAX;
     }
 
-    let mut permissions = 0_u64;
+    let mut permissions = 0_u32;
     match query.user_relationship().await {
-        RelationshipStatus::Friend => return u64::MAX.into(),
+        RelationshipStatus::Friend => return u32::MAX,
         RelationshipStatus::Blocked | RelationshipStatus::BlockedOther => {
-            return (UserPermission::Access as u64).into()
+            return UserPermission::Access as u32
         }
         RelationshipStatus::Incoming | RelationshipStatus::Outgoing => {
-            permissions = UserPermission::Access as u64;
+            permissions = UserPermission::Access as u32;
         }
         _ => {}
     }
 
     if query.have_mutual_connection().await {
-        permissions = UserPermission::Access as u64 + UserPermission::ViewProfile as u64;
+        permissions = UserPermission::Access + UserPermission::ViewProfile;
 
         if query.user_is_bot().await || query.are_we_a_bot().await {
-            permissions += UserPermission::SendMessage as u64;
+            permissions += UserPermission::SendMessage as u32;
         }
 
-        permissions.into()
+        permissions
     } else {
-        permissions.into()
+        permissions
     }
-
-    // TODO: add boolean switch for permission for users to globally message a user
-    // maybe an enum?
-    // PrivacyLevel { Private, Friends, Mutual, Public, Global }
-
-    // TODO: add boolean switch for permission for users to mutually DM a user
 }
 
 /// Calculate permissions against a server
@@ -87,7 +81,9 @@ pub async fn calculate_channel_permissions<P: PermissionQuery>(query: &mut P) ->
                 query.set_recipient_as_user().await;
 
                 let permissions = calculate_user_permissions(query).await;
-                if permissions.has_user_permission(UserPermission::SendMessage) {
+                if (permissions & UserPermission::SendMessage as u32)
+                    == UserPermission::SendMessage as u32
+                {
                     (*DEFAULT_PERMISSION_DIRECT_MESSAGE).into()
                 } else {
                     (*DEFAULT_PERMISSION_VIEW_ONLY).into()
@@ -110,9 +106,7 @@ pub async fn calculate_channel_permissions<P: PermissionQuery>(query: &mut P) ->
         ChannelType::ServerChannel => {
             query.set_server_from_channel().await;
 
-            if query.are_we_server_owner().await {
-                ChannelPermission::GrantAllSafe.into()
-            } else if query.are_we_a_member().await {
+            if query.are_we_a_member().await {
                 let mut permissions = calculate_server_permissions(query).await;
                 permissions.apply(query.get_default_channel_permissions().await);
 
@@ -122,10 +116,6 @@ pub async fn calculate_channel_permissions<P: PermissionQuery>(query: &mut P) ->
 
                 if query.are_we_timed_out().await {
                     permissions.restrict(*ALLOW_IN_TIMEOUT);
-                }
-
-                if !permissions.has_channel_permission(ChannelPermission::ViewChannel) {
-                    permissions.revoke_all();
                 }
 
                 permissions

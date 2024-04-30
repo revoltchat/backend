@@ -2,10 +2,7 @@ use authifier::AuthifierEvent;
 use serde::{Deserialize, Serialize};
 
 use revolt_models::v0::{
-    AppendMessage, Channel, Emoji, FieldsChannel, FieldsMember, FieldsRole, FieldsServer,
-    FieldsUser, FieldsWebhook, Member, MemberCompositeKey, Message, PartialChannel, PartialMember,
-    PartialMessage, PartialRole, PartialServer, PartialUser, PartialWebhook, Report, Server, User,
-    UserSettings, Webhook,
+    Channel, FieldsChannel, FieldsWebhook, PartialChannel, PartialWebhook, Webhook,
 };
 use revolt_result::Error;
 
@@ -48,17 +45,18 @@ pub enum EventV1 {
 
     /// Successfully authenticated
     Authenticated,
-    /// Basic data to cache
+    /* /// Basic data to cache
     Ready {
         users: Vec<User>,
         servers: Vec<Server>,
         channels: Vec<Channel>,
         members: Vec<Member>,
-        emojis: Vec<Emoji>,
+        emojis: Option<Vec<Emoji>>,
     },
 
     /// Ping response
     Pong { data: Ping },
+
     /// New message
     Message(Message),
 
@@ -110,7 +108,6 @@ pub enum EventV1 {
         id: String,
         server: Server,
         channels: Vec<Channel>,
-        emojis: Vec<Emoji>,
     },
 
     /// Update existing server
@@ -156,7 +153,13 @@ pub enum EventV1 {
     },
 
     /// Relationship with another user changed
-    UserRelationship { id: String, user: User },
+    UserRelationship {
+        id: String,
+        user: User,
+        // ! this field can be deprecated
+        status: RelationshipStatus,
+    },
+
     /// Settings updated remotely
     UserSettingsUpdate { id: String, update: UserSettings },
 
@@ -170,6 +173,7 @@ pub enum EventV1 {
     ///
     /// User flags are specified to explain why a wipe is occurring though not all reasons will necessarily ever appear.
     UserPlatformWipe { user_id: String, flags: i32 },
+
     /// New emoji
     EmojiCreate(Emoji),
 
@@ -177,7 +181,7 @@ pub enum EventV1 {
     EmojiDelete { id: String },
 
     /// New report
-    ReportCreate(Report),
+    ReportCreate(Report), */
     /// New channel
     ChannelCreate(Channel),
 
@@ -244,7 +248,8 @@ impl EventV1 {
     pub async fn p_user(self, id: String, db: &Database) {
         self.clone().p(id.clone()).await;
 
-        // TODO: this should be captured by member list in the future and not immediately fanned out to users
+        // ! FIXME: this should be captured by member list in the future
+        // ! and not immediately fanned out to users
         if let Ok(members) = db.fetch_all_memberships(&id).await {
             for member in members {
                 self.clone().p(member.id.server).await;
