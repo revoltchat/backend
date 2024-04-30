@@ -7,13 +7,13 @@ ARG TARGETARCH
 
 # Install build requirements
 RUN dpkg --add-architecture "${TARGETARCH}"
-RUN apt-get update && \
+RUN apt-get update &&
     apt-get install -y \
-    make \
-    pkg-config \
-    libssl-dev:"${TARGETARCH}"
+        make \
+        pkg-config \
+        libssl-dev:"${TARGETARCH}"
 COPY scripts/build-image-layer.sh /tmp/
-RUN sh /tmp/build-image-layer.sh tools
+RUN /bin/bash /tmp/build-image-layer.sh tools
 
 # Build all dependencies
 COPY Cargo.toml Cargo.lock ./
