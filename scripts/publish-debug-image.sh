@@ -12,8 +12,8 @@ echo "debug = true" >> Cargo.toml
 
 TAG=$1-debug
 echo "Building images, will tag for ghcr.io with $TAG!"
-docker build -t ghcr.io/revoltchat/base:latest -f Dockerfile.useCurrentArch .
-docker build -t ghcr.io/revoltchat/server:$TAG - < crates/delta/Dockerfile
-docker build -t ghcr.io/revoltchat/bonfire:$TAG - < crates/bonfire/Dockerfile
+docker build -t ghcr.io/kimanilife/base:latest -f Dockerfile.useCurrentArch .
+docker build -t ghcr.io/kimanilife/server:$TAG - < crates/delta/Dockerfile
+docker build -t ghcr.io/kimanilife/bonfire:$TAG - < crates/bonfire/Dockerfile
 
 git restore Cargo.toml

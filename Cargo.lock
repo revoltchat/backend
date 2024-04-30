@@ -3408,7 +3408,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-bonfire"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-std",
  "async-tungstenite",
@@ -3435,7 +3435,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-config"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-std",
  "cached",
@@ -3451,7 +3451,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-database"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-lock",
  "async-recursion",
@@ -3497,7 +3497,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-delta"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-channel",
  "async-std",
@@ -3543,7 +3543,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-models"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "indexmap",
  "iso8601-timestamp 0.2.11",
@@ -3560,7 +3560,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-permissions"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-std",
  "async-trait",
@@ -3575,7 +3575,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-presence"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-std",
  "log",
@@ -3586,7 +3586,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-result"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "revolt_okapi",
  "revolt_rocket_okapi",
