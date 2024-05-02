@@ -1,4 +1,5 @@
 use crate::util::regex::RE_USERNAME;
+use revolt_quark::models::File;
 use revolt_quark::{
     authifier::models::Session, models::User, Database, EmptyResponse, Error, Result,
 };
@@ -85,6 +86,7 @@ pub async fn req(
     let occupation = profile.occupation;
     new_profile.occupation = Some(occupation);
     user.profile = Some(new_profile);
+    user.avatar = Some(File::use_avatar(db, &data.avatar, &user.id).await?);
 
     db.insert_user(&user).await.map(|_| EmptyResponse)
 }
