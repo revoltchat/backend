@@ -1,0 +1,31 @@
+[package]
+name = "revolt-models"
+version = "0.6.5"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+authors = [ "Paul Makles <me@insrt.uk>" ]
+description = "Revolt Backend: API Models"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+serde = [ "dep:serde", "revolt-permissions/serde" ]
+schemas = [ "dep:schemars", "revolt-permissions/schemas" ]
+validator = [ "dep:validator" ]
+partials = [ "dep:revolt_optional_struct", "serde", "schemas" ]
+
+default = [ "serde", "partials" ]
+
+[dependencies]
+# Core
+revolt-permissions = { version = "0.6.5", path = "../permissions" }
+
+# Serialisation
+revolt_optional_struct = { version = "0.2.0", optional = true }
+serde = { version = "1", features = ["derive"], optional = true }
+
+# Spec Generation
+schemars = { version = "0.8.8", optional = true }
+
+# Validation
+validator = { version = "0.16.0", optional = true, features = ["derive"] }

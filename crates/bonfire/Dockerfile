@@ -1,5 +1,5 @@
 # Build Stage
-FROM ghcr.io/kimanilife/base:latest AS builder
+FROM ghcr.io/revoltchat/base:latest AS builder
 
 # Bundle Stage
 FROM debian:bullseye-slim
