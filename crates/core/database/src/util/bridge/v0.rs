@@ -19,10 +19,7 @@ impl crate::Bot {
             id: self.id,
             username: user.username,
             avatar: user.avatar.map(|x| x.id).unwrap_or_default(),
-            description: user
-                .profile
-                .map(|profile| profile.content)
-                .unwrap_or_default(),
+            description: String::new(),
         }
     }
 }
@@ -52,7 +49,7 @@ impl From<crate::Webhook> for Webhook {
             avatar: value.avatar.map(|file| file.into()),
             channel_id: value.channel_id,
             token: value.token,
-            permissions: value.permissions
+            permissions: value.permissions,
         }
     }
 }
@@ -65,7 +62,7 @@ impl From<crate::PartialWebhook> for PartialWebhook {
             avatar: value.avatar.map(|file| file.into()),
             channel_id: value.channel_id,
             token: value.token,
-            permissions: value.permissions
+            permissions: value.permissions,
         }
     }
 }
@@ -325,6 +322,12 @@ impl From<crate::UserProfile> for UserProfile {
         UserProfile {
             content: value.content,
             background: value.background.map(|file| file.into()),
+            first_name: value.first_name,
+            last_name: value.last_name,
+            phone_number: value.phone_number,
+            country: value.country,
+            city: value.city,
+            occupation: value.occupation,
         }
     }
 }

@@ -94,11 +94,29 @@ auto_derived!(
     /// User's profile
     pub struct UserProfile {
         /// Text content on user's profile
-        #[serde(skip_serializing_if = "String::is_empty", default)]
-        pub content: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub content: Option<String>,
         /// Background visible on user's profile
         #[serde(skip_serializing_if = "Option::is_none")]
         pub background: Option<File>,
+        /// First name
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub first_name: Option<String>,
+        /// Last name
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub last_name: Option<String>,
+        /// Phone number
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub phone_number: Option<String>,
+        /// Country
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub country: Option<String>,
+        /// City
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub city: Option<String>,
+        /// Occupation
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub occupation: Option<String>,
     }
 
     /// Bot information for if the user is a bot
@@ -172,7 +190,7 @@ impl User {
             }
             FieldsUser::ProfileContent => {
                 if let Some(x) = self.profile.as_mut() {
-                    x.content = String::new();
+                    x.content = Some(String::new());
                 }
             }
             FieldsUser::ProfileBackground => {

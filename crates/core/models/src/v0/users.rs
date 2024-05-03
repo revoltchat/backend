@@ -93,11 +93,28 @@ auto_derived!(
     /// User's profile
     pub struct UserProfile {
         /// Text content on user's profile
-        #[serde(skip_serializing_if = "String::is_empty")]
-        pub content: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub content: Option<String>,
         /// Background visible on user's profile
         #[serde(skip_serializing_if = "Option::is_none")]
         pub background: Option<File>,
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub first_name: Option<String>,
+        /// Last name
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub last_name: Option<String>,
+        /// Phone number
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub phone_number: Option<String>,
+        /// Country
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub country: Option<String>,
+        /// City
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub city: Option<String>,
+        /// Occupation
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub occupation: Option<String>,
     }
 
     /// User badge bitfield

@@ -25,13 +25,13 @@ pub fn config() -> Config {
                 expiry: Default::default(),
                 templates: Templates {
                     verify: Template {
-                        title: "Verify your Revolt account.".into(),
+                        title: "Verify your Kinami Life account.".into(),
                         text: include_str!(crate::asset!("templates/verify.txt")).into(),
                         url: format!("{}/login/verify/", *APP_URL),
                         html: Some(include_str!(crate::asset!("templates/verify.html")).into()),
                     },
                     reset: Template {
-                        title: "Reset your Revolt password.".into(),
+                        title: "Reset your Kinami Life password.".into(),
                         text: include_str!(crate::asset!("templates/reset.txt")).into(),
                         url: format!("{}/login/reset/", *APP_URL),
                         html: Some(include_str!(crate::asset!("templates/reset.html")).into()),

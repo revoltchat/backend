@@ -21,6 +21,29 @@ pub struct UserProfileData {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[validate(length(min = 1, max = 128))]
     background: Option<String>,
+     #[validate(length(min = 0, max = 2000))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    first_name: Option<String>,
+    /// Last name
+    #[validate(length(min = 0, max = 2000))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    last_name: Option<String>,
+    /// Phone number
+     #[validate(length(min = 0, max = 2000))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    phone_number: Option<String>,
+    /// Country
+     #[validate(length(min = 0, max = 2000))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    country: Option<String>,
+    /// City
+     #[validate(length(min = 0, max = 2000))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    city: Option<String>,
+    /// Occupation
+     #[validate(length(min = 0, max = 2000))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    occupation: Option<String>,
 }
 
 /// # User Data
@@ -156,6 +179,30 @@ pub async fn req(
 
         if let Some(background) = profile.background {
             new_profile.background = Some(File::use_background(db, &background, &user.id).await?);
+        }
+
+        if let Some(first_name) = profile.first_name {
+            new_profile.first_name = Some(first_name);
+        }
+
+        if let Some(last_name) = profile.last_name {
+            new_profile.last_name = Some(last_name);
+        }
+
+        if let Some(phone_number) = profile.phone_number {
+            new_profile.phone_number = Some(phone_number);
+        }
+
+        if let Some(country) = profile.country {
+            new_profile.country = Some(country);
+        }
+
+        if let Some(city) = profile.city {
+            new_profile.city = Some(city);
+        }
+
+        if let Some(occupation) = profile.occupation {
+            new_profile.occupation = Some(occupation);
         }
 
         partial.profile = Some(new_profile);

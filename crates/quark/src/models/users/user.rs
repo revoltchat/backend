@@ -65,6 +65,24 @@ pub struct UserProfile {
     /// Background visible on user's profile
     #[serde(skip_serializing_if = "Option::is_none")]
     pub background: Option<File>,
+    /// First name
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub first_name: Option<String>,
+    /// Last name
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_name: Option<String>,
+    /// Phone number
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phone_number: Option<String>,
+    /// Country
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub country: Option<String>,
+    /// City
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub city: Option<String>,
+    /// Occupation
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub occupation: Option<String>,
 }
 
 /// User badge bitfield
