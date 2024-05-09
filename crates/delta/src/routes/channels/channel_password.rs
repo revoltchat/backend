@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use validator::Validate;
 #[derive(Validate, Serialize, Deserialize, JsonSchema)]
 pub struct DataChannelPassword {
-    #[validate(length(min = 1))]
     pub password: Option<String>,
 }
 
@@ -23,8 +22,6 @@ pub async fn req(
     data: Json<DataChannelPassword>,
 ) -> Result<Json<Channel>> {
     let data = data.into_inner();
-    data.validate()
-        .map_err(|error| Error::FailedValidation { error })?;
 
     let channel = target.as_channel(db).await?;
     perms(&user)
@@ -33,6 +30,10 @@ pub async fn req(
         .await?;
 
     if let Channel::TextChannel { password, .. } = &channel {
+        if password.is_none() {
+            return Ok(Json(channel));
+        }
+
         if data.password != *password {
             return Err(Error::InvalidProperty);
         }
