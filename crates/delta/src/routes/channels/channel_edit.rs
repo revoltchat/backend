@@ -33,6 +33,7 @@ pub struct DataEditChannel {
     archived: Option<bool>,
     #[validate(length(min = 1))]
     remove: Option<Vec<FieldsChannel>>,
+    password: Option<String>,
 }
 
 /// # Edit Channel
@@ -62,6 +63,7 @@ pub async fn req(
         && data.nsfw.is_none()
         && data.owner.is_none()
         && data.remove.is_none()
+        && data.password.is_none()
     {
         return Ok(Json(channel));
     }
@@ -109,6 +111,7 @@ pub async fn req(
             description,
             icon,
             nsfw,
+            password,
             ..
         }
         | Channel::TextChannel {
@@ -117,6 +120,7 @@ pub async fn req(
             description,
             icon,
             nsfw,
+            password,
             ..
         }
         | Channel::VoiceChannel {
@@ -125,6 +129,7 @@ pub async fn req(
             description,
             icon,
             nsfw,
+            password,
             ..
         } => {
             if let Some(fields) = &data.remove {
@@ -165,6 +170,10 @@ pub async fn req(
             if let Some(new_nsfw) = data.nsfw {
                 *nsfw = new_nsfw;
                 partial.nsfw = Some(new_nsfw);
+            }
+
+            if let Some(new_password) = data.password {
+                partial.password = Some(new_password);
             }
 
             // Send out mutation system messages.

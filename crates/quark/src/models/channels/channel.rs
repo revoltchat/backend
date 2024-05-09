@@ -66,6 +66,8 @@ pub enum Channel {
         /// Whether this group is marked as not safe for work
         #[serde(skip_serializing_if = "if_false", default)]
         nsfw: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        password: Option<String>,
     },
     /// Text channel belonging to a server
     TextChannel {
@@ -101,6 +103,8 @@ pub enum Channel {
         /// Whether this channel is marked as not safe for work
         #[serde(skip_serializing_if = "if_false", default)]
         nsfw: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        password: Option<String>,
     },
     /// Voice channel belonging to a server
     VoiceChannel {
@@ -132,6 +136,8 @@ pub enum Channel {
         /// Whether this channel is marked as not safe for work
         #[serde(skip_serializing_if = "if_false", default)]
         nsfw: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        password: Option<String>,
     },
 }
 
@@ -158,6 +164,8 @@ pub struct PartialChannel {
     pub default_permissions: Option<OverrideField>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_message_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub password: Option<String>,
 }
 
 /// Optional fields on channel object

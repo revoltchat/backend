@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use revolt_quark::{
     models::{server::PartialServer, Channel, User},
-    perms, Db, Error, Permission, Ref, Result, variables::delta::MAX_CHANNEL_COUNT,
+    perms,
+    variables::delta::MAX_CHANNEL_COUNT,
+    Db, Error, Permission, Ref, Result,
 };
 
 use rocket::serde::json::Json;
@@ -59,7 +61,9 @@ pub async fn req(
         .await?;
 
     if server.channels.len() > *MAX_CHANNEL_COUNT {
-        return Err(Error::TooManyChannels { max: *MAX_CHANNEL_COUNT })
+        return Err(Error::TooManyChannels {
+            max: *MAX_CHANNEL_COUNT,
+        });
     };
 
     let id = Ulid::new().to_string();
@@ -85,6 +89,7 @@ pub async fn req(
 
             default_permissions: None,
             role_permissions: HashMap::new(),
+            password: None,
 
             nsfw: nsfw.unwrap_or(false),
         },
@@ -100,6 +105,7 @@ pub async fn req(
             role_permissions: HashMap::new(),
 
             nsfw: nsfw.unwrap_or(false),
+            password: None,
         },
     };
 

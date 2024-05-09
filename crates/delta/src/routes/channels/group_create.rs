@@ -75,6 +75,7 @@ pub async fn req(db: &Db, user: User, info: Json<DataCreateGroup>) -> Result<Jso
         last_message_id: None,
 
         permissions: None,
+        password: None,
 
         nsfw: info.nsfw.unwrap_or(false),
     };

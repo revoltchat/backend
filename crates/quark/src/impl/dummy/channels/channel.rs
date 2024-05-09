@@ -1,4 +1,4 @@
-use crate::models::{channel::{Channel, FieldsChannel, PartialChannel}};
+use crate::models::channel::{Channel, FieldsChannel, PartialChannel};
 use crate::{AbstractAttachment, AbstractChannel, Error, OverrideField, Result};
 
 use super::super::DummyDb;
@@ -23,6 +23,7 @@ impl AbstractChannel for DummyDb {
             permissions: None,
 
             nsfw: false,
+            password: None,
         })
     }
 

@@ -5,6 +5,7 @@ mod channel_ack;
 mod channel_delete;
 mod channel_edit;
 mod channel_fetch;
+mod channel_password;
 mod group_add_member;
 mod group_create;
 mod group_remove_member;
@@ -31,6 +32,7 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
     openapi_get_routes_spec![
         channel_ack::req,
         channel_fetch::req,
+        channel_password::req,
         members_fetch::req,
         channel_delete::req,
         channel_edit::req,

@@ -81,6 +81,7 @@ pub async fn req(
         role_permissions: HashMap::new(),
 
         nsfw: nsfw.unwrap_or(false),
+        password: None,
     };
 
     db.insert_channel(&channel).await?;
