@@ -35,7 +35,7 @@ pub struct DataUserProfile {
 #[derive(Validate, Serialize, Deserialize, JsonSchema)]
 pub struct DataOnboard {
     /// New username which will be used to identify the user on the platform
-    #[validate(length(min = 2, max = 32), regex = "RE_USERNAME")]
+    #[validate(length(min = 2))]
     username: String,
     #[validate(length(min = 2))]
     avatar: String,
