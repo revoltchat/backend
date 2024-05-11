@@ -31,6 +31,9 @@ in pkgs.mkShell {
     pkgs.rustfmt
     pkgs.pkgconfig
     pkgs.openssl.dev
+
+    # mdbook
+    pkgs.mdbook
   ];
 
   RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
