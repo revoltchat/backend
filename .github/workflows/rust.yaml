@@ -2,6 +2,14 @@ name: Rust build, test, and generate specification
 
 on:
   push:
+    paths-ignore:
+      - ".github/**"
+      - "!.github/workflows/rust.yaml"
+      - ".vscode/**"
+      - "doc/**"
+      - ".gitignore"
+      - "LICENSE"
+      - "README"
   pull_request:
     branches: [main]
 

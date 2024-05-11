@@ -10,6 +10,7 @@ on:
       - ".github/**"
       - "!.github/workflows/docker.yml"
       - ".vscode/**"
+      - "doc/**"
       - ".gitignore"
       - "LICENSE"
       - "README"
