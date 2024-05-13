@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{borrow::Cow, collections::HashMap};
 
 use revolt_config::config;
 use revolt_models::v0::{self, MessageAuthor, VoiceInformation};
@@ -434,6 +434,15 @@ impl Channel {
     pub fn server(&self) -> Option<String> {
         match self {
             Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => Some(server.clone()),
+            _ => None
+        }
+    }
+
+    /// Gets this channel's voice information
+    pub fn voice(&self) -> Option<Cow<VoiceInformation>> {
+        match self {
+            Self::DirectMessage { .. } | Channel::VoiceChannel { .. } => Some(Cow::Owned(v0::VoiceInformation::default())),
+            Self::TextChannel { voice: Some(voice), .. } => Some(Cow::Borrowed(voice)),
             _ => None
         }
     }

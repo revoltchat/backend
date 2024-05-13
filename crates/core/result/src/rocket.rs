@@ -77,6 +77,8 @@ impl<'r> Responder<'r, 'static> for Error {
 
             ErrorType::LiveKitUnavailable => Status::BadRequest,
             ErrorType::AlreadyInVoiceChannel => Status::BadRequest,
+            ErrorType::NotAVoiceChannel => Status::BadRequest,
+            ErrorType::AlreadyConnected => Status::BadRequest
         };
 
         // Serialize the error data structure into JSON.

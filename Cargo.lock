@@ -4016,6 +4016,7 @@ dependencies = [
  "revolt-permissions",
  "revolt-presence",
  "revolt-result",
+ "revolt-voice",
  "rmp-serde",
  "sentry",
  "serde",
@@ -4118,6 +4119,7 @@ dependencies = [
  "revolt-models",
  "revolt-permissions",
  "revolt-result",
+ "revolt-voice",
  "revolt_rocket_okapi",
  "rocket",
  "rocket_authifier",
@@ -4189,6 +4191,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "revolt-voice"
+version = "0.1.0"
+dependencies = [
+ "async-std",
+ "futures",
+ "livekit-api",
+ "livekit-protocol",
+ "redis-kiss",
+ "revolt-config",
+ "revolt-database",
+ "revolt-models",
+ "revolt-permissions",
+ "revolt-result",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "revolt-voice-ingress"
 version = "0.7.1"
 dependencies = [
@@ -4203,8 +4223,8 @@ dependencies = [
  "revolt-database",
  "revolt-models",
  "revolt-permissions",
- "revolt-presence",
  "revolt-result",
+ "revolt-voice",
  "rmp-serde",
  "rocket",
  "rocket_empty",

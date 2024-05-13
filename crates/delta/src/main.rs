@@ -99,10 +99,8 @@ pub async fn web() -> Rocket<Build> {
     )
     .into();
 
-
-    log::info!("{:?}", &config.api.livekit);
-
-    let room_client = RoomClient::with_api_key(&config.api.livekit.url, &config.api.livekit.key, &config.api.livekit.secret);
+    // Voice handler
+    let voice_client = revolt_voice::VoiceClient::new(config.api.livekit.url.clone(), config.api.livekit.key.clone(), config.api.livekit.secret.clone());
 
     // Configure Rocket
     let rocket = rocket::build();
@@ -117,7 +115,7 @@ pub async fn web() -> Rocket<Build> {
         .manage(authifier)
         .manage(db)
         .manage(cors.clone())
-        .manage(room_client)
+        .manage(voice_client)
         .attach(util::ratelimiter::RatelimitFairing)
         .attach(cors)
         .configure(rocket::Config {

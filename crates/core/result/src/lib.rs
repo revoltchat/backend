@@ -134,7 +134,9 @@ pub enum ErrorType {
 
     // ? Voice errors
     LiveKitUnavailable,
-    AlreadyInVoiceChannel
+    AlreadyInVoiceChannel,
+    NotAVoiceChannel,
+    AlreadyConnected
 }
 
 #[macro_export]
