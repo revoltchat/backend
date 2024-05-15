@@ -10,6 +10,7 @@ static ALPHABET: [char; 54] = [
 
 auto_derived!(
     /// Invite
+    #[serde(tag = "type")]
     pub enum Invite {
         /// Invite to a specific server channel
         Server {

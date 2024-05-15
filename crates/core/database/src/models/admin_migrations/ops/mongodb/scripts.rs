@@ -4,8 +4,7 @@ use crate::{
     mongodb::{
         bson::{doc, from_bson, from_document, to_document, Bson, DateTime, Document},
         options::FindOptions,
-    },
-    MongoDb, DISCRIMINATOR_SEARCH_SPACE,
+    }, Invite, MongoDb, DISCRIMINATOR_SEARCH_SPACE
 };
 use futures::StreamExt;
 use rand::seq::SliceRandom;
@@ -19,7 +18,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 26;
+pub const LATEST_REVISION: i32 = 27;
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -981,6 +980,56 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             )
             .await
             .expect("Failed to create ratelimit_events index.");
+    }
+
+    if revision <= 26 {
+        info!("Running migration [revision 26 / 15-05-2024]: fix invites being incorrectly serialized with wrong enum tagging.");
+
+        auto_derived!(
+            pub enum OldInvite {
+                Server {
+                    #[serde(rename = "_id")]
+                    code: String,
+                    server: String,
+                    creator: String,
+                    channel: String,
+                },
+                Group {
+                    #[serde(rename = "_id")]
+                    code: String,
+                    creator: String,
+                    channel: String,
+                }
+            }
+        );
+
+        let mut invites = db.db()
+            .collection::<OldInvite>("channel_invites")
+            .find(doc! {
+                "type": { "$exists": false }
+            }, None)
+            .await
+            .expect("failed to find invites");
+
+        while let Some(Ok(invite)) = invites.next().await {
+            let new_invite = match invite {
+                OldInvite::Server { code, server, creator, channel } => Invite::Server { code, server, creator, channel },
+                OldInvite::Group { code, creator, channel } => Invite::Group { code, creator, channel }
+            };
+
+            db.db()
+                .collection("channel_invites")
+                .replace_one(doc! { "$or": [
+                    {
+                        "Server._id": new_invite.code()
+                    },
+                    {
+                        "Group._id": new_invite.code()
+                    }
+                ]}, new_invite, None)
+                .await
+                .unwrap();
+        }
     }
 
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.
