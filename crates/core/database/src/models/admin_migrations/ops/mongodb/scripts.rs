@@ -6,6 +6,7 @@ use crate::{
         options::FindOptions,
     }, Invite, MongoDb, DISCRIMINATOR_SEARCH_SPACE
 };
+use bson::oid::ObjectId;
 use futures::StreamExt;
 use rand::seq::SliceRandom;
 use revolt_permissions::DEFAULT_WEBHOOK_PERMISSIONS;
@@ -1003,8 +1004,15 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             }
         );
 
+        #[derive(serde::Serialize, serde::Deserialize)]
+        struct Outer {
+            _id: ObjectId,
+            #[serde(flatten)]
+            invite: OldInvite
+        }
+
         let mut invites = db.db()
-            .collection::<OldInvite>("channel_invites")
+            .collection::<Outer>("channel_invites")
             .find(doc! {
                 "type": { "$exists": false }
             }, None)
@@ -1012,7 +1020,7 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             .expect("failed to find invites");
 
         while let Some(Ok(invite)) = invites.next().await {
-            let new_invite = match invite {
+            let new_invite = match invite.invite {
                 OldInvite::Server { code, server, creator, channel } => Invite::Server { code, server, creator, channel },
                 OldInvite::Group { code, creator, channel } => Invite::Group { code, creator, channel }
             };
