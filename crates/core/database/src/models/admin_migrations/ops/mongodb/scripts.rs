@@ -4,7 +4,8 @@ use crate::{
     mongodb::{
         bson::{doc, from_bson, from_document, to_document, Bson, DateTime, Document},
         options::FindOptions,
-    }, Invite, MongoDb, DISCRIMINATOR_SEARCH_SPACE
+    },
+    Invite, MongoDb, DISCRIMINATOR_SEARCH_SPACE,
 };
 use bson::oid::ObjectId;
 use futures::StreamExt;
@@ -1000,7 +1001,7 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
                     code: String,
                     creator: String,
                     channel: String,
-                }
+                },
             }
         );
 
@@ -1008,36 +1009,64 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
         struct Outer {
             _id: ObjectId,
             #[serde(flatten)]
-            invite: OldInvite
+            invite: OldInvite,
         }
 
-        let mut invites = db.db()
+        let invites = db
+            .db()
             .collection::<Outer>("channel_invites")
-            .find(doc! {
-                "type": { "$exists": false }
-            }, None)
+            .find(
+                doc! {
+                    "type": { "$exists": false }
+                },
+                None,
+            )
+            .await
+            .expect("failed to find invites")
+            .filter_map(|s| async { s.ok() })
+            .collect::<Vec<Outer>>()
+            .await
+            .into_iter()
+            .map(|invite| match invite.invite {
+                OldInvite::Server {
+                    code,
+                    server,
+                    creator,
+                    channel,
+                } => Invite::Server {
+                    code,
+                    server,
+                    creator,
+                    channel,
+                },
+                OldInvite::Group {
+                    code,
+                    creator,
+                    channel,
+                } => Invite::Group {
+                    code,
+                    creator,
+                    channel,
+                },
+            })
+            .collect::<Vec<Invite>>();
+
+        db.db()
+            .collection("channel_invites")
+            .insert_many(invites, None)
+            .await
+            .expect("failed to insert corrected invite");
+
+        db.db()
+            .collection::<Outer>("channel_invites")
+            .delete_many(
+                doc! {
+                    "type": { "$exists": false }
+                },
+                None,
+            )
             .await
             .expect("failed to find invites");
-
-        while let Some(Ok(invite)) = invites.next().await {
-            let new_invite = match invite.invite {
-                OldInvite::Server { code, server, creator, channel } => Invite::Server { code, server, creator, channel },
-                OldInvite::Group { code, creator, channel } => Invite::Group { code, creator, channel }
-            };
-
-            db.db()
-                .collection("channel_invites")
-                .replace_one(doc! { "$or": [
-                    {
-                        "Server._id": new_invite.code()
-                    },
-                    {
-                        "Group._id": new_invite.code()
-                    }
-                ]}, new_invite, None)
-                .await
-                .unwrap();
-        }
     }
 
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.
