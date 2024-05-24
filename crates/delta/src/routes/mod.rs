@@ -60,7 +60,8 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
             "/auth/mfa" => rocket_authifier::routes::mfa::routes(),
             "/onboard" => onboard::routes(),
             "/push" => push::routes(),
-            "/sync" => sync::routes()
+            "/sync" => sync::routes(),
+            "/webhooks" => webhooks::routes()
         };
     }
 
