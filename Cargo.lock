@@ -2923,6 +2923,7 @@ dependencies = [
  "nanoid",
  "num_enum 0.5.7",
  "once_cell",
+ "rand 0.8.5",
  "regex",
  "reqwest",
  "revolt-database",

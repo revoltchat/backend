@@ -1,0 +1,5 @@
+Welcome to Kimani Life! Your password is the following, please make sure to change it: {{password}}
+
+Please navigate to: {{url}}
+
+This email is intended for {{email}}
