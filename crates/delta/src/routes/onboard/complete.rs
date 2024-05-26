@@ -1,4 +1,4 @@
-use crate::util::regex::RE_USERNAME;
+use revolt_quark::models::File;
 use revolt_quark::{
     authifier::models::Session, models::User, Database, EmptyResponse, Error, Result,
 };
@@ -68,6 +68,8 @@ pub async fn req(
         username,
         ..Default::default()
     };
+
+    user.avatar = Some(File::use_avatar(db, &data.avatar, &user.id).await?);
     let profile = data.profile;
     let mut new_profile = user.profile.take().unwrap_or_default();
     let content = profile.content;

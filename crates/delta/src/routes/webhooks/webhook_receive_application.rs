@@ -1,6 +1,7 @@
 use rand::{thread_rng, Rng};
 use revolt_quark::authifier::config::{EmailVerificationConfig, Template};
 use revolt_quark::authifier::{models::Account, Authifier};
+use revolt_quark::models::File;
 use revolt_quark::variables::delta::APP_URL;
 use revolt_quark::{models::User, Database, EmptyResponse, Error, Result};
 use rocket::{serde::json::Json, State};
@@ -17,6 +18,7 @@ pub struct DataApplication {
     pub country: String,
     pub city: String,
     pub occupation: String,
+    pub avatar: String,
 }
 
 /// # Webhook for application
@@ -68,6 +70,8 @@ pub async fn webhook_receive_application(
         username,
         ..Default::default()
     };
+
+    user.avatar = Some(File::use_avatar(db, &data.avatar, &user.id).await?);
     let profile = data;
     let mut new_profile = user.profile.take().unwrap_or_default();
     let content = profile.content;
