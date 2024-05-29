@@ -55,7 +55,6 @@ pub struct DataEditUser {
     /// Attachment Id for avatar
     #[validate(length(min = 1, max = 128))]
     avatar: Option<String>,
-    /// Attachment Id for avatar
     temporary_password: Option<bool>,
 
     /// New user status
