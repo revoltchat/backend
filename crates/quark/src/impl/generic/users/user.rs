@@ -71,6 +71,7 @@ impl User {
                 }
             }
             FieldsUser::DisplayName => self.display_name = None,
+            FieldsUser::TemporaryPassword => self.temporary_password = None,
         }
     }
 
@@ -460,6 +461,7 @@ impl User {
                 FieldsUser::StatusPresence,
                 FieldsUser::ProfileContent,
                 FieldsUser::ProfileBackground,
+                FieldsUser::TemporaryPassword,
             ],
         )
         .await

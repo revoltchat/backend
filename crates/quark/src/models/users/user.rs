@@ -199,6 +199,7 @@ pub enum FieldsUser {
     ProfileContent,
     ProfileBackground,
     DisplayName,
+    TemporaryPassword,
 }
 
 /// Enumeration providing a hint to the type of user we are handling

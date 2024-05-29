@@ -338,6 +338,7 @@ impl IntoDocumentPath for FieldsUser {
             FieldsUser::StatusPresence => "status.presence",
             FieldsUser::StatusText => "status.text",
             FieldsUser::DisplayName => "display_name",
+            FieldsUser::TemporaryPassword => "temporary_password",
         })
     }
 }

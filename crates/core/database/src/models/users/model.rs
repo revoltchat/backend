@@ -135,6 +135,7 @@ auto_derived!(
         StatusPresence,
         ProfileContent,
         ProfileBackground,
+        TemporaryPassword,
     }
 );
 
@@ -201,6 +202,7 @@ impl User {
                     x.background = None;
                 }
             }
+            FieldsUser::TemporaryPassword => self.temporary_password = Some(false),
         }
     }
 
@@ -219,6 +221,7 @@ impl User {
                 FieldsUser::StatusPresence,
                 FieldsUser::ProfileContent,
                 FieldsUser::ProfileBackground,
+                FieldsUser::TemporaryPassword,
             ],
         )
         .await
