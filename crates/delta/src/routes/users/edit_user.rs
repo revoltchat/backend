@@ -21,7 +21,7 @@ pub struct UserProfileData {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[validate(length(min = 1, max = 128))]
     background: Option<String>,
-     #[validate(length(min = 0, max = 2000))]
+    #[validate(length(min = 0, max = 2000))]
     #[serde(skip_serializing_if = "Option::is_none")]
     first_name: Option<String>,
     /// Last name
@@ -29,19 +29,19 @@ pub struct UserProfileData {
     #[serde(skip_serializing_if = "Option::is_none")]
     last_name: Option<String>,
     /// Phone number
-     #[validate(length(min = 0, max = 2000))]
+    #[validate(length(min = 0, max = 2000))]
     #[serde(skip_serializing_if = "Option::is_none")]
     phone_number: Option<String>,
     /// Country
-     #[validate(length(min = 0, max = 2000))]
+    #[validate(length(min = 0, max = 2000))]
     #[serde(skip_serializing_if = "Option::is_none")]
     country: Option<String>,
     /// City
-     #[validate(length(min = 0, max = 2000))]
+    #[validate(length(min = 0, max = 2000))]
     #[serde(skip_serializing_if = "Option::is_none")]
     city: Option<String>,
     /// Occupation
-     #[validate(length(min = 0, max = 2000))]
+    #[validate(length(min = 0, max = 2000))]
     #[serde(skip_serializing_if = "Option::is_none")]
     occupation: Option<String>,
 }
@@ -55,6 +55,8 @@ pub struct DataEditUser {
     /// Attachment Id for avatar
     #[validate(length(min = 1, max = 128))]
     avatar: Option<String>,
+    /// Attachment Id for avatar
+    temporary_password: Option<bool>,
 
     /// New user status
     #[validate]
@@ -207,7 +209,9 @@ pub async fn req(
 
         partial.profile = Some(new_profile);
     }
-
+    if let some(temporary_password) = data.temporary_password {
+        user.temporary_password = Some(false);
+    }
     user.update(db, partial, data.remove.unwrap_or_default())
         .await?;
 
