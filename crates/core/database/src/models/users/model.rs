@@ -44,6 +44,9 @@ auto_derived_partial!(
         /// Bot information
         #[serde(skip_serializing_if = "Option::is_none")]
         pub bot: Option<BotInformation>,
+        /// Temporary password
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub temporary_password: Option<bool>,
     },
     "PartialUser"
 );

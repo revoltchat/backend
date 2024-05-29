@@ -185,6 +185,9 @@ pub struct User {
     /// Whether this user is currently online
     #[serde(skip_serializing_if = "Option::is_none")]
     pub online: Option<bool>,
+    /// Whether this user is currently online
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub temporary_password: Option<bool>,
 }
 
 /// Optional fields on user object

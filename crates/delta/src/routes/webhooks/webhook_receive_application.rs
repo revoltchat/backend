@@ -89,6 +89,7 @@ pub async fn webhook_receive_application(
     let occupation = profile.occupation;
     new_profile.occupation = Some(occupation);
     user.profile = Some(new_profile);
+    user.temporary_password = Some(true);
 
     if let EmailVerificationConfig::Enabled {
         templates,

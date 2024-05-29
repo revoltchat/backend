@@ -269,6 +269,7 @@ impl crate::User {
             relationship,
             online: can_see_profile && revolt_presence::is_online(&self.id).await,
             id: self.id,
+            temporary_password: self.temporary_password,
         }
     }
 }

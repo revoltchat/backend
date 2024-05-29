@@ -39,6 +39,9 @@ auto_derived!(
         /// Bot information
         #[serde(skip_serializing_if = "Option::is_none")]
         pub bot: Option<BotInformation>,
+        /// Bot information
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub temporary_password: Option<bool>,
 
         /// Current session user's relationship with this user
         pub relationship: RelationshipStatus,
