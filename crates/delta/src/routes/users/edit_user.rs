@@ -209,7 +209,7 @@ pub async fn req(
         partial.profile = Some(new_profile);
     }
     if let Some(temporary_password) = data.temporary_password {
-        user.temporary_password = Some(false);
+        partial.temporary_password = Some(false);
     }
     user.update(db, partial, data.remove.unwrap_or_default())
         .await?;
