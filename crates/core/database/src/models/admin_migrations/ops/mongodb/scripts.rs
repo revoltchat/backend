@@ -1051,22 +1051,24 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             })
             .collect::<Vec<Invite>>();
 
-        db.db()
-            .collection("channel_invites")
-            .insert_many(invites, None)
-            .await
-            .expect("failed to insert corrected invite");
+        if !invites.is_empty() {
+            db.db()
+                .collection("channel_invites")
+                .insert_many(invites, None)
+                .await
+                .expect("failed to insert corrected invite");
 
-        db.db()
-            .collection::<Outer>("channel_invites")
-            .delete_many(
-                doc! {
-                    "type": { "$exists": false }
-                },
-                None,
-            )
-            .await
-            .expect("failed to find invites");
+            db.db()
+                .collection::<Outer>("channel_invites")
+                .delete_many(
+                    doc! {
+                        "type": { "$exists": false }
+                    },
+                    None,
+                )
+                .await
+                .expect("failed to find invites");
+        }
     }
 
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.
