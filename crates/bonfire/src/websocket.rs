@@ -19,6 +19,7 @@ use revolt_database::{
 use revolt_presence::{create_session, delete_session};
 
 use async_std::{net::TcpStream, sync::Mutex};
+use revolt_result::create_error;
 
 use crate::config::{ProtocolConfiguration, WebsocketHandshakeCallback};
 use crate::events::state::{State, SubscriptionStateChange};
@@ -69,6 +70,7 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
 
     // Try to authenticate the user.
     let Some(token) = config.get_session_token().as_ref() else {
+        write.send(config.encode(&create_error!(InvalidSession))).await.ok();
         return;
     };
     let user = match User::from_token(db, token, UserHint::Any).await {
