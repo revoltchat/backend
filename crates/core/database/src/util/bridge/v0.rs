@@ -995,6 +995,15 @@ impl crate::User {
                 vec![]
             },
             badges: self.badges.unwrap_or_default() as u32,
+            online: can_see_profile
+                && revolt_presence::is_online(&self.id).await
+                && !matches!(
+                    self.status,
+                    Some(crate::UserStatus {
+                        presence: Some(crate::Presence::Invisible),
+                        ..
+                    })
+                ),
             status: if can_see_profile {
                 self.status.map(|status| status.into())
             } else {
@@ -1009,7 +1018,6 @@ impl crate::User {
             privileged: self.privileged,
             bot: self.bot.map(|bot| bot.into()),
             relationship,
-            online: can_see_profile && revolt_presence::is_online(&self.id).await,
             id: self.id,
         }
     }
@@ -1064,6 +1072,15 @@ impl crate::User {
                 vec![]
             },
             badges: self.badges.unwrap_or_default() as u32,
+            online: can_see_profile
+                && is_online
+                && !matches!(
+                    self.status,
+                    Some(crate::UserStatus {
+                        presence: Some(crate::Presence::Invisible),
+                        ..
+                    })
+                ),
             status: if can_see_profile {
                 self.status.map(|status| status.into())
             } else {
@@ -1078,7 +1095,6 @@ impl crate::User {
             privileged: self.privileged,
             bot: self.bot.map(|bot| bot.into()),
             relationship,
-            online: can_see_profile && is_online,
             id: self.id,
         }
     }
@@ -1099,13 +1115,20 @@ impl crate::User {
                 })
                 .unwrap_or_default(),
             badges: self.badges.unwrap_or_default() as u32,
+            online: revolt_presence::is_online(&self.id).await
+                && !matches!(
+                    self.status,
+                    Some(crate::UserStatus {
+                        presence: Some(crate::Presence::Invisible),
+                        ..
+                    })
+                ),
             status: self.status.map(|status| status.into()),
             profile: self.profile.map(|profile| profile.into()),
             flags: self.flags.unwrap_or_default() as u32,
             privileged: self.privileged,
             bot: self.bot.map(|bot| bot.into()),
             relationship: RelationshipStatus::User,
-            online: revolt_presence::is_online(&self.id).await,
             id: self.id,
         }
     }
