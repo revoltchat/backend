@@ -2,7 +2,7 @@
 name = "revolt-models"
 version = "0.7.2"
 edition = "2021"
-license = "AGPL-3.0-or-later"
+license = "MIT"
 authors = ["Paul Makles <me@insrt.uk>"]
 description = "Revolt Backend: API Models"
 
