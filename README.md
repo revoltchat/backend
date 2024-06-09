@@ -105,6 +105,21 @@ Tag and push a new release by running:
 just release
 ```
 
+## Testing
+
+First, start the required services:
+
+```sh
+docker compose -f docker-compose.db.yml up -d
+```
+
+Now run tests for whichever database:
+
+```sh
+TEST_DB=REFERENCE cargo nextest run
+TEST_DB=MONGOBD cargo nextest run
+```
+
 ## License
 
 The Revolt backend is generally licensed under the [GNU Affero General Public License v3.0](https://github.com/revoltchat/backend/blob/master/LICENSE).
