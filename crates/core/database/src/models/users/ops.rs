@@ -1,3 +1,4 @@
+use authifier::models::Session;
 use revolt_result::Result;
 
 use crate::{FieldsUser, PartialUser, RelationshipStatus, User};
@@ -16,8 +17,8 @@ pub trait AbstractUsers: Sync + Send {
     /// Fetch a user from the database by their username
     async fn fetch_user_by_username(&self, username: &str, discriminator: &str) -> Result<User>;
 
-    /// Fetch a user from the database by their session token
-    async fn fetch_user_by_token(&self, token: &str) -> Result<User>;
+    /// Fetch a session from the database by token
+    async fn fetch_session_by_token(&self, token: &str) -> Result<Session>;
 
     /// Fetch multiple users by their ids
     async fn fetch_users<'a>(&self, ids: &'a [String]) -> Result<Vec<User>>;

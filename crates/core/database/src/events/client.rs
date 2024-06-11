@@ -48,6 +48,8 @@ pub enum EventV1 {
 
     /// Successfully authenticated
     Authenticated,
+    /// Logged out
+    Logout,
     /// Basic data to cache
     Ready {
         users: Vec<User>,

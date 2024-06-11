@@ -276,23 +276,27 @@ impl User {
         Ok(username)
     }
 
-    /// Find a user from a given token and hint
+    /// Find a user and session ID from a given token and hint
     #[async_recursion]
-    pub async fn from_token(db: &Database, token: &str, hint: UserHint) -> Result<User> {
+    pub async fn from_token(db: &Database, token: &str, hint: UserHint) -> Result<(User, String)> {
         match hint {
-            UserHint::Bot => {
+            UserHint::Bot => Ok((
                 db.fetch_user(
                     &db.fetch_bot_by_token(token)
                         .await
                         .map_err(|_| create_error!(InvalidSession))?
                         .id,
                 )
-                .await
+                .await?,
+                String::new(),
+            )),
+            UserHint::User => {
+                let session = db.fetch_session_by_token(token).await?;
+                Ok((db.fetch_user(&session.user_id).await?, session.id))
             }
-            UserHint::User => db.fetch_user_by_token(token).await,
             UserHint::Any => {
-                if let Ok(user) = User::from_token(db, token, UserHint::User).await {
-                    Ok(user)
+                if let Ok(result) = User::from_token(db, token, UserHint::User).await {
+                    Ok(result)
                 } else {
                     User::from_token(db, token, UserHint::Bot).await
                 }

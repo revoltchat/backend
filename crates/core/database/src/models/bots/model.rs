@@ -2,7 +2,7 @@ use revolt_config::config;
 use revolt_result::Result;
 use ulid::Ulid;
 
-use crate::{BotInformation, Database, PartialUser, User};
+use crate::{events::client::EventV1, BotInformation, Database, PartialUser, User};
 
 auto_derived_partial!(
     /// Bot
@@ -141,6 +141,10 @@ impl Bot {
         }
 
         db.update_bot(&self.id, &partial, remove).await?;
+
+        if partial.token.is_some() {
+            EventV1::Logout.private(self.id.clone()).await;
+        }
 
         self.apply_options(partial);
         Ok(())

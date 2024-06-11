@@ -1,3 +1,4 @@
+use authifier::models::Session;
 use revolt_result::Result;
 
 use crate::{FieldsUser, PartialUser, RelationshipStatus, User};
@@ -40,8 +41,8 @@ impl AbstractUsers for ReferenceDb {
             .ok_or_else(|| create_error!(NotFound))
     }
 
-    /// Fetch a user from the database by their session token
-    async fn fetch_user_by_token(&self, _token: &str) -> Result<User> {
+    /// Fetch a session from the database by token
+    async fn fetch_session_by_token(&self, _token: &str) -> Result<Session> {
         todo!()
     }
 

@@ -1,6 +1,7 @@
 use std::net::SocketAddr;
 
 use async_tungstenite::WebSocketStream;
+use authifier::AuthifierEvent;
 use fred::{
     interfaces::{ClientLike, EventInterface, PubsubInterface},
     types::RedisConfig,
@@ -73,17 +74,19 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
         write.send(config.encode(&create_error!(InvalidSession))).await.ok();
         return;
     };
-    let user = match User::from_token(db, token, UserHint::Any).await {
+
+    let (user, session_id) = match User::from_token(db, token, UserHint::Any).await {
         Ok(user) => user,
         Err(err) => {
             write.send(config.encode(&err)).await.ok();
             return;
         }
     };
+
     info!("User {addr:?} authenticated as @{}", user.username);
 
     // Create local state.
-    let mut state = State::from(user);
+    let mut state = State::from(user, session_id);
     let user_id = state.cache.user_id.clone();
 
     // Notify socket we have authenticated.
@@ -189,6 +192,7 @@ async fn listener(
         }) else {
             return;
         };
+
         let event = match *REDIS_PAYLOAD_TYPE {
             PayloadType::Json => message
                 .value
@@ -203,13 +207,34 @@ async fn listener(
                 .as_bytes()
                 .and_then(|b| bincode::deserialize::<EventV1>(b).ok()),
         };
+
         let Some(mut event) = event else {
             warn!("Failed to deserialise an event for {}!", message.channel);
             return;
         };
-        let should_send = state.handle_incoming_event_v1(db, &mut event).await;
-        if !should_send {
-            continue;
+
+        if let EventV1::Auth(auth) = &event {
+            if let AuthifierEvent::DeleteSession { session_id, .. } = auth {
+                if &state.session_id == session_id {
+                    event = EventV1::Logout;
+                }
+            } else if let AuthifierEvent::DeleteAllSessions {
+                exclude_session_id, ..
+            } = auth
+            {
+                if let Some(excluded) = exclude_session_id {
+                    if &state.session_id != excluded {
+                        event = EventV1::Logout;
+                    }
+                } else {
+                    event = EventV1::Logout;
+                }
+            }
+        } else {
+            let should_send = state.handle_incoming_event_v1(db, &mut event).await;
+            if !should_send {
+                continue;
+            }
         }
 
         let result = write.lock().await.send(config.encode(&event)).await;
@@ -218,6 +243,11 @@ async fn listener(
             if !matches!(e, Error::AlreadyClosed | Error::ConnectionClosed) {
                 warn!("Error while sending an event to {addr:?}: {e:?}");
             }
+
+            return;
+        }
+
+        if let EventV1::Logout = event {
             return;
         }
     }
