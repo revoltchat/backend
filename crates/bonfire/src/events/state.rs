@@ -1,5 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
+use async_std::sync::RwLock;
 use lru::LruCache;
 use revolt_database::{Channel, Member, Server, User};
 
@@ -60,8 +64,8 @@ pub struct State {
 
     pub session_id: String,
     pub private_topic: String,
-    subscribed: HashSet<String>,
-    state: SubscriptionStateChange,
+    pub state: SubscriptionStateChange,
+    pub subscribed: Arc<RwLock<HashSet<String>>>,
 }
 
 impl State {
@@ -81,7 +85,7 @@ impl State {
 
         State {
             cache,
-            subscribed,
+            subscribed: Arc::new(RwLock::new(subscribed)),
             session_id,
             private_topic,
             state: SubscriptionStateChange::Reset,
@@ -89,15 +93,16 @@ impl State {
     }
 
     /// Apply currently queued state
-    pub fn apply_state(&mut self) -> SubscriptionStateChange {
+    pub async fn apply_state(&mut self) -> SubscriptionStateChange {
         let state = std::mem::replace(&mut self.state, SubscriptionStateChange::None);
+        let mut subscribed = self.subscribed.write().await;
         if let SubscriptionStateChange::Change { add, remove } = &state {
             for id in add {
-                self.subscribed.insert(id.clone());
+                subscribed.insert(id.clone());
             }
 
             for id in remove {
-                self.subscribed.remove(id);
+                subscribed.remove(id);
             }
         }
 
@@ -109,20 +114,16 @@ impl State {
         self.cache.users.get(&self.cache.user_id).unwrap().clone()
     }
 
-    /// Iterate through all subscriptions
-    pub fn iter_subscriptions(&self) -> std::collections::hash_set::Iter<'_, std::string::String> {
-        self.subscribed.iter()
-    }
-
     /// Reset the current state
-    pub fn reset_state(&mut self) {
+    pub async fn reset_state(&mut self) {
         self.state = SubscriptionStateChange::Reset;
-        self.subscribed.clear();
+        self.subscribed.write().await.clear();
     }
 
     /// Add a new subscription
-    pub fn insert_subscription(&mut self, subscription: String) {
-        if self.subscribed.contains(&subscription) {
+    pub async fn insert_subscription(&mut self, subscription: String) {
+        let mut subscribed = self.subscribed.write().await;
+        if subscribed.contains(&subscription) {
             return;
         }
 
@@ -139,12 +140,13 @@ impl State {
             SubscriptionStateChange::Reset => {}
         }
 
-        self.subscribed.insert(subscription);
+        subscribed.insert(subscription);
     }
 
     /// Remove existing subscription
-    pub fn remove_subscription(&mut self, subscription: &str) {
-        if !self.subscribed.contains(&subscription.to_string()) {
+    pub async fn remove_subscription(&mut self, subscription: &str) {
+        let mut subscribed = self.subscribed.write().await;
+        if !subscribed.contains(&subscription.to_string()) {
             return;
         }
 
@@ -161,6 +163,6 @@ impl State {
             SubscriptionStateChange::Reset => panic!("Should not remove during a reset!"),
         }
 
-        self.subscribed.remove(subscription);
+        subscribed.remove(subscription);
     }
 }

@@ -1,4 +1,4 @@
-use std::net::SocketAddr;
+use std::{collections::HashSet, net::SocketAddr, sync::Arc};
 
 use async_tungstenite::WebSocketStream;
 use authifier::AuthifierEvent;
@@ -19,7 +19,10 @@ use revolt_database::{
 };
 use revolt_presence::{create_session, delete_session};
 
-use async_std::{net::TcpStream, sync::Mutex};
+use async_std::{
+    net::TcpStream,
+    sync::{Mutex, RwLock},
+};
 use revolt_result::create_error;
 
 use crate::config::{ProtocolConfiguration, WebsocketHandshakeCallback};
@@ -44,6 +47,7 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
     else {
         return;
     };
+
     // Verify we've received a valid config, otherwise we should just drop the connection.
     let Ok(mut config) = receiver.await else {
         return;
@@ -102,6 +106,7 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
     let Ok(ready_payload) = state.generate_ready_payload(db).await else {
         return;
     };
+
     if write.send(config.encode(&ready_payload)).await.is_err() {
         return;
     }
@@ -116,10 +121,12 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
 
     {
         let write = Mutex::new(write);
+        let subscribed = state.subscribed.clone();
+
         // Create a PubSub connection to poll on.
         let listener = listener(db, &mut state, addr, &config, &write).fuse();
         // Read from WebSocket stream.
-        let worker = worker(addr, user_id.clone(), &config, read, &write).fuse();
+        let worker = worker(addr, subscribed, user_id.clone(), &config, read, &write).fuse();
 
         // Pin both tasks.
         pin_mut!(listener, worker);
@@ -157,10 +164,12 @@ async fn listener(
     let mut message_rx = subscriber.message_rx();
     loop {
         // Check for state changes for subscriptions.
-        match state.apply_state() {
+        match state.apply_state().await {
             SubscriptionStateChange::Reset => {
                 subscriber.unsubscribe_all().await.unwrap();
-                for id in state.iter_subscriptions() {
+
+                let subscribed = state.subscribed.read().await;
+                for id in subscribed.iter() {
                     subscriber.subscribe(id).await.unwrap();
                 }
 
@@ -255,6 +264,7 @@ async fn listener(
 
 async fn worker(
     addr: SocketAddr,
+    subscribed: Arc<RwLock<HashSet<String>>>,
     user_id: String,
     config: &ProtocolConfiguration,
     mut read: WsReader,
@@ -277,8 +287,13 @@ async fn worker(
         let Ok(payload) = config.decode(&msg) else {
             continue;
         };
+
         match payload {
             ClientMessage::BeginTyping { channel } => {
+                if !subscribed.read().await.contains(&channel) {
+                    break;
+                }
+
                 EventV1::ChannelStartTyping {
                     id: channel.clone(),
                     user: user_id.clone(),
@@ -287,6 +302,10 @@ async fn worker(
                 .await;
             }
             ClientMessage::EndTyping { channel } => {
+                if !subscribed.read().await.contains(&channel) {
+                    break;
+                }
+
                 EventV1::ChannelStopTyping {
                     id: channel.clone(),
                     user: user_id.clone(),
