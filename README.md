@@ -105,6 +105,8 @@ Tag and push a new release by running:
 just release
 ```
 
+If you have bumped the crate versions, proceed to [GitHub releases](https://github.com/revoltchat/backend/releases/new) to create a changelog.
+
 ## Testing
 
 First, start the required services:
