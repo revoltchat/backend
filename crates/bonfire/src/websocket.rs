@@ -291,7 +291,7 @@ async fn worker(
         match payload {
             ClientMessage::BeginTyping { channel } => {
                 if !subscribed.read().await.contains(&channel) {
-                    break;
+                    continue;
                 }
 
                 EventV1::ChannelStartTyping {
@@ -303,7 +303,7 @@ async fn worker(
             }
             ClientMessage::EndTyping { channel } => {
                 if !subscribed.read().await.contains(&channel) {
-                    break;
+                    continue;
                 }
 
                 EventV1::ChannelStopTyping {
