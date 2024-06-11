@@ -21,11 +21,11 @@ impl Cache {
                 let server = self.servers.get(server);
                 let mut query =
                     DatabasePermissionQuery::new(db, self.users.get(&self.user_id).unwrap())
-                        .channel(&channel);
+                        .channel(channel);
                 // let mut perms = perms(self.users.get(&self.user_id).unwrap()).channel(channel);
 
                 if let Some(member) = member {
-                    query = query.member(&member);
+                    query = query.member(member);
                 }
 
                 if let Some(server) = server {
@@ -182,19 +182,19 @@ impl State {
         users.push(user.into_self().await);
 
         // Set subscription state internally.
-        self.reset_state();
-        self.insert_subscription(self.private_topic.clone());
+        self.reset_state().await;
+        self.insert_subscription(self.private_topic.clone()).await;
 
         for user in &users {
-            self.insert_subscription(user.id.clone());
+            self.insert_subscription(user.id.clone()).await;
         }
 
         for server in &servers {
-            self.insert_subscription(server.id.clone());
+            self.insert_subscription(server.id.clone()).await;
         }
 
         for channel in &channels {
-            self.insert_subscription(channel.id().to_string());
+            self.insert_subscription(channel.id().to_string()).await;
         }
 
         Ok(EventV1::Ready {
@@ -236,11 +236,11 @@ impl State {
             let mut bulk_events = vec![];
 
             for id in added_channels {
-                self.insert_subscription(id);
+                self.insert_subscription(id).await;
             }
 
             for id in removed_channels {
-                self.remove_subscription(&id);
+                self.remove_subscription(&id).await;
                 self.cache.channels.remove(&id);
 
                 bulk_events.push(EventV1::ChannelDelete { id });
@@ -263,7 +263,7 @@ impl State {
                             .channels
                             .insert(channel.id().to_string(), channel.clone());
 
-                        self.insert_subscription(channel.id().to_string());
+                        self.insert_subscription(channel.id().to_string()).await;
                         bulk_events.push(EventV1::ChannelCreate(channel.into()));
                     }
                 }
@@ -336,7 +336,7 @@ impl State {
         match event {
             EventV1::ChannelCreate(channel) => {
                 let id = channel.id().to_string();
-                self.insert_subscription(id.clone());
+                self.insert_subscription(id.clone()).await;
                 self.cache.channels.insert(id, channel.clone().into());
             }
             EventV1::ChannelUpdate {
@@ -376,17 +376,17 @@ impl State {
                 }
             }
             EventV1::ChannelDelete { id } => {
-                self.remove_subscription(id);
+                self.remove_subscription(id).await;
                 self.cache.channels.remove(id);
             }
             EventV1::ChannelGroupJoin { user, .. } => {
-                self.insert_subscription(user.clone());
+                self.insert_subscription(user.clone()).await;
             }
             EventV1::ChannelGroupLeave { id, user, .. } => {
                 if user == &self.cache.user_id {
-                    self.remove_subscription(id);
+                    self.remove_subscription(id).await;
                 } else if !self.cache.can_subscribe_to_user(user) {
-                    self.remove_subscription(user);
+                    self.remove_subscription(user).await;
                 }
             }
 
@@ -396,7 +396,7 @@ impl State {
                 channels,
                 emojis: _,
             } => {
-                self.insert_subscription(id.clone());
+                self.insert_subscription(id.clone()).await;
                 self.cache.servers.insert(id.clone(), server.clone().into());
                 let member = Member {
                     id: MemberCompositeKey {
@@ -435,11 +435,11 @@ impl State {
             }
             EventV1::ServerMemberLeave { id, user } => {
                 if user == &self.cache.user_id {
-                    self.remove_subscription(id);
+                    self.remove_subscription(id).await;
 
                     if let Some(server) = self.cache.servers.remove(id) {
                         for channel in &server.channels {
-                            self.remove_subscription(channel);
+                            self.remove_subscription(channel).await;
                             self.cache.channels.remove(channel);
                         }
                     }
@@ -447,11 +447,11 @@ impl State {
                 }
             }
             EventV1::ServerDelete { id } => {
-                self.remove_subscription(id);
+                self.remove_subscription(id).await;
 
                 if let Some(server) = self.cache.servers.remove(id) {
                     for channel in &server.channels {
-                        self.remove_subscription(channel);
+                        self.remove_subscription(channel).await;
                         self.cache.channels.remove(channel);
                     }
                 }
@@ -524,9 +524,9 @@ impl State {
                 self.cache.users.insert(id.clone(), user.clone().into());
 
                 if self.cache.can_subscribe_to_user(id) {
-                    self.insert_subscription(id.clone());
+                    self.insert_subscription(id.clone()).await;
                 } else {
-                    self.remove_subscription(id);
+                    self.remove_subscription(id).await;
                 }
             }
 
@@ -540,11 +540,11 @@ impl State {
 
         // Sub / unsub accordingly.
         if let Some(id) = queue_add {
-            self.insert_subscription(id);
+            self.insert_subscription(id).await;
         }
 
         if let Some(id) = queue_remove {
-            self.remove_subscription(&id);
+            self.remove_subscription(&id).await;
         }
 
         true
