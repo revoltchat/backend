@@ -48,7 +48,29 @@ cp .env.example .env
 # (optionally) copy the default configuration file
 cp crates/core/config/Revolt.toml Revolt.toml
 # configure as necessary...
+```
 
+You may want to copy the following configuration:
+
+```toml
+# Revolt.toml
+[database]
+mongodb = "mongodb://localhost"
+redis = "redis://localhost"
+
+[hosts]
+app = "http://local.revolt.chat"
+api = "http://local.revolt.chat:8000"
+events = "ws://local.revolt.chat:9000"
+autumn = "http://local.revolt.chat:3000"
+january = "http://local.revolt.chat:7000"
+voso_legacy = ""
+voso_legacy_ws = ""
+```
+
+Then continue:
+
+```bash
 # start other necessary services
 docker compose up -d
 
