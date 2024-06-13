@@ -32,7 +32,8 @@ pub async fn edit(
 
     // Fetch server, target member and current permissions
     let mut server = server.as_server(db).await?;
-    let mut member = target.as_member(db, &server.id).await?;
+    let member = db.fetch_member(&server.id, &user.id).await?;
+    let mut target_member = target.as_member(db, &server.id).await?;
     let mut query = DatabasePermissionQuery::new(db, &user)
         .server(&server)
         .member(&member);
@@ -46,7 +47,7 @@ pub async fn edit(
             .map(|x| x.contains(&v0::FieldsMember::Nickname))
             .unwrap_or_default()
     {
-        if user.id == member.id.user {
+        if user.id == target_member.id.user {
             permissions.throw_if_lacking_channel_permission(ChannelPermission::ChangeNickname)?;
         } else {
             permissions.throw_if_lacking_channel_permission(ChannelPermission::ManageNicknames)?;
@@ -60,7 +61,7 @@ pub async fn edit(
             .map(|x| x.contains(&v0::FieldsMember::Avatar))
             .unwrap_or_default()
     {
-        if user.id == member.id.user {
+        if user.id == target_member.id.user {
             permissions.throw_if_lacking_channel_permission(ChannelPermission::ChangeAvatar)?;
         } else {
             return Err(create_error!(InvalidOperation));
@@ -91,15 +92,15 @@ pub async fn edit(
     let our_ranking = query.get_member_rank().unwrap_or(i64::MIN);
 
     // Check that we have permissions to act against this member
-    if member.id.user != user.id
-        && member.get_ranking(query.server_ref().as_ref().unwrap()) <= our_ranking
+    if target_member.id.user != user.id
+        && target_member.get_ranking(query.server_ref().as_ref().unwrap()) <= our_ranking
     {
         return Err(create_error!(NotElevated));
     }
 
     // Check permissions against roles in diff
     if let Some(roles) = &data.roles {
-        let current_roles = member.roles.iter().collect::<HashSet<&String>>();
+        let current_roles = target_member.roles.iter().collect::<HashSet<&String>>();
 
         let new_roles = roles.iter().collect::<HashSet<&String>>();
         let added_roles: Vec<&&String> = new_roles.difference(&current_roles).collect();
@@ -134,7 +135,7 @@ pub async fn edit(
     // 1. Remove fields from object
     if let Some(fields) = &remove {
         if fields.contains(&v0::FieldsMember::Avatar) {
-            if let Some(avatar) = &member.avatar {
+            if let Some(avatar) = &target_member.avatar {
                 db.mark_attachment_as_deleted(&avatar.id).await?;
             }
         }
@@ -145,7 +146,7 @@ pub async fn edit(
         partial.avatar = Some(File::use_avatar(db, &avatar, &user.id).await?);
     }
 
-    member
+    target_member
         .update(
             db,
             partial,
@@ -155,5 +156,5 @@ pub async fn edit(
         )
         .await?;
 
-    Ok(Json(member.into()))
+    Ok(Json(target_member.into()))
 }
