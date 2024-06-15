@@ -30,12 +30,12 @@ pub async fn edit(
         })
     })?;
 
-    // Fetch server, target member and current permissions
+    // Fetch server and target member
     let mut server = server.as_server(db).await?;
     let mut member = target.as_member(db, &server.id).await?;
-    let mut query = DatabasePermissionQuery::new(db, &user)
-        .server(&server)
-        .member(&member);
+
+    // Fetch our currrent permissions
+    let mut query = DatabasePermissionQuery::new(db, &user).server(&server);
     let permissions = calculate_server_permissions(&mut query).await;
 
     // Check permissions in server
