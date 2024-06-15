@@ -24,6 +24,7 @@ use async_std::{
     sync::{Mutex, RwLock},
 };
 use revolt_result::create_error;
+use sentry::Level;
 
 use crate::config::{ProtocolConfiguration, WebsocketHandshakeCallback};
 use crate::events::state::{State, SubscriptionStateChange};
@@ -52,6 +53,7 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
     let Ok(mut config) = receiver.await else {
         return;
     };
+
     info!(
         "User {addr:?} provided protocol configuration (version = {}, format = {:?})",
         config.get_protocol_version(),
@@ -63,10 +65,8 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
 
     // If the user has not provided authentication, request information.
     if config.get_session_token().is_none() {
-        while let Ok(message) = read.try_next().await {
-            if let Ok(ClientMessage::Authenticate { token }) =
-                config.decode(message.as_ref().unwrap())
-            {
+        while let Ok(Some(message)) = read.try_next().await {
+            if let Ok(ClientMessage::Authenticate { token }) = config.decode(&message) {
                 config.set_session_token(token);
                 break;
             }
@@ -75,7 +75,10 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
 
     // Try to authenticate the user.
     let Some(token) = config.get_session_token().as_ref() else {
-        write.send(config.encode(&create_error!(InvalidSession))).await.ok();
+        write
+            .send(config.encode(&create_error!(InvalidSession)))
+            .await
+            .ok();
         return;
     };
 
@@ -94,20 +97,24 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
     let user_id = state.cache.user_id.clone();
 
     // Notify socket we have authenticated.
-    if write
-        .send(config.encode(&EventV1::Authenticated))
-        .await
-        .is_err()
-    {
+    if let Err(err) = write.send(config.encode(&EventV1::Authenticated)).await {
+        error!("Failed to write: {err:?}");
+        sentry::capture_error(&err);
         return;
     }
 
     // Download required data to local cache and send Ready payload.
-    let Ok(ready_payload) = state.generate_ready_payload(db).await else {
-        return;
+    let ready_payload = match state.generate_ready_payload(db).await {
+        Ok(ready_payload) => ready_payload,
+        Err(err) => {
+            sentry::capture_error(&err);
+            return;
+        }
     };
 
-    if write.send(config.encode(&ready_payload)).await.is_err() {
+    if let Err(err) = write.send(config.encode(&ready_payload)).await {
+        error!("Failed to write: {err:?}");
+        sentry::capture_error(&err);
         return;
     }
 
@@ -154,23 +161,41 @@ async fn listener(
     write: &Mutex<WsWriter>,
 ) {
     let redis_config = RedisConfig::from_url(&REDIS_URI).unwrap();
-    let Ok(subscriber) = fred::types::Builder::from_config(redis_config).build_subscriber_client()
-    else {
+
+    let subscriber = match fred::types::Builder::from_config(redis_config).build_subscriber_client()
+    {
+        Ok(subscriber) => subscriber,
+        Err(err) => {
+            error!("Failed to build a subscriber: {err:?}");
+            sentry::capture_error(&err);
+            return;
+        }
+    };
+
+    if let Err(err) = subscriber.init().await {
+        error!("Failed to init subscriber: {err:?}");
+        sentry::capture_error(&err);
         return;
     };
-    if subscriber.init().await.is_err() {
-        return;
-    };
+
     let mut message_rx = subscriber.message_rx();
     loop {
         // Check for state changes for subscriptions.
         match state.apply_state().await {
             SubscriptionStateChange::Reset => {
-                subscriber.unsubscribe_all().await.unwrap();
+                if let Err(err) = subscriber.unsubscribe_all().await {
+                    error!("Unsubscribe all failed: {err:?}");
+                    sentry::capture_error(&err);
+                    return;
+                }
 
                 let subscribed = state.subscribed.read().await;
                 for id in subscribed.iter() {
-                    subscriber.subscribe(id).await.unwrap();
+                    if let Err(err) = subscriber.subscribe(id).await {
+                        error!("Subscribe failed: {err:?}");
+                        sentry::capture_error(&err);
+                        return;
+                    }
                 }
 
                 #[cfg(debug_assertions)]
@@ -181,25 +206,35 @@ async fn listener(
                     #[cfg(debug_assertions)]
                     info!("{addr:?} unsubscribing from {id}");
 
-                    subscriber.unsubscribe(id).await.unwrap();
+                    if let Err(err) = subscriber.unsubscribe(id).await {
+                        error!("Unsubscribe failed: {err:?}");
+                        sentry::capture_error(&err);
+                        return;
+                    }
                 }
 
                 for id in add {
                     #[cfg(debug_assertions)]
                     info!("{addr:?} subscribing to {id}");
 
-                    subscriber.subscribe(id).await.unwrap();
+                    if let Err(err) = subscriber.subscribe(id).await {
+                        error!("Subscribe failed: {err:?}");
+                        sentry::capture_error(&err);
+                        return;
+                    }
                 }
             }
             SubscriptionStateChange::None => {}
         }
 
         // Handle incoming events.
-        let Ok(message) = message_rx.recv().await.map_err(|e| {
-            warn!("Error while consuming pub/sub messages: {e:?}");
-            sentry::capture_error(&e);
-        }) else {
-            return;
+        let message = match message_rx.recv().await {
+            Ok(message) => message,
+            Err(e) => {
+                error!("Error while consuming pub/sub messages: {e:?}");
+                sentry::capture_error(&e);
+                return;
+            }
         };
 
         let event = match *REDIS_PAYLOAD_TYPE {
@@ -218,7 +253,17 @@ async fn listener(
         };
 
         let Some(mut event) = event else {
-            warn!("Failed to deserialise an event for {}!", message.channel);
+            let err = format!(
+                "Failed to deserialise an event for {}! Introspection: `{:?}`",
+                message.channel,
+                message
+                    .value
+                    .as_string()
+                    .map(|x| x.chars().take(32).collect::<String>())
+            );
+
+            error!("{}", err);
+            sentry::capture_message(&err, Level::Error);
             return;
         };
 
@@ -250,13 +295,16 @@ async fn listener(
         if let Err(e) = result {
             use async_tungstenite::tungstenite::Error;
             if !matches!(e, Error::AlreadyClosed | Error::ConnectionClosed) {
-                warn!("Error while sending an event to {addr:?}: {e:?}");
+                let err = format!("Error while sending an event to {addr:?}: {e:?}");
+                warn!("{}", err);
+                sentry::capture_message(&err, Level::Warning);
             }
 
             return;
         }
 
         if let EventV1::Logout = event {
+            info!("User {addr:?} received log out event!");
             return;
         }
     }
@@ -274,12 +322,19 @@ async fn worker(
         let result = read.try_next().await;
         let msg = match result {
             Ok(Some(msg)) => msg,
-            Ok(None) => return,
+            Ok(None) => {
+                warn!("Received a None message!");
+                sentry::capture_message("Received a None message!", Level::Warning);
+                return;
+            }
             Err(e) => {
                 use async_tungstenite::tungstenite::Error;
                 if !matches!(e, Error::AlreadyClosed | Error::ConnectionClosed) {
-                    warn!("Error while reading an event from {addr:?}: {e:?}");
+                    let err = format!("Error while reading an event from {addr:?}: {e:?}");
+                    warn!("{}", err);
+                    sentry::capture_message(&err, Level::Warning);
                 }
+
                 return;
             }
         };
