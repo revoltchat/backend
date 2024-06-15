@@ -504,7 +504,35 @@ impl Message {
         if let Some(true) = include_users {
             let user_ids = messages
                 .iter()
-                .map(|m| m.author.clone())
+                .flat_map(|m| {
+                    let mut users = vec![m.author.clone()];
+                    if let Some(system) = &m.system {
+                        match system {
+                            v0::SystemMessage::ChannelDescriptionChanged { by } => {
+                                users.push(by.clone())
+                            }
+                            v0::SystemMessage::ChannelIconChanged { by } => users.push(by.clone()),
+                            v0::SystemMessage::ChannelOwnershipChanged { from, to, .. } => {
+                                users.push(from.clone());
+                                users.push(to.clone())
+                            }
+                            v0::SystemMessage::ChannelRenamed { by, .. } => users.push(by.clone()),
+                            v0::SystemMessage::UserAdded { by, id, .. }
+                            | v0::SystemMessage::UserRemove { by, id, .. } => {
+                                users.push(by.clone());
+                                users.push(id.clone());
+                            }
+                            v0::SystemMessage::UserBanned { id, .. }
+                            | v0::SystemMessage::UserKicked { id, .. }
+                            | v0::SystemMessage::UserJoined { id, .. }
+                            | v0::SystemMessage::UserLeft { id, .. } => {
+                                users.push(id.clone());
+                            }
+                            v0::SystemMessage::Text { .. } => {}
+                        }
+                    }
+                    users
+                })
                 .collect::<HashSet<String>>()
                 .into_iter()
                 .collect::<Vec<String>>();
