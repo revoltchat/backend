@@ -50,9 +50,6 @@ auto_derived_partial!(
         /// User's current status
         #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub status: Option<UserStatus>,
-        /// User's profile page
-        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-        pub profile: Option<UserProfile>,
 
         /// Enum of user flags
         #[cfg_attr(

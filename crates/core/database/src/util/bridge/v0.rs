@@ -1009,11 +1009,6 @@ impl crate::User {
             } else {
                 None
             },
-            profile: if can_see_profile {
-                self.profile.map(|profile| profile.into())
-            } else {
-                None
-            },
             flags: self.flags.unwrap_or_default() as u32,
             privileged: self.privileged,
             bot: self.bot.map(|bot| bot.into()),
@@ -1086,11 +1081,6 @@ impl crate::User {
             } else {
                 None
             },
-            profile: if can_see_profile {
-                self.profile.map(|profile| profile.into())
-            } else {
-                None
-            },
             flags: self.flags.unwrap_or_default() as u32,
             privileged: self.privileged,
             bot: self.bot.map(|bot| bot.into()),
@@ -1124,7 +1114,6 @@ impl crate::User {
                     })
                 ),
             status: self.status.map(|status| status.into()),
-            profile: self.profile.map(|profile| profile.into()),
             flags: self.flags.unwrap_or_default() as u32,
             privileged: self.privileged,
             bot: self.bot.map(|bot| bot.into()),
@@ -1152,7 +1141,7 @@ impl From<User> for crate::User {
             relations: None,
             badges: Some(value.badges as i32),
             status: value.status.map(Into::into),
-            profile: value.profile.map(Into::into),
+            profile: None,
             flags: Some(value.flags as i32),
             privileged: value.privileged,
             bot: value.bot.map(Into::into),
@@ -1175,7 +1164,6 @@ impl From<crate::PartialUser> for PartialUser {
             }),
             badges: value.badges.map(|badges| badges as u32),
             status: value.status.map(|status| status.into()),
-            profile: value.profile.map(|profile| profile.into()),
             flags: value.flags.map(|flags| flags as u32),
             privileged: value.privileged,
             bot: value.bot.map(|bot| bot.into()),
