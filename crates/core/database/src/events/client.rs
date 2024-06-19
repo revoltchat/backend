@@ -249,7 +249,7 @@ impl EventV1 {
         // TODO: this should be captured by member list in the future and not immediately fanned out to users
         if let Ok(members) = db.fetch_all_memberships(&id).await {
             for member in members {
-                self.clone().p(member.id.server).await;
+                self.clone().server(member.id.server).await;
             }
         }
     }
@@ -257,6 +257,11 @@ impl EventV1 {
     /// Publish private event
     pub async fn private(self, id: String) {
         self.p(format!("{id}!")).await;
+    }
+
+    /// Publish server member event
+    pub async fn server(self, id: String) {
+        self.p(format!("{id}u")).await;
     }
 
     /// Publish internal global event

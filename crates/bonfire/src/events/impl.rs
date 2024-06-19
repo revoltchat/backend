@@ -92,6 +92,7 @@ impl State {
     /// Generate a Ready packet for the current user
     pub async fn generate_ready_payload(&mut self, db: &Database) -> Result<EventV1> {
         let user = self.clone_user();
+        self.cache.is_bot = user.bot.is_some();
 
         // Find all relationships to the user.
         let mut user_ids: HashSet<String> = user
@@ -191,6 +192,10 @@ impl State {
 
         for server in &servers {
             self.insert_subscription(server.id.clone()).await;
+
+            if self.cache.is_bot {
+                self.insert_subscription(format!("{}u", server.id)).await;
+            }
         }
 
         for channel in &channels {
@@ -397,6 +402,11 @@ impl State {
                 emojis: _,
             } => {
                 self.insert_subscription(id.clone()).await;
+
+                if self.cache.is_bot {
+                    self.insert_subscription(format!("{}u", id)).await;
+                }
+
                 self.cache.servers.insert(id.clone(), server.clone().into());
                 let member = Member {
                     id: MemberCompositeKey {

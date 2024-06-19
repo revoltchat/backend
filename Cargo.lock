@@ -138,9 +138,21 @@ version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2114d64672151c0c5eaa5e131ec84a74f06e1e559830dabba01ca30605d66319"
 dependencies = [
- "concurrent-queue",
- "event-listener",
+ "concurrent-queue 1.2.2",
+ "event-listener 2.5.2",
  "futures-core",
+]
+
+[[package]]
+name = "async-channel"
+version = "2.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "89b47800b0be77592da0afd425cc03468052844aff33b84e33cc696f64e77b6a"
+dependencies = [
+ "concurrent-queue 2.5.0",
+ "event-listener-strategy",
+ "futures-core",
+ "pin-project-lite 0.2.13",
 ]
 
 [[package]]
@@ -150,7 +162,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "871f9bb5e0a22eeb7e8cf16641feb87c9dc67032ccf8ff49e772eb9941d3a965"
 dependencies = [
  "async-task",
- "concurrent-queue",
+ "concurrent-queue 1.2.2",
  "fastrand",
  "futures-lite",
  "once_cell",
@@ -163,7 +175,7 @@ version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd8b508d585e01084059b60f06ade4cb7415cd2e4084b71dd1cb44e7d3fb9880"
 dependencies = [
- "async-channel",
+ "async-channel 1.6.1",
  "async-executor",
  "async-io",
  "async-lock",
@@ -180,7 +192,7 @@ version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e5e18f61464ae81cde0a23e713ae8fd299580c54d697a35820cfd0625b8b0e07"
 dependencies = [
- "concurrent-queue",
+ "concurrent-queue 1.2.2",
  "futures-lite",
  "libc",
  "log",
@@ -199,7 +211,7 @@ version = "2.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "287272293e9d8c41773cec55e365490fe034813a2f172f502d6ddcf75b2f582b"
 dependencies = [
- "event-listener",
+ "event-listener 2.5.2",
 ]
 
 [[package]]
@@ -211,7 +223,7 @@ dependencies = [
  "async-io",
  "blocking",
  "cfg-if",
- "event-listener",
+ "event-listener 2.5.2",
  "futures-lite",
  "libc",
  "once_cell",
@@ -237,7 +249,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "62565bb4402e926b29953c785397c6dc0391b7b446e45008b0049eb43cec6f5d"
 dependencies = [
  "async-attributes",
- "async-channel",
+ "async-channel 1.6.1",
  "async-global-executor",
  "async-io",
  "async-lock",
@@ -531,7 +543,7 @@ version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6ccb65d468978a086b69884437ded69a90faab3bbe6e67f242173ea728acccc"
 dependencies = [
- "async-channel",
+ "async-channel 1.6.1",
  "async-task",
  "atomic-waker",
  "fastrand",
@@ -730,6 +742,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "concurrent-queue"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ca0197aee26d1ae37445ee532fefce43251d24cc7c166799f4d46817f1d3973"
+dependencies = [
+ "crossbeam-utils",
+]
+
+[[package]]
 name = "config"
 version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -833,13 +854,9 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-utils"
-version = "0.8.8"
+version = "0.8.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0bf124c720b7686e3c2663cf54062ab0f68a88af2fb6a030e87e30bf721fcb38"
-dependencies = [
- "cfg-if",
- "lazy_static",
-]
+checksum = "22ec99545bb0ed0ea7bb9b8e1e9122ea386ff8a48c0922e43f36d45ab09e0e80"
 
 [[package]]
 name = "crypto-bigint"
@@ -1294,6 +1311,27 @@ name = "event-listener"
 version = "2.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77f3309417938f28bf8228fcff79a4a37103981e3e186d2ccd19c74b38f4eb71"
+
+[[package]]
+name = "event-listener"
+version = "5.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6032be9bd27023a771701cc49f9f053c751055f71efb2e0ae5c15809093675ba"
+dependencies = [
+ "concurrent-queue 2.5.0",
+ "parking",
+ "pin-project-lite 0.2.13",
+]
+
+[[package]]
+name = "event-listener-strategy"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f214dc438f977e6d4e3500aaa277f5ad94ca83fbbd9b1a15713ce2344ccc5a1"
+dependencies = [
+ "event-listener 5.3.1",
+ "pin-project-lite 0.2.13",
+]
 
 [[package]]
 name = "fake-simd"
@@ -1976,13 +2014,13 @@ version = "1.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "334e04b4d781f436dc315cb1e7515bd96826426345d498149e4bde36b67f8ee9"
 dependencies = [
- "async-channel",
+ "async-channel 1.6.1",
  "castaway",
  "crossbeam-utils",
  "curl",
  "curl-sys",
  "encoding_rs",
- "event-listener",
+ "event-listener 2.5.2",
  "futures-lite",
  "http",
  "log",
@@ -2265,6 +2303,12 @@ checksum = "31e24f1ad8321ca0e8a1e0ac13f23cb668e6f5466c2c57319f6a5cf1cc8e3b1c"
 dependencies = [
  "linked-hash-map",
 ]
+
+[[package]]
+name = "lru_time_cache"
+version = "0.11.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9106e1d747ffd48e6be5bb2d97fa706ed25b144fbee4d5c02eae110cd8d6badd"
 
 [[package]]
 name = "maplit"
@@ -3410,6 +3454,7 @@ dependencies = [
 name = "revolt-bonfire"
 version = "0.7.5"
 dependencies = [
+ "async-channel 2.3.1",
  "async-std",
  "async-tungstenite",
  "authifier",
@@ -3418,6 +3463,7 @@ dependencies = [
  "futures",
  "log",
  "lru 0.7.6",
+ "lru_time_cache",
  "once_cell",
  "querystring",
  "redis-kiss",
@@ -3500,7 +3546,7 @@ dependencies = [
 name = "revolt-delta"
 version = "0.7.5"
 dependencies = [
- "async-channel",
+ "async-channel 1.6.1",
  "async-std",
  "authifier",
  "bitfield",
@@ -4362,7 +4408,7 @@ version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6d7400c0eff44aa2fcb5e31a5f24ba9716ed90138769e4977a2ba6014ae63eb5"
 dependencies = [
- "async-channel",
+ "async-channel 1.6.1",
  "futures-core",
  "futures-io",
 ]
