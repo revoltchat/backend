@@ -8,7 +8,7 @@ use fred::{
 };
 use futures::{
     channel::oneshot,
-    pin_mut, select,
+    join, pin_mut, select,
     stream::{SplitSink, SplitStream},
     FutureExt, SinkExt, StreamExt, TryStreamExt,
 };
@@ -127,34 +127,44 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
     }
 
     {
+        // Setup channels and mutexes
         let write = Mutex::new(write);
         let subscribed = state.subscribed.clone();
         let active_servers = state.active_servers.clone();
-        let (signal_s, signal_r) = async_channel::unbounded();
+        let (topic_signal_s, topic_signal_r) = async_channel::unbounded();
+
+        // TODO: this needs to be rewritten
+        // Create channels through which the tasks can signal to each other they need to clean up
+        let (kill_signal_1_s, kill_signal_1_r) = async_channel::bounded(1);
+        let (kill_signal_2_s, kill_signal_2_r) = async_channel::bounded(1);
 
         // Create a PubSub connection to poll on.
-        let listener = listener(db, &mut state, addr, &config, signal_r, &write).fuse();
+        let listener = listener_with_kill_signal(
+            db,
+            &mut state,
+            addr,
+            &config,
+            topic_signal_r,
+            kill_signal_1_r,
+            &write,
+            kill_signal_2_s,
+        );
+
         // Read from WebSocket stream.
-        let worker = worker(
+        let worker = worker_with_kill_signal(
             addr,
             subscribed,
             active_servers,
             user_id.clone(),
             &config,
-            signal_s,
+            topic_signal_s,
+            kill_signal_2_r,
             read,
             &write,
-        )
-        .fuse();
-
-        // Pin both tasks.
-        pin_mut!(listener, worker);
-
-        // Wait for either disconnect or for listener to die.
-        select!(
-            () = listener => {},
-            () = worker => {}
+            kill_signal_1_s,
         );
+
+        join!(listener, worker);
     }
     // Clean up presence session.
     let last_session = delete_session(&user_id, session_id).await;
@@ -165,16 +175,40 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
     }
 }
 
+#[allow(clippy::too_many_arguments)]
+async fn listener_with_kill_signal(
+    db: &'static Database,
+    state: &mut State,
+    addr: SocketAddr,
+    config: &ProtocolConfiguration,
+    topic_signal_r: async_channel::Receiver<()>,
+    kill_signal_r: async_channel::Receiver<()>,
+    write: &Mutex<WsWriter>,
+    kill_signal_s: async_channel::Sender<()>,
+) {
+    listener(
+        db,
+        state,
+        addr,
+        config,
+        topic_signal_r,
+        kill_signal_r,
+        write,
+    )
+    .await;
+    kill_signal_s.send(()).await.ok();
+}
+
 async fn listener(
     db: &'static Database,
     state: &mut State,
     addr: SocketAddr,
     config: &ProtocolConfiguration,
-    signal_r: async_channel::Receiver<()>,
+    topic_signal_r: async_channel::Receiver<()>,
+    kill_signal_r: async_channel::Receiver<()>,
     write: &Mutex<WsWriter>,
 ) {
     let redis_config = RedisConfig::from_url(&REDIS_URI).unwrap();
-
     let subscriber = match fred::types::Builder::from_config(redis_config).build_subscriber_client()
     {
         Ok(subscriber) => subscriber,
@@ -191,15 +225,17 @@ async fn listener(
         return;
     };
 
+    // TODO: subscriber.on_error(func)
+
     let mut message_rx = subscriber.message_rx();
-    loop {
+    'out: loop {
         // Check for state changes for subscriptions.
         match state.apply_state().await {
             SubscriptionStateChange::Reset => {
                 if let Err(err) = subscriber.unsubscribe_all().await {
                     error!("Unsubscribe all failed: {err:?}");
                     sentry::capture_error(&err);
-                    return;
+                    break 'out;
                 }
 
                 let subscribed = state.subscribed.read().await;
@@ -207,7 +243,7 @@ async fn listener(
                     if let Err(err) = subscriber.subscribe(id).await {
                         error!("Subscribe failed: {err:?}");
                         sentry::capture_error(&err);
-                        return;
+                        break 'out;
                     }
                 }
 
@@ -222,7 +258,7 @@ async fn listener(
                     if let Err(err) = subscriber.unsubscribe(id).await {
                         error!("Unsubscribe failed: {err:?}");
                         sentry::capture_error(&err);
-                        return;
+                        break 'out;
                     }
                 }
 
@@ -233,7 +269,7 @@ async fn listener(
                     if let Err(err) = subscriber.subscribe(id).await {
                         error!("Subscribe failed: {err:?}");
                         sentry::capture_error(&err);
-                        return;
+                        break 'out;
                     }
                 }
             }
@@ -241,11 +277,15 @@ async fn listener(
         }
 
         let t1 = message_rx.recv().fuse();
-        let t2 = signal_r.recv().fuse();
+        let t2 = topic_signal_r.recv().fuse();
+        let t3 = kill_signal_r.recv().fuse();
 
-        pin_mut!(t1, t2);
+        pin_mut!(t1, t2, t3);
 
         select! {
+            _ = t3 => {
+                break 'out;
+            },
             _ = t2 => {},
             message = t1 => {
                 // Handle incoming events.
@@ -254,7 +294,7 @@ async fn listener(
                     Err(e) => {
                         error!("Error while consuming pub/sub messages: {e:?}");
                         sentry::capture_error(&e);
-                        return;
+                        break 'out;
                     }
                 };
 
@@ -285,7 +325,7 @@ async fn listener(
 
                     error!("{}", err);
                     sentry::capture_message(&err, Level::Error);
-                    return;
+                    break 'out;
                 };
 
                 if let EventV1::Auth(auth) = &event {
@@ -321,16 +361,49 @@ async fn listener(
                         sentry::capture_message(&err, Level::Warning);
                     }
 
-                    return;
+                    break 'out;
                 }
 
                 if let EventV1::Logout = event {
                     info!("User {addr:?} received log out event!");
-                    return;
+                    break 'out;
                 }
             }
         }
     }
+
+    if let Err(err) = subscriber.quit().await {
+        error!("{}", err);
+        sentry::capture_error(&err);
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn worker_with_kill_signal(
+    addr: SocketAddr,
+    subscribed: Arc<RwLock<HashSet<String>>>,
+    active_servers: Arc<Mutex<lru_time_cache::LruCache<String, ()>>>,
+    user_id: String,
+    config: &ProtocolConfiguration,
+    topic_signal_s: async_channel::Sender<()>,
+    kill_signal_r: async_channel::Receiver<()>,
+    read: WsReader,
+    write: &Mutex<WsWriter>,
+    kill_signal_s: async_channel::Sender<()>,
+) {
+    worker(
+        addr,
+        subscribed,
+        active_servers,
+        user_id,
+        config,
+        topic_signal_s,
+        kill_signal_r,
+        read,
+        write,
+    )
+    .await;
+    kill_signal_s.send(()).await.ok();
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -340,81 +413,93 @@ async fn worker(
     active_servers: Arc<Mutex<lru_time_cache::LruCache<String, ()>>>,
     user_id: String,
     config: &ProtocolConfiguration,
-    signal_s: async_channel::Sender<()>,
+    topic_signal_s: async_channel::Sender<()>,
+    kill_signal_r: async_channel::Receiver<()>,
     mut read: WsReader,
     write: &Mutex<WsWriter>,
 ) {
     loop {
-        let result = read.try_next().await;
-        let msg = match result {
-            Ok(Some(msg)) => msg,
-            Ok(None) => {
-                warn!("Received a None message!");
-                sentry::capture_message("Received a None message!", Level::Warning);
+        let t1 = read.try_next().fuse();
+        let t2 = kill_signal_r.recv().fuse();
+
+        pin_mut!(t1, t2);
+
+        select! {
+            _ = t2 => {
                 return;
-            }
-            Err(e) => {
-                use async_tungstenite::tungstenite::Error;
-                if !matches!(e, Error::AlreadyClosed | Error::ConnectionClosed) {
-                    let err = format!("Error while reading an event from {addr:?}: {e:?}");
-                    warn!("{}", err);
-                    sentry::capture_message(&err, Level::Warning);
-                }
+            },
+            result = t1 => {
+                let msg = match result {
+                    Ok(Some(msg)) => msg,
+                    Ok(None) => {
+                        warn!("Received a None message!");
+                        sentry::capture_message("Received a None message!", Level::Warning);
+                        return;
+                    }
+                    Err(e) => {
+                        use async_tungstenite::tungstenite::Error;
+                        if !matches!(e, Error::AlreadyClosed | Error::ConnectionClosed) {
+                            let err = format!("Error while reading an event from {addr:?}: {e:?}");
+                            warn!("{}", err);
+                            sentry::capture_message(&err, Level::Warning);
+                        }
 
-                return;
-            }
-        };
+                        return;
+                    }
+                };
 
-        let Ok(payload) = config.decode(&msg) else {
-            continue;
-        };
-
-        match payload {
-            ClientMessage::BeginTyping { channel } => {
-                if !subscribed.read().await.contains(&channel) {
+                let Ok(payload) = config.decode(&msg) else {
                     continue;
-                }
+                };
 
-                EventV1::ChannelStartTyping {
-                    id: channel.clone(),
-                    user: user_id.clone(),
-                }
-                .p(channel.clone())
-                .await;
-            }
-            ClientMessage::EndTyping { channel } => {
-                if !subscribed.read().await.contains(&channel) {
-                    continue;
-                }
+                match payload {
+                    ClientMessage::BeginTyping { channel } => {
+                        if !subscribed.read().await.contains(&channel) {
+                            continue;
+                        }
 
-                EventV1::ChannelStopTyping {
-                    id: channel.clone(),
-                    user: user_id.clone(),
-                }
-                .p(channel.clone())
-                .await;
-            }
-            ClientMessage::Subscribe { server_id } => {
-                let mut servers = active_servers.lock().await;
-                let has_item = servers.contains_key(&server_id);
-                servers.insert(server_id, ());
+                        EventV1::ChannelStartTyping {
+                            id: channel.clone(),
+                            user: user_id.clone(),
+                        }
+                        .p(channel.clone())
+                        .await;
+                    }
+                    ClientMessage::EndTyping { channel } => {
+                        if !subscribed.read().await.contains(&channel) {
+                            continue;
+                        }
 
-                if !has_item {
-                    // Poke the listener to adjust subscriptions
-                    signal_s.send(()).await.ok();
+                        EventV1::ChannelStopTyping {
+                            id: channel.clone(),
+                            user: user_id.clone(),
+                        }
+                        .p(channel.clone())
+                        .await;
+                    }
+                    ClientMessage::Subscribe { server_id } => {
+                        let mut servers = active_servers.lock().await;
+                        let has_item = servers.contains_key(&server_id);
+                        servers.insert(server_id, ());
+
+                        if !has_item {
+                            // Poke the listener to adjust subscriptions
+                            topic_signal_s.send(()).await.ok();
+                        }
+                    }
+                    ClientMessage::Ping { data, responded } => {
+                        if responded.is_none() {
+                            write
+                                .lock()
+                                .await
+                                .send(config.encode(&EventV1::Pong { data }))
+                                .await
+                                .ok();
+                        }
+                    }
+                    _ => {}
                 }
             }
-            ClientMessage::Ping { data, responded } => {
-                if responded.is_none() {
-                    write
-                        .lock()
-                        .await
-                        .send(config.encode(&EventV1::Pong { data }))
-                        .await
-                        .ok();
-                }
-            }
-            _ => {}
         }
     }
 }
