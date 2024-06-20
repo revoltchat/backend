@@ -3,6 +3,7 @@ use std::{collections::HashSet, net::SocketAddr, sync::Arc};
 use async_tungstenite::WebSocketStream;
 use authifier::AuthifierEvent;
 use fred::{
+    error::{RedisError, RedisErrorKind},
     interfaces::{ClientLike, EventInterface, PubsubInterface},
     types::RedisConfig,
 };
@@ -229,11 +230,14 @@ async fn listener(
     // Handle Redis connection dropping
     let (clean_up_s, clean_up_r) = async_channel::bounded(1);
     let clean_up_s = Arc::new(Mutex::new(clean_up_s));
-    subscriber.on_error(move |_| {
-        let clean_up_s = clean_up_s.clone();
-        spawn(async move {
-            clean_up_s.lock().await.send(()).await.ok();
-        });
+    subscriber.on_error(move |err| {
+        if let RedisErrorKind::Canceled = err.kind() {
+            let clean_up_s = clean_up_s.clone();
+            spawn(async move {
+                clean_up_s.lock().await.send(()).await.ok();
+            });
+        }
+
         Ok(())
     });
 
