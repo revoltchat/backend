@@ -18,7 +18,7 @@ pub fn config() -> Config {
                     host: (*SMTP_HOST).to_string(),
                     username: (*SMTP_USERNAME).to_string(),
                     password: (*SMTP_PASSWORD).to_string(),
-                    reply_to: Some(*SMTP_FROM).to_string(),
+                    reply_to: None,
                     port: None,
                     use_tls: None,
                 },
