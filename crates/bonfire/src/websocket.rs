@@ -22,6 +22,7 @@ use revolt_presence::{create_session, delete_session};
 use async_std::{
     net::TcpStream,
     sync::{Mutex, RwLock},
+    task::spawn,
 };
 use revolt_result::create_error;
 use sentry::Level;
@@ -225,7 +226,16 @@ async fn listener(
         return;
     };
 
-    // TODO: subscriber.on_error(func)
+    // Handle Redis connection dropping
+    let (clean_up_s, clean_up_r) = async_channel::bounded(1);
+    let clean_up_s = Arc::new(Mutex::new(clean_up_s));
+    subscriber.on_error(move |_| {
+        let clean_up_s = clean_up_s.clone();
+        spawn(async move {
+            clean_up_s.lock().await.send(()).await.ok();
+        });
+        Ok(())
+    });
 
     let mut message_rx = subscriber.message_rx();
     'out: loop {
@@ -279,10 +289,14 @@ async fn listener(
         let t1 = message_rx.recv().fuse();
         let t2 = topic_signal_r.recv().fuse();
         let t3 = kill_signal_r.recv().fuse();
+        let t4 = clean_up_r.recv().fuse();
 
-        pin_mut!(t1, t2, t3);
+        pin_mut!(t1, t2, t3, t4);
 
         select! {
+            _ = t4 => {
+                break 'out;
+            },
             _ = t3 => {
                 break 'out;
             },
