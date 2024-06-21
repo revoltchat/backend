@@ -47,8 +47,7 @@ pub async fn web() -> Rocket<Build> {
                 authifier::database::MongoDb(client.database("revolt")),
             ),
         },
-        config: Default::default(),
-        // config: authifier_config().await,
+        config: authifier_config().await,
         event_channel: Some(sender),
     };
 
