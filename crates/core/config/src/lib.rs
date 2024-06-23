@@ -106,6 +106,8 @@ pub struct Api {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct FeaturesLimits {
+    pub outgoing_friend_requests: usize,
+
     pub group_size: usize,
     pub bots: usize,
     pub message_length: usize,

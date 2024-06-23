@@ -60,6 +60,9 @@ pub enum ErrorType {
     Blocked,
     BlockedByOther,
     NotFriends,
+    TooManyPendingFriendRequests {
+        max: usize,
+    },
 
     // ? Channel related errors
     UnknownChannel,

@@ -47,6 +47,8 @@ webhooks_enabled = false
 [features.limits]
 
 [features.limits.default]
+outgoing_friend_requests = 10
+
 group_size = 100
 bots = 5
 message_length = 2000
