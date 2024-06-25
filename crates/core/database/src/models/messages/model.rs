@@ -213,6 +213,8 @@ impl Message {
         channel: Channel,
         data: DataMessageSend,
         author: MessageAuthor<'_>,
+        user: Option<v0::User>,
+        member: Option<v0::Member>,
         limits: FeaturesLimits,
         mut idempotency: IdempotencyKey,
         generate_embeds: bool,
@@ -362,7 +364,9 @@ impl Message {
         message.nonce = Some(idempotency.into_key());
 
         // Send the message
-        message.send(db, author, &channel, generate_embeds).await?;
+        message
+            .send(db, author, user, member, &channel, generate_embeds)
+            .await?;
 
         Ok(message)
     }
@@ -371,13 +375,15 @@ impl Message {
     pub async fn send_without_notifications(
         &mut self,
         db: &Database,
+        user: Option<v0::User>,
+        member: Option<v0::Member>,
         is_dm: bool,
         generate_embeds: bool,
     ) -> Result<()> {
         db.insert_message(self).await?;
 
         // Fan out events
-        EventV1::Message(self.clone().into())
+        EventV1::Message(self.clone().into_model(user, member))
             .p(self.channel.to_string())
             .await;
 
@@ -418,11 +424,15 @@ impl Message {
         &mut self,
         db: &Database,
         author: MessageAuthor<'_>,
+        user: Option<v0::User>,
+        member: Option<v0::Member>,
         channel: &Channel,
         generate_embeds: bool,
     ) -> Result<()> {
         self.send_without_notifications(
             db,
+            user,
+            member,
             matches!(channel, Channel::DirectMessage { .. }),
             generate_embeds,
         )
@@ -438,7 +448,12 @@ impl Message {
                     _ => vec![],
                 }
             },
-            PushNotification::from(self.clone().into(), Some(author), &channel.id()).await,
+            PushNotification::from(
+                self.clone().into_model(None, None),
+                Some(author),
+                &channel.id(),
+            )
+            .await,
         )
         .await;
 
@@ -500,7 +515,7 @@ impl Message {
             .fetch_messages(query)
             .await?
             .into_iter()
-            .map(Into::into)
+            .map(|msg| msg.into_model(None, None))
             .collect();
 
         if let Some(true) = include_users {

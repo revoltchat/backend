@@ -5,6 +5,7 @@ use revolt_database::{
 };
 use revolt_database::{Interactions, Message};
 use revolt_models::v0;
+use revolt_permissions::PermissionQuery;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
 use rocket::serde::json::Json;
@@ -75,18 +76,34 @@ pub async fn message_send(
 
     // Create the message
     let author: v0::User = user.clone().into(db, Some(&user)).await;
+
+    // Make sure we have server member (edge case if server owner)
+    query.are_we_a_member().await;
+
+    // Create model user / members
+    let model_user = user
+        .clone()
+        .into_known_static(revolt_presence::is_online(&user.id).await);
+
+    let model_member: Option<v0::Member> = query
+        .member_ref()
+        .as_ref()
+        .map(|member| member.clone().into_owned().into());
+
     Ok(Json(
         Message::create_from_api(
             db,
             channel,
             data,
             v0::MessageAuthor::User(&author),
+            Some(model_user.clone()),
+            model_member.clone(),
             user.limits().await,
             idempotency,
             permissions.has_channel_permission(ChannelPermission::SendEmbeds),
             allow_mentions,
         )
         .await?
-        .into(),
+        .into_model(Some(model_user), model_member),
     ))
 }

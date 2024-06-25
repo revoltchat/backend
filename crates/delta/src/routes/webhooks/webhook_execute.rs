@@ -59,12 +59,14 @@ pub async fn webhook_execute(
             channel,
             data,
             v0::MessageAuthor::Webhook(&webhook.into()),
+            None,
+            None,
             config().await.features.limits.default,
             idempotency,
             true,
             true,
         )
         .await?
-        .into(),
+        .into_model(None, None),
     ))
 }

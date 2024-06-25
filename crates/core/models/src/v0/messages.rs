@@ -31,6 +31,12 @@ auto_derived_partial!(
         pub channel: String,
         /// Id of the user or webhook that sent this message
         pub author: String,
+        /// The user that sent this message
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub user: Option<User>,
+        /// The member that sent this message
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub member: Option<Member>,
         /// The webhook that sent this message
         #[serde(skip_serializing_if = "Option::is_none")]
         pub webhook: Option<MessageWebhook>,

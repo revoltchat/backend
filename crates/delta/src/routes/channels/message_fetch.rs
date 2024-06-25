@@ -29,5 +29,5 @@ pub async fn fetch(
         return Err(create_error!(NotFound));
     }
 
-    Ok(Json(message.into()))
+    Ok(Json(message.into_model(None, None)))
 }

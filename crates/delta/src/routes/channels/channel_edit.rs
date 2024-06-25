@@ -73,7 +73,7 @@ pub async fn edit(
             return Err(create_error!(InvalidOperation));
         }
         .into_message(channel.id().to_string())
-        .send(db, user.as_author_for_system(), &channel, false)
+        .send(db, user.as_author_for_system(), None, None, &channel, false)
         .await
         .ok();
     }
@@ -151,7 +151,7 @@ pub async fn edit(
                         by: user.id.clone(),
                     }
                     .into_message(channel.id().to_string())
-                    .send(db, user.as_author_for_system(), &channel, false)
+                    .send(db, user.as_author_for_system(), None, None, &channel, false)
                     .await
                     .ok();
                 }
@@ -161,7 +161,7 @@ pub async fn edit(
                         by: user.id.clone(),
                     }
                     .into_message(channel.id().to_string())
-                    .send(db, user.as_author_for_system(), &channel, false)
+                    .send(db, user.as_author_for_system(), None, None, &channel, false)
                     .await
                     .ok();
                 }
@@ -171,7 +171,7 @@ pub async fn edit(
                         by: user.id.clone(),
                     }
                     .into_message(channel.id().to_string())
-                    .send(db, user.as_author_for_system(), &channel, false)
+                    .send(db, user.as_author_for_system(), None, None, &channel, false)
                     .await
                     .ok();
                 }

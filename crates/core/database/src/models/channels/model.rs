@@ -377,6 +377,8 @@ impl Channel {
                         username: &user.username,
                         avatar: user.avatar.as_ref().map(|file| file.id.as_ref()),
                     },
+                    None,
+                    None,
                     self,
                     false,
                 )
@@ -688,6 +690,8 @@ impl Channel {
                                 username: name,
                                 avatar: None,
                             },
+                            None,
+                            None,
                             self,
                             false,
                         )
@@ -723,6 +727,8 @@ impl Channel {
                             username: &user.username,
                             avatar: user.avatar.as_ref().map(|file| file.id.as_ref()),
                         },
+                        None,
+                        None,
                         self,
                         false,
                     )

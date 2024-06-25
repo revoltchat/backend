@@ -97,5 +97,5 @@ pub async fn edit(
         }
     }
 
-    Ok(Json(message.into()))
+    Ok(Json(message.into_model(None, None)))
 }
