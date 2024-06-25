@@ -470,24 +470,6 @@ impl User {
 
     /// Add another user as a friend
     pub async fn add_friend(&mut self, db: &Database, target: &mut User) -> Result<()> {
-        let count = self
-            .relations
-            .as_ref()
-            .map(|relations| {
-                relations
-                    .iter()
-                    .filter(|r| matches!(r.status, RelationshipStatus::Outgoing))
-                    .count()
-            })
-            .unwrap_or_default();
-
-        let config = config().await;
-        if count >= config.features.limits.default.outgoing_friend_requests {
-            return Err(create_error!(TooManyPendingFriendRequests {
-                max: config.features.limits.default.outgoing_friend_requests
-            }));
-        }
-
         match self.relationship_with(&target.id) {
             RelationshipStatus::User => Err(create_error!(NoEffect)),
             RelationshipStatus::Friend => Err(create_error!(AlreadyFriends)),
@@ -495,6 +477,7 @@ impl User {
             RelationshipStatus::Blocked => Err(create_error!(Blocked)),
             RelationshipStatus::BlockedOther => Err(create_error!(BlockedByOther)),
             RelationshipStatus::Incoming => {
+                // Accept incoming friend request
                 self.apply_relationship(
                     db,
                     target,
@@ -504,6 +487,27 @@ impl User {
                 .await
             }
             RelationshipStatus::None => {
+                // Get this user's current count of outgoing friend requests
+                let count = self
+                    .relations
+                    .as_ref()
+                    .map(|relations| {
+                        relations
+                            .iter()
+                            .filter(|r| matches!(r.status, RelationshipStatus::Outgoing))
+                            .count()
+                    })
+                    .unwrap_or_default();
+
+                // If we're over the limit, don't allow creating more requests
+                let config = config().await;
+                if count >= config.features.limits.default.outgoing_friend_requests {
+                    return Err(create_error!(TooManyPendingFriendRequests {
+                        max: config.features.limits.default.outgoing_friend_requests
+                    }));
+                }
+
+                // Send the friend request
                 self.apply_relationship(
                     db,
                     target,
