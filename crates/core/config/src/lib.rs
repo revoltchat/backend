@@ -105,20 +105,26 @@ pub struct Api {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct FeaturesLimits {
-    pub outgoing_friend_requests: usize,
-
+pub struct GlobalLimits {
     pub group_size: usize,
-    pub bots: usize,
-    pub message_length: usize,
     pub message_replies: usize,
-    pub message_attachments: usize,
-    pub message_embeds: usize,
     pub message_reactions: usize,
-    pub servers: usize,
     pub server_emoji: usize,
     pub server_roles: usize,
     pub server_channels: usize,
+
+    pub new_user_days: usize,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct FeaturesLimits {
+    pub outgoing_friend_requests: usize,
+
+    pub bots: usize,
+    pub message_length: usize,
+    pub message_attachments: usize,
+    pub message_embeds: usize,
+    pub servers: usize,
 
     pub attachment_size: usize,
     pub avatar_size: usize,
@@ -130,6 +136,9 @@ pub struct FeaturesLimits {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct FeaturesLimitsCollection {
+    pub global: GlobalLimits,
+
+    pub new_user: FeaturesLimits,
     pub default: FeaturesLimits,
 
     #[serde(flatten)]

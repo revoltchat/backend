@@ -201,9 +201,9 @@ impl Channel {
         update_server: bool,
     ) -> Result<Channel> {
         let config = config().await;
-        if server.channels.len() > config.features.limits.default.server_channels {
+        if server.channels.len() > config.features.limits.global.server_channels {
             return Err(create_error!(TooManyChannels {
-                max: config.features.limits.default.server_channels,
+                max: config.features.limits.global.server_channels,
             }));
         };
 
@@ -263,9 +263,9 @@ impl Channel {
         data.users.insert(owner_id.to_string());
 
         let config = config().await;
-        if data.users.len() > config.features.limits.default.group_size {
+        if data.users.len() > config.features.limits.global.group_size {
             return Err(create_error!(GroupTooLarge {
-                max: config.features.limits.default.group_size,
+                max: config.features.limits.global.group_size,
             }));
         }
 
@@ -346,9 +346,9 @@ impl Channel {
             }
 
             let config = config().await;
-            if recipients.len() >= config.features.limits.default.group_size {
+            if recipients.len() >= config.features.limits.global.group_size {
                 return Err(create_error!(GroupTooLarge {
-                    max: config.features.limits.default.group_size
+                    max: config.features.limits.global.group_size
                 }));
             }
 

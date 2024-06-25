@@ -46,20 +46,40 @@ webhooks_enabled = false
 
 [features.limits]
 
-[features.limits.default]
-outgoing_friend_requests = 10
-
+[features.limits.global]
 group_size = 100
-bots = 5
-message_length = 2000
-message_embeds = 5
 message_replies = 5
-message_attachments = 5
 message_reactions = 20
-servers = 100
 server_emoji = 100
 server_roles = 200
 server_channels = 200
+
+new_user_days = 3
+
+[features.limits.new_user]
+outgoing_friend_requests = 5
+
+bots = 2
+message_length = 2000
+message_embeds = 5
+message_attachments = 5
+servers = 100
+
+attachment_size = 20000000
+avatar_size = 4000000
+background_size = 6000000
+icon_size = 2500000
+banner_size = 6000000
+emoji_size = 500000
+
+[features.limits.default]
+outgoing_friend_requests = 10
+
+bots = 5
+message_length = 2000
+message_embeds = 5
+message_attachments = 5
+servers = 100
 
 attachment_size = 20000000
 avatar_size = 4000000

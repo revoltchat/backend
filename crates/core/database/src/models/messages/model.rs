@@ -288,9 +288,9 @@ impl Message {
         // Verify replies are valid.
         let mut replies = HashSet::new();
         if let Some(entries) = data.replies {
-            if entries.len() > config.features.limits.default.message_replies {
+            if entries.len() > config.features.limits.global.message_replies {
                 return Err(create_error!(TooManyReplies {
-                    max: config.features.limits.default.message_replies,
+                    max: config.features.limits.global.message_replies,
                 }));
             }
 
@@ -616,7 +616,7 @@ impl Message {
     pub async fn add_reaction(&self, db: &Database, user: &User, emoji: &str) -> Result<()> {
         // Check how many reactions are already on the message
         let config = config().await;
-        if self.reactions.len() >= config.features.limits.default.message_reactions
+        if self.reactions.len() >= config.features.limits.global.message_reactions
             && !self.reactions.contains_key(emoji)
         {
             return Err(create_error!(InvalidOperation));
@@ -781,7 +781,7 @@ impl Interactions {
         if let Some(reactions) = &self.reactions {
             permissions.throw_if_lacking_channel_permission(ChannelPermission::React)?;
 
-            if reactions.len() > config.features.limits.default.message_reactions {
+            if reactions.len() > config.features.limits.global.message_reactions {
                 return Err(create_error!(InvalidOperation));
             }
 

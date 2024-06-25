@@ -34,9 +34,9 @@ pub async fn create(
         .throw_if_lacking_channel_permission(ChannelPermission::ManageRole)?;
 
     let config = config().await;
-    if server.roles.len() >= config.features.limits.default.server_roles {
+    if server.roles.len() >= config.features.limits.global.server_roles {
         return Err(create_error!(TooManyRoles {
-            max: config.features.limits.default.server_roles,
+            max: config.features.limits.global.server_roles,
         }));
     };
 
