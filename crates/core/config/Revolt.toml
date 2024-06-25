@@ -48,6 +48,7 @@ webhooks_enabled = false
 
 [features.limits.global]
 group_size = 100
+message_embeds = 5
 message_replies = 5
 message_reactions = 20
 server_emoji = 100
@@ -61,7 +62,6 @@ outgoing_friend_requests = 5
 
 bots = 2
 message_length = 2000
-message_embeds = 5
 message_attachments = 5
 servers = 100
 
@@ -77,7 +77,6 @@ outgoing_friend_requests = 10
 
 bots = 5
 message_length = 2000
-message_embeds = 5
 message_attachments = 5
 servers = 100
 

@@ -80,8 +80,7 @@ impl Bot {
             return Err(create_error!(IsBot));
         }
 
-        let config = config().await;
-        if db.get_number_of_bots_by_user(&owner.id).await? >= config.features.limits.default.bots {
+        if db.get_number_of_bots_by_user(&owner.id).await? >= owner.limits().await.bots {
             return Err(create_error!(ReachedMaximumBots));
         }
 

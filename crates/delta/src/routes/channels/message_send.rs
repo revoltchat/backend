@@ -81,6 +81,7 @@ pub async fn message_send(
             channel,
             data,
             v0::MessageAuthor::User(&author),
+            user.limits().await,
             idempotency,
             permissions.has_channel_permission(ChannelPermission::SendEmbeds),
             allow_mentions,

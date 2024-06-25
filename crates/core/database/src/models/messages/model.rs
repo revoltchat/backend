@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
-use revolt_config::config;
+use revolt_config::{config, FeaturesLimits};
 use revolt_models::v0::{
     self, BulkMessageResponse, DataMessageSend, Embed, MessageAuthor, MessageSort, MessageWebhook,
     PushNotification, ReplyIntent, SendableEmbed, Text, RE_MENTION,
@@ -207,11 +207,13 @@ impl Default for Message {
 #[allow(clippy::disallowed_methods)]
 impl Message {
     /// Create message from API data
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_from_api(
         db: &Database,
         channel: Channel,
         data: DataMessageSend,
         author: MessageAuthor<'_>,
+        limits: FeaturesLimits,
         mut idempotency: IdempotencyKey,
         generate_embeds: bool,
         allow_mentions: bool,
@@ -221,7 +223,7 @@ impl Message {
         Message::validate_sum(
             &data.content,
             data.embeds.as_deref().unwrap_or_default(),
-            config.features.limits.default.message_length,
+            limits.message_length,
         )?;
 
         idempotency
@@ -320,20 +322,20 @@ impl Message {
         if data
             .attachments
             .as_ref()
-            .is_some_and(|v| v.len() > config.features.limits.default.message_attachments)
+            .is_some_and(|v| v.len() > limits.message_attachments)
         {
             return Err(create_error!(TooManyAttachments {
-                max: config.features.limits.default.message_attachments,
+                max: limits.message_attachments,
             }));
         }
 
         if data
             .embeds
             .as_ref()
-            .is_some_and(|v| v.len() > config.features.limits.default.message_embeds)
+            .is_some_and(|v| v.len() > config.features.limits.global.message_embeds)
         {
             return Err(create_error!(TooManyEmbeds {
-                max: config.features.limits.default.message_embeds,
+                max: config.features.limits.global.message_embeds,
             }));
         }
 

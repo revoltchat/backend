@@ -56,7 +56,7 @@ pub async fn worker(db: Database) {
             let embeds = generate(
                 task.content,
                 &config.hosts.january,
-                config.features.limits.default.message_embeds,
+                config.features.limits.global.message_embeds,
                 semaphore,
             )
             .await;

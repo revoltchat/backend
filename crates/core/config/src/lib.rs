@@ -107,6 +107,7 @@ pub struct Api {
 #[derive(Deserialize, Debug, Clone)]
 pub struct GlobalLimits {
     pub group_size: usize,
+    pub message_embeds: usize,
     pub message_replies: usize,
     pub message_reactions: usize,
     pub server_emoji: usize,
@@ -123,7 +124,6 @@ pub struct FeaturesLimits {
     pub bots: usize,
     pub message_length: usize,
     pub message_attachments: usize,
-    pub message_embeds: usize,
     pub servers: usize,
 
     pub attachment_size: usize,
