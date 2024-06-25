@@ -180,7 +180,7 @@ impl State {
             .collect();
 
         // Make sure we see our own user correctly.
-        users.push(user.into_self().await);
+        users.push(user.into_self(true).await);
 
         // Set subscription state internally.
         self.reset_state().await;
@@ -537,6 +537,20 @@ impl State {
                     self.insert_subscription(id.clone()).await;
                 } else {
                     self.remove_subscription(id).await;
+                }
+            }
+
+            EventV1::Message(message) => {
+                // Since Message events are fanned out to many clients,
+                // we must reconstruct the relationship value at this end.
+                if let Some(user) = &mut message.user {
+                    user.relationship = self
+                        .cache
+                        .users
+                        .get(&self.cache.user_id)
+                        .expect("missing self?")
+                        .relationship_with(&message.author)
+                        .into();
                 }
             }
 

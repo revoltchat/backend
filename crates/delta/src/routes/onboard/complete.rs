@@ -48,7 +48,7 @@ pub async fn complete(
     Ok(Json(
         User::create(db, data.username, session.user_id, None)
             .await?
-            .into_self()
+            .into_self(false)
             .await,
     ))
 }

@@ -52,7 +52,7 @@ pub async fn edit(
         && data.flags.is_none()
         && data.remove.is_none()
     {
-        return Ok(Json(user.into_self().await));
+        return Ok(Json(user.into_self(false).await));
     }
 
     // 1. Remove fields from object
@@ -126,5 +126,5 @@ pub async fn edit(
     )
     .await?;
 
-    Ok(Json(user.into_self().await))
+    Ok(Json(user.into_self(false).await))
 }

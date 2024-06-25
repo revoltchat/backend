@@ -3572,6 +3572,7 @@ dependencies = [
  "revolt-database",
  "revolt-models",
  "revolt-permissions",
+ "revolt-presence",
  "revolt-result",
  "revolt_rocket_okapi",
  "rocket",
