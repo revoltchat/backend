@@ -326,6 +326,7 @@ impl IntoDocumentPath for FieldsUser {
             FieldsUser::ProfileContent => "profile.content",
             FieldsUser::StatusPresence => "status.presence",
             FieldsUser::StatusText => "status.text",
+            FieldsUser::DisplayName => "display_name",
         })
     }
 }

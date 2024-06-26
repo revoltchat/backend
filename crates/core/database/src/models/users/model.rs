@@ -61,6 +61,7 @@ auto_derived!(
         StatusPresence,
         ProfileContent,
         ProfileBackground,
+        DisplayName,
     }
 
     /// User's relationship with another user (or themselves)
@@ -657,6 +658,7 @@ impl User {
                     x.background = None;
                 }
             }
+            FieldsUser::DisplayName => self.display_name = None,
         }
     }
 

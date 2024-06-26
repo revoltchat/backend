@@ -1212,6 +1212,7 @@ impl From<FieldsUser> for crate::FieldsUser {
             FieldsUser::ProfileContent => crate::FieldsUser::ProfileContent,
             FieldsUser::StatusPresence => crate::FieldsUser::StatusPresence,
             FieldsUser::StatusText => crate::FieldsUser::StatusText,
+            FieldsUser::DisplayName => crate::FieldsUser::DisplayName,
         }
     }
 }
@@ -1224,6 +1225,7 @@ impl From<crate::FieldsUser> for FieldsUser {
             crate::FieldsUser::ProfileContent => FieldsUser::ProfileContent,
             crate::FieldsUser::StatusPresence => FieldsUser::StatusPresence,
             crate::FieldsUser::StatusText => FieldsUser::StatusText,
+            crate::FieldsUser::DisplayName => FieldsUser::DisplayName,
         }
     }
 }

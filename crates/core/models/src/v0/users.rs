@@ -83,6 +83,7 @@ auto_derived!(
         StatusPresence,
         ProfileContent,
         ProfileBackground,
+        DisplayName,
     }
 
     /// User's relationship with another user (or themselves)
