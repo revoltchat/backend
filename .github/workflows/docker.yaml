@@ -2,8 +2,8 @@ name: Docker Test & Publish
 
 on:
   push:
-    branches:
-      - "main"
+    # branches:
+    #   - "main"
     tags:
       - "*"
     paths-ignore:
