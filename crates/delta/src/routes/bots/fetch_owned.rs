@@ -41,7 +41,7 @@ mod test {
         let harness = TestHarness::new().await;
         let (_, session, user) = harness.new_user().await;
 
-        let bot = Bot::create(&harness.db, TestHarness::rand_string(), &user, None)
+        let (bot, _) = Bot::create(&harness.db, TestHarness::rand_string(), &user, None)
             .await
             .expect("`Bot`");
 

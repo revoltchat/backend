@@ -162,4 +162,11 @@ auto_derived!(
         /// User objects
         pub users: Vec<User>,
     }
+
+    /// Bot with user response
+    pub struct BotWithUserResponse {
+        #[serde(flatten)]
+        pub bot: Bot,
+        pub user: User,
+    }
 );

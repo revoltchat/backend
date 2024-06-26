@@ -72,7 +72,12 @@ impl Default for Bot {
 #[allow(clippy::disallowed_methods)]
 impl Bot {
     /// Create a new bot
-    pub async fn create<D>(db: &Database, username: String, owner: &User, data: D) -> Result<Bot>
+    pub async fn create<D>(
+        db: &Database,
+        username: String,
+        owner: &User,
+        data: D,
+    ) -> Result<(Bot, User)>
     where
         D: Into<Option<PartialBot>>,
     {
@@ -86,7 +91,7 @@ impl Bot {
 
         let id = Ulid::new().to_string();
 
-        User::create(
+        let user = User::create(
             db,
             username,
             Some(id.to_string()),
@@ -111,7 +116,7 @@ impl Bot {
         }
 
         db.insert_bot(&bot).await?;
-        Ok(bot)
+        Ok((bot, user))
     }
 
     /// Remove a field from this object
