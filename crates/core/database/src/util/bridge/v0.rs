@@ -470,7 +470,7 @@ impl crate::Message {
             member,
             webhook: self.webhook,
             content: self.content,
-            system: self.system.map(|system| system.into()),
+            system: self.system.map(Into::into),
             attachments: self
                 .attachments
                 .map(|v| v.into_iter().map(|f| f.into()).collect()),
@@ -480,7 +480,8 @@ impl crate::Message {
             replies: self.replies,
             reactions: self.reactions,
             interactions: self.interactions.into(),
-            masquerade: self.masquerade.map(|masq| masq.into()),
+            masquerade: self.masquerade.map(Into::into),
+            flags: self.flags.map(|flags| flags as u32).unwrap_or_default(),
         }
     }
 }
@@ -496,7 +497,7 @@ impl From<crate::PartialMessage> for PartialMessage {
             member: None,
             webhook: value.webhook,
             content: value.content,
-            system: value.system.map(|system| system.into()),
+            system: value.system.map(Into::into),
             attachments: value
                 .attachments
                 .map(|v| v.into_iter().map(|f| f.into()).collect()),
@@ -505,8 +506,9 @@ impl From<crate::PartialMessage> for PartialMessage {
             mentions: value.mentions,
             replies: value.replies,
             reactions: value.reactions,
-            interactions: value.interactions.map(|interactions| interactions.into()),
-            masquerade: value.masquerade.map(|masq| masq.into()),
+            interactions: value.interactions.map(Into::into),
+            masquerade: value.masquerade.map(Into::into),
+            flags: value.flags.map(|flags| flags as u32),
         }
     }
 }

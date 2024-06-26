@@ -4,8 +4,8 @@ use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
 use revolt_config::{config, FeaturesLimits};
 use revolt_models::v0::{
-    self, BulkMessageResponse, DataMessageSend, Embed, MessageAuthor, MessageSort, MessageWebhook,
-    PushNotification, ReplyIntent, SendableEmbed, Text, RE_MENTION,
+    self, BulkMessageResponse, DataMessageSend, Embed, MessageAuthor, MessageFlags, MessageSort,
+    MessageWebhook, PushNotification, ReplyIntent, SendableEmbed, Text, RE_MENTION,
 };
 use revolt_permissions::{ChannelPermission, PermissionValue};
 use revolt_result::Result;
@@ -65,6 +65,10 @@ auto_derived_partial!(
         /// Name and / or avatar overrides for this message
         #[serde(skip_serializing_if = "Option::is_none")]
         pub masquerade: Option<Masquerade>,
+
+        /// Bitfield of message flags
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub flags: Option<i32>,
     },
     "PartialMessage"
 );
@@ -200,6 +204,7 @@ impl Default for Message {
             reactions: Default::default(),
             interactions: Default::default(),
             masquerade: None,
+            flags: None,
         }
     }
 }
@@ -241,6 +246,13 @@ impl Message {
             return Err(create_error!(EmptyMessage));
         }
 
+        // Ensure flags are either not set or have permissible values
+        if let Some(flags) = &data.flags {
+            if flags != &0 && flags != &1 {
+                return Err(create_error!(InvalidProperty));
+            }
+        }
+
         // Ensure restrict_reactions is not specified without reactions list
         if let Some(interactions) = &data.interactions {
             if interactions.restrict_reactions {
@@ -274,6 +286,7 @@ impl Message {
                 .unwrap_or_default(),
             author: author_id,
             webhook: webhook.map(|w| w.into()),
+            flags: data.flags.map(|v| v as i32),
             ..Default::default()
         };
 
@@ -438,24 +451,26 @@ impl Message {
         )
         .await?;
 
-        // Push out Web Push notifications
-        crate::tasks::web_push::queue(
-            {
-                match channel {
-                    Channel::DirectMessage { recipients, .. }
-                    | Channel::Group { recipients, .. } => recipients.clone(),
-                    Channel::TextChannel { .. } => self.mentions.clone().unwrap_or_default(),
-                    _ => vec![],
-                }
-            },
-            PushNotification::from(
-                self.clone().into_model(None, None),
-                Some(author),
-                &channel.id(),
+        if !self.has_suppressed_notifications() {
+            // Push out Web Push notifications
+            crate::tasks::web_push::queue(
+                {
+                    match channel {
+                        Channel::DirectMessage { recipients, .. }
+                        | Channel::Group { recipients, .. } => recipients.clone(),
+                        Channel::TextChannel { .. } => self.mentions.clone().unwrap_or_default(),
+                        _ => vec![],
+                    }
+                },
+                PushNotification::from(
+                    self.clone().into_model(None, None),
+                    Some(author),
+                    &channel.id(),
+                )
+                .await,
             )
-            .await,
-        )
-        .await;
+            .await;
+        }
 
         Ok(())
     }
@@ -485,6 +500,16 @@ impl Message {
             media: media.map(|m| m.into()),
             colour: embed.colour,
         }))
+    }
+
+    /// Whether this message has suppressed notifications
+    pub fn has_suppressed_notifications(&self) -> bool {
+        if let Some(flags) = self.flags {
+            flags & MessageFlags::SupressNotifications as i32
+                == MessageFlags::SupressNotifications as i32
+        } else {
+            false
+        }
     }
 
     /// Update message data

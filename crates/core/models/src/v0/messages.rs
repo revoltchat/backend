@@ -70,6 +70,15 @@ auto_derived_partial!(
         /// Name and / or avatar overrides for this message
         #[serde(skip_serializing_if = "Option::is_none")]
         pub masquerade: Option<Masquerade>,
+
+        /// Bitfield of message flags
+        ///
+        /// https://docs.rs/revolt-models/latest/revolt_models/v0/enum.MessageFlags.html
+        #[cfg_attr(
+            feature = "serde",
+            serde(skip_serializing_if = "crate::if_zero_u32", default)
+        )]
+        pub flags: u32,
     },
     "PartialMessage"
 );
@@ -247,6 +256,11 @@ auto_derived!(
         pub masquerade: Option<Masquerade>,
         /// Information about how this message should be interacted with
         pub interactions: Option<Interactions>,
+
+        /// Bitfield of message flags
+        ///
+        /// https://docs.rs/revolt-models/latest/revolt_models/v0/enum.MessageFlags.html
+        pub flags: Option<u32>,
     }
 
     /// Options for querying messages
@@ -333,6 +347,13 @@ auto_derived!(
         pub user_id: Option<String>,
         /// Remove all reactions
         pub remove_all: Option<bool>,
+    }
+
+    /// Message flag bitfield
+    #[repr(u32)]
+    pub enum MessageFlags {
+        /// Message will not send push / desktop notifications
+        SupressNotifications = 1,
     }
 );
 
