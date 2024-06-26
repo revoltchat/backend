@@ -21,6 +21,8 @@ Rust 1.70 or higher.
 
 ## Development Guide
 
+Before contributing, make yourself familiar with [our contribution guidelines](https://developers.revolt.chat/contrib.html) and the [technical documentation for this project](https://revoltchat.github.io/backend/).
+
 Before getting started, you'll want to install:
 
 - Rust toolchain (rustup recommended)
