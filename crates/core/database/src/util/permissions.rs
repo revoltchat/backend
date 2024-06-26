@@ -53,6 +53,12 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
         if let Some(other_user) = &self.user {
             if self.perspective.id == other_user.id {
                 return RelationshipStatus::User;
+            } else if let Some(bot) = &other_user.bot {
+                // For the purposes of permissions checks,
+                // assume owner is the same as bot
+                if self.perspective.id == bot.owner {
+                    return RelationshipStatus::User;
+                }
             }
 
             if let Some(relations) = &self.perspective.relations {
