@@ -353,7 +353,7 @@ auto_derived!(
     #[repr(u32)]
     pub enum MessageFlags {
         /// Message will not send push / desktop notifications
-        SupressNotifications = 1,
+        SuppressNotifications = 1,
     }
 );
 

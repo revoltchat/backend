@@ -505,8 +505,8 @@ impl Message {
     /// Whether this message has suppressed notifications
     pub fn has_suppressed_notifications(&self) -> bool {
         if let Some(flags) = self.flags {
-            flags & MessageFlags::SupressNotifications as i32
-                == MessageFlags::SupressNotifications as i32
+            flags & MessageFlags::SuppressNotifications as i32
+                == MessageFlags::SuppressNotifications as i32
         } else {
             false
         }
