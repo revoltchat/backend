@@ -172,7 +172,7 @@ mod tests {
                 .await
                 .unwrap();
 
-            let bot = Bot::create(
+            let (bot, _) = Bot::create(
                 &db,
                 "Bot Name".to_string(),
                 &owner,
