@@ -6,6 +6,8 @@ use futures_locks::RwLock;
 use once_cell::sync::Lazy;
 use serde::Deserialize;
 
+pub use sentry::capture_error;
+
 #[cfg(not(debug_assertions))]
 use std::env;
 
@@ -76,6 +78,13 @@ pub struct ApiFcm {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+pub struct ApiApn {
+    pub pkcs8: String,
+    pub key_id: String,
+    pub team_id: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct ApiSecurityCaptcha {
     pub hcaptcha_key: String,
     pub hcaptcha_sitekey: String,
@@ -100,6 +109,7 @@ pub struct Api {
     pub smtp: ApiSmtp,
     pub vapid: ApiVapid,
     pub fcm: ApiFcm,
+    pub apn: ApiApn,
     pub security: ApiSecurity,
     pub workers: ApiWorkers,
 }

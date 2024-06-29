@@ -29,6 +29,11 @@ public_key = "BGcvgR-i2z4IQ5Mw841vJvkLjt8wY-FjmWrw83jOLCY52qcGZS0OF7nfLzuYbjsQIS
 [api.fcm]
 api_key = ""
 
+[api.apn]
+pkcs8 = ""
+key_id = ""
+team_id = ""
+
 [api.security]
 authifier_shield_key = ""
 voso_legacy_token = ""

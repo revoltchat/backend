@@ -316,6 +316,25 @@ impl AbstractUsers for MongoDb {
     async fn delete_user(&self, id: &str) -> Result<()> {
         query!(self, delete_one_by_id, COL, id).map(|_| ())
     }
+
+    /// Remove push subscription for a session by session id (TODO: remove)
+    async fn remove_push_subscription_by_session_id(&self, session_id: &str) -> Result<()> {
+        self.col::<User>("sessions")
+            .update_one(
+                doc! {
+                    "_id": session_id
+                },
+                doc! {
+                    "$unset": {
+                        "subscription": 1
+                    }
+                },
+                None,
+            )
+            .await
+            .map(|_| ())
+            .map_err(|_| create_database_error!("update_one", COL))
+    }
 }
 
 impl IntoDocumentPath for FieldsUser {

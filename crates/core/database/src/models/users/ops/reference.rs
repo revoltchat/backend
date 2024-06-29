@@ -163,4 +163,9 @@ impl AbstractUsers for ReferenceDb {
             Err(create_error!(NotFound))
         }
     }
+
+    /// Remove push subscription for a session by session id (TODO: remove)
+    async fn remove_push_subscription_by_session_id(&self, _session_id: &str) -> Result<()> {
+        todo!()
+    }
 }

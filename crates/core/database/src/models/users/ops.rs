@@ -58,4 +58,7 @@ pub trait AbstractUsers: Sync + Send {
 
     /// Delete a user by their id
     async fn delete_user(&self, id: &str) -> Result<()>;
+
+    /// Remove push subscription for a session by session id (TODO: remove)
+    async fn remove_push_subscription_by_session_id(&self, session_id: &str) -> Result<()>;
 }
