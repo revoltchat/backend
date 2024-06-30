@@ -2,10 +2,14 @@
 FROM ghcr.io/revoltchat/base:latest AS builder
 
 # Bundle Stage
-FROM debian:bullseye-slim
-RUN apt-get update && \
-    apt-get install -y ca-certificates && \
-    apt-get clean
+FROM gcr.io/distroless/cc:nonroot
+
+# copy our compiled binary
 COPY --from=builder /home/rust/src/target/release/revolt-bonfire ./
 EXPOSE 9000
+
+# run as non-privileged user
+USER nonroot
+
+# command of container
 CMD ["./revolt-bonfire"]
