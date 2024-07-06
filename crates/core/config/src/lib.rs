@@ -79,6 +79,7 @@ pub struct ApiFcm {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct ApiApn {
+    pub sandbox: bool,
     pub pkcs8: String,
     pub key_id: String,
     pub team_id: String,

@@ -30,6 +30,7 @@ public_key = "BGcvgR-i2z4IQ5Mw841vJvkLjt8wY-FjmWrw83jOLCY52qcGZS0OF7nfLzuYbjsQIS
 api_key = ""
 
 [api.apn]
+sandbox = false
 pkcs8 = ""
 key_id = ""
 team_id = ""
