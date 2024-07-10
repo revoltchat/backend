@@ -702,6 +702,8 @@ impl Channel {
                     }
                 }
 
+                db.remove_user_from_group(id, &user.id).await?;
+
                 EventV1::ChannelGroupLeave {
                     id: id.to_string(),
                     user: user.id.to_string(),
