@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 use revolt_models::v0::{
     AppendMessage, Channel, Emoji, FieldsChannel, FieldsMember, FieldsRole, FieldsServer,
     FieldsUser, FieldsWebhook, Member, MemberCompositeKey, Message, PartialChannel, PartialMember,
-    PartialMessage, PartialRole, PartialServer, PartialUser, PartialWebhook, Report, Server, User,
-    UserSettings, Webhook,
+    PartialMessage, PartialRole, PartialServer, PartialUser, PartialWebhook, RemovalIntention,
+    Report, Server, User, UserSettings, Webhook,
 };
 use revolt_result::Error;
 
@@ -136,7 +136,11 @@ pub enum EventV1 {
     ServerMemberJoin { id: String, user: String },
 
     /// User left server
-    ServerMemberLeave { id: String, user: String },
+    ServerMemberLeave {
+        id: String,
+        user: String,
+        reason: RemovalIntention,
+    },
 
     /// Server role created or updated
     ServerRoleUpdate {

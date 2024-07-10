@@ -229,6 +229,7 @@ impl Member {
         EventV1::ServerMemberLeave {
             id: self.id.server.to_string(),
             user: self.id.user.to_string(),
+            reason: intention.clone().into(),
         }
         .p(self.id.server.to_string())
         .await;

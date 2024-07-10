@@ -443,7 +443,7 @@ impl State {
             EventV1::ServerMemberJoin { .. } => {
                 // We will always receive ServerCreate when joining a new server.
             }
-            EventV1::ServerMemberLeave { id, user } => {
+            EventV1::ServerMemberLeave { id, user, .. } => {
                 if user == &self.cache.user_id {
                     self.remove_subscription(id).await;
 
