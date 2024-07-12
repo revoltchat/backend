@@ -3788,9 +3788,9 @@ dependencies = [
 
 [[package]]
 name = "revolt_a2"
-version = "0.10.0"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "466eb5262fcbb26e6e10b8a0acf56eb7cc095008132ff4ebddfc44d8672f8066"
+checksum = "edbe1f79cb41271d3cd8f932d75dddeba963c19dc93d1ee6cbe0391b495ab2f5"
 dependencies = [
  "base64 0.21.3",
  "erased-serde",

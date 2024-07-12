@@ -6,7 +6,6 @@ use base64::{
     Engine as _,
 };
 use deadqueue::limited::Queue;
-use fcm::FcmError;
 use once_cell::sync::Lazy;
 use revolt_config::config;
 use revolt_models::v0::PushNotification;
@@ -82,6 +81,7 @@ pub async fn worker(db: Database) {
                                 tag,
                                 timestamp: _,
                                 url: _,
+                                message: _,
                             } = &task.payload;
 
                             let mut notification = fcm::NotificationBuilder::new();

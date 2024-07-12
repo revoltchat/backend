@@ -200,6 +200,8 @@ auto_derived!(
         pub timestamp: u64,
         /// URL to open when clicking notification
         pub url: String,
+        /// The message object itself, to send to clients for processing
+        pub message: Message,
     }
 
     /// Representation of a text embed before it is sent.
@@ -437,15 +439,30 @@ impl PushNotification {
             format!("{}/assets/logo.png", config.hosts.app)
         };
 
-        let image = msg.attachments.and_then(|attachments| {
+        let image = msg.attachments.as_ref().and_then(|attachments| {
             attachments
                 .first()
                 .map(|v| format!("{}/attachments/{}", config.hosts.autumn, v.id))
         });
 
-        let body = if let Some(sys) = msg.system {
-            sys.into()
-        } else if let Some(text) = msg.content {
+        let body = if let Some(ref sys) = msg.system {
+            sys.clone().into()
+        } else if let Some(ref text) = msg.content {
+            text.clone()
+        } else if let Some(text) = msg.embeds.as_ref().and_then(|embeds| match embeds.first() {
+            Some(Embed::Image(_)) => Some("Sent an image".to_string()),
+            Some(Embed::Video(_)) => Some("Sent a video".to_string()),
+            Some(Embed::Text(e)) => e
+                .description
+                .clone()
+                .or(e.title.clone().or(Some("Empty Embed".to_string()))),
+            Some(Embed::Website(e)) => e.title.clone().or(e
+                .description
+                .clone()
+                .or(e.site_name.clone().or(Some("Empty Embed".to_string())))),
+            Some(Embed::None) => Some("Empty Message".to_string()), // ???
+            None => Some("Empty Message".to_string()),              // ??
+        }) {
             text
         } else {
             "Empty Message".to_string()
@@ -466,6 +483,7 @@ impl PushNotification {
             tag: channel_id.to_string(),
             timestamp,
             url: format!("{}/channel/{}/{}", config.hosts.app, channel_id, msg.id),
+            message: msg,
         }
     }
 }

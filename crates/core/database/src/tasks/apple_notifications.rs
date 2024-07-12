@@ -6,21 +6,51 @@ use base64::{
 };
 use deadqueue::limited::Queue;
 use once_cell::sync::Lazy;
-use revolt_a2::{Client, ClientConfig, DefaultNotificationBuilder, Endpoint};
-use revolt_a2::{Error, ErrorBody, ErrorReason, NotificationBuilder, Response};
+use revolt_a2::{
+    request::{
+        notification::{DefaultAlert, NotificationOptions},
+        payload::{APSAlert, PayloadLike, APS},
+    },
+    Client, ClientConfig, DefaultNotificationBuilder, Endpoint, Error, ErrorBody, ErrorReason,
+    NotificationBuilder, Priority, PushType, Response,
+};
 use revolt_config::config;
 use revolt_models::v0::{Message, PushNotification};
 
 use crate::Database;
 
-/// Payload information
+/// Payload information, before assembly
 #[derive(Debug)]
-pub struct ApnCustomPayload {
+pub struct ApnPayload {
     message: Message,
-    serverId: String,
+    url: String,
     authorAvatar: String,
     authorDisplayName: String,
     channelName: String,
+}
+
+#[derive(Serialize, Debug)]
+struct Payload<'a> {
+    aps: APS<'a>,
+    #[serde(skip_serializing)]
+    options: NotificationOptions<'a>,
+    #[serde(skip_serializing)]
+    device_token: &'a str,
+
+    message: Message,
+    url: String,
+    authorAvatar: String,
+    authorDisplayName: String,
+    channelName: String,
+}
+
+impl<'a> PayloadLike for Payload<'a> {
+    fn get_device_token(&self) -> &'a str {
+        self.device_token
+    }
+    fn get_options(&self) -> &NotificationOptions {
+        &self.options
+    }
 }
 
 /// Task information
@@ -45,7 +75,7 @@ pub struct ApnTask {
     category: String,
 
     /// Payload used by the iOS client to modify the notification
-    payload: ApnCustomPayload,
+    custom_payload: ApnPayload,
 }
 
 impl ApnTask {
@@ -55,7 +85,10 @@ impl ApnTask {
         // in a group, it would look like "Sendername in groupname"
         // in a dm it should just be "Sendername".
         // not sure how feasible all those are given the PushNotification object as it currently stands.
-        todo!();
+        format!(
+            "{} in {}",
+            notification.author, notification.message.channel
+        ) // TODO: this absolutely needs a channel name
     }
 
     pub fn from_notification(
@@ -70,12 +103,12 @@ impl ApnTask {
             body: notification.body.to_string(),
             thread_id: notification.tag.to_string(),
             category: "ALERT_MESSAGE".to_string(),
-            payload: ApnCustomPayload {
-                message: (),
-                serverId: (),
-                authorAvatar: notification.icon.to_string(),
-                authorDisplayName: notification.author.to_string(),
-                channelName: (),
+            custom_payload: ApnPayload {
+                message: notification.message.clone(),
+                url: notification.url.clone(),
+                authorAvatar: notification.icon.clone(),
+                authorDisplayName: notification.author.clone(),
+                channelName: "#fetchchannelnamehere".to_string(), // TODO: get actual channel name
             },
         }
     }
@@ -110,8 +143,7 @@ pub async fn worker(db: Database) {
         .decode(config.api.apn.pkcs8)
         .expect("valid `pcks8`");
 
-    let client_config = ClientConfig::default();
-    client_config.endpoint = endpoint;
+    let client_config = ClientConfig::new(endpoint);
 
     let client = Client::token(
         &mut Cursor::new(pkcs8),
@@ -121,21 +153,52 @@ pub async fn worker(db: Database) {
     )
     .expect("could not create APN client");
 
+    let payload_options = NotificationOptions {
+        apns_id: None,
+        apns_push_type: Some(PushType::Alert),
+        apns_expiration: None,
+        apns_priority: Some(Priority::High),
+        apns_topic: Some("chat.revolt.app"),
+        apns_collapse_id: None,
+    };
+
     loop {
         let task = Q.pop().await;
-        let payload = DefaultNotificationBuilder::new()
-            .set_title(&task.title)
-            .set_body(&task.body)
-            .set_thread_id(&task.thread_id)
-            .set_category(&task.category)
-            .set_mutable_content() // allows the service extension to execute
-            .build(&task.device_token, Default::default());
 
-        payload.data = &task.payload; // this looks like a job for someone more rust-inclined than me. -tom
+        let payload: Payload = Payload {
+            aps: APS {
+                alert: Some(APSAlert::Default(DefaultAlert {
+                    title: Some(&task.title),
+                    subtitle: None,
+                    body: Some(&task.body),
+                    title_loc_key: None,
+                    title_loc_args: None,
+                    action_loc_key: None,
+                    loc_key: None,
+                    loc_args: None,
+                    launch_image: None,
+                })),
+                badge: Some(1),
+                sound: None,
+                thread_id: Some(&task.thread_id),
+                content_available: Some(1),
+                category: Some(&task.category),
+                mutable_content: Some(1),
+                url_args: None,
+            },
+            device_token: &task.device_token,
+            options: payload_options.clone(),
+            message: task.custom_payload.message,
+            url: task.custom_payload.url,
+            authorAvatar: task.custom_payload.authorAvatar,
+            authorDisplayName: task.custom_payload.authorDisplayName,
+            channelName: task.custom_payload.channelName,
+        };
 
-        println!("sending APNS payload: {:?}", payload.data);
+        let resp = client.send(payload).await;
+        //println!("response from APNS: {:?}", resp);
 
-        if let Err(err) = client.send(payload).await {
+        if let Err(err) = resp {
             match err {
                 Error::ResponseError(Response {
                     error:
