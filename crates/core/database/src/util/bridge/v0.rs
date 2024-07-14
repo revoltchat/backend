@@ -1024,6 +1024,8 @@ impl crate::User {
     }
 
     /// Convert user object into user model assuming mutual connection
+    ///
+    /// Relations will never be included, i.e. when we process ourselves
     pub fn into_known<'a, P>(self, perspective: P, is_online: bool) -> User
     where
         P: Into<Option<&'a crate::User>>,
@@ -1059,19 +1061,7 @@ impl crate::User {
             discriminator: self.discriminator,
             display_name: self.display_name,
             avatar: self.avatar.map(|file| file.into()),
-            relations: if let Some(crate::User { id, .. }) = perspective {
-                if id == &self.id {
-                    self.relations
-                        .unwrap_or_default()
-                        .into_iter()
-                        .map(|relation| relation.into())
-                        .collect()
-                } else {
-                    vec![]
-                }
-            } else {
-                vec![]
-            },
+            relations: vec![],
             badges: self.badges.unwrap_or_default() as u32,
             online: can_see_profile
                 && is_online
