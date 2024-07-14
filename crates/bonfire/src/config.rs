@@ -1,5 +1,6 @@
 use async_tungstenite::tungstenite::{handshake, Message};
 use futures::channel::oneshot::Sender;
+use revolt_database::events::client::ReadyPayloadFields;
 use revolt_result::{create_error, Result};
 use serde::{Deserialize, Serialize};
 
@@ -82,6 +83,17 @@ impl ProtocolConfiguration {
     /// Get the protocol format specified
     pub fn get_protocol_format(&self) -> &ProtocolFormat {
         &self.format
+    }
+
+    /// Get ready payload fields
+    pub fn get_ready_payload_fields(&self) -> Vec<ReadyPayloadFields> {
+        vec![
+            ReadyPayloadFields::Users,
+            ReadyPayloadFields::Servers,
+            ReadyPayloadFields::Channels,
+            ReadyPayloadFields::Members,
+            ReadyPayloadFields::Emoji,
+        ]
     }
 }
 

@@ -1,8 +1,9 @@
 use std::collections::HashSet;
 
 use revolt_database::{
-    events::client::EventV1, util::permissions::DatabasePermissionQuery, Channel, Database, Member,
-    MemberCompositeKey, Presence, RelationshipStatus,
+    events::client::{EventV1, ReadyPayloadFields},
+    util::permissions::DatabasePermissionQuery,
+    Channel, Database, Member, MemberCompositeKey, Presence, RelationshipStatus,
 };
 use revolt_models::v0;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
@@ -90,7 +91,11 @@ impl Cache {
 /// State Manager
 impl State {
     /// Generate a Ready packet for the current user
-    pub async fn generate_ready_payload(&mut self, db: &Database) -> Result<EventV1> {
+    pub async fn generate_ready_payload(
+        &mut self,
+        db: &Database,
+        fields: Vec<ReadyPayloadFields>,
+    ) -> Result<EventV1> {
         let user = self.clone_user();
         self.cache.is_bot = user.bot.is_some();
 
@@ -150,14 +155,36 @@ impl State {
             .await?;
 
         // Fetch customisations.
-        let emojis = db
-            .fetch_emoji_by_parent_ids(
-                &servers
-                    .iter()
-                    .map(|x| x.id.to_string())
-                    .collect::<Vec<String>>(),
+        let emojis = if fields.contains(&ReadyPayloadFields::Emoji) {
+            Some(
+                db.fetch_emoji_by_parent_ids(
+                    &servers
+                        .iter()
+                        .map(|x| x.id.to_string())
+                        .collect::<Vec<String>>(),
+                )
+                .await?,
             )
-            .await?;
+        } else {
+            None
+        };
+
+        // Fetch user settings
+        let user_settings = if let Some(ReadyPayloadFields::UserSettings(keys)) = fields
+            .iter()
+            .find(|e| matches!(e, ReadyPayloadFields::UserSettings(_)))
+        {
+            Some(db.fetch_user_settings(&user.id, &keys).await?)
+        } else {
+            None
+        };
+
+        // Fetch channel unreads
+        let channel_unreads = if fields.contains(&ReadyPayloadFields::ChannelUnreads) {
+            Some(db.fetch_unreads(&user.id).await?)
+        } else {
+            None
+        };
 
         // Copy data into local state cache.
         self.cache.users = users.iter().cloned().map(|x| (x.id.clone(), x)).collect();
@@ -201,13 +228,31 @@ impl State {
         for channel in &channels {
             self.insert_subscription(channel.id().to_string()).await;
         }
-
         Ok(EventV1::Ready {
-            users,
-            servers: servers.into_iter().map(Into::into).collect(),
-            channels: channels.into_iter().map(Into::into).collect(),
-            members: members.into_iter().map(Into::into).collect(),
-            emojis: emojis.into_iter().map(Into::into).collect(),
+            users: if fields.contains(&ReadyPayloadFields::Users) {
+                Some(users)
+            } else {
+                None
+            },
+            servers: if fields.contains(&ReadyPayloadFields::Servers) {
+                Some(servers.into_iter().map(Into::into).collect())
+            } else {
+                None
+            },
+            channels: if fields.contains(&ReadyPayloadFields::Channels) {
+                Some(channels.into_iter().map(Into::into).collect())
+            } else {
+                None
+            },
+            members: if fields.contains(&ReadyPayloadFields::Members) {
+                Some(members.into_iter().map(Into::into).collect())
+            } else {
+                None
+            },
+            emojis: emojis.map(|vec| vec.into_iter().map(Into::into).collect()),
+
+            user_settings,
+            channel_unreads: channel_unreads.map(|vec| vec.into_iter().map(Into::into).collect()),
         })
     }
 
