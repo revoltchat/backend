@@ -40,6 +40,8 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::GroupTooLarge { .. } => Status::Forbidden,
             ErrorType::AlreadyInGroup => Status::Conflict,
             ErrorType::NotInGroup => Status::NotFound,
+            ErrorType::AlreadyPinned => Status::BadRequest,
+            ErrorType::NotPinned => Status::BadRequest,
 
             ErrorType::UnknownServer => Status::NotFound,
             ErrorType::InvalidRole => Status::NotFound,

@@ -70,6 +70,9 @@ auto_derived_partial!(
         /// Name and / or avatar overrides for this message
         #[serde(skip_serializing_if = "Option::is_none")]
         pub masquerade: Option<Masquerade>,
+        /// Whether or not the message in pinned
+        #[serde(skip_serializing_if = "crate::if_option_false")]
+        pub pinned: Option<bool>,
 
         /// Bitfield of message flags
         ///
@@ -127,6 +130,10 @@ auto_derived!(
         ChannelIconChanged { by: String },
         #[serde(rename = "channel_ownership_changed")]
         ChannelOwnershipChanged { from: String, to: String },
+        #[serde(rename = "message_pinned")]
+        MessagePinned { id: String },
+        #[serde(rename = "message_unpinned")]
+        MessageUnpinned { id: String },
     }
 
     /// Name and / or avatar override information
@@ -298,7 +305,9 @@ auto_derived!(
         ///
         /// See [MongoDB documentation](https://docs.mongodb.com/manual/text-search/#-text-operator) for more information.
         #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
-        pub query: String,
+        pub query: Option<String>,
+        /// Whether to only search for pinned messages, cannot be sent with `query`.
+        pub pinned: Option<bool>,
 
         /// Maximum number of messages to fetch
         #[cfg_attr(feature = "validator", validate(range(min = 1, max = 100)))]
@@ -418,6 +427,8 @@ impl From<SystemMessage> for String {
             SystemMessage::ChannelOwnershipChanged { .. } => {
                 "Channel ownership changed.".to_string()
             }
+            SystemMessage::MessagePinned { .. } => "Message pinned.".to_string(),
+            SystemMessage::MessageUnpinned { .. } => "Message unpinned.".to_string(),
         }
     }
 }

@@ -90,6 +90,8 @@ pub enum ErrorType {
     },
     AlreadyInGroup,
     NotInGroup,
+    AlreadyPinned,
+    NotPinned,
 
     // ? Server related errors
     UnknownServer,

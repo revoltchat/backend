@@ -66,3 +66,8 @@ pub fn if_false(t: &bool) -> bool {
 pub fn if_zero_u32(t: &u32) -> bool {
     t == &0
 }
+
+/// Utility function to check if an option doesnt contain true
+pub fn if_option_false(t: &Option<bool>) -> bool {
+    t != &Some(true)
+}

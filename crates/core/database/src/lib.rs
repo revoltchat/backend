@@ -87,3 +87,8 @@ pub mod tasks;
 pub fn if_false(t: &bool) -> bool {
     !t
 }
+
+/// Utility function to check if an option doesnt contain true
+pub fn if_option_false(t: &Option<bool>) -> bool {
+    t != &Some(true)
+}

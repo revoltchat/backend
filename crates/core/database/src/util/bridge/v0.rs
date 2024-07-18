@@ -482,6 +482,7 @@ impl crate::Message {
             interactions: self.interactions.into(),
             masquerade: self.masquerade.map(Into::into),
             flags: self.flags.map(|flags| flags as u32).unwrap_or_default(),
+            pinned: self.pinned,
         }
     }
 }
@@ -509,6 +510,7 @@ impl From<crate::PartialMessage> for PartialMessage {
             interactions: value.interactions.map(Into::into),
             masquerade: value.masquerade.map(Into::into),
             flags: value.flags.map(|flags| flags as u32),
+            pinned: value.pinned,
         }
     }
 }

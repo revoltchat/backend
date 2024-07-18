@@ -50,6 +50,10 @@ impl AbstractMessages for MongoDb {
             false
         };
 
+        if let Some(pinned) = query.filter.pinned {
+            filter.insert("pinned", pinned);
+        };
+
         // 2. Find query limit
         let limit = query.limit.unwrap_or(50);
 
@@ -156,6 +160,7 @@ impl AbstractMessages for MongoDb {
                         .build(),
                 )
                 .await
+                .inspect_err(|e| eprintln!("{e:?}"))
                 .map_err(|_| create_database_error!("find", COL))
             }
         }

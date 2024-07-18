@@ -65,6 +65,9 @@ auto_derived_partial!(
         /// Name and / or avatar overrides for this message
         #[serde(skip_serializing_if = "Option::is_none")]
         pub masquerade: Option<Masquerade>,
+        /// Whether or not the message in pinned
+        #[serde(skip_serializing_if = "crate::if_option_false")]
+        pub pinned: Option<bool>,
 
         /// Bitfield of message flags
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -168,6 +171,8 @@ auto_derived!(
         pub author: Option<String>,
         /// Search query
         pub query: Option<String>,
+        /// Search for pinned
+        pub pinned: Option<bool>,
     }
 
     /// Message Query
@@ -205,6 +210,7 @@ impl Default for Message {
             interactions: Default::default(),
             masquerade: None,
             flags: None,
+            pinned:  None,
         }
     }
 }
@@ -571,6 +577,8 @@ impl Message {
                                 users.push(id.clone());
                             }
                             v0::SystemMessage::Text { .. } => {}
+                            v0::SystemMessage::MessagePinned { .. } => {},
+                            v0::SystemMessage::MessageUnpinned { .. } => {},
                         }
                     }
                     users
