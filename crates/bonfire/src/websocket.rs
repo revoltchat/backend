@@ -106,7 +106,10 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
     }
 
     // Download required data to local cache and send Ready payload.
-    let ready_payload = match state.generate_ready_payload(db).await {
+    let ready_payload = match state
+        .generate_ready_payload(db, config.get_ready_payload_fields())
+        .await
+    {
         Ok(ready_payload) => ready_payload,
         Err(err) => {
             sentry::capture_error(&err);

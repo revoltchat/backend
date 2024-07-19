@@ -2,10 +2,10 @@ use authifier::AuthifierEvent;
 use serde::{Deserialize, Serialize};
 
 use revolt_models::v0::{
-    AppendMessage, Channel, Emoji, FieldsChannel, FieldsMember, FieldsRole, FieldsServer,
-    FieldsUser, FieldsWebhook, Member, MemberCompositeKey, Message, PartialChannel, PartialMember,
-    PartialMessage, PartialRole, PartialServer, PartialUser, PartialWebhook, RemovalIntention,
-    Report, Server, User, UserSettings, Webhook,
+    AppendMessage, Channel, ChannelUnread, Emoji, FieldsChannel, FieldsMember, FieldsRole,
+    FieldsServer, FieldsUser, FieldsWebhook, Member, MemberCompositeKey, Message, PartialChannel,
+    PartialMember, PartialMessage, PartialRole, PartialServer, PartialUser, PartialWebhook,
+    RemovalIntention, Report, Server, User, UserSettings, Webhook,
 };
 use revolt_result::Error;
 
@@ -39,6 +39,19 @@ pub enum ErrorEvent {
     APIError(Error),
 }
 
+/// Fields provided in Ready payload
+#[derive(PartialEq)]
+pub enum ReadyPayloadFields {
+    Users,
+    Servers,
+    Channels,
+    Members,
+    Emoji,
+
+    UserSettings(Vec<String>),
+    ChannelUnreads,
+}
+
 /// Protocol Events
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
@@ -52,11 +65,21 @@ pub enum EventV1 {
     Logout,
     /// Basic data to cache
     Ready {
-        users: Vec<User>,
-        servers: Vec<Server>,
-        channels: Vec<Channel>,
-        members: Vec<Member>,
-        emojis: Vec<Emoji>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        users: Option<Vec<User>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        servers: Option<Vec<Server>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        channels: Option<Vec<Channel>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        members: Option<Vec<Member>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        emojis: Option<Vec<Emoji>>,
+
+        #[serde(skip_serializing_if = "Option::is_none")]
+        user_settings: Option<UserSettings>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        channel_unreads: Option<Vec<ChannelUnread>>,
     },
 
     /// Ping response
