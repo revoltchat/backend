@@ -9,10 +9,9 @@ use once_cell::sync::Lazy;
 use revolt_a2::{
     request::{
         notification::{DefaultAlert, NotificationOptions},
-        payload::{APSAlert, PayloadLike, APS},
+        payload::{APSAlert, APSSound, PayloadLike, APS},
     },
-    Client, ClientConfig, DefaultNotificationBuilder, Endpoint, Error, ErrorBody, ErrorReason,
-    NotificationBuilder, Priority, PushType, Response,
+    Client, ClientConfig, Endpoint, Error, ErrorBody, ErrorReason, Priority, PushType, Response,
 };
 use revolt_config::config;
 use revolt_models::v0::{Message, PushNotification};
@@ -37,11 +36,11 @@ struct Payload<'a> {
     #[serde(skip_serializing)]
     device_token: &'a str,
 
-    message: Message,
-    url: String,
-    authorAvatar: String,
-    authorDisplayName: String,
-    channelName: String,
+    message: &'a Message,
+    url: &'a str,
+    authorAvatar: &'a str,
+    authorDisplayName: &'a str,
+    channelName: &'a str,
 }
 
 impl<'a> PayloadLike for Payload<'a> {
@@ -55,12 +54,15 @@ impl<'a> PayloadLike for Payload<'a> {
 
 /// Task information
 #[derive(Debug)]
-pub struct ApnTask {
+pub struct AlertJob {
     /// Session Id
     session_id: String,
 
     /// Device token
     device_token: String,
+
+    /// User Id
+    user_id: String,
 
     /// Title
     title: String,
@@ -78,7 +80,7 @@ pub struct ApnTask {
     custom_payload: ApnPayload,
 }
 
-impl ApnTask {
+impl AlertJob {
     fn format_title(notification: &PushNotification) -> String {
         // ideally this changes depending on context
         // in a server, it would look like "Sendername, #channelname in servername"
@@ -90,36 +92,94 @@ impl ApnTask {
             notification.author, notification.message.channel
         ) // TODO: this absolutely needs a channel name
     }
+}
 
+#[derive(Debug)]
+pub struct BadgeJob {
+    /// Session Id
+    session_id: String,
+
+    /// Device token
+    device_token: String,
+
+    /// User Id
+    user_id: String,
+}
+
+#[derive(Debug)]
+pub enum JobType {
+    Alert(AlertJob),
+    Badge(BadgeJob),
+}
+
+#[derive(Debug)]
+pub struct ApnJob {
+    job_type: JobType,
+}
+
+impl ApnJob {
     pub fn from_notification(
         session_id: String,
+        user_id: String,
         device_token: String,
         notification: &PushNotification,
-    ) -> ApnTask {
-        ApnTask {
-            session_id,
-            device_token,
-            title: ApnTask::format_title(notification),
-            body: notification.body.to_string(),
-            thread_id: notification.tag.to_string(),
-            category: "ALERT_MESSAGE".to_string(),
-            custom_payload: ApnPayload {
-                message: notification.message.clone(),
-                url: notification.url.clone(),
-                authorAvatar: notification.icon.clone(),
-                authorDisplayName: notification.author.clone(),
-                channelName: "#fetchchannelnamehere".to_string(), // TODO: get actual channel name
-            },
+    ) -> ApnJob {
+        ApnJob {
+            job_type: JobType::Alert(AlertJob {
+                session_id,
+                device_token,
+                user_id,
+                title: AlertJob::format_title(notification),
+                body: notification.body.to_string(),
+                thread_id: notification.tag.to_string(),
+                category: "ALERT_MESSAGE".to_string(),
+                custom_payload: ApnPayload {
+                    message: notification.message.clone(),
+                    url: notification.url.clone(),
+                    authorAvatar: notification.icon.clone(),
+                    authorDisplayName: notification.author.clone(),
+                    channelName: "#fetchchannelnamehere".to_string(), // TODO: get actual channel name
+                },
+            }),
+        }
+    }
+
+    pub fn from_ack(session_id: String, user_id: String, device_token: String) -> ApnJob {
+        ApnJob {
+            job_type: JobType::Badge(BadgeJob {
+                session_id,
+                device_token,
+                user_id,
+            }),
         }
     }
 }
 
-static Q: Lazy<Queue<ApnTask>> = Lazy::new(|| Queue::new(10_000));
+enum AssembledPayload<'a> {
+    Alert(Payload<'a>),
+    Default(revolt_a2::request::payload::Payload<'a>),
+}
+
+static Q: Lazy<Queue<ApnJob>> = Lazy::new(|| Queue::new(10_000));
 
 /// Queue a new task for a worker
-pub async fn queue(task: ApnTask) {
+pub async fn queue(task: ApnJob) {
     Q.try_push(task).ok();
     info!("Queue is using {} slots from {}.", Q.len(), Q.capacity());
+}
+
+async fn get_badge_count(db: &Database, user: &str) -> Option<u32> {
+    if let Ok(unreads) = db.fetch_unreads(user).await {
+        let mut mention_count = 0;
+        for channel in unreads {
+            if let Some(mentions) = channel.mentions {
+                mention_count += mentions.len() as u32
+            }
+        }
+
+        return Some(mention_count);
+    }
+    None
 }
 
 /// Start a new worker
@@ -164,38 +224,63 @@ pub async fn worker(db: Database) {
 
     loop {
         let task = Q.pop().await;
+        let payload: AssembledPayload;
 
-        let payload: Payload = Payload {
-            aps: APS {
-                alert: Some(APSAlert::Default(DefaultAlert {
-                    title: Some(&task.title),
-                    subtitle: None,
-                    body: Some(&task.body),
-                    title_loc_key: None,
-                    title_loc_args: None,
-                    action_loc_key: None,
-                    loc_key: None,
-                    loc_args: None,
-                    launch_image: None,
-                })),
-                badge: Some(1),
-                sound: None,
-                thread_id: Some(&task.thread_id),
-                content_available: Some(1),
-                category: Some(&task.category),
-                mutable_content: Some(1),
-                url_args: None,
-            },
-            device_token: &task.device_token,
-            options: payload_options.clone(),
-            message: task.custom_payload.message,
-            url: task.custom_payload.url,
-            authorAvatar: task.custom_payload.authorAvatar,
-            authorDisplayName: task.custom_payload.authorDisplayName,
-            channelName: task.custom_payload.channelName,
+        match task.job_type {
+            JobType::Alert(ref alert) => {
+                payload = AssembledPayload::Alert(Payload {
+                    aps: APS {
+                        alert: Some(APSAlert::Default(DefaultAlert {
+                            title: Some(&alert.title),
+                            subtitle: None,
+                            body: Some(&alert.body),
+                            title_loc_key: None,
+                            title_loc_args: None,
+                            action_loc_key: None,
+                            loc_key: None,
+                            loc_args: None,
+                            launch_image: None,
+                        })),
+                        badge: get_badge_count(&db, &alert.user_id).await,
+                        sound: Some(APSSound::Sound("default")),
+                        thread_id: Some(&alert.thread_id),
+                        content_available: None,
+                        category: Some(&alert.category),
+                        mutable_content: Some(1),
+                        url_args: None,
+                    },
+                    device_token: &alert.device_token,
+                    options: payload_options.clone(),
+                    message: &alert.custom_payload.message,
+                    url: &alert.custom_payload.url,
+                    authorAvatar: &alert.custom_payload.authorAvatar,
+                    authorDisplayName: &alert.custom_payload.authorDisplayName,
+                    channelName: &alert.custom_payload.channelName,
+                });
+            }
+            JobType::Badge(ref alert) => {
+                payload = AssembledPayload::Default(revolt_a2::request::payload::Payload {
+                    aps: APS {
+                        alert: None,
+                        badge: get_badge_count(&db, &alert.user_id).await,
+                        sound: None,
+                        thread_id: None,
+                        content_available: None,
+                        category: None,
+                        mutable_content: None,
+                        url_args: None,
+                    },
+                    device_token: &alert.device_token,
+                    options: payload_options.clone(),
+                    data: std::collections::BTreeMap::new(),
+                })
+            }
+        }
+
+        let resp = match payload {
+            AssembledPayload::Alert(p) => client.send(p).await,
+            AssembledPayload::Default(p) => client.send(p).await,
         };
-
-        let resp = client.send(payload).await;
         //println!("response from APNS: {:?}", resp);
 
         if let Err(err) = resp {
@@ -209,7 +294,10 @@ pub async fn worker(db: Database) {
                     ..
                 }) => {
                     if let Err(err) = db
-                        .remove_push_subscription_by_session_id(&task.session_id)
+                        .remove_push_subscription_by_session_id(match task.job_type {
+                            JobType::Alert(ref a) => &a.session_id.as_str(),
+                            JobType::Badge(ref a) => &a.session_id.as_str(),
+                        })
                         .await
                     {
                         revolt_config::capture_error(&err);

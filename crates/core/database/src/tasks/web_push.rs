@@ -105,13 +105,12 @@ pub async fn worker(db: Database) {
                             info!("No FCM token was specified!");
                         }
                     } else if sub.endpoint == "apn" {
-                        apple_notifications::queue(
-                            apple_notifications::ApnTask::from_notification(
-                                session.id,
-                                sub.auth,
-                                &task.payload,
-                            ),
-                        )
+                        apple_notifications::queue(apple_notifications::ApnJob::from_notification(
+                            session.id,
+                            session.user_id,
+                            sub.auth,
+                            &task.payload,
+                        ))
                         .await;
                     } else {
                         // Use Web Push Standard
