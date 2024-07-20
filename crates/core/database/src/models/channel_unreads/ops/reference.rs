@@ -13,7 +13,7 @@ impl AbstractChannelUnreads for ReferenceDb {
         channel_id: &str,
         user_id: &str,
         message_id: &str,
-    ) -> Result<()> {
+    ) -> Result<Option<ChannelUnread>> {
         let mut unreads = self.channel_unreads.lock().await;
         let key = ChannelCompositeKey {
             channel: channel_id.to_string(),
@@ -27,14 +27,14 @@ impl AbstractChannelUnreads for ReferenceDb {
             unreads.insert(
                 key.clone(),
                 ChannelUnread {
-                    id: key,
+                    id: key.clone(),
                     last_id: Some(message_id.to_string()),
                     mentions: None,
                 },
             );
         }
 
-        Ok(())
+        Ok(unreads.get(&key).cloned())
     }
 
     /// Acknowledge many channels.
@@ -86,5 +86,15 @@ impl AbstractChannelUnreads for ReferenceDb {
             .filter(|unread| unread.id.user == user_id)
             .cloned()
             .collect())
+    }
+
+    /// Fetch unread for a specific user in a channel.
+    async fn fetch_unread(&self, user_id: &str, channel_id: &str) -> Result<Option<ChannelUnread>> {
+        let unreads = self.channel_unreads.lock().await;
+
+        Ok(unreads.get(&ChannelCompositeKey {
+            channel: channel_id.to_string(),
+            user: user_id.to_string()
+        }).cloned())
     }
 }
