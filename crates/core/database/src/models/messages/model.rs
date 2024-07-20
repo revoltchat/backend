@@ -444,8 +444,8 @@ impl Message {
     ) -> Result<()> {
         self.send_without_notifications(
             db,
-            user,
-            member,
+            user.clone(),
+            member.clone(),
             matches!(channel, Channel::DirectMessage { .. }),
             generate_embeds,
         )
@@ -463,7 +463,7 @@ impl Message {
                     }
                 },
                 PushNotification::from(
-                    self.clone().into_model(None, None),
+                    self.clone().into_model(user, member),
                     Some(author),
                     &channel.id(),
                 )

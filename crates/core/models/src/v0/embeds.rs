@@ -92,38 +92,38 @@ auto_derived!(
     pub struct WebsiteMetadata {
         /// Direct URL to web page
         #[serde(skip_serializing_if = "Option::is_none")]
-        url: Option<String>,
+        pub url: Option<String>,
         /// Original direct URL
         #[serde(skip_serializing_if = "Option::is_none")]
-        original_url: Option<String>,
+        pub original_url: Option<String>,
         /// Remote content
         #[serde(skip_serializing_if = "Option::is_none")]
-        special: Option<Special>,
+        pub special: Option<Special>,
 
         /// Title of website
         #[serde(skip_serializing_if = "Option::is_none")]
-        title: Option<String>,
+        pub title: Option<String>,
         /// Description of website
         #[serde(skip_serializing_if = "Option::is_none")]
-        description: Option<String>,
+        pub description: Option<String>,
         /// Embedded image
         #[serde(skip_serializing_if = "Option::is_none")]
-        image: Option<Image>,
+        pub image: Option<Image>,
         /// Embedded video
         #[serde(skip_serializing_if = "Option::is_none")]
-        video: Option<Video>,
+        pub video: Option<Video>,
 
         // #[serde(skip_serializing_if = "Option::is_none")]
         // opengraph_type: Option<String>,
         /// Site name
         #[serde(skip_serializing_if = "Option::is_none")]
-        site_name: Option<String>,
+        pub site_name: Option<String>,
         /// URL to site icon
         #[serde(skip_serializing_if = "Option::is_none")]
-        icon_url: Option<String>,
+        pub icon_url: Option<String>,
         /// CSS Colour
         #[serde(skip_serializing_if = "Option::is_none")]
-        colour: Option<String>,
+        pub colour: Option<String>,
     }
 
     /// Text Embed
