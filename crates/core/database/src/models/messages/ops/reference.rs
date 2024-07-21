@@ -2,7 +2,7 @@ use futures::future::try_join_all;
 use indexmap::IndexSet;
 use revolt_result::Result;
 
-use crate::{AppendMessage, Message, MessageQuery, PartialMessage, ReferenceDb};
+use crate::{AppendMessage, FieldsMessage, Message, MessageQuery, PartialMessage, ReferenceDb};
 
 use super::AbstractMessages;
 
@@ -189,10 +189,15 @@ impl AbstractMessages for ReferenceDb {
     }
 
     /// Update a given message with new information
-    async fn update_message(&self, id: &str, message: &PartialMessage) -> Result<()> {
+    async fn update_message(&self, id: &str, message: &PartialMessage, remove: Vec<FieldsMessage>) -> Result<()> {
         let mut messages = self.messages.lock().await;
         if let Some(message_data) = messages.get_mut(id) {
             message_data.apply_options(message.to_owned());
+
+            for field in remove {
+                #[allow(clippy::disallowed_methods)]
+                message_data.remove_field(&field);
+            }
             Ok(())
         } else {
             Err(create_error!(NotFound))

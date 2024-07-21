@@ -1322,3 +1322,18 @@ impl From<BotInformation> for crate::BotInformation {
         }
     }
 }
+
+impl From<crate::FieldsMessage> for FieldsMessage {
+    fn from(value: crate::FieldsMessage) -> Self {
+        match value {
+            crate::FieldsMessage::Pinned => FieldsMessage::Pinned,
+        }
+    }
+}
+impl From<FieldsMessage> for crate::FieldsMessage {
+    fn from(value: FieldsMessage) -> Self {
+        match value {
+            FieldsMessage::Pinned => crate::FieldsMessage::Pinned,
+        }
+    }
+}

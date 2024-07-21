@@ -33,7 +33,7 @@ pub async fn message_unpin(
     message.update(db, PartialMessage {
         pinned: Some(false),
         ..Default::default()
-    }).await?;
+    }, vec![FieldsMessage::Pinned]).await?;
 
     Ok(EmptyResponse)
 }

@@ -83,7 +83,7 @@ pub async fn edit(
 
     partial.embeds = Some(new_embeds);
 
-    message.update(db, partial).await?;
+    message.update(db, partial, vec![]).await?;
 
     // Queue up a task for processing embeds if the we have sufficient permissions
     if permissions.has_channel_permission(ChannelPermission::SendEmbeds) {

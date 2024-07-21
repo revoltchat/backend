@@ -33,7 +33,7 @@ pub async fn message_pin(
     message.update(db, PartialMessage {
         pinned: Some(true),
         ..Default::default()
-    }).await?;
+    }, vec![]).await?;
 
     Ok(EmptyResponse)
 }

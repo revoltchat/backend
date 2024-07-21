@@ -364,6 +364,11 @@ auto_derived!(
         /// Message will not send push / desktop notifications
         SuppressNotifications = 1,
     }
+
+    /// Optional fields on message
+    pub enum FieldsMessage {
+        Pinned
+    }
 );
 
 /// Message Author Abstraction

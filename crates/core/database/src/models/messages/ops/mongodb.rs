@@ -5,7 +5,7 @@ use revolt_models::v0::MessageSort;
 use revolt_result::Result;
 
 use crate::{
-    AppendMessage, DocumentId, Message, MessageQuery, MessageTimePeriod, MongoDb, PartialMessage,
+    AppendMessage, DocumentId, FieldsMessage, IntoDocumentPath, Message, MessageQuery, MessageTimePeriod, MongoDb, PartialMessage
 };
 
 use super::AbstractMessages;
@@ -182,8 +182,16 @@ impl AbstractMessages for MongoDb {
     }
 
     /// Update a given message with new information
-    async fn update_message(&self, id: &str, message: &PartialMessage) -> Result<()> {
-        query!(self, update_one_by_id, COL, id, message, vec![], None).map(|_| ())
+    async fn update_message(&self, id: &str, message: &PartialMessage, remove: Vec<FieldsMessage>) -> Result<()> {
+        query!(
+            self,
+            update_one_by_id,
+            COL,
+            id,
+            message,
+            remove.iter().map(|x| x as &dyn IntoDocumentPath).collect(),
+            None
+        ).map(|_| ())
     }
 
     /// Append information to a given message
@@ -298,6 +306,14 @@ impl AbstractMessages for MongoDb {
             .await
             .map(|_| ())
             .map_err(|_| create_database_error!("delete_many", COL))
+    }
+}
+
+impl IntoDocumentPath for FieldsMessage {
+    fn as_path(&self) -> Option<&'static str> {
+        Some(match self {
+            FieldsMessage::Pinned => "pinned"
+        })
     }
 }
 

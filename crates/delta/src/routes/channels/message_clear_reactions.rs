@@ -37,6 +37,7 @@ pub async fn clear_reactions(
                 reactions: Some(Default::default()),
                 ..Default::default()
             },
+            vec![]
         )
         .await
         .map(|_| EmptyResponse)

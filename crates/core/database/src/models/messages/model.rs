@@ -4,8 +4,7 @@ use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
 use revolt_config::{config, FeaturesLimits};
 use revolt_models::v0::{
-    self, BulkMessageResponse, DataMessageSend, Embed, MessageAuthor, MessageFlags, MessageSort,
-    MessageWebhook, PushNotification, ReplyIntent, SendableEmbed, Text, RE_MENTION,
+    self, BulkMessageResponse, DataMessageSend, Embed, MessageAuthor, MessageFlags, MessageSort, MessageWebhook, PushNotification, ReplyIntent, SendableEmbed, Text, RE_MENTION
 };
 use revolt_permissions::{ChannelPermission, PermissionValue};
 use revolt_result::Result;
@@ -187,6 +186,11 @@ auto_derived!(
         /// Time period to fetch
         #[serde(flatten)]
         pub time_period: MessageTimePeriod,
+    }
+
+    /// Optional fields on message
+    pub enum FieldsMessage {
+        Pinned
     }
 );
 
@@ -519,14 +523,15 @@ impl Message {
     }
 
     /// Update message data
-    pub async fn update(&mut self, db: &Database, partial: PartialMessage) -> Result<()> {
+    pub async fn update(&mut self, db: &Database, partial: PartialMessage, remove: Vec<FieldsMessage>) -> Result<()> {
         self.apply_options(partial.clone());
-        db.update_message(&self.id, &partial).await?;
+        db.update_message(&self.id, &partial, remove.clone()).await?;
 
         EventV1::MessageUpdate {
             id: self.id.clone(),
             channel: self.channel.clone(),
             data: partial.into(),
+            clear: remove.into_iter().map(|field| field.into()).collect()
         }
         .p(self.channel.clone())
         .await;
@@ -807,6 +812,12 @@ impl Message {
 
         // Write to database
         db.clear_reaction(&self.id, emoji).await
+    }
+
+    pub fn remove_field(&mut self, field: &FieldsMessage) {
+        match field {
+            FieldsMessage::Pinned => self.pinned = None
+        }
     }
 }
 
