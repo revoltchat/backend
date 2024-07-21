@@ -146,7 +146,14 @@ pub async fn create_database(db: &MongoDb) {
                         "author": 1_i32
                     },
                     "name": "author"
-                }
+                },
+                {
+                    "key": {
+                        "channel": 1_i32,
+                        "pinned": 1_i32
+                    },
+                    "name": "channel_pinned_compound"
+                },
             ]
         },
         None,

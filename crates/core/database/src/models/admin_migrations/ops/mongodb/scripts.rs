@@ -20,7 +20,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 27;
+pub const LATEST_REVISION: i32 = 28;
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -1069,6 +1069,29 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
                 .await
                 .expect("failed to find invites");
         }
+    }
+
+    if revision <= 27 {
+        info!("Running migration [revision 27 / 21-07-2024]: create message pinned index.");
+
+        db.db()
+            .run_command(
+                doc! {
+                    "createIndexes": "messages",
+                    "indexes": [
+                        {
+                            "key": {
+                                "channel": 1_i32,
+                                "pinned": 1_i32
+                            },
+                            "name": "channel_pinned_compound"
+                        }
+                    ]
+                },
+                None,
+            )
+            .await
+            .expect("Failed to create message index.");
     }
 
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.
