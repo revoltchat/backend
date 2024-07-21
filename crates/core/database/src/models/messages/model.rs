@@ -101,6 +101,10 @@ auto_derived!(
         ChannelIconChanged { by: String },
         #[serde(rename = "channel_ownership_changed")]
         ChannelOwnershipChanged { from: String, to: String },
+        #[serde(rename = "message_pinned")]
+        MessagePinned { id: String, by: String },
+        #[serde(rename = "message_unpinned")]
+        MessageUnpinned { id: String, by: String },
     }
 
     /// Name and / or avatar override information
@@ -525,6 +529,11 @@ impl Message {
     /// Update message data
     pub async fn update(&mut self, db: &Database, partial: PartialMessage, remove: Vec<FieldsMessage>) -> Result<()> {
         self.apply_options(partial.clone());
+
+        for field in &remove {
+            self.remove_field(field);
+        }
+
         db.update_message(&self.id, &partial, remove.clone()).await?;
 
         EventV1::MessageUpdate {

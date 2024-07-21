@@ -1,6 +1,7 @@
 use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference}, Database, PartialMessage, User
+    util::{permissions::DatabasePermissionQuery, reference::Reference}, Database, PartialMessage, SystemMessage, User
 };
+use revolt_models::v0::MessageAuthor;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
 use rocket::State;
@@ -35,6 +36,23 @@ pub async fn message_pin(
         ..Default::default()
     }, vec![]).await?;
 
+    SystemMessage::MessagePinned {
+        id: message.id.clone(),
+        by: user.id.clone()
+    }
+    .into_message(channel.id())
+    .send(
+        db,
+        MessageAuthor::System {
+            username: &user.username,
+            avatar: user.avatar.as_ref().map(|file| file.id.as_ref())
+        },
+        None,
+        None,
+        &channel,
+        false
+    ).await?;
+
     Ok(EmptyResponse)
 }
 
@@ -42,7 +60,7 @@ pub async fn message_pin(
 mod test {
     use crate::{rocket, util::test::TestHarness};
     use revolt_database::{events::client::EventV1, util::{idempotency::IdempotencyKey, reference::Reference}, Member, Message, Server};
-    use revolt_models::v0;
+    use revolt_models::v0::{self, SystemMessage};
     use rocket::http::{Header, Status};
 
     #[rocket::async_test]
@@ -96,6 +114,22 @@ mod test {
 
         assert_eq!(response.status(), Status::NoContent);
         drop(response);
+
+        harness.wait_for_event(&channel.id(), |event| {
+            match event {
+                EventV1::Message(message) => {
+                    match &message.system {
+                        Some(SystemMessage::MessagePinned { by, .. }) => {
+                            assert_eq!(by, &user.id);
+
+                            true
+                        },
+                        _ => false
+                    }
+                },
+                _ => false
+            }
+        }).await;
 
         harness.wait_for_event(&channel.id(), |event| {
             match event {

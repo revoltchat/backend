@@ -1,6 +1,7 @@
 use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference}, Database, FieldsMessage, PartialMessage, User
+    util::{permissions::DatabasePermissionQuery, reference::Reference}, Database, FieldsMessage, PartialMessage, SystemMessage, User
 };
+use revolt_models::v0::MessageAuthor;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
 use rocket::State;
@@ -30,10 +31,24 @@ pub async fn message_unpin(
         return Err(create_error!(NotPinned))
     }
 
-    message.update(db, PartialMessage {
-        pinned: Some(false),
-        ..Default::default()
-    }, vec![FieldsMessage::Pinned]).await?;
+    message.update(db, PartialMessage::default(), vec![FieldsMessage::Pinned]).await?;
+
+    SystemMessage::MessageUnpinned {
+        id: message.id.clone(),
+        by: user.id.clone()
+    }
+    .into_message(channel.id())
+    .send(
+        db,
+        MessageAuthor::System {
+            username: &user.username,
+            avatar: user.avatar.as_ref().map(|file| file.id.as_ref())
+        },
+        None,
+        None,
+        &channel,
+        false
+    ).await?;
 
     Ok(EmptyResponse)
 }
@@ -42,7 +57,7 @@ pub async fn message_unpin(
 mod test {
     use crate::{rocket, util::test::TestHarness};
     use revolt_database::{events::client::EventV1, util::{idempotency::IdempotencyKey, reference::Reference}, Member, Message, PartialMessage, Server};
-    use revolt_models::v0;
+    use revolt_models::v0::{self, FieldsMessage, SystemMessage};
     use rocket::http::{Header, Status};
 
     #[rocket::async_test]
@@ -65,7 +80,7 @@ mod test {
         Member::create(&harness.db, &server, &user, Some(channels.clone())).await.expect("Failed to create member");
         let member = Reference::from_unchecked(user.id.clone()).as_member(&harness.db, &server.id).await.expect("Failed to get member");
 
-        let mut message = Message::create_from_api(
+        let message = Message::create_from_api(
             &harness.db,
             channel.clone(),
             v0::DataMessageSend {
@@ -110,12 +125,25 @@ mod test {
 
         harness.wait_for_event(&channel.id(), |event| {
             match event {
-                EventV1::MessageUpdate { id, data, .. } => {
-                    if id != &message.id {
-                        return false
-                    };
+                EventV1::Message(message) => {
+                    match &message.system {
+                        Some(SystemMessage::MessageUnpinned { by, .. }) => {
+                            assert_eq!(by, &user.id);
 
-                    assert_eq!(data.pinned, Some(false));
+                            true
+                        },
+                        _ => false
+                    }
+                },
+                _ => false
+            }
+        }).await;
+
+        harness.wait_for_event(&channel.id(), |event| {
+            match event {
+                EventV1::MessageUpdate { id, clear, .. } => {
+                    assert_eq!(&message.id, id);
+                    assert_eq!(clear, &[FieldsMessage::Pinned]);
 
                     true
                 },

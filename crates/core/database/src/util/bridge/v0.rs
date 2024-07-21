@@ -533,6 +533,8 @@ impl From<crate::SystemMessage> for SystemMessage {
             crate::SystemMessage::UserKicked { id } => Self::UserKicked { id },
             crate::SystemMessage::UserLeft { id } => Self::UserLeft { id },
             crate::SystemMessage::UserRemove { id, by } => Self::UserRemove { id, by },
+            crate::SystemMessage::MessagePinned { id, by } => Self::MessagePinned { id, by },
+            crate::SystemMessage::MessageUnpinned { id, by } => Self::MessageUnpinned { id, by },
         }
     }
 }
