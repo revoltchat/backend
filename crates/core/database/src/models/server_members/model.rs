@@ -81,7 +81,7 @@ impl Member {
         server: &Server,
         user: &User,
         channels: Option<Vec<Channel>>,
-    ) -> Result<Vec<Channel>> {
+    ) -> Result<(Member, Vec<Channel>)> {
         if db.fetch_ban(&server.id, &user.id).await.is_ok() {
             return Err(create_error!(Banned));
         }
@@ -155,7 +155,7 @@ impl Member {
             .ok();
         }
 
-        Ok(channels)
+        Ok((member, channels))
     }
 
     /// Update member data

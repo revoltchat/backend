@@ -18,6 +18,10 @@ static TOKEN_CACHE: Lazy<Mutex<lru::LruCache<String, ()>>> =
     Lazy::new(|| Mutex::new(lru::LruCache::new(NonZeroUsize::new(1000).unwrap())));
 
 impl IdempotencyKey {
+    pub fn unchecked_from_string(key: String) -> Self {
+        Self { key }
+    }
+
     // Backwards compatibility.
     // Issue #109
     pub async fn consume_nonce(&mut self, v: Option<String>) -> Result<()> {
