@@ -5,11 +5,11 @@ use revolt_database::{
 use revolt_models::v0;
 
 use revolt_permissions::{
-    calculate_channel_permissions, calculate_server_permissions, ChannelPermission,
+    calculate_server_permissions, ChannelPermission,
 };
 use revolt_result::{create_error, Result};
+use revolt_voice::{delete_voice_state, get_user_voice_channel_in_server, VoiceClient};
 use rocket::{serde::json::Json, State};
-use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 /// # Ban User
@@ -19,6 +19,7 @@ use validator::Validate;
 #[put("/<server>/bans/<target>", data = "<data>")]
 pub async fn ban(
     db: &State<Database>,
+    voice: &State<VoiceClient>,
     user: User,
     server: Reference,
     target: Reference,
@@ -57,6 +58,11 @@ pub async fn ban(
         member
             .remove(db, &server, RemovalIntention::Ban, false)
             .await?;
+
+        // If the member is in a voice channel while banned kick them from the voice channel
+        if let Some(channel_id) = get_user_voice_channel_in_server(&user.id, &server.id).await? {
+            delete_voice_state(&channel_id, Some(&server.id), &user.id).await?
+        }
     }
 
     ServerBan::create(db, &server, &target.id, data.reason)

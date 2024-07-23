@@ -7,10 +7,11 @@ use redis_kiss::{get_connection, redis::Pipeline, AsyncCommands};
 use revolt_database::{
     events::client::EventV1, util::{permissions::DatabasePermissionQuery, reference::Reference}, Database, File, PartialMember, User
 };
-use revolt_models::v0::{self, PartialUserVoiceState};
+use revolt_models::v0::{self, FieldsMember, PartialUserVoiceState};
 
 use revolt_permissions::{calculate_server_permissions, ChannelPermission};
 use revolt_result::{create_error, Result, ToRevoltError};
+use revolt_voice::VoiceClient;
 use rocket::{form::validate::Contains, serde::json::Json, State};
 use validator::Validate;
 
@@ -20,7 +21,7 @@ use validator::Validate;
 #[openapi(tag = "Server Members")]
 #[patch("/<server>/members/<target>", data = "<data>")]
 pub async fn edit(
-    room_client: &State<RoomClient>,
+    voice_client: &State<VoiceClient>,
     db: &State<Database>,
     user: User,
     server: Reference,
@@ -37,6 +38,7 @@ pub async fn edit(
     // Fetch server, target member and current permissions
     let mut server = server.as_server(db).await?;
     let mut member = target.as_member(db, &server.id).await?;
+    let target_user = target.as_user(db).await?;
     let mut query = DatabasePermissionQuery::new(db, &user)
         .server(&server)
         .member(&member);
@@ -153,8 +155,8 @@ pub async fn edit(
         roles,
         timeout,
         remove,
-        can_publish,
-        can_receive,
+        mut can_publish,
+        mut can_receive,
         voice_channel
     } = data;
 
@@ -181,6 +183,10 @@ pub async fn edit(
         partial.avatar = Some(File::use_avatar(db, &avatar, &user.id).await?);
     }
 
+    let remove_contains_voice = remove
+        .as_ref()
+        .map(|r| r.contains(FieldsMember::CanPublish) || r.contains(FieldsMember::CanReceive)).unwrap_or_default();
+
     member
         .update(
             db,
@@ -191,7 +197,11 @@ pub async fn edit(
         )
         .await?;
 
-    if can_publish.is_some() || can_receive.is_some() || voice_channel.is_some() {
+    if can_publish.is_some() ||
+       can_receive.is_some() ||
+       voice_channel.is_some() ||
+       remove_contains_voice
+    {
         let mut conn = get_connection().await.to_internal_error()?;
 
         let unique_key = format!("{}-{}", &member.id.user, &member.id.server);
@@ -205,6 +215,22 @@ pub async fn edit(
         {
             let mut pipeline = Pipeline::new();
             let mut new_perms = ParticipantPermission::default();
+
+            if remove_contains_voice {
+                let mut query = DatabasePermissionQuery::new(db, &target_user)
+                    .server(&server)
+                    .member(&member);
+
+                let permissions = calculate_server_permissions(&mut query).await;
+
+                if !permissions.has_channel_permission(ChannelPermission::Speak) {
+                    can_publish = Some(false)
+                }
+
+                if !permissions.has_channel_permission(ChannelPermission::Listen) {
+                    can_receive = Some(false)
+                }
+            }
 
             if let Some(can_publish) = can_publish {
                 pipeline.set(
@@ -235,18 +261,7 @@ pub async fn edit(
                 .await
                 .to_internal_error()?;
 
-            room_client
-                .update_participant(
-                    &channel,
-                    &member.id.user,
-                    UpdateParticipantOptions {
-                        permission: Some(new_perms),
-                        name: "".to_string(),
-                        metadata: "".to_string(),
-                    },
-                )
-                .await
-                .to_internal_error()?;
+            voice_client.update_permissions(&user, &channel, new_perms).await?;
 
             EventV1::UserVoiceStateUpdate {
                 id: member.id.user.clone(),

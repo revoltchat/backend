@@ -96,7 +96,7 @@ async fn ingress(db: &State<Database>, voice_client: &State<VoiceClient>, body: 
             EventV1::UserVoiceStateUpdate {
                 id: user_id.clone(),
                 channel_id: channel_id.clone(),
-                data: partial,
+                data: partial
             }
             .p(channel_id.clone())
             .await;

@@ -1,5 +1,5 @@
-use livekit_api::{access_token::{AccessToken, VideoGrants}, services::room::{CreateRoomOptions, RoomClient}};
-use livekit_protocol::Room;
+use livekit_api::{access_token::{AccessToken, VideoGrants}, services::room::{CreateRoomOptions, RoomClient, UpdateParticipantOptions}};
+use livekit_protocol::{ParticipantInfo, ParticipantPermission, Room};
 use redis_kiss::{get_connection, redis::Pipeline, AsyncCommands};
 use revolt_database::{Channel, User};
 use revolt_models::v0::{self, PartialUserVoiceState, UserVoiceState};
@@ -29,6 +29,22 @@ pub async fn raise_if_in_voice(user: &User, target: &str) -> Result<()> {
     } else {
         Ok(())
     }
+}
+
+pub async fn get_user_voice_channel_in_server(user_id: &str, server_id: &str) -> Result<Option<String>> {
+    let mut conn = get_connection()
+        .await
+        .to_internal_error()?;
+
+    let unique_key = format!(
+        "{}-{}",
+        user_id,
+        server_id
+    );
+
+    conn.get::<&str, Option<String>>(&unique_key)
+        .await
+        .to_internal_error()
 }
 
 pub fn get_allowed_sources(permissions: PermissionValue) -> Vec<String> {
@@ -67,6 +83,7 @@ pub async fn create_voice_state(channel_id: &str, server_id: Option<&str>, user_
     Pipeline::new()
         .sadd(format!("vc-members-{channel_id}"), user_id)
         .sadd(format!("vc-{user_id}"), channel_id)
+        .set(&unique_key, channel_id)
         .set(format!("can_publish-{unique_key}"), voice_state.can_publish)
         .set(format!("can_receive-{unique_key}"), voice_state.can_receive)
         .set(format!("screensharing-{unique_key}"), voice_state.screensharing)
@@ -96,6 +113,7 @@ pub async fn delete_voice_state(channel_id: &str, server_id: Option<&str>, user_
             format!("can_receive-{unique_key}"),
             format!("screensharing-{unique_key}"),
             format!("camera-{unique_key}"),
+            unique_key.clone(),
         ])
         .query_async(&mut get_connection()
             .await
@@ -243,6 +261,7 @@ impl VoiceClient {
             .with_grants(VideoGrants {
                 room_join: true,
                 can_publish_sources: allowed_sources,
+                can_subscribe: permissions.has_channel_permission(ChannelPermission::Listen),
                 room: channel.id().to_string(),
                 ..Default::default()
             })
@@ -261,6 +280,21 @@ impl VoiceClient {
             ..Default::default()
         })
         .await
-        .map_err(|_| create_error!(InternalError))
+        .to_internal_error()
+    }
+
+    pub async fn update_permissions(&self, user: &User, channel_id: &str, new_permissions: ParticipantPermission) -> Result<ParticipantInfo> {
+        self.rooms
+            .update_participant(
+                channel_id,
+                &user.id,
+                UpdateParticipantOptions {
+                    permission: Some(new_permissions),
+                    name: "".to_string(),
+                    metadata: "".to_string(),
+                },
+            )
+            .await
+            .to_internal_error()
     }
 }

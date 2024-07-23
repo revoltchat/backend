@@ -60,11 +60,11 @@ auto_derived_partial!(
         pub timeout: Option<Timestamp>,
 
         /// Whether the member is server-wide voice muted
-        #[serde(skip_serializing_if = "if_false")]
-        pub can_publish: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub can_publish: Option<bool>,
         /// Whether the member is server-wide voice deafened
-        #[serde(skip_serializing_if = "if_false")]
-        pub can_receive: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub can_receive: Option<bool>,
     },
     "PartialMember"
 );
@@ -85,6 +85,8 @@ auto_derived!(
         Avatar,
         Roles,
         Timeout,
+        CanReceive,
+        CanPublish,
     }
 
     /// Member removal intention

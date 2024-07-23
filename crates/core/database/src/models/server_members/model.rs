@@ -32,11 +32,11 @@ auto_derived_partial!(
         pub timeout: Option<Timestamp>,
 
         /// Whether the member is server-wide voice muted
-        #[serde(skip_serializing_if = "if_false")]
-        pub can_publish: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub can_publish: Option<bool>,
         /// Whether the member is server-wide voice deafened
-        #[serde(skip_serializing_if = "if_false")]
-        pub can_receive: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub can_receive: Option<bool>,
     },
     "PartialMember"
 );
@@ -57,6 +57,8 @@ auto_derived!(
         Avatar,
         Roles,
         Timeout,
+        CanReceive,
+        CanPublish,
     }
 
     /// Member removal intention
@@ -76,8 +78,8 @@ impl Default for Member {
             avatar: None,
             roles: vec![],
             timeout: None,
-            can_publish: false,
-            can_receive: false,
+            can_publish: None,
+            can_receive: None,
         }
     }
 }
@@ -199,6 +201,8 @@ impl Member {
             FieldsMember::Nickname => self.nickname = None,
             FieldsMember::Roles => self.roles.clear(),
             FieldsMember::Timeout => self.timeout = None,
+            FieldsMember::CanReceive => self.can_receive = None,
+            FieldsMember::CanPublish => self.can_publish = None
         }
     }
 

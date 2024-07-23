@@ -105,8 +105,8 @@ pub async fn root() -> Result<Json<RevoltConfig>> {
                 url: config.hosts.january,
             },
             livekit: VoiceFeature {
-                enabled: !config.api.livekit.url.is_empty(),
-                url: config.api.livekit.url.to_string(),
+                enabled: !config.hosts.livekit.is_empty(),
+                url: config.hosts.livekit.to_string(),
             },
         },
         ws: config.hosts.events,

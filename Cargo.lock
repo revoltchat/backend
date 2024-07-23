@@ -4182,6 +4182,7 @@ dependencies = [
 name = "revolt-result"
 version = "0.7.1"
 dependencies = [
+ "log",
  "revolt_okapi",
  "revolt_rocket_okapi",
  "rocket",

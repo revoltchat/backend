@@ -181,9 +181,11 @@ pub trait ToRevoltError<T> {
     fn to_internal_error(self) -> Result<T, Error>;
 }
 
-impl<T, E> ToRevoltError<T> for Result<T, E> {
+impl<T, E: std::fmt::Debug> ToRevoltError<T> for Result<T, E> {
     fn to_internal_error(self) -> Result<T, Error> {
-        self.map_err(|_| {
+        self
+        .inspect_err(|e| log::error!("{e:?}"))
+        .map_err(|_| {
             let loc = Location::caller();
 
             Error {

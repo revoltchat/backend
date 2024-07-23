@@ -236,7 +236,7 @@ pub enum EventV1 {
     UserVoiceStateUpdate {
         id: String,
         channel_id: String,
-        data: PartialUserVoiceState
+        data: PartialUserVoiceState,
     }
 }
 

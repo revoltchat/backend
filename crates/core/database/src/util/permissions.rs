@@ -179,6 +179,22 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
         }
     }
 
+    async fn do_we_have_publish_overwrites(&mut self) -> bool {
+        if let Some(member) = &self.member {
+            member.can_publish.unwrap_or(true)
+        } else {
+            false
+        }
+    }
+
+    async fn do_we_have_receive_overwrites(&mut self) -> bool {
+        if let Some(member) = &self.member {
+            member.can_receive.unwrap_or(true)
+        } else {
+            false
+        }
+    }
+
     // * For calculating channel permission
 
     /// Get the type of the channel
