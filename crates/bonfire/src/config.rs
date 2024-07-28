@@ -17,6 +17,8 @@ pub struct ProtocolConfiguration {
     protocol_version: i32,
     format: ProtocolFormat,
     session_token: Option<String>,
+
+    ready_payload_fields: Vec<ReadyPayloadFields>,
 }
 
 impl ProtocolConfiguration {
@@ -25,11 +27,14 @@ impl ProtocolConfiguration {
         protocol_version: i32,
         format: ProtocolFormat,
         session_token: Option<String>,
+        ready_payload_fields: Vec<ReadyPayloadFields>,
     ) -> Self {
         Self {
             protocol_version,
             format,
             session_token,
+
+            ready_payload_fields,
         }
     }
 
@@ -86,14 +91,8 @@ impl ProtocolConfiguration {
     }
 
     /// Get ready payload fields
-    pub fn get_ready_payload_fields(&self) -> Vec<ReadyPayloadFields> {
-        vec![
-            ReadyPayloadFields::Users,
-            ReadyPayloadFields::Servers,
-            ReadyPayloadFields::Channels,
-            ReadyPayloadFields::Members,
-            ReadyPayloadFields::Emoji,
-        ]
+    pub fn get_ready_payload_fields(&self) -> &[ReadyPayloadFields] {
+        &self.ready_payload_fields
     }
 }
 
@@ -125,6 +124,8 @@ impl handshake::server::Callback for WebsocketHandshakeCallback {
         let mut format = ProtocolFormat::Json;
         let mut session_token = None;
 
+        let mut user_settings_keys = vec![];
+
         // Parse and map parameters from key-value to known variables.
         for (key, value) in params {
             match key {
@@ -139,8 +140,21 @@ impl handshake::server::Callback for WebsocketHandshakeCallback {
                     _ => {}
                 },
                 "token" => session_token = Some(value.into()),
+                "__user_settings_keys" => user_settings_keys = value.split(',').collect(),
                 _ => {}
             }
+        }
+
+        let mut ready_payload_fields = vec![
+            ReadyPayloadFields::Users,
+            ReadyPayloadFields::Servers,
+            ReadyPayloadFields::Channels,
+            ReadyPayloadFields::Members,
+            ReadyPayloadFields::Emoji,
+        ];
+
+        if let Some(keys) = user_settings_keys {
+            ready_payload_fields.push(ReadyPayloadFields::UserSettings(keys));
         }
 
         // Send configuration information back from this callback.
@@ -151,6 +165,7 @@ impl handshake::server::Callback for WebsocketHandshakeCallback {
                 protocol_version,
                 format,
                 session_token,
+                ready_payload_fields,
             })
             .is_ok()
         {
