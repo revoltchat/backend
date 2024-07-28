@@ -4,7 +4,8 @@ use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
 use revolt_config::{config, FeaturesLimits};
 use revolt_models::v0::{
-    self, BulkMessageResponse, DataMessageSend, Embed, MessageAuthor, MessageFlags, MessageSort, MessageWebhook, PushNotification, ReplyIntent, SendableEmbed, Text, RE_MENTION
+    self, BulkMessageResponse, DataMessageSend, Embed, MessageAuthor, MessageFlags, MessageSort,
+    MessageWebhook, PushNotification, ReplyIntent, SendableEmbed, Text, RE_MENTION,
 };
 use revolt_permissions::{ChannelPermission, PermissionValue};
 use revolt_result::Result;
@@ -194,7 +195,7 @@ auto_derived!(
 
     /// Optional fields on message
     pub enum FieldsMessage {
-        Pinned
+        Pinned,
     }
 );
 
@@ -218,7 +219,7 @@ impl Default for Message {
             interactions: Default::default(),
             masquerade: None,
             flags: None,
-            pinned:  None,
+            pinned: None,
         }
     }
 }
@@ -527,20 +528,26 @@ impl Message {
     }
 
     /// Update message data
-    pub async fn update(&mut self, db: &Database, partial: PartialMessage, remove: Vec<FieldsMessage>) -> Result<()> {
+    pub async fn update(
+        &mut self,
+        db: &Database,
+        partial: PartialMessage,
+        remove: Vec<FieldsMessage>,
+    ) -> Result<()> {
         self.apply_options(partial.clone());
 
         for field in &remove {
             self.remove_field(field);
         }
 
-        db.update_message(&self.id, &partial, remove.clone()).await?;
+        db.update_message(&self.id, &partial, remove.clone())
+            .await?;
 
         EventV1::MessageUpdate {
             id: self.id.clone(),
             channel: self.channel.clone(),
             data: partial.into(),
-            clear: remove.into_iter().map(|field| field.into()).collect()
+            clear: remove.into_iter().map(|field| field.into()).collect(),
         }
         .p(self.channel.clone())
         .await;
@@ -591,9 +598,11 @@ impl Message {
                                 users.push(id.clone());
                             }
                             v0::SystemMessage::Text { .. } => {}
-                            v0::SystemMessage::MessagePinned { by, .. }
-                            | v0::SystemMessage::MessageUnpinned { by, .. } => {
-                                users.push(by.clone())
+                            v0::SystemMessage::MessagePinned { by, .. } => {
+                                users.push(by.clone());
+                            }
+                            v0::SystemMessage::MessageUnpinned { by, .. } => {
+                                users.push(by.clone());
                             }
                         }
                     }
@@ -827,7 +836,7 @@ impl Message {
 
     pub fn remove_field(&mut self, field: &FieldsMessage) {
         match field {
-            FieldsMessage::Pinned => self.pinned = None
+            FieldsMessage::Pinned => self.pinned = None,
         }
     }
 }
