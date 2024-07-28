@@ -17,7 +17,7 @@ Note: `january`, `autumn`, and `vortex` are yet to be moved into this monorepo.
 
 ## Minimum Supported Rust Version
 
-Rust 1.70 or higher.
+Rust 1.76 or higher.
 
 ## Development Guide
 
