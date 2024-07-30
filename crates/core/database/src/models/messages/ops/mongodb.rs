@@ -160,7 +160,6 @@ impl AbstractMessages for MongoDb {
                         .build(),
                 )
                 .await
-                .inspect_err(|e| eprintln!("{e:?}"))
                 .map_err(|_| create_database_error!("find", COL))
             }
         }
