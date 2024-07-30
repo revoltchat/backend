@@ -417,13 +417,13 @@ impl Channel {
     }
 
     /// Clone this channel's id
-    pub fn id(&self) -> String {
+    pub fn id(&self) -> &str {
         match self {
             Channel::DirectMessage { id, .. }
             | Channel::Group { id, .. }
             | Channel::SavedMessages { id, .. }
             | Channel::TextChannel { id, .. }
-            | Channel::VoiceChannel { id, .. } => id.clone(),
+            | Channel::VoiceChannel { id, .. } => id,
         }
     }
 

@@ -25,7 +25,7 @@ pub async fn message_unpin(
         .await
         .throw_if_lacking_channel_permission(ChannelPermission::ManageMessages)?;
 
-    let mut message = msg.as_message_in_channel(db, &channel.id()).await?;
+    let mut message = msg.as_message_in_channel(db, channel.id()).await?;
 
     if !message.pinned.unwrap_or_default() {
         return Err(create_error!(NotPinned))
@@ -37,7 +37,7 @@ pub async fn message_unpin(
         id: message.id.clone(),
         by: user.id.clone()
     }
-    .into_message(channel.id())
+    .into_message(channel.id().to_string())
     .send(
         db,
         MessageAuthor::System {
@@ -123,7 +123,7 @@ mod test {
         assert_eq!(response.status(), Status::NoContent);
         drop(response);
 
-        harness.wait_for_event(&channel.id(), |event| {
+        harness.wait_for_event(channel.id(), |event| {
             match event {
                 EventV1::Message(message) => {
                     match &message.system {
@@ -139,7 +139,7 @@ mod test {
             }
         }).await;
 
-        harness.wait_for_event(&channel.id(), |event| {
+        harness.wait_for_event(channel.id(), |event| {
             match event {
                 EventV1::MessageUpdate { id, clear, .. } => {
                     assert_eq!(&message.id, id);

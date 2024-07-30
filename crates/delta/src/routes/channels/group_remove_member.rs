@@ -106,8 +106,8 @@ mod test {
             .await;
 
         let event = harness
-            .wait_for_event(&group.id(), |event| match event {
-                EventV1::ChannelGroupJoin { id, .. } => id == &group.id(),
+            .wait_for_event(group.id(), |event| match event {
+                EventV1::ChannelGroupJoin { id, .. } => id == group.id(),
                 _ => false,
             })
             .await;
@@ -117,7 +117,7 @@ mod test {
             _ => unreachable!(),
         };
 
-        let message = harness.wait_for_message(&group.id()).await;
+        let message = harness.wait_for_message(group.id()).await;
 
         assert_eq!(
             message.system,

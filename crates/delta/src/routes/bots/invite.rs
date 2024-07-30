@@ -93,7 +93,9 @@ mod test {
             .client
             .post(format!("/bots/{}/invite", bot.id))
             .header(ContentType::JSON)
-            .body(json!(v0::InviteBotDestination::Group { group: group.id() }).to_string())
+            .body(json!(v0::InviteBotDestination::Group {
+                group: group.id().to_string()
+            }).to_string())
             .header(Header::new("x-session-token", session.token.to_string()))
             .dispatch()
             .await;
@@ -102,8 +104,8 @@ mod test {
         drop(response);
 
         let event = harness
-            .wait_for_event(&group.id(), |event| match event {
-                EventV1::ChannelGroupJoin { id, .. } => id == &group.id(),
+            .wait_for_event(group.id(), |event| match event {
+                EventV1::ChannelGroupJoin { id, .. } => id == group.id(),
                 _ => false,
             })
             .await;

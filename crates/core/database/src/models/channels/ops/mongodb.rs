@@ -266,7 +266,7 @@ impl AbstractChannels for MongoDb {
         .await?;
 
         // Delete the channel itself
-        query!(self, delete_one_by_id, COL, &channel.id()).map(|_| ())
+        query!(self, delete_one_by_id, COL, channel.id()).map(|_| ())
     }
 }
 

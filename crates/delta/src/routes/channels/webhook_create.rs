@@ -54,7 +54,7 @@ pub async fn create_webhook(
         id: webhook_id,
         name: data.name,
         avatar,
-        channel_id: channel.id(),
+        channel_id: channel.id().to_string(),
         permissions: *DEFAULT_WEBHOOK_PERMISSIONS,
         token: Some(nanoid::nanoid!(64)),
     };

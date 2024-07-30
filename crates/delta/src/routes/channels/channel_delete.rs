@@ -82,8 +82,8 @@ mod test {
         drop(response);
 
         harness
-            .wait_for_event(&group.id(), |event| match event {
-                EventV1::ChannelDelete { id, .. } => id == &group.id(),
+            .wait_for_event(group.id(), |event| match event {
+                EventV1::ChannelDelete { id, .. } => id == group.id(),
                 _ => false,
             })
             .await;

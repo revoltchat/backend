@@ -25,7 +25,7 @@ pub async fn message_pin(
         .await
         .throw_if_lacking_channel_permission(ChannelPermission::ManageMessages)?;
 
-    let mut message = msg.as_message_in_channel(db, &channel.id()).await?;
+    let mut message = msg.as_message_in_channel(db, channel.id()).await?;
 
     if message.pinned.unwrap_or_default() {
         return Err(create_error!(AlreadyPinned))
@@ -40,7 +40,7 @@ pub async fn message_pin(
         id: message.id.clone(),
         by: user.id.clone()
     }
-    .into_message(channel.id())
+    .into_message(channel.id().to_string())
     .send(
         db,
         MessageAuthor::System {
@@ -115,7 +115,7 @@ mod test {
         assert_eq!(response.status(), Status::NoContent);
         drop(response);
 
-        harness.wait_for_event(&channel.id(), |event| {
+        harness.wait_for_event(channel.id(), |event| {
             match event {
                 EventV1::Message(message) => {
                     match &message.system {
@@ -131,11 +131,11 @@ mod test {
             }
         }).await;
 
-        harness.wait_for_event(&channel.id(), |event| {
+        harness.wait_for_event(channel.id(), |event| {
             match event {
                 EventV1::MessageUpdate { id, channel: channel_id, data, .. } => {
                     assert_eq!(id, &message.id);
-                    assert_eq!(channel_id, &channel.id());
+                    assert_eq!(channel_id, channel.id());
                     assert_eq!(data.pinned, Some(true));
 
                     true

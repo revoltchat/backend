@@ -11,7 +11,7 @@ impl AbstractChannels for ReferenceDb {
     /// Insert a new channel in the database
     async fn insert_channel(&self, channel: &Channel) -> Result<()> {
         let mut channels = self.channels.lock().await;
-        if let Entry::Vacant(entry) = channels.entry(channel.id()) {
+        if let Entry::Vacant(entry) = channels.entry(channel.id().to_string()) {
             entry.insert(channel.clone());
             Ok(())
         } else {
@@ -148,7 +148,7 @@ impl AbstractChannels for ReferenceDb {
     // Delete a channel
     async fn delete_channel(&self, channel: &Channel) -> Result<()> {
         let mut channels = self.channels.lock().await;
-        if channels.remove(&channel.id()).is_some() {
+        if channels.remove(channel.id()).is_some() {
             Ok(())
         } else {
             Err(create_error!(NotFound))

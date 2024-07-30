@@ -292,7 +292,7 @@ impl Message {
         let message_id = Ulid::new().to_string();
         let mut message = Message {
             id: message_id.clone(),
-            channel: channel.id(),
+            channel: channel.id().to_string(),
             masquerade: data.masquerade.map(|masquerade| masquerade.into()),
             interactions: data
                 .interactions
@@ -479,7 +479,7 @@ impl Message {
                 PushNotification::from(
                     self.clone().into_model(None, None),
                     Some(author),
-                    &channel.id(),
+                    channel.id(),
                 )
                 .await,
             )
