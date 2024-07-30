@@ -591,8 +591,10 @@ impl Message {
                                 users.push(id.clone());
                             }
                             v0::SystemMessage::Text { .. } => {}
-                            v0::SystemMessage::MessagePinned { .. } => {},
-                            v0::SystemMessage::MessageUnpinned { .. } => {},
+                            v0::SystemMessage::MessagePinned { by, .. }
+                            | v0::SystemMessage::MessageUnpinned { by, .. } => {
+                                users.push(by.clone())
+                            }
                         }
                     }
                     users
