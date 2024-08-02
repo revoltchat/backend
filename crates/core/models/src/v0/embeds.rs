@@ -84,6 +84,12 @@ auto_derived!(
             content_type: BandcampType,
             id: String,
         },
+        AppleMusic {
+            album_id: String,
+            
+            #[serde(skip_serializing_if = "Option::is_none")]
+            track_id: Option<String>,
+        },
         /// Streamable Video
         Streamable { id: String },
     }
