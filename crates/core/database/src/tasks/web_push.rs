@@ -6,7 +6,6 @@ use base64::{
     Engine as _,
 };
 use deadqueue::limited::Queue;
-use fcm::FcmError;
 use once_cell::sync::Lazy;
 use revolt_config::config;
 use revolt_models::v0::PushNotification;
@@ -82,6 +81,7 @@ pub async fn worker(db: Database) {
                                 tag,
                                 timestamp: _,
                                 url: _,
+                                message: _,
                             } = &task.payload;
 
                             let mut notification = fcm::NotificationBuilder::new();
@@ -105,13 +105,12 @@ pub async fn worker(db: Database) {
                             info!("No FCM token was specified!");
                         }
                     } else if sub.endpoint == "apn" {
-                        apple_notifications::queue(
-                            apple_notifications::ApnTask::from_notification(
-                                session.id,
-                                sub.auth,
-                                &task.payload,
-                            ),
-                        )
+                        apple_notifications::queue(apple_notifications::ApnJob::from_notification(
+                            session.id,
+                            session.user_id,
+                            sub.auth,
+                            &task.payload,
+                        ))
                         .await;
                     } else {
                         // Use Web Push Standard

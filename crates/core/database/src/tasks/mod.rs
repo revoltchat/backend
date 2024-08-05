@@ -18,7 +18,7 @@ pub async fn start_workers(db: Database, authifier_db: authifier::Database) {
     task::spawn(apple_notifications::worker(db.clone()));
 
     for _ in 0..WORKER_COUNT {
-        task::spawn(ack::worker(db.clone()));
+        task::spawn(ack::worker(db.clone(), authifier_db.clone()));
         task::spawn(last_message_id::worker(db.clone()));
         task::spawn(process_embeds::worker(db.clone()));
         task::spawn(web_push::worker(authifier_db.clone()));
