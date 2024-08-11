@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, ops::Deref};
 
 use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
@@ -480,7 +480,7 @@ impl Message {
                 PushNotification::from(
                     self.clone().into_model(user, member),
                     Some(author),
-                    channel.id(),
+                    channel.to_owned().into(),
                 )
                 .await,
             )

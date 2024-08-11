@@ -185,30 +185,30 @@ async fn get_badge_count(db: &Database, user: &str) -> Option<u32> {
 /// Start a new worker
 pub async fn worker(db: Database) {
     let config = config().await;
-    if config.api.apn.pkcs8.is_empty()
-        || config.api.apn.key_id.is_empty()
-        || config.api.apn.team_id.is_empty()
+    if config.pushd.apn.pkcs8.is_empty()
+        || config.pushd.apn.key_id.is_empty()
+        || config.pushd.apn.team_id.is_empty()
     {
         eprintln!("Missing APN keys.");
         return;
     }
 
-    let endpoint = if config.api.apn.sandbox {
+    let endpoint = if config.pushd.apn.sandbox {
         Endpoint::Sandbox
     } else {
         Endpoint::Production
     };
 
     let pkcs8 = engine::general_purpose::STANDARD
-        .decode(config.api.apn.pkcs8)
+        .decode(config.pushd.apn.pkcs8)
         .expect("valid `pcks8`");
 
     let client_config = ClientConfig::new(endpoint);
 
     let client = Client::token(
         &mut Cursor::new(pkcs8),
-        config.api.apn.key_id,
-        config.api.apn.team_id,
+        config.pushd.apn.key_id,
+        config.pushd.apn.team_id,
         client_config,
     )
     .expect("could not create APN client");

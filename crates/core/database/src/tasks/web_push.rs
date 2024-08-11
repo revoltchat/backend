@@ -54,14 +54,14 @@ pub async fn worker(db: Database) {
     let config = config().await;
 
     let web_push_client = IsahcWebPushClient::new().unwrap();
-    let fcm_client = if config.api.fcm.api_key.is_empty() {
+    let fcm_client = if config.pushd.fcm.api_key.is_empty() {
         None
     } else {
         Some(fcm::Client::new())
     };
 
     let web_push_private_key = engine::general_purpose::URL_SAFE_NO_PAD
-        .decode(config.api.vapid.private_key)
+        .decode(config.pushd.vapid.private_key)
         .expect("valid `VAPID_PRIVATE_KEY`");
 
     loop {
@@ -82,6 +82,7 @@ pub async fn worker(db: Database) {
                                 timestamp: _,
                                 url: _,
                                 message: _,
+                                channel: _,
                             } = &task.payload;
 
                             let mut notification = fcm::NotificationBuilder::new();
@@ -93,7 +94,7 @@ pub async fn worker(db: Database) {
                             let notification = notification.finalize();
 
                             let mut message_builder =
-                                fcm::MessageBuilder::new(&config.api.fcm.api_key, &sub.auth);
+                                fcm::MessageBuilder::new(&config.pushd.fcm.api_key, &sub.auth);
                             message_builder.notification(notification);
 
                             if let Err(err) = client.send(message_builder.finalize()).await {

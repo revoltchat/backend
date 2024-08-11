@@ -40,6 +40,14 @@ pub struct Database {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+pub struct Rabbit {
+    pub host: String,
+    pub port: u16,
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct Hosts {
     pub app: String,
     pub api: String,
@@ -67,18 +75,21 @@ pub struct ApiSmtp {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct ApiVapid {
+pub struct PushVapid {
+    pub queue: String,
     pub private_key: String,
     pub public_key: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct ApiFcm {
+pub struct PushFcm {
+    pub queue: String,
     pub api_key: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct ApiApn {
+pub struct PushApn {
+    pub queue: String,
     pub sandbox: bool,
     pub pkcs8: String,
     pub key_id: String,
@@ -108,11 +119,16 @@ pub struct ApiWorkers {
 pub struct Api {
     pub registration: ApiRegistration,
     pub smtp: ApiSmtp,
-    pub vapid: ApiVapid,
-    pub fcm: ApiFcm,
-    pub apn: ApiApn,
     pub security: ApiSecurity,
     pub workers: ApiWorkers,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct Pushd {
+    pub exchange: String,
+    pub vapid: PushVapid,
+    pub fcm: PushFcm,
+    pub apn: PushApn,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -171,8 +187,10 @@ pub struct Sentry {
 #[derive(Deserialize, Debug, Clone)]
 pub struct Settings {
     pub database: Database,
+    pub rabbit: Rabbit,
     pub hosts: Hosts,
     pub api: Api,
+    pub pushd: Pushd,
     pub features: Features,
     pub sentry: Sentry,
 }
