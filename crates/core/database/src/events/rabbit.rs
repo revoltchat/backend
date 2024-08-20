@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use revolt_models::v0::PushNotification;
 use serde::{Deserialize, Serialize};
 
@@ -22,5 +24,8 @@ pub enum PayloadKind {
 #[derive(Serialize, Deserialize)]
 pub struct PayloadToService {
     pub notification: PayloadKind,
+    pub user_id: String,
+    pub session_id: String,
     pub token: String,
+    pub extras: HashMap<String, String>,
 }

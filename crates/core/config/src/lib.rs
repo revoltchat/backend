@@ -126,6 +126,7 @@ pub struct Api {
 #[derive(Deserialize, Debug, Clone)]
 pub struct Pushd {
     pub exchange: String,
+    pub message_queue: String,
     pub vapid: PushVapid,
     pub fcm: PushFcm,
     pub apn: PushApn,

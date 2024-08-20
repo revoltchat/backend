@@ -45,19 +45,20 @@ max_concurrent_connections = 50
 
 [pushd]
 exchange = "revolt.notifications"
+message_queue = "notifications.origin.message"
 
 [pushd.vapid]
-queue = "notifications.vapid"
+queue = "notifications.outbound.vapid"
 private_key = "LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUJSUWpyTWxLRnBiVWhsUHpUbERvcEliYk1yeVNrNXpKYzVYVzIxSjJDS3hvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFWnkrQkg2TGJQZ2hEa3pEempXOG0rUXVPM3pCajRXT1phdkR6ZU00c0pqbmFwd1psTFE0WAp1ZDh2TzVodU94QWhMQlU3WWRldVovWHlBdFpWZmNyQi9BPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo"
 public_key = "BGcvgR-i2z4IQ5Mw841vJvkLjt8wY-FjmWrw83jOLCY52qcGZS0OF7nfLzuYbjsQISwVO2HXrmf18gLWVX3Kwfw="
 
 [pushd.fcm]
-queue = "notifications.fcm"
+queue = "notifications.outbound.fcm"
 api_key = ""
 
 [pushd.apn]
 sandbox = false
-queue = "notifications.apn"
+queue = "notifications.outbound.apn"
 pkcs8 = ""
 key_id = ""
 team_id = ""

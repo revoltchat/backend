@@ -27,3 +27,4 @@ serde_json = "1"
 revolt_optional_struct = "0.2.0"
 serde = { version = "1", features = ["derive"] }
 iso8601-timestamp = { version = "0.2.10", features = ["serde", "bson"] }
+base64 = "0.22.1"

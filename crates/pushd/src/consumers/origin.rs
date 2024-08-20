@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use amqprs::{
     channel::{BasicPublishArguments, Channel},
     consumer::AsyncConsumer,
@@ -6,29 +8,21 @@ use amqprs::{
 use async_trait::async_trait;
 use revolt_database::{events::rabbit::*, Database};
 
-pub struct OriginConsumer {
+pub struct OriginMessageConsumer {
+    #[allow(dead_code)]
     db: Database,
     authifier_db: authifier::Database,
-    config: revolt_config::Settings,
 }
 
-impl OriginConsumer {
-    pub fn new(
-        db: Database,
-        authifier_db: authifier::Database,
-        config: revolt_config::Settings,
-    ) -> OriginConsumer {
-        OriginConsumer {
-            db,
-            authifier_db,
-            config,
-        }
+impl OriginMessageConsumer {
+    pub fn new(db: Database, authifier_db: authifier::Database) -> OriginMessageConsumer {
+        OriginMessageConsumer { db, authifier_db }
     }
 }
 
 #[allow(unused_variables)]
 #[async_trait]
-impl AsyncConsumer for OriginConsumer {
+impl AsyncConsumer for OriginMessageConsumer {
     /// This consumer handles delegating messages into their respective platform queues.
     async fn consume(
         &mut self,
@@ -45,41 +39,48 @@ impl AsyncConsumer for OriginConsumer {
             .find_sessions_with_subscription(&payload.users)
             .await
         {
+            let config = revolt_config::config().await;
             for session in sessions {
                 if let Some(sub) = session.subscription {
-                    let sendable = serde_json::to_string(&PayloadToService {
+                    let mut sendable = PayloadToService {
                         notification: PayloadKind::MessageNotification(
                             payload.notification.clone(),
                         ),
                         token: sub.auth,
-                    })
-                    .unwrap();
+                        user_id: session.user_id,
+                        session_id: session.id,
+                        extras: HashMap::new(),
+                    };
 
                     let args: BasicPublishArguments;
 
                     if sub.endpoint == "apn" {
                         args = BasicPublishArguments::new(
-                            self.config.pushd.exchange.as_str(),
-                            self.config.pushd.apn.queue.as_str(),
+                            config.pushd.exchange.as_str(),
+                            config.pushd.apn.queue.as_str(),
                         )
                         .finish();
                     } else if sub.endpoint == "fcm" {
                         args = BasicPublishArguments::new(
-                            self.config.pushd.exchange.as_str(),
-                            self.config.pushd.fcm.queue.as_str(),
+                            config.pushd.exchange.as_str(),
+                            config.pushd.fcm.queue.as_str(),
                         )
                         .finish();
                     } else {
                         // web push (vapid)
                         args = BasicPublishArguments::new(
-                            self.config.pushd.exchange.as_str(),
-                            self.config.pushd.vapid.queue.as_str(),
+                            config.pushd.exchange.as_str(),
+                            config.pushd.vapid.queue.as_str(),
                         )
                         .finish();
+                        sendable.extras.insert("p265dh".to_string(), sub.p256dh);
+                        sendable.extras.insert("endpoint".to_string(), sub.endpoint);
                     }
 
+                    let payload = serde_json::to_string(&sendable).unwrap();
+
                     channel
-                        .basic_publish(BasicProperties::default(), sendable.into(), args)
+                        .basic_publish(BasicProperties::default(), payload.into(), args)
                         .await
                         .unwrap();
                 }

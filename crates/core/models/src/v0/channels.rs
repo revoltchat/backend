@@ -306,4 +306,14 @@ impl Channel {
             | Channel::VoiceChannel { id, .. } => id,
         }
     }
+
+    pub fn name(&self) -> &str {
+        match self {
+            Channel::DirectMessage { .. } => "DMs",
+            Channel::SavedMessages { .. } => "Saved Messages",
+            Channel::TextChannel { name, .. }
+            | Channel::Group { name, .. }
+            | Channel::VoiceChannel { name, .. } => name,
+        }
+    }
 }
