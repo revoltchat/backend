@@ -3307,6 +3307,7 @@ dependencies = [
  "authifier",
  "base64 0.22.1",
  "fcm",
+ "isahc",
  "iso8601-timestamp 0.2.11",
  "revolt-config",
  "revolt-database",
@@ -3731,6 +3732,7 @@ dependencies = [
 name = "revolt-database"
 version = "0.7.15"
 dependencies = [
+ "amqprs",
  "async-lock",
  "async-recursion",
  "async-std",

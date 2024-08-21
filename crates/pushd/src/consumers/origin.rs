@@ -2,21 +2,87 @@ use std::collections::HashMap;
 
 use amqprs::{
     channel::{BasicPublishArguments, Channel},
+    connection::{Connection, OpenConnectionArguments},
     consumer::AsyncConsumer,
     BasicProperties, Deliver,
 };
 use async_trait::async_trait;
 use revolt_database::{events::rabbit::*, Database};
+use tracing::debug;
 
 pub struct OriginMessageConsumer {
     #[allow(dead_code)]
     db: Database,
     authifier_db: authifier::Database,
+    conn: Option<Connection>,
+    channel: Option<Channel>,
 }
 
 impl OriginMessageConsumer {
     pub fn new(db: Database, authifier_db: authifier::Database) -> OriginMessageConsumer {
-        OriginMessageConsumer { db, authifier_db }
+        OriginMessageConsumer {
+            db,
+            authifier_db,
+            conn: None,
+            channel: None,
+        }
+    }
+
+    async fn make_channel(&mut self) {
+        let config = revolt_config::config().await;
+
+        let args = OpenConnectionArguments::new(
+            &config.rabbit.host,
+            config.rabbit.port,
+            &config.rabbit.username,
+            &config.rabbit.password,
+        );
+        self.conn = Some(amqprs::connection::Connection::open(&args).await.unwrap());
+
+        let _raw_channel = self
+            .conn
+            .as_ref()
+            .unwrap()
+            .open_channel(None)
+            .await
+            .unwrap();
+
+        self.channel = Some(_raw_channel);
+    }
+
+    async fn publish_message(
+        &mut self,
+        payload: Vec<u8>,
+        args: BasicPublishArguments,
+        attempt: u8,
+    ) {
+        let routing_key = &args.routing_key.clone();
+        if attempt > 3 {
+            panic!(
+                "Failed 3 attempts to send a message to queue {}",
+                routing_key
+            );
+        }
+        if self.channel.is_none() {
+            self.make_channel().await;
+        }
+
+        if let Some(chnl) = &self.channel {
+            //if let Err(err) =
+            chnl.basic_publish(BasicProperties::default(), payload.clone(), args.clone())
+                .await
+                .unwrap();
+            // {
+            //     match err {
+            //         Error::InternalChannelError(_) => {
+            //             self.make_channel().await;
+            //             self.publish_message(payload, args, attempt + 1).await;
+            //         }
+            //         _ => {}
+            //     }
+            // }
+            debug!("Sent message to queue for target {}", routing_key);
+        }
     }
 }
 
@@ -33,6 +99,8 @@ impl AsyncConsumer for OriginMessageConsumer {
     ) {
         let content = String::from_utf8(content).unwrap();
         let payload: MessageSentNotification = serde_json::from_str(content.as_str()).unwrap();
+
+        debug!("Received message event on origin");
 
         if let Ok(sessions) = self
             .authifier_db
@@ -74,15 +142,14 @@ impl AsyncConsumer for OriginMessageConsumer {
                         )
                         .finish();
                         sendable.extras.insert("p265dh".to_string(), sub.p256dh);
-                        sendable.extras.insert("endpoint".to_string(), sub.endpoint);
+                        sendable
+                            .extras
+                            .insert("endpoint".to_string(), sub.endpoint.clone());
                     }
 
                     let payload = serde_json::to_string(&sendable).unwrap();
 
-                    channel
-                        .basic_publish(BasicProperties::default(), payload.into(), args)
-                        .await
-                        .unwrap();
+                    self.publish_message(payload.into(), args, 1).await;
                 }
             }
         }

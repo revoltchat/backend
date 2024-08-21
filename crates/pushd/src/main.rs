@@ -1,5 +1,5 @@
 use amqprs::{
-    channel::{BasicConsumeArguments, QueueBindArguments, QueueDeclareArguments},
+    channel::{BasicConsumeArguments, Channel, QueueBindArguments, QueueDeclareArguments},
     connection::{Connection, OpenConnectionArguments},
     consumer::AsyncConsumer,
 };
@@ -11,6 +11,7 @@ use consumers::{
     origin::OriginMessageConsumer, outbound::apn::ApnsOutboundConsumer,
     outbound::fcm::FcmOutboundConsumer, outbound::vapid::VapidOutboundConsumer,
 };
+use tracing::info;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() {
@@ -30,7 +31,7 @@ async fn main() {
         panic!("Mongo is not in use, can't connect via authifier!")
     }
 
-    let mut connections: Vec<Connection> = Vec::new();
+    let mut connections: Vec<(Channel, Connection)> = Vec::new();
 
     connections.push(
         make_queue_and_consume(
@@ -67,7 +68,7 @@ async fn main() {
         connections.push(
             make_queue_and_consume(
                 &config,
-                &config.pushd.fcm.queue,
+                &config.pushd.vapid.queue,
                 VapidOutboundConsumer::new(db.clone()).await.unwrap(),
             )
             .await,
@@ -77,20 +78,25 @@ async fn main() {
     let guard = Notify::new();
     guard.notified().await;
 
-    for conn in connections {
+    for (channel, conn) in connections {
+        channel.close().await.expect("Unable to close channel");
         conn.close().await.expect("Unable to close connection");
     }
 }
 
-async fn make_queue_and_consume<F>(config: &Settings, name: &str, consumer: F) -> Connection
+async fn make_queue_and_consume<F>(
+    config: &Settings,
+    name: &str,
+    consumer: F,
+) -> (Channel, Connection)
 where
     F: AsyncConsumer + Send + 'static,
 {
     let connection = Connection::open(&OpenConnectionArguments::new(
-        "127.0.0.1",
-        5672,
-        "guest",
-        "guest",
+        &config.rabbit.host,
+        config.rabbit.port,
+        &config.rabbit.username,
+        &config.rabbit.password,
     ))
     .await
     .unwrap();
@@ -109,10 +115,11 @@ where
         .await
         .unwrap();
 
-    let args = BasicConsumeArguments::new(name, "basic_consumer")
+    let args = BasicConsumeArguments::new(name, "")
         .manual_ack(false)
         .finish();
 
     channel.basic_consume(consumer, args).await.unwrap();
-    connection
+    info!("Consuming queue {}", name);
+    (channel, connection)
 }
