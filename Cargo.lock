@@ -112,16 +112,6 @@ dependencies = [
  "serde",
  "serde_bytes",
  "tokio 1.39.2",
- "tracing",
-]
-
-[[package]]
-name = "ansi_term"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee49baf6cb617b853aa8d93bf420db2383fab46d314482ca2803b40d5fde979b"
-dependencies = [
- "winapi",
 ]
 
 [[package]]
@@ -2031,7 +2021,7 @@ dependencies = [
  "http 1.1.0",
  "http-body 1.0.0",
  "pin-project-lite 0.2.13",
- "smallvec 1.13.2",
+ "smallvec",
  "tokio 1.39.2",
  "want",
 ]
@@ -2446,7 +2436,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tracing",
- "tracing-subscriber 0.3.11",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -2496,15 +2486,6 @@ checksum = "ffbee8634e0d45d258acb448e7eaab3fce7a0a467395d4d9f228e3c1f01fb2e4"
 
 [[package]]
 name = "matchers"
-version = "0.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f099785f7595cc4b4553a174ce30dd7589ef93391ff414dbb67f62392b9e0ce1"
-dependencies = [
- "regex-automata",
-]
-
-[[package]]
-name = "matchers"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8263075bb86c5a1b1427b5ae862e8889656f126e9f77c484496e8b47cf5c5558"
@@ -2517,12 +2498,6 @@ name = "matches"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a3e378b66a060d48947b590737b30a1be76706c8dd7b8ba0f2fe3989c68a853f"
-
-[[package]]
-name = "maybe-uninit"
-version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60302e4db3a61da70c0cb7991976248362f30319e88850c487b9b95bbf059e00"
 
 [[package]]
 name = "md-5"
@@ -2610,7 +2585,7 @@ dependencies = [
  "thiserror",
  "tokio 1.39.2",
  "tracing",
- "tracing-subscriber 0.3.11",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -2749,7 +2724,7 @@ dependencies = [
  "num-iter",
  "num-traits",
  "rand 0.8.5",
- "smallvec 1.13.2",
+ "smallvec",
  "zeroize",
 ]
 
@@ -2930,15 +2905,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "owning_ref"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ff55baddef9e4ad00f88b6c743a2a8062d4c6ade126c2a528644b8e444d52ce"
-dependencies = [
- "stable_deref_trait",
-]
-
-[[package]]
 name = "p256"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2985,7 +2951,7 @@ dependencies = [
  "cfg-if",
  "libc",
  "redox_syscall",
- "smallvec 1.13.2",
+ "smallvec",
  "windows-sys 0.36.1",
 ]
 
@@ -3309,6 +3275,7 @@ dependencies = [
  "fcm",
  "isahc",
  "iso8601-timestamp 0.2.11",
+ "log",
  "revolt-config",
  "revolt-database",
  "revolt-models",
@@ -3317,8 +3284,6 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio 1.39.2",
- "tracing",
- "tracing-subscriber 0.1.6",
  "ulid 1.0.0",
  "web-push",
 ]
@@ -3780,6 +3745,7 @@ dependencies = [
 name = "revolt-delta"
 version = "0.7.15"
 dependencies = [
+ "amqprs",
  "async-channel 1.6.1",
  "async-std",
  "authifier",
@@ -4132,7 +4098,7 @@ dependencies = [
  "pin-project-lite 0.2.13",
  "ref-cast",
  "serde",
- "smallvec 1.13.2",
+ "smallvec",
  "stable-pattern",
  "state",
  "time 0.3.17",
@@ -4177,7 +4143,7 @@ dependencies = [
  "pkcs8",
  "rand_core 0.6.3",
  "signature",
- "smallvec 1.13.2",
+ "smallvec",
  "subtle",
  "zeroize",
 ]
@@ -4526,7 +4492,7 @@ dependencies = [
  "sentry-backtrace",
  "sentry-core",
  "tracing-core",
- "tracing-subscriber 0.3.11",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -4738,15 +4704,6 @@ dependencies = [
 
 [[package]]
 name = "smallvec"
-version = "0.6.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b97fcaeba89edba30f044a10c6a3cc39df9c3f17d7cd829dd1446cab35f890e0"
-dependencies = [
- "maybe-uninit",
-]
-
-[[package]]
-name = "smallvec"
 version = "1.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
@@ -4801,12 +4758,6 @@ checksum = "4564168c00635f88eaed410d5efa8131afa8d8699a612c80c455a0ba05c21045"
 dependencies = [
  "memchr",
 ]
-
-[[package]]
-name = "stable_deref_trait"
-version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
 name = "state"
@@ -5234,33 +5185,16 @@ dependencies = [
 
 [[package]]
 name = "tracing-subscriber"
-version = "0.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "192ca16595cdd0661ce319e8eede9c975f227cdaabc4faaefdc256f43d852e45"
-dependencies = [
- "ansi_term 0.11.0",
- "chrono",
- "lazy_static",
- "matchers 0.0.1",
- "owning_ref",
- "regex",
- "smallvec 0.6.14",
- "tracing-core",
- "tracing-log",
-]
-
-[[package]]
-name = "tracing-subscriber"
 version = "0.3.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4bc28f93baff38037f64e6f43d34cfa1605f27a49c34e8a04c5e78b0babf2596"
 dependencies = [
- "ansi_term 0.12.1",
+ "ansi_term",
  "lazy_static",
- "matchers 0.1.0",
+ "matchers",
  "regex",
  "sharded-slab",
- "smallvec 1.13.2",
+ "smallvec",
  "thread_local",
  "tracing",
  "tracing-core",
@@ -5285,7 +5219,7 @@ dependencies = [
  "lazy_static",
  "log",
  "rand 0.8.5",
- "smallvec 1.13.2",
+ "smallvec",
  "thiserror",
  "tinyvec",
  "tokio 1.39.2",
@@ -5306,7 +5240,7 @@ dependencies = [
  "lru-cache",
  "parking_lot",
  "resolv-conf",
- "smallvec 1.13.2",
+ "smallvec",
  "thiserror",
  "tokio 1.39.2",
  "trust-dns-proto",

@@ -6,7 +6,7 @@ use base64::{
     Engine as _,
 };
 use revolt_database::{events::rabbit::*, Database};
-use revolt_models::v0::{Channel, PushNotification};
+// use revolt_models::v0::{Channel, PushNotification};
 use web_push::{
     ContentEncoding, IsahcWebPushClient, SubscriptionInfo, SubscriptionKeys, VapidSignatureBuilder,
     WebPushClient, WebPushError, WebPushMessageBuilder,
@@ -18,24 +18,24 @@ pub struct VapidOutboundConsumer {
     pkey: Vec<u8>,
 }
 
-impl VapidOutboundConsumer {
-    fn format_title(&self, notification: &PushNotification) -> String {
-        // ideally this changes depending on context
-        // in a server, it would look like "Sendername, #channelname in servername"
-        // in a group, it would look like "Sendername in groupname"
-        // in a dm it should just be "Sendername".
-        // not sure how feasible all those are given the PushNotification object as it currently stands.
+// impl VapidOutboundConsumer {
+//     fn format_title(&self, notification: &PushNotification) -> String {
+//         // ideally this changes depending on context
+//         // in a server, it would look like "Sendername, #channelname in servername"
+//         // in a group, it would look like "Sendername in groupname"
+//         // in a dm it should just be "Sendername".
+//         // not sure how feasible all those are given the PushNotification object as it currently stands.
 
-        match &notification.channel {
-            Channel::DirectMessage { .. } => notification.author.clone(),
-            Channel::Group { name, .. } => format!("{}, #{}", notification.author, name),
-            Channel::TextChannel { name, .. } | Channel::VoiceChannel { name, .. } => {
-                format!("{} in #{}", notification.author, name)
-            }
-            _ => "Unknown".to_string(),
-        }
-    }
-}
+//         match &notification.channel {
+//             Channel::DirectMessage { .. } => notification.author.clone(),
+//             Channel::Group { name, .. } => format!("{}, #{}", notification.author, name),
+//             Channel::TextChannel { name, .. } | Channel::VoiceChannel { name, .. } => {
+//                 format!("{} in #{}", notification.author, name)
+//             }
+//             _ => "Unknown".to_string(),
+//         }
+//     }
+// }
 
 impl VapidOutboundConsumer {
     pub async fn new(db: Database) -> Result<VapidOutboundConsumer, &'static str> {
@@ -80,50 +80,57 @@ impl AsyncConsumer for VapidOutboundConsumer {
             },
         };
 
+        #[allow(clippy::needless_late_init)]
+        let payload_body: String;
+
         match payload.notification {
+            PayloadKind::FRReceived(alert) => {
+                payload_body = serde_json::to_string(&alert).unwrap();
+            }
+            PayloadKind::FRAccepted(alert) => {
+                payload_body = serde_json::to_string(&alert).unwrap();
+            }
+            PayloadKind::Generic(alert) => {
+                payload_body = serde_json::to_string(&alert).unwrap();
+            }
             PayloadKind::MessageNotification(alert) => {
-                let title = self.format_title(&alert);
-                match VapidSignatureBuilder::from_pem(
-                    std::io::Cursor::new(&self.pkey),
-                    &subscription,
-                ) {
-                    Ok(sig_builder) => match sig_builder.build() {
-                        Ok(signature) => {
-                            let mut builder = WebPushMessageBuilder::new(&subscription);
-                            builder.set_vapid_signature(signature);
+                payload_body = serde_json::to_string(&alert).unwrap();
+            }
+        }
 
-                            let alert_json = serde_json::to_string(&alert).unwrap();
-                            builder.set_payload(ContentEncoding::AesGcm, alert_json.as_bytes());
+        match VapidSignatureBuilder::from_pem(std::io::Cursor::new(&self.pkey), &subscription) {
+            Ok(sig_builder) => match sig_builder.build() {
+                Ok(signature) => {
+                    let mut builder = WebPushMessageBuilder::new(&subscription);
+                    builder.set_vapid_signature(signature);
 
-                            match builder.build() {
-                                Ok(msg) => {
-                                    if let Err(err) = self.client.send(msg).await {
-                                        if err == WebPushError::Unauthorized {
-                                            if let Err(err) = self
-                                                .db
-                                                .remove_push_subscription_by_session_id(
-                                                    &payload.session_id,
-                                                )
-                                                .await
-                                            {
-                                                revolt_config::capture_error(&err);
-                                            }
-                                        }
+                    builder.set_payload(ContentEncoding::AesGcm, payload_body.as_bytes());
+
+                    match builder.build() {
+                        Ok(msg) => {
+                            if let Err(err) = self.client.send(msg).await {
+                                if err == WebPushError::Unauthorized {
+                                    if let Err(err) = self
+                                        .db
+                                        .remove_push_subscription_by_session_id(&payload.session_id)
+                                        .await
+                                    {
+                                        revolt_config::capture_error(&err);
                                     }
-                                }
-                                Err(err) => {
-                                    revolt_config::capture_error(&err);
                                 }
                             }
                         }
                         Err(err) => {
                             revolt_config::capture_error(&err);
                         }
-                    },
-                    Err(err) => {
-                        revolt_config::capture_error(&err);
                     }
                 }
+                Err(err) => {
+                    revolt_config::capture_error(&err);
+                }
+            },
+            Err(err) => {
+                revolt_config::capture_error(&err);
             }
         }
     }

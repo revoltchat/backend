@@ -10,13 +10,14 @@ pub mod util;
 
 use revolt_config::config;
 use revolt_database::events::client::EventV1;
-use revolt_database::{Database, MongoDb};
+use revolt_database::{Database, MongoDb, AMQP};
 use rocket::{Build, Rocket};
 use rocket_cors::{AllowedOrigins, CorsOptions};
 use rocket_prometheus::PrometheusMetrics;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 
+use amqprs::connection::{Connection, OpenConnectionArguments};
 use async_std::channel::unbounded;
 use authifier::config::{
     Captcha, Config as AuthifierConfig, EmailVerificationConfig, ResolveIp, SMTPSettings, Shield,
@@ -96,6 +97,19 @@ pub async fn web() -> Rocket<Build> {
     )
     .into();
 
+    // Configure Rabbit
+    let connection = Connection::open(&OpenConnectionArguments::new(
+        &config.rabbit.host,
+        config.rabbit.port,
+        &config.rabbit.username,
+        &config.rabbit.password,
+    ))
+    .await
+    .unwrap();
+    let channel = connection.open_channel(None).await.unwrap();
+
+    let amqp = AMQP::new(connection, channel);
+
     // Configure Rocket
     let rocket = rocket::build();
     let prometheus = PrometheusMetrics::new();
@@ -108,6 +122,7 @@ pub async fn web() -> Rocket<Build> {
         .mount("/swagger/", swagger)
         .manage(authifier)
         .manage(db)
+        .manage(amqp)
         .manage(cors.clone())
         .attach(util::ratelimiter::RatelimitFairing)
         .attach(cors)

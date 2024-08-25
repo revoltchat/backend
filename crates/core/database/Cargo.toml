@@ -93,4 +93,4 @@ revolt_a2 = { version = "0.10", default-features = false, features = ["ring"] }
 authifier = { version = "1.0.8" }
 
 # RabbitMQ
-amqprs = { version = "1.7.0", features = ["traces"] }
+amqprs = { version = "1.7.0" }

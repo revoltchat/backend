@@ -1,6 +1,6 @@
 use std::{collections::HashSet, str::FromStr, time::Duration};
 
-use crate::{events::client::EventV1, Database, File, RatelimitEvent};
+use crate::{events::client::EventV1, Database, File, RatelimitEvent, AMQP};
 
 use once_cell::sync::Lazy;
 use rand::seq::SliceRandom;
@@ -485,7 +485,12 @@ impl User {
     }
 
     /// Add another user as a friend
-    pub async fn add_friend(&mut self, db: &Database, target: &mut User) -> Result<()> {
+    pub async fn add_friend(
+        &mut self,
+        db: &Database,
+        amqp: &AMQP,
+        target: &mut User,
+    ) -> Result<()> {
         match self.relationship_with(&target.id) {
             RelationshipStatus::User => Err(create_error!(NoEffect)),
             RelationshipStatus::Friend => Err(create_error!(AlreadyFriends)),
@@ -494,6 +499,8 @@ impl User {
             RelationshipStatus::BlockedOther => Err(create_error!(BlockedByOther)),
             RelationshipStatus::Incoming => {
                 // Accept incoming friend request
+                _ = amqp.friend_request_accepted(self, target).await;
+
                 self.apply_relationship(
                     db,
                     target,
@@ -521,6 +528,8 @@ impl User {
                         max: self.limits().await.outgoing_friend_requests
                     }));
                 }
+
+                _ = amqp.friend_request_received(target, self).await;
 
                 // Send the friend request
                 self.apply_relationship(

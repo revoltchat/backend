@@ -1,4 +1,4 @@
-use std::io::Cursor;
+use std::{borrow::Cow, collections::BTreeMap, io::Cursor};
 
 use amqprs::{channel::Channel as AmqpChannel, consumer::AsyncConsumer, BasicProperties, Deliver};
 use async_trait::async_trait;
@@ -9,7 +9,7 @@ use base64::{
 use revolt_a2::{
     request::{
         notification::{DefaultAlert, NotificationOptions},
-        payload::{APSAlert, APSSound, PayloadLike, APS},
+        payload::{APSAlert, APSSound, Payload, PayloadLike, APS},
     },
     Client, ClientConfig, Endpoint, Error, ErrorBody, ErrorReason, Priority, PushType, Response,
 };
@@ -147,6 +147,119 @@ impl AsyncConsumer for ApnsOutboundConsumer {
         let resp: Result<Response, Error>;
 
         match payload.notification {
+            PayloadKind::FRReceived(alert) => {
+                let loc_args = vec![Cow::from(
+                    alert
+                        .from_user
+                        .display_name
+                        .or(Some(format!(
+                            "{}#{}",
+                            alert.from_user.username, alert.from_user.discriminator
+                        )))
+                        .clone()
+                        .unwrap(),
+                )];
+
+                let apn_payload = Payload {
+                    aps: APS {
+                        alert: Some(APSAlert::Default(DefaultAlert {
+                            title: None,
+                            subtitle: None,
+                            body: None,
+                            title_loc_key: None,
+                            title_loc_args: None,
+                            action_loc_key: None,
+                            loc_key: Some("push.fr.received"),
+                            loc_args: Some(loc_args),
+                            launch_image: None,
+                        })),
+                        badge: self.get_badge_count(&payload.user_id).await,
+                        sound: Some(APSSound::Sound("default")),
+                        thread_id: None,
+                        content_available: None,
+                        category: None,
+                        mutable_content: Some(1),
+                        url_args: None,
+                    },
+                    device_token: &payload.token,
+                    options: payload_options.clone(),
+                    data: BTreeMap::new(),
+                };
+
+                resp = self.client.send(apn_payload).await;
+            }
+
+            PayloadKind::FRAccepted(alert) => {
+                let loc_args = vec![Cow::from(
+                    alert
+                        .accepted_user
+                        .display_name
+                        .or(Some(format!(
+                            "{}#{}",
+                            alert.accepted_user.username, alert.accepted_user.discriminator
+                        )))
+                        .clone()
+                        .unwrap(),
+                )];
+
+                let apn_payload = Payload {
+                    aps: APS {
+                        alert: Some(APSAlert::Default(DefaultAlert {
+                            title: None,
+                            subtitle: None,
+                            body: None,
+                            title_loc_key: None,
+                            title_loc_args: None,
+                            action_loc_key: None,
+                            loc_key: Some("push.fr.accepted"),
+                            loc_args: Some(loc_args),
+                            launch_image: None,
+                        })),
+                        badge: self.get_badge_count(&payload.user_id).await,
+                        sound: Some(APSSound::Sound("default")),
+                        thread_id: None,
+                        content_available: None,
+                        category: None,
+                        mutable_content: Some(1),
+                        url_args: None,
+                    },
+                    device_token: &payload.token,
+                    options: payload_options.clone(),
+                    data: BTreeMap::new(),
+                };
+
+                resp = self.client.send(apn_payload).await;
+            }
+            PayloadKind::Generic(alert) => {
+                let apn_payload = Payload {
+                    aps: APS {
+                        alert: Some(APSAlert::Default(DefaultAlert {
+                            title: Some(&alert.title),
+                            subtitle: None,
+                            body: Some(&alert.body),
+                            title_loc_key: None,
+                            title_loc_args: None,
+                            action_loc_key: None,
+                            loc_key: None,
+                            loc_args: None,
+                            launch_image: None,
+                        })),
+                        badge: self.get_badge_count(&payload.user_id).await,
+                        sound: Some(APSSound::Sound("default")),
+                        thread_id: None,
+                        content_available: None,
+                        category: None,
+                        mutable_content: Some(1),
+                        url_args: None,
+                    },
+                    device_token: &payload.token,
+                    options: payload_options.clone(),
+                    data: BTreeMap::new(),
+                };
+
+                resp = self.client.send(apn_payload).await;
+            }
+
             PayloadKind::MessageNotification(alert) => {
                 let title = self.format_title(&alert);
                 let apn_payload = MessagePayload {

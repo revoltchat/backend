@@ -10,9 +10,7 @@ revolt-models = { version = "0.7.15", path = "../core/models", features = [
     "validator",
 ] }
 
-tracing = "0.1"
-tracing-subscriber = "0.1"
-amqprs = { version = "1.7.0", features = ["traces"] }
+amqprs = { version = "1.7.0" }
 fcm = "0.9.2"
 web-push = "0.10.0"
 isahc = { optional = true, version = "1.7", features = ["json"] }
@@ -22,6 +20,8 @@ async-trait = "0.1.81"
 ulid = "1.0.0"
 
 authifier = "1.0.8"
+
+log = "0.4.11"
 
 #serialization
 serde_json = "1"

@@ -83,6 +83,9 @@ pub use models::*;
 pub mod events;
 pub mod tasks;
 
+mod amqp;
+pub use amqp::amqp::AMQP;
+
 /// Utility function to check if a boolean value is false
 pub fn if_false(t: &bool) -> bool {
     !t

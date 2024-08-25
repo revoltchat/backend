@@ -8,13 +8,17 @@ use tokio::sync::Notify;
 
 mod consumers;
 use consumers::{
-    origin::OriginMessageConsumer, outbound::apn::ApnsOutboundConsumer,
-    outbound::fcm::FcmOutboundConsumer, outbound::vapid::VapidOutboundConsumer,
+    inbound::{
+        fr_accepted::FRAcceptedConsumer, fr_received::FRReceivedConsumer, generic::GenericConsumer,
+        message::MessageConsumer,
+    },
+    outbound::{apn::ApnsOutboundConsumer, fcm::FcmOutboundConsumer, vapid::VapidOutboundConsumer},
 };
-use tracing::info;
+use log::info;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() {
+    //log::set_max_level(log::LevelFilter::Trace);
     let config = config().await;
 
     // Setup database
@@ -33,11 +37,42 @@ async fn main() {
 
     let mut connections: Vec<(Channel, Connection)> = Vec::new();
 
+    // inbound: generic
     connections.push(
         make_queue_and_consume(
             &config,
             &config.pushd.message_queue,
-            OriginMessageConsumer::new(db.clone(), authifier.clone()),
+            GenericConsumer::new(db.clone(), authifier.clone()),
+        )
+        .await,
+    );
+
+    // inbound: messages
+    connections.push(
+        make_queue_and_consume(
+            &config,
+            &config.pushd.message_queue,
+            MessageConsumer::new(db.clone(), authifier.clone()),
+        )
+        .await,
+    );
+
+    // inbound: FR received
+    connections.push(
+        make_queue_and_consume(
+            &config,
+            &config.pushd.fr_received_queue,
+            FRReceivedConsumer::new(db.clone(), authifier.clone()),
+        )
+        .await,
+    );
+
+    // inbound: FR accepted
+    connections.push(
+        make_queue_and_consume(
+            &config,
+            &config.pushd.fr_accepted_queue,
+            FRAcceptedConsumer::new(db.clone(), authifier.clone()),
         )
         .await,
     );

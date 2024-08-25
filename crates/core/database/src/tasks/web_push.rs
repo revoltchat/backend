@@ -22,7 +22,7 @@ use web_push::{
 };
 
 use super::apple_notifications;
-use crate::events::rabbit::{self, MessageSentNotification};
+use crate::events::rabbit::{self, MessageSentPayload};
 
 /// Task information
 #[derive(Debug)]
@@ -95,7 +95,7 @@ pub async fn worker(db: Database) {
     loop {
         let task = Q.pop().await;
 
-        let payload = MessageSentNotification {
+        let payload = MessageSentPayload {
             notification: task.payload,
             users: task.recipients,
         };

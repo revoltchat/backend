@@ -46,6 +46,9 @@ max_concurrent_connections = 50
 [pushd]
 exchange = "revolt.notifications"
 message_queue = "notifications.origin.message"
+fr_accepted_queue = "notifications.ingest.fr_accepted" # friend request accepted
+fr_received_queue = "notifications.ingest.fr_received" # friend request received
+generic_queue = "notifications.ingest.generic"         # generic messages (title + body)
 
 [pushd.vapid]
 queue = "notifications.outbound.vapid"

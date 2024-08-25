@@ -1,2 +1,2 @@
-pub mod origin;
+pub mod inbound;
 pub mod outbound;

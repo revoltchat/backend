@@ -1,16 +1,17 @@
 use std::collections::HashMap;
 
+use crate::consumers::inbound::internal::*;
 use amqprs::{
     channel::{BasicPublishArguments, Channel},
-    connection::{Connection, OpenConnectionArguments},
+    connection::Connection,
     consumer::AsyncConsumer,
     BasicProperties, Deliver,
 };
 use async_trait::async_trait;
+use log::debug;
 use revolt_database::{events::rabbit::*, Database};
-use tracing::debug;
 
-pub struct OriginMessageConsumer {
+pub struct GenericConsumer {
     #[allow(dead_code)]
     db: Database,
     authifier_db: authifier::Database,
@@ -18,77 +19,46 @@ pub struct OriginMessageConsumer {
     channel: Option<Channel>,
 }
 
-impl OriginMessageConsumer {
-    pub fn new(db: Database, authifier_db: authifier::Database) -> OriginMessageConsumer {
-        OriginMessageConsumer {
+impl Channeled for GenericConsumer {
+    fn get_connection(&self) -> Option<&Connection> {
+        if self.conn.is_none() {
+            None
+        } else {
+            Some(self.conn.as_ref().unwrap())
+        }
+    }
+
+    fn get_channel(&self) -> Option<&Channel> {
+        if self.channel.is_none() {
+            None
+        } else {
+            Some(self.channel.as_ref().unwrap())
+        }
+    }
+
+    fn set_connection(&mut self, conn: Connection) {
+        self.conn = Some(conn);
+    }
+
+    fn set_channel(&mut self, channel: Channel) {
+        self.channel = Some(channel)
+    }
+}
+
+impl GenericConsumer {
+    pub fn new(db: Database, authifier_db: authifier::Database) -> GenericConsumer {
+        GenericConsumer {
             db,
             authifier_db,
             conn: None,
             channel: None,
         }
     }
-
-    async fn make_channel(&mut self) {
-        let config = revolt_config::config().await;
-
-        let args = OpenConnectionArguments::new(
-            &config.rabbit.host,
-            config.rabbit.port,
-            &config.rabbit.username,
-            &config.rabbit.password,
-        );
-        self.conn = Some(amqprs::connection::Connection::open(&args).await.unwrap());
-
-        let _raw_channel = self
-            .conn
-            .as_ref()
-            .unwrap()
-            .open_channel(None)
-            .await
-            .unwrap();
-
-        self.channel = Some(_raw_channel);
-    }
-
-    async fn publish_message(
-        &mut self,
-        payload: Vec<u8>,
-        args: BasicPublishArguments,
-        attempt: u8,
-    ) {
-        let routing_key = &args.routing_key.clone();
-        if attempt > 3 {
-            panic!(
-                "Failed 3 attempts to send a message to queue {}",
-                routing_key
-            );
-        }
-        if self.channel.is_none() {
-            self.make_channel().await;
-        }
-
-        if let Some(chnl) = &self.channel {
-            //if let Err(err) =
-            chnl.basic_publish(BasicProperties::default(), payload.clone(), args.clone())
-                .await
-                .unwrap();
-            // {
-            //     match err {
-            //         Error::InternalChannelError(_) => {
-            //             self.make_channel().await;
-            //             self.publish_message(payload, args, attempt + 1).await;
-            //         }
-            //         _ => {}
-            //     }
-            // }
-            debug!("Sent message to queue for target {}", routing_key);
-        }
-    }
 }
 
 #[allow(unused_variables)]
 #[async_trait]
-impl AsyncConsumer for OriginMessageConsumer {
+impl AsyncConsumer for GenericConsumer {
     /// This consumer handles delegating messages into their respective platform queues.
     async fn consume(
         &mut self,
@@ -98,7 +68,7 @@ impl AsyncConsumer for OriginMessageConsumer {
         content: Vec<u8>,
     ) {
         let content = String::from_utf8(content).unwrap();
-        let payload: MessageSentNotification = serde_json::from_str(content.as_str()).unwrap();
+        let payload: MessageSentPayload = serde_json::from_str(content.as_str()).unwrap();
 
         debug!("Received message event on origin");
 
@@ -149,7 +119,7 @@ impl AsyncConsumer for OriginMessageConsumer {
 
                     let payload = serde_json::to_string(&sendable).unwrap();
 
-                    self.publish_message(payload.into(), args, 1).await;
+                    publish_message(self, payload.into(), args).await;
                 }
             }
         }
