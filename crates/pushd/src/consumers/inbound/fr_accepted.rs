@@ -8,7 +8,7 @@ use amqprs::{
     BasicProperties, Deliver,
 };
 use async_trait::async_trait;
-use log::info;
+use log::debug;
 use revolt_database::{events::rabbit::*, Database};
 
 pub struct FRAcceptedConsumer {
@@ -70,7 +70,7 @@ impl AsyncConsumer for FRAcceptedConsumer {
         let content = String::from_utf8(content).unwrap();
         let payload: FRAcceptedPayload = serde_json::from_str(content.as_str()).unwrap();
 
-        println!("Received FR accept event");
+        debug!("Received FR accept event");
 
         if let Ok(sessions) = self.authifier_db.find_sessions(&payload.user).await {
             let config = revolt_config::config().await;

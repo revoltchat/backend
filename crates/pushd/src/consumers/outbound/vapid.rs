@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use amqprs::{channel::Channel as AmqpChannel, consumer::AsyncConsumer, BasicProperties, Deliver};
 
 use async_trait::async_trait;
@@ -85,10 +87,36 @@ impl AsyncConsumer for VapidOutboundConsumer {
 
         match payload.notification {
             PayloadKind::FRReceived(alert) => {
-                payload_body = serde_json::to_string(&alert).unwrap();
+                let name = alert
+                    .from_user
+                    .display_name
+                    .or(Some(format!(
+                        "{}#{}",
+                        alert.from_user.username, alert.from_user.discriminator
+                    )))
+                    .clone()
+                    .unwrap();
+
+                let mut body = HashMap::new();
+                body.insert("body", format!("{} sent you a friend request", name));
+
+                payload_body = serde_json::to_string(&body).unwrap();
             }
             PayloadKind::FRAccepted(alert) => {
-                payload_body = serde_json::to_string(&alert).unwrap();
+                let name = alert
+                    .accepted_user
+                    .display_name
+                    .or(Some(format!(
+                        "{}#{}",
+                        alert.accepted_user.username, alert.accepted_user.discriminator
+                    )))
+                    .clone()
+                    .unwrap();
+
+                let mut body = HashMap::new();
+                body.insert("body", format!("{} accepted your friend request", name));
+
+                payload_body = serde_json::to_string(&body).unwrap();
             }
             PayloadKind::Generic(alert) => {
                 payload_body = serde_json::to_string(&alert).unwrap();
