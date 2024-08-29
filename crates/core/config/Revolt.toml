@@ -47,8 +47,18 @@ private_key = "LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUJSUWpyTWxLR
 public_key = "BGcvgR-i2z4IQ5Mw841vJvkLjt8wY-FjmWrw83jOLCY52qcGZS0OF7nfLzuYbjsQISwVO2HXrmf18gLWVX3Kwfw="
 
 [api.fcm]
-# Google Firebase Cloud Messaging API key for sending notifications
-api_key = ""
+# Google Firebase Cloud Messaging Service Account Key
+# Obtained from the cloud messaging console
+key_type = ""
+project_id = ""
+private_key_id = ""
+private_key = ""
+client_email = ""
+client_id = ""
+auth_uri = ""
+token_uri = ""
+auth_provider_x509_cert_url = ""
+client_x509_cert_url = ""
 
 [api.apn]
 # Apple Push Notifications keys for sending notifications

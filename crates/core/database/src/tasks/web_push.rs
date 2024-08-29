@@ -1,4 +1,7 @@
-use std::collections::HashSet;
+use std::{
+    collections::{HashMap, HashSet},
+    time::Duration,
+};
 
 use authifier::Database;
 use base64::{
@@ -6,6 +9,7 @@ use base64::{
     Engine as _,
 };
 use deadqueue::limited::Queue;
+use fcm_v1::auth::{Authenticator, ServiceAccountKey};
 use once_cell::sync::Lazy;
 use revolt_config::config;
 use revolt_models::v0::PushNotification;
@@ -54,10 +58,28 @@ pub async fn worker(db: Database) {
     let config = config().await;
 
     let web_push_client = IsahcWebPushClient::new().unwrap();
-    let fcm_client = if config.api.fcm.api_key.is_empty() {
+    let fcm_client = if config.api.fcm.key_type.is_empty() {
         None
     } else {
-        Some(fcm::Client::new())
+        Some(fcm_v1::Client::new(
+            Authenticator::service_account::<&str>(ServiceAccountKey {
+                key_type: Some(config.api.fcm.key_type),
+                project_id: Some(config.api.fcm.project_id.clone()),
+                private_key_id: Some(config.api.fcm.private_key_id),
+                private_key: config.api.fcm.private_key,
+                client_email: config.api.fcm.client_email,
+                client_id: Some(config.api.fcm.client_id),
+                auth_uri: Some(config.api.fcm.auth_uri),
+                token_uri: config.api.fcm.token_uri,
+                auth_provider_x509_cert_url: Some(config.api.fcm.auth_provider_x509_cert_url),
+                client_x509_cert_url: Some(config.api.fcm.client_x509_cert_url),
+            })
+            .await
+            .unwrap(),
+            config.api.fcm.project_id,
+            false,
+            Duration::from_secs(5),
+        ))
     };
 
     let web_push_private_key = engine::general_purpose::URL_SAFE_NO_PAD
@@ -76,27 +98,38 @@ pub async fn worker(db: Database) {
                             let PushNotification {
                                 author,
                                 icon,
-                                image: _,
+                                image,
                                 body,
-                                tag,
-                                timestamp: _,
+                                tag: _,
+                                timestamp,
                                 url: _,
-                                message: _,
+                                message,
                             } = &task.payload;
 
-                            let mut notification = fcm::NotificationBuilder::new();
-                            notification.title(author);
-                            notification.icon(icon);
-                            notification.body(body);
-                            notification.tag(tag);
-                            // TODO: expand support for fields
-                            let notification = notification.finalize();
+                            let message = fcm_v1::message::Message {
+                                token: Some(sub.auth),
+                                data: Some(HashMap::from([
+                                    (
+                                        "author".to_owned(),
+                                        serde_json::Value::String(author.clone()),
+                                    ),
+                                    ("icon".to_owned(), serde_json::Value::String(icon.clone())),
+                                    (
+                                        "image".to_owned(),
+                                        if let Some(image) = image {
+                                            serde_json::Value::String(image.clone())
+                                        } else {
+                                            serde_json::Value::Null
+                                        },
+                                    ),
+                                    ("body".to_owned(), serde_json::Value::String(body.clone())),
+                                    ("timestamp".to_owned(), json!(timestamp)),
+                                    ("message".to_owned(), json!(&message)),
+                                ])),
+                                ..Default::default()
+                            };
 
-                            let mut message_builder =
-                                fcm::MessageBuilder::new(&config.api.fcm.api_key, &sub.auth);
-                            message_builder.notification(notification);
-
-                            if let Err(err) = client.send(message_builder.finalize()).await {
+                            if let Err(err) = client.send(&message).await {
                                 error!("Failed to send FCM notification! {:?}", err);
                             } else {
                                 info!("Sent FCM notification to {:?}.", session.id);
