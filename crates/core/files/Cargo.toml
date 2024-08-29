@@ -1,7 +1,10 @@
 [package]
 name = "revolt-files"
-version = "0.1.1"
+version = "0.7.16"
 edition = "2021"
+license = "AGPL-3.0-or-later"
+authors = ["Paul Makles <me@insrt.uk>"]
+description = "Revolt Backend: S3 and encryption subroutines"
 
 [dependencies]
 aes-gcm = "0.10.3"

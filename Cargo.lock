@@ -4614,7 +4614,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-files"
-version = "0.1.1"
+version = "0.7.16"
 dependencies = [
  "aes-gcm 0.10.3",
  "aws-config",
