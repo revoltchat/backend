@@ -4457,7 +4457,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-autumn"
-version = "0.7.13"
+version = "0.7.14"
 dependencies = [
  "axum",
  "axum_typed_multipart",
@@ -4474,7 +4474,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-bonfire"
-version = "0.7.15"
+version = "0.7.16"
 dependencies = [
  "async-channel 2.3.1",
  "async-std",
@@ -4504,7 +4504,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-config"
-version = "0.7.15"
+version = "0.7.16"
 dependencies = [
  "async-std",
  "cached",
@@ -4520,7 +4520,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-database"
-version = "0.7.15"
+version = "0.7.16"
 dependencies = [
  "async-lock",
  "async-recursion",
@@ -4567,7 +4567,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-delta"
-version = "0.7.15"
+version = "0.7.16"
 dependencies = [
  "async-channel 1.6.1",
  "async-std",
@@ -4614,7 +4614,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-files"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "aes-gcm 0.10.3",
  "aws-config",
@@ -4623,7 +4623,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-models"
-version = "0.7.15"
+version = "0.7.16"
 dependencies = [
  "indexmap 1.9.3",
  "iso8601-timestamp 0.2.11",
@@ -4640,7 +4640,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-nodejs-bindings"
-version = "0.7.15"
+version = "0.7.16"
 dependencies = [
  "async-std",
  "neon",
@@ -4652,7 +4652,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-permissions"
-version = "0.7.15"
+version = "0.7.16"
 dependencies = [
  "async-std",
  "async-trait",
@@ -4667,7 +4667,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-presence"
-version = "0.7.15"
+version = "0.7.16"
 dependencies = [
  "async-std",
  "log",
@@ -4678,7 +4678,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-result"
-version = "0.7.15"
+version = "0.7.16"
 dependencies = [
  "revolt_okapi",
  "revolt_rocket_okapi",
