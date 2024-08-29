@@ -89,11 +89,19 @@ struct ResultBinding<T> {
 }
 
 macro_rules! shim {
-    ($cx: ident, $name: ident, $( $variable: ident $type: ident $id: expr )+, | $db: ident | $closure: expr, $( $arg: expr, )+) => {
+    ($cx: ident, $name: ident, $( $variable: ident $type: ident $id: expr )*, $( $model: ident $modelType: ident $modelId: expr )*, | $db: ident | $closure: expr, $( $arg: expr, )+) => {
         fn $name(mut cx: FunctionContext) -> JsResult<JsPromise> {
             $(
                 let $variable = cx.argument::<$type>($id)?.value(&mut cx);
-            )+
+            )*
+
+            $(
+                let mut $model = if let Model::$modelType(value) = cx.argument::<JsBox<Model>>($modelId)?.give() {
+                    value
+                } else {
+                    unreachable!()
+                };
+            )*
 
             let (db, channel) = cx.this::<JsBox<DatabaseBinding>>()?.take();
             let (deferred, promise) = cx.promise();
@@ -158,12 +166,24 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         proc_channels_create_dm,
         user_a JsString 0
         user_b JsString 1,
+        ,
         |db| async move {
             let user_a = db.fetch_user(&user_a).await?;
             let user_b = db.fetch_user(&user_b).await?;
             revolt_database::Channel::create_dm(&db, &user_a, &user_b).await
         },
         &userA, &userB,
+    );
+
+    shim!(
+        cx,
+        proc_users_suspend,
+        ,
+        user User 0,
+        |db| async move {
+            user.suspend(&db).await
+        },
+        &user,
     );
 
     Ok(())

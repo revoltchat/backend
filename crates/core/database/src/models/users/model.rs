@@ -662,6 +662,14 @@ impl User {
         }
     }
 
+    /// Suspend the user
+    pub async fn suspend(&mut self, db: &Database) -> Result<()> {
+        // Remove sessions (logout all)
+        // Mark user as suspended
+        // Disable account
+        Ok(())
+    }
+
     /// Mark as deleted
     pub async fn mark_deleted(&mut self, db: &Database) -> Result<()> {
         self.update(
