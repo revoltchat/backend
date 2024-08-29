@@ -1,0 +1,22 @@
+[package]
+name = "revolt-autumn"
+version = "0.7.13"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0.68"
+
+tokio = { version = "1.0", features = ["full"] }
+
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+revolt-config = { version = "0.7.13", path = "../../core/config" }
+
+tempfile = "3.12.0"
+axum_typed_multipart = "0.12.1"
+axum = { version = "0.7.5", features = ["multipart"] }
+
+utoipa-scalar = { version = "0.1.0", features = ["axum"] }
+utoipa = { version = "4.2.3", features = ["axum_extras", "ulid"] }

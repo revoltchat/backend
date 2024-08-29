@@ -1,0 +1,10 @@
+[package]
+name = "revolt-files"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+aes-gcm = "0.10.3"
+
+aws-config = "1.5.5"
+aws-sdk-s3 = { version = "1.46.0", features = ["behavior-version-latest"] }
