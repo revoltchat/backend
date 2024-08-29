@@ -1,8 +1,17 @@
 [database]
+# MongoDB connection URL
+# Defaults to the container name specified in self-hosted
 mongodb = "mongodb://database"
+# Redis connection URL
+# Defaults to the container name specified in self-hosted
 redis = "redis://redis/"
 
 [hosts]
+# Web locations of various services
+# Defaults assume all services are reverse-proxied
+# See https://github.com/revoltchat/self-hosted/blob/master/Caddyfile
+#
+# Remember to change these to https/wss where appropriate in production!
 app = "http://local.revolt.chat"
 api = "http://local.revolt.chat/api"
 events = "ws://local.revolt.chat/ws"
@@ -14,43 +23,103 @@ voso_legacy_ws = ""
 [api]
 
 [api.registration]
+# Whether an invite should be required for registration
+# See https://github.com/revoltchat/self-hosted#making-your-instance-invite-only
 invite_only = false
 
 [api.smtp]
+# Email server configuration for verification
+# Defaults to no email verification (host field is empty)
 host = ""
 username = ""
 password = ""
-from_address = ""
-# reply_to = ""
-# port = 587
-# use_tls = true
+from_address = "noreply@example.com"
+reply_to = "noreply@example.com"
+port = 587
+use_tls = true
 
 [api.vapid]
+# Generate your own keys:
+# 1. Run `openssl ecparam -name prime256v1 -genkey -noout -out vapid_private.pem`
+# 2. Find `private_key` using `base64 vapid_private.pem`
+# 3. Find `public_key` using `openssl ec -in vapid_private.pem -outform DER|tail -c 65|base64|tr '/+' '_-'|tr -d '\n'`
 private_key = "LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUJSUWpyTWxLRnBiVWhsUHpUbERvcEliYk1yeVNrNXpKYzVYVzIxSjJDS3hvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFWnkrQkg2TGJQZ2hEa3pEempXOG0rUXVPM3pCajRXT1phdkR6ZU00c0pqbmFwd1psTFE0WAp1ZDh2TzVodU94QWhMQlU3WWRldVovWHlBdFpWZmNyQi9BPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo"
 public_key = "BGcvgR-i2z4IQ5Mw841vJvkLjt8wY-FjmWrw83jOLCY52qcGZS0OF7nfLzuYbjsQISwVO2HXrmf18gLWVX3Kwfw="
 
 [api.fcm]
+# Google Firebase Cloud Messaging API key for sending notifications
 api_key = ""
 
 [api.apn]
+# Apple Push Notifications keys for sending notifications
 sandbox = false
 pkcs8 = ""
 key_id = ""
 team_id = ""
 
 [api.security]
+# Authifier Shield API key
 authifier_shield_key = ""
+# Legacy voice server management token
 voso_legacy_token = ""
+# Whether services are behind the Cloudflare network
 trust_cloudflare = false
 
 [api.security.captcha]
+# hCaptcha configuration
 hcaptcha_key = ""
 hcaptcha_sitekey = ""
 
 [api.workers]
+# Maximum concurrent connections (to proxy server)
 max_concurrent_connections = 50
 
+[files]
+# Encryption key for stored files
+# Generate your own key using `openssl rand -base64 32`
+encryption_key = "qcuMA+ssxhMyKaNAKBGFfryfFtUH8NDlamQyDwGW6fU="
+
+[files.limit]
+# Minimum image resolution
+min_resolution = [1, 1]
+# Maximum MP of images
+max_mega_pixels = 40
+# Maximum pixel side of an image
+max_pixel_side = 10_000
+
+[files.preview]
+# Maximum image resolution
+attachments = [1280, 1280]
+avatars = [128, 128]
+backgrounds = [1280, 720]
+icons = [128, 128]
+banners = [480, 480]
+emojis = [128, 128]
+
+[files.s3]
+# Configuration for S3
+# Defaults included for MinIO + self-hosted setup
+#
+# Backblaze B2:
+# - endpoint is listed on the "Buckets" page
+# - region is `eu-central-003` string from endpoint URL
+# - access_key_id is keyID generated on the "Application Keys" page
+# - secret_access_key is token generated on the "Application Keys" page
+# - default_bucket matches the name of the bucket you've created
+
+# S3 protocol endpoint
+endpoint = ""
+# S3 region name
+region = ""
+# S3 protocol key ID
+access_key_id = ""
+# S3 protocol access key
+secret_access_key = ""
+# Bucket to upload to by default
+default_bucket = "revolt-uploads"
+
 [features]
+# Feature gate options
 webhooks_enabled = false
 
 [features.limits]
@@ -64,7 +133,12 @@ server_emoji = 100
 server_roles = 200
 server_channels = 200
 
+# How many days since creation a user is considered new
 new_user_days = 3
+
+# Maximum permissible body size in bytes for uploads
+# (should be greater than any one file upload limit)
+body_limit_size = 20_000_000
 
 [features.limits.new_user]
 outgoing_friend_requests = 5
@@ -74,12 +148,12 @@ message_length = 2000
 message_attachments = 5
 servers = 100
 
-attachment_size = 20000000
-avatar_size = 4000000
-background_size = 6000000
-icon_size = 2500000
-banner_size = 6000000
-emoji_size = 500000
+attachment_size = 20_000_000
+avatar_size = 4_000_000
+background_size = 6_000_000
+icon_size = 2_500_000
+banner_size = 6_000_000
+emoji_size = 500_000
 
 [features.limits.default]
 outgoing_friend_requests = 10
@@ -89,13 +163,14 @@ message_length = 2000
 message_attachments = 5
 servers = 100
 
-attachment_size = 20000000
-avatar_size = 4000000
-background_size = 6000000
-icon_size = 2500000
-banner_size = 6000000
-emoji_size = 500000
+attachment_size = 20_000_000
+avatar_size = 4_000_000
+background_size = 6_000_000
+icon_size = 2_500_000
+banner_size = 6_000_000
+emoji_size = 500_000
 
 [sentry]
+# Configuration for Sentry error reporting
 api = ""
 events = ""

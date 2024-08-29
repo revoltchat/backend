@@ -126,6 +126,8 @@ pub struct GlobalLimits {
     pub server_channels: usize,
 
     pub new_user_days: usize,
+
+    pub body_limit_size: usize,
 }
 
 #[derive(Deserialize, Debug, Clone)]
