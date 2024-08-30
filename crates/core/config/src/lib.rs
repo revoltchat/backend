@@ -25,6 +25,8 @@ static CONFIG_BUILDER: Lazy<RwLock<Config>> = Lazy::new(|| {
             ));
         } else if std::path::Path::new("Revolt.toml").exists() {
             builder = builder.add_source(File::new("Revolt.toml", FileFormat::Toml));
+        } else if std::path::Path::new("/Revolt.toml").exists() {
+            builder = builder.add_source(File::new("/Revolt.toml", FileFormat::Toml));
         }
 
         builder.build().unwrap()
