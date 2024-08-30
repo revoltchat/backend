@@ -20,3 +20,6 @@ docker build -t ghcr.io/revoltchat/server:$TAG - < crates/delta/Dockerfile
 docker build -t ghcr.io/revoltchat/bonfire:$TAG - < crates/bonfire/Dockerfile
 
 git restore Cargo.toml
+
+docker push ghcr.io/revoltchat/server:$TAG
+docker push ghcr.io/revoltchat/bonfire:$TAG
