@@ -8,8 +8,15 @@ extern crate serde;
 #[macro_use]
 extern crate schemars;
 
+#[cfg(feature = "utoipa")]
+#[macro_use]
+extern crate utoipa;
+
 #[cfg(feature = "rocket")]
 pub mod rocket;
+
+#[cfg(feature = "axum")]
+pub mod axum;
 
 #[cfg(feature = "okapi")]
 pub mod okapi;
@@ -20,6 +27,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 /// Error information
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[derive(Debug, Clone)]
 pub struct Error {
     /// Type of error and additional information
@@ -42,6 +50,7 @@ impl std::error::Error for Error {}
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[derive(Debug, Clone)]
 pub enum ErrorType {
     /// This error was not labeled :(
@@ -144,6 +153,9 @@ pub enum ErrorType {
     FailedValidation {
         error: String,
     },
+
+    // ? Micro-service errors
+    ProxyError,
 
     // ? Legacy errors
     VosoUnavailable,

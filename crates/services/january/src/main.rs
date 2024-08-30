@@ -4,12 +4,13 @@ use axum::Router;
 
 use tokio::net::TcpListener;
 use utoipa::{
-    openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
+    openapi::security::{Http, HttpAuthScheme, SecurityScheme},
     Modify, OpenApi,
 };
 use utoipa_scalar::{Scalar, Servable as ScalarServable};
 
 mod api;
+pub mod requests;
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -22,22 +23,25 @@ async fn main() -> Result<(), std::io::Error> {
         modifiers(&SecurityAddon),
         paths(
             api::root,
-            api::upload_file,
-            api::fetch_preview,
-            api::fetch_file
+            api::proxy,
+            api::embed
         ),
         components(
             schemas(
+                api::RootResponse,
                 revolt_result::Error,
                 revolt_result::ErrorType,
-                api::RootResponse,
-                api::Tag,
-                api::UploadPayload,
-                api::UploadResponse
+                revolt_models::v0::ImageSize,
+                revolt_models::v0::Image,
+                revolt_models::v0::Video,
+                revolt_models::v0::TwitchType,
+                revolt_models::v0::LightspeedType,
+                revolt_models::v0::BandcampType,
+                revolt_models::v0::Special,
+                revolt_models::v0::WebsiteMetadata,
+                revolt_models::v0::Text,
+                revolt_models::v0::Embed
             )
-        ),
-        tags(
-            // (name = "Files", description = "File uploads API")
         )
     )]
     struct ApiDoc;
@@ -49,7 +53,7 @@ async fn main() -> Result<(), std::io::Error> {
             if let Some(components) = openapi.components.as_mut() {
                 components.add_security_scheme(
                     "api_key",
-                    SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("todo_apikey"))),
+                    SecurityScheme::Http(Http::new(HttpAuthScheme::Bearer)),
                 )
             }
         }

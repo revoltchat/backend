@@ -28,6 +28,7 @@ COPY crates/core/permissions/Cargo.toml ./crates/core/permissions/
 COPY crates/core/presence/Cargo.toml ./crates/core/presence/
 COPY crates/core/result/Cargo.toml ./crates/core/result/
 COPY crates/services/autumn/Cargo.toml ./crates/services/autumn/
+COPY crates/services/january/Cargo.toml ./crates/services/january/
 RUN sh /tmp/build-image-layer.sh deps
 
 # Build all apps
