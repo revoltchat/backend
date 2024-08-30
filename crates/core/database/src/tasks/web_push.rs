@@ -3,7 +3,7 @@ use std::{
     time::Duration,
 };
 
-use authifier::Database;
+use authifier::Database as AuthifierDatabase;
 use base64::{
     engine::{self},
     Engine as _,
@@ -19,6 +19,8 @@ use web_push::{
     ContentEncoding, IsahcWebPushClient, SubscriptionInfo, SubscriptionKeys, VapidSignatureBuilder,
     WebPushClient, WebPushMessageBuilder,
 };
+
+use crate::Database;
 
 use super::apple_notifications;
 
@@ -54,7 +56,7 @@ pub async fn queue(recipients: Vec<String>, payload: PushNotification) {
 }
 
 /// Start a new worker
-pub async fn worker(db: Database) {
+pub async fn worker(db: Database, authifier_db: AuthifierDatabase) {
     let config = config().await;
 
     let web_push_client = IsahcWebPushClient::new().unwrap();
@@ -89,7 +91,10 @@ pub async fn worker(db: Database) {
     loop {
         let task = Q.pop().await;
 
-        if let Ok(sessions) = db.find_sessions_with_subscription(&task.recipients).await {
+        if let Ok(sessions) = authifier_db
+            .find_sessions_with_subscription(&task.recipients)
+            .await
+        {
             for session in sessions {
                 if let Some(sub) = session.subscription {
                     if sub.endpoint == "fcm" {
@@ -106,6 +111,19 @@ pub async fn worker(db: Database) {
 
                             if let Err(err) = client.send(&message).await {
                                 error!("Failed to send FCM notification! {:?}", err);
+
+                                if let fcm_v1::Error::FCM(fcm_error) = err {
+                                    if fcm_error.contains("404 (Not Found)") {
+                                        println!("Unregistering {:?}", session.id);
+
+                                        if let Err(err) = db
+                                            .remove_push_subscription_by_session_id(&session.id)
+                                            .await
+                                        {
+                                            revolt_config::capture_error(&err);
+                                        }
+                                    }
+                                }
                             } else {
                                 info!("Sent FCM notification to {:?}.", session.id);
                             }
