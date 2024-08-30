@@ -101,9 +101,9 @@ pub async fn worker(db: Database) {
                                 image,
                                 body,
                                 tag: _,
-                                timestamp,
+                                timestamp: _,
                                 url: _,
-                                message,
+                                message: _,
                             } = &task.payload;
 
                             let message = fcm_v1::message::Message {
@@ -123,8 +123,6 @@ pub async fn worker(db: Database) {
                                         },
                                     ),
                                     ("body".to_owned(), serde_json::Value::String(body.clone())),
-                                    ("timestamp".to_owned(), json!(timestamp)),
-                                    ("message".to_owned(), json!(&message)),
                                 ])),
                                 ..Default::default()
                             };
