@@ -95,35 +95,12 @@ pub async fn worker(db: Database) {
                     if sub.endpoint == "fcm" {
                         // Use Firebase Cloud Messaging
                         if let Some(client) = &fcm_client {
-                            let PushNotification {
-                                author,
-                                icon,
-                                image,
-                                body,
-                                tag: _,
-                                timestamp: _,
-                                url: _,
-                                message: _,
-                            } = &task.payload;
-
                             let message = fcm_v1::message::Message {
                                 token: Some(sub.auth),
-                                data: Some(HashMap::from([
-                                    (
-                                        "author".to_owned(),
-                                        serde_json::Value::String(author.clone()),
-                                    ),
-                                    ("icon".to_owned(), serde_json::Value::String(icon.clone())),
-                                    (
-                                        "image".to_owned(),
-                                        if let Some(image) = image {
-                                            serde_json::Value::String(image.clone())
-                                        } else {
-                                            serde_json::Value::Null
-                                        },
-                                    ),
-                                    ("body".to_owned(), serde_json::Value::String(body.clone())),
-                                ])),
+                                data: Some(HashMap::from([(
+                                    "payload".to_owned(),
+                                    serde_json::Value::String(json!(&task.payload).to_string()),
+                                )])),
                                 ..Default::default()
                             };
 
