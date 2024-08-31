@@ -1,6 +1,6 @@
 {
   "name": "revolt-nodejs-bindings",
-  "version": "0.7.15-rev0.0.2",
+  "version": "0.7.15-rev0.0.3",
   "description": "Node.js bindings for the Revolt software",
   "main": "index.node",
   "scripts": {

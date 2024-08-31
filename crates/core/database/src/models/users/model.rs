@@ -733,7 +733,7 @@ impl User {
                         "email": account.email,
                         "list": reason.join(", "),
                         "duration": duration_days,
-                        "duration_diplay": if duration_days.is_some() {
+                        "duration_display": if duration_days.is_some() {
                             "block"
                         } else {
                             "none"
