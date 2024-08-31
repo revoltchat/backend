@@ -40,16 +40,7 @@ pub async fn web() -> Rocket<Build> {
     let (sender, receiver) = unbounded();
 
     // Setup Authifier
-    let authifier = Authifier {
-        database: match db.clone() {
-            Database::Reference(_) => Default::default(),
-            Database::MongoDb(MongoDb(client, _)) => authifier::Database::MongoDb(
-                authifier::database::MongoDb(client.database("revolt")),
-            ),
-        },
-        config: authifier_config().await,
-        event_channel: Some(sender),
-    };
+    let authifier = db.clone().to_authifier().await;
 
     // Launch a listener for Authifier events
     async_std::task::spawn(async move {
@@ -116,78 +107,6 @@ pub async fn web() -> Rocket<Build> {
             address: Ipv4Addr::new(0, 0, 0, 0).into(),
             ..Default::default()
         })
-}
-
-pub async fn authifier_config() -> AuthifierConfig {
-    let config = config().await;
-
-    let mut auth_config = AuthifierConfig {
-        email_verification: if !config.api.smtp.host.is_empty() {
-            EmailVerificationConfig::Enabled {
-                smtp: SMTPSettings {
-                    from: config.api.smtp.from_address,
-                    host: config.api.smtp.host,
-                    username: config.api.smtp.username,
-                    password: config.api.smtp.password,
-                    reply_to: Some(
-                        config
-                            .api
-                            .smtp
-                            .reply_to
-                            .unwrap_or("support@revolt.chat".into()),
-                    ),
-                    port: config.api.smtp.port,
-                    use_tls: config.api.smtp.use_tls,
-                },
-                expiry: Default::default(),
-                templates: Templates {
-                    verify: Template {
-                        title: "Verify your Revolt account.".into(),
-                        text: include_str!("templates/verify.txt").into(),
-                        url: format!("{}/login/verify/", config.hosts.app),
-                        html: Some(include_str!("templates/verify.html").into()),
-                    },
-                    reset: Template {
-                        title: "Reset your Revolt password.".into(),
-                        text: include_str!("templates/reset.txt").into(),
-                        url: format!("{}/login/reset/", config.hosts.app),
-                        html: Some(include_str!("templates/reset.html").into()),
-                    },
-                    deletion: Template {
-                        title: "Confirm account deletion.".into(),
-                        text: include_str!("templates/deletion.txt").into(),
-                        url: format!("{}/delete/", config.hosts.app),
-                        html: Some(include_str!("templates/deletion.html").into()),
-                    },
-                    welcome: None,
-                },
-            }
-        } else {
-            EmailVerificationConfig::Disabled
-        },
-        ..Default::default()
-    };
-
-    auth_config.invite_only = config.api.registration.invite_only;
-
-    if !config.api.security.captcha.hcaptcha_key.is_empty() {
-        auth_config.captcha = Captcha::HCaptcha {
-            secret: config.api.security.captcha.hcaptcha_key,
-        };
-    }
-
-    if !config.api.security.authifier_shield_key.is_empty() {
-        auth_config.shield = Shield::Enabled {
-            api_key: config.api.security.authifier_shield_key,
-            strict: false,
-        };
-    }
-
-    if config.api.security.trust_cloudflare {
-        auth_config.resolve_ip = ResolveIp::Cloudflare;
-    }
-
-    auth_config
 }
 
 #[launch]
