@@ -4851,6 +4851,7 @@ dependencies = [
  "async-std",
  "neon",
  "neon-serde4",
+ "revolt-config",
  "revolt-database",
  "revolt-result",
  "serde",

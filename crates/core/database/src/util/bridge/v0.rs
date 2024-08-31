@@ -1171,6 +1171,7 @@ impl From<User> for crate::User {
             flags: Some(value.flags as i32),
             privileged: value.privileged,
             bot: value.bot.map(Into::into),
+            suspended_until: None,
         }
     }
 }
@@ -1209,6 +1210,8 @@ impl From<FieldsUser> for crate::FieldsUser {
             FieldsUser::StatusPresence => crate::FieldsUser::StatusPresence,
             FieldsUser::StatusText => crate::FieldsUser::StatusText,
             FieldsUser::DisplayName => crate::FieldsUser::DisplayName,
+
+            FieldsUser::Internal => crate::FieldsUser::None,
         }
     }
 }
@@ -1222,6 +1225,9 @@ impl From<crate::FieldsUser> for FieldsUser {
             crate::FieldsUser::StatusPresence => FieldsUser::StatusPresence,
             crate::FieldsUser::StatusText => FieldsUser::StatusText,
             crate::FieldsUser::DisplayName => FieldsUser::DisplayName,
+
+            crate::FieldsUser::Suspension => FieldsUser::Internal,
+            crate::FieldsUser::None => FieldsUser::Internal,
         }
     }
 }

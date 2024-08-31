@@ -1,8 +1,34 @@
 #[macro_use]
 extern crate serde;
 
+use std::sync::OnceLock;
+
 use neon::prelude::*;
 use revolt_database::{Database, DatabaseInfo};
+
+fn js_init(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+    static INIT: OnceLock<()> = OnceLock::new();
+    if INIT.get().is_none() {
+        INIT.get_or_init(|| {
+            async_std::task::block_on(async {
+                revolt_config::configure!(api);
+
+                match DatabaseInfo::Auto.connect().await {
+                    Ok(db) => {
+                        let authifier_db = db.clone().to_authifier().await.database;
+                        revolt_database::tasks::start_workers(db, authifier_db);
+                        Ok(())
+                    }
+                    Err(err) => Err(err),
+                }
+            })
+            .or_else(|err| cx.throw_error(err))
+            .unwrap();
+        });
+    }
+
+    Ok(cx.undefined())
+}
 
 struct DatabaseBinding(Database, Channel);
 impl Finalize for DatabaseBinding {}
@@ -136,6 +162,9 @@ macro_rules! shim {
 
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
+    // initialise required background stuff
+    cx.export_function("init", js_init)?;
+
     // database & model stuff
     cx.export_function("database", js_database)?;
     cx.export_function("model_data", js_data)?;
@@ -178,10 +207,12 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     shim!(
         cx,
         proc_users_suspend,
-        ,
+        duration JsNumber 1
+        reason JsString 2,
         user User 0,
         |db| async move {
-            user.suspend(&db).await
+            let duration = duration as usize;
+            user.suspend(&db, if duration == 0 { None } else { Some(duration) }, Some(reason.split('|').map(|x| x.to_owned()).collect())).await
         },
         &user,
     );

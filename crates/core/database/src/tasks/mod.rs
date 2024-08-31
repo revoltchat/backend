@@ -15,7 +15,7 @@ pub mod process_embeds;
 pub mod web_push;
 
 /// Spawn background workers
-pub async fn start_workers(db: Database, authifier_db: authifier::Database) {
+pub fn start_workers(db: Database, authifier_db: authifier::Database) {
     task::spawn(authifier_relay::worker());
     task::spawn(apple_notifications::worker(db.clone()));
 

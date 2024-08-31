@@ -8,7 +8,7 @@ static Q: Lazy<(Sender<AuthifierEvent>, Receiver<AuthifierEvent>)> = Lazy::new(|
 
 /// Get sender
 pub fn sender() -> Sender<AuthifierEvent> {
-    Q.0
+    Q.0.clone()
 }
 
 /// Start a new worker

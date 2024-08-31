@@ -34,9 +34,9 @@ host = ""
 username = ""
 password = ""
 from_address = "noreply@example.com"
-reply_to = "noreply@example.com"
-port = 587
-use_tls = true
+# reply_to = "noreply@example.com"
+# port = 587
+# use_tls = true
 
 [api.vapid]
 # Generate your own keys:

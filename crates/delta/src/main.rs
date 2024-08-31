@@ -10,7 +10,6 @@ pub mod util;
 
 use revolt_config::config;
 use revolt_database::events::client::EventV1;
-use revolt_database::{Database, MongoDb};
 use rocket::{Build, Rocket};
 use rocket_cors::{AllowedOrigins, CorsOptions};
 use rocket_prometheus::PrometheusMetrics;
@@ -18,11 +17,7 @@ use std::net::Ipv4Addr;
 use std::str::FromStr;
 
 use async_std::channel::unbounded;
-use authifier::config::{
-    Captcha, Config as AuthifierConfig, EmailVerificationConfig, ResolveIp, SMTPSettings, Shield,
-    Template, Templates,
-};
-use authifier::{Authifier, AuthifierEvent};
+use authifier::AuthifierEvent;
 use rocket::data::ToByteUnit;
 
 pub async fn web() -> Rocket<Build> {
@@ -59,10 +54,7 @@ pub async fn web() -> Rocket<Build> {
     });
 
     // Launch background task workers
-    async_std::task::spawn(revolt_database::tasks::start_workers(
-        db.clone(),
-        authifier.database.clone(),
-    ));
+    revolt_database::tasks::start_workers(db.clone(), authifier.database.clone());
 
     // Configure CORS
     let cors = CorsOptions {
