@@ -1,5 +1,6 @@
-use crate::Database;
+use crate::{Database, FileHash, Metadata};
 
+use iso8601_timestamp::Timestamp;
 use revolt_result::Result;
 
 auto_derived_partial!(
@@ -12,19 +13,30 @@ auto_derived_partial!(
         pub tag: String,
         /// Original filename
         pub filename: String,
-        /// Parsed metadata of this file
-        pub metadata: Metadata,
-        /// Raw content type of this file
-        pub content_type: String,
-        /// Size of this file (in bytes)
-        pub size: isize,
+        /// Hash of this file
+        pub hash: Option<String>, // these are Option<>s to not break file uploads on legacy Autumn
 
+        /// When this file was uploaded
+        pub uploaded_at: Option<Timestamp>, // these are Option<>s to not break file uploads on legacy Autumn
+        /// ID of user who uploaded this file
+        pub uploaded_id: Option<String>, // these are Option<>s to not break file uploads on legacy Autumn
+
+        // TODO: used_for: field
+        //
         /// Whether this file was deleted
         #[serde(skip_serializing_if = "Option::is_none")]
         pub deleted: Option<bool>,
         /// Whether this file was reported
         #[serde(skip_serializing_if = "Option::is_none")]
         pub reported: Option<bool>,
+
+        // !!! DEPRECATED:
+        /// Parsed metadata of this file
+        pub metadata: Metadata,
+        /// Raw content type of this file
+        pub content_type: String,
+        /// Size of this file (in bytes)
+        pub size: isize,
 
         // TODO: migrate this mess to having:
         // - author_id
@@ -43,26 +55,12 @@ auto_derived_partial!(
     "PartialFile"
 );
 
-auto_derived!(
-    /// Metadata associated with a file
-    #[serde(tag = "type")]
-    #[derive(Default)]
-    pub enum Metadata {
-        /// File is just a generic uncategorised file
-        #[default]
-        File,
-        /// File contains textual data and should be displayed as such
-        Text,
-        /// File is an image with specific dimensions
-        Image { width: isize, height: isize },
-        /// File is a video with specific dimensions
-        Video { width: isize, height: isize },
-        /// File is audio
-        Audio,
-    }
-);
-
 impl File {
+    /// Get the hash entry for this file
+    pub async fn as_hash(&self, db: &Database) -> Result<FileHash> {
+        db.fetch_attachment_hash(self.hash.as_ref().unwrap()).await
+    }
+
     /// Use a file for a message attachment
     pub async fn use_attachment(db: &Database, id: &str, parent: &str) -> Result<File> {
         db.find_and_use_attachment(id, "attachments", "message", parent)

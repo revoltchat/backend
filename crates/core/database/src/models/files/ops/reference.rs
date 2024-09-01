@@ -18,6 +18,20 @@ impl AbstractAttachments for ReferenceDb {
         }
     }
 
+    /// Fetch an attachment by its id.
+    async fn fetch_attachment(&self, tag: &str, file_id: &str) -> Result<File> {
+        let files = self.files.lock().await;
+        if let Some(file) = files.get(file_id) {
+            if file.tag == tag {
+                Ok(file.clone())
+            } else {
+                Err(create_error!(NotFound))
+            }
+        } else {
+            Err(create_error!(NotFound))
+        }
+    }
+
     /// Find an attachment by its details and mark it as used by a given parent.
     async fn find_and_use_attachment(
         &self,

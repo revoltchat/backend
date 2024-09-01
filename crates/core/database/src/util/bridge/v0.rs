@@ -419,6 +419,9 @@ impl From<File> for crate::File {
             user_id: value.user_id,
             server_id: value.server_id,
             object_id: value.object_id,
+            hash: None,
+            uploaded_at: None,
+            uploaded_id: None,
         }
     }
 }

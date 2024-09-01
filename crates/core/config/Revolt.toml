@@ -88,6 +88,8 @@ max_concurrent_connections = 50
 # Encryption key for stored files
 # Generate your own key using `openssl rand -base64 32`
 encryption_key = "qcuMA+ssxhMyKaNAKBGFfryfFtUH8NDlamQyDwGW6fU="
+# Quality used for lossy WebP previews (set to 100 for lossless)
+webp_quality = 80.0
 
 [files.limit]
 # Minimum image resolution
@@ -118,13 +120,13 @@ emojis = [128, 128]
 # - default_bucket matches the name of the bucket you've created
 
 # S3 protocol endpoint
-endpoint = ""
+endpoint = "http://minio:9000"
 # S3 region name
-region = ""
+region = "minio"
 # S3 protocol key ID
-access_key_id = ""
+access_key_id = "minioautumn"
 # S3 protocol access key
-secret_access_key = ""
+secret_access_key = "minioautumn"
 # Bucket to upload to by default
 default_bucket = "revolt-uploads"
 

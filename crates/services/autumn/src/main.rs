@@ -2,6 +2,7 @@ use std::net::{Ipv4Addr, SocketAddr};
 
 use axum::Router;
 
+use revolt_database::DatabaseInfo;
 use tokio::net::TcpListener;
 use utoipa::{
     openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
@@ -55,10 +56,14 @@ async fn main() -> Result<(), std::io::Error> {
         }
     }
 
+    // Connect to the database
+    let db = DatabaseInfo::Auto.connect().await.unwrap();
+
     // Configure Axum and router
     let app = Router::new()
         .merge(Scalar::with_url("/scalar", ApiDoc::openapi()))
-        .nest("/", api::router().await);
+        .nest("/", api::router().await)
+        .with_state(db);
 
     // Configure TCP listener and bind
     let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 3000));

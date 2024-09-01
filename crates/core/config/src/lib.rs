@@ -127,6 +127,31 @@ pub struct Api {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+pub struct FilesLimit {
+    pub min_resolution: [usize; 2],
+    pub max_mega_pixels: usize,
+    pub max_pixel_side: usize,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct FilesS3 {
+    pub endpoint: String,
+    pub region: String,
+    pub access_key_id: String,
+    pub secret_access_key: String,
+    pub default_bucket: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct Files {
+    pub encryption_key: String,
+    pub webp_quality: f32,
+    pub limit: FilesLimit,
+    pub preview: HashMap<String, [usize; 2]>,
+    pub s3: FilesS3,
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct GlobalLimits {
     pub group_size: usize,
     pub message_embeds: usize,
@@ -186,6 +211,7 @@ pub struct Settings {
     pub database: Database,
     pub hosts: Hosts,
     pub api: Api,
+    pub files: Files,
     pub features: Features,
     pub sentry: Sentry,
 }
