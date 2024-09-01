@@ -6,7 +6,13 @@ edition = "2021"
 [dependencies]
 # Media processing
 webp = "0.3.0"
-image = "0.25.2"
+jxl-oxide = "0.8.1"
+image = { version = "0.25.2" } # requires dav1d system library: features = ["avif-native"]
+
+# Content type processing
+infer = "0.16.0"
+ffprobe = "0.4.0"
+imagesize = "0.13.0"
 
 # Utility
 lazy_static = "1.5.0"

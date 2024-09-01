@@ -11,12 +11,17 @@ use axum_typed_multipart::{FieldData, TryFromMultipart, TypedMultipart};
 use image::ImageReader;
 use lazy_static::lazy_static;
 use revolt_config::config;
-use revolt_database::{Database, FileHash};
+use revolt_database::{Database, FileHash, Metadata};
 use revolt_files::fetch_from_s3;
 use revolt_result::{create_error, Result};
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 use utoipa::ToSchema;
+
+use crate::{
+    metadata::{generate_metadata, temp_file_size},
+    mime_type::determine_mime_type,
+};
 
 /// Build the API router
 pub async fn router() -> Router<Database> {
@@ -132,8 +137,36 @@ pub struct UploadResponse {
 )]
 async fn upload_file(
     Path(tag): Path<Tag>,
-    TypedMultipart(UploadPayload { file }): TypedMultipart<UploadPayload>,
+    TypedMultipart(UploadPayload { mut file }): TypedMultipart<UploadPayload>,
 ) -> axum::response::Result<Json<UploadResponse>> {
+    // Extract the filename, or give it a generic name.
+    let file_name = file.metadata.file_name.unwrap_or("unnamed-file".to_owned());
+
+    // TODO: find existing `hash` (or match `processed`) and use that if possible
+    // then: create attachment and return UploadResponse { id }
+
+    // Determine file size
+    let original_file_size = temp_file_size(&file.contents)?;
+
+    // Determine the mime type for the file
+    let mime_type = determine_mime_type(&mut file.contents, &file_name, original_file_size);
+
+    // TODO: block mime types here
+
+    // Determine metadata for the file
+    let metadata = generate_metadata(&file.contents, mime_type);
+
+    // TODO: Re-encode MIMES_WITH_EXIF to remove EXIF data (this needs orientation data: https://github.com/revoltchat/autumn/blob/master/src/routes/upload.rs#L96)
+    // TODO: Re-encode videos to remove EXIF data (this may need orientation data?)
+
+    // TODO: Virus scan Metadata::Text/File
+
+    // TODO: encrypt the file and generate FileHash
+    // note: file_size is processed file's size (incl. authTag in encrypted buffer)
+    // TODO: insert FileHash
+    // TODO: upload to S3
+    // TODO: create attachment
+
     Ok(Json(UploadResponse { id: "aaa" }))
 }
 
@@ -180,10 +213,15 @@ async fn fetch_preview(
         return Err(create_error!(NotFound));
     }
 
+    // Ignore files that haven't been attached
+    if file.used_for.is_none() {
+        return Err(create_error!(NotFound));
+    }
+
     let hash = file.as_hash(&db).await?;
 
     // Only process image files
-    if !hash.content_type.starts_with("image/") {
+    if !matches!(hash.metadata, Metadata::Image { .. }) {
         return Ok(
             Redirect::permanent(&format!("/{tag}/{file_id}/{}", file.filename)).into_response(),
         );
@@ -197,15 +235,16 @@ async fn fetch_preview(
     let [w, h] = config.files.preview.get(tag).unwrap();
 
     // Read the image and resize it
+    // TODO: use jxl_oxide to process image/jxl files
     let image = ImageReader::new(Cursor::new(data))
         .with_guessed_format()
         .map_err(|_| create_error!(InternalError))?
         .decode()
         .map_err(|_| create_error!(InternalError))?
+        //.resize(width as u32, height as u32, image::imageops::FilterType::Gaussian)
         // resize is about 2.5x slower,
-        //  thumb approximation doesn't have terrible quality so it's fine to stick with
-        // .resize(width as u32, height as u32, image::imageops::FilterType::Gaussian)
-        // aspect ratio is preserved when scaling
+        // thumbnail doesn't have terrible quality
+        // so we use thumbnail
         .thumbnail(*w as u32, *h as u32);
 
     // Encode it into WEBP
@@ -250,6 +289,11 @@ async fn fetch_file(
 
     // Ignore deleted files
     if file.deleted.is_some_and(|v| v) {
+        return Err(create_error!(NotFound));
+    }
+
+    // Ignore files that haven't been attached
+    if file.used_for.is_none() {
         return Err(create_error!(NotFound));
     }
 

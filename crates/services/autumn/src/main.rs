@@ -11,6 +11,8 @@ use utoipa::{
 use utoipa_scalar::{Scalar, Servable as ScalarServable};
 
 mod api;
+pub mod metadata;
+pub mod mime_type;
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {

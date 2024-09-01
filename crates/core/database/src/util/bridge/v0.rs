@@ -1,7 +1,7 @@
 use revolt_models::v0::*;
 use revolt_permissions::{calculate_user_permissions, UserPermission};
 
-use crate::{util::permissions::DatabasePermissionQuery, Database};
+use crate::{util::permissions::DatabasePermissionQuery, Database, FileUsedFor};
 
 impl crate::Bot {
     pub fn into_public_bot(self, user: crate::User) -> PublicBot {
@@ -422,6 +422,7 @@ impl From<File> for crate::File {
             hash: None,
             uploaded_at: None,
             uploaded_id: None,
+            used_for: None,
         }
     }
 }

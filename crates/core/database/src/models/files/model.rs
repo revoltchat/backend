@@ -21,8 +21,9 @@ auto_derived_partial!(
         /// ID of user who uploaded this file
         pub uploaded_id: Option<String>, // these are Option<>s to not break file uploads on legacy Autumn
 
-        // TODO: used_for: field
-        //
+        /// What the file was used for
+        pub used_for: Option<FileUsedFor>,
+
         /// Whether this file was deleted
         #[serde(skip_serializing_if = "Option::is_none")]
         pub deleted: Option<bool>,
@@ -53,6 +54,30 @@ auto_derived_partial!(
         pub object_id: Option<String>,
     },
     "PartialFile"
+);
+
+auto_derived!(
+    /// Type of object file was used for
+    pub enum FileUsedForType {
+        // TODO: changing this requires a db migration
+        message,
+        serverBanner,
+        emoji,
+        userAvatar,
+        userProfileBackground,
+        legacyGroupIcon,
+        channelIcon,
+        serverIcon,
+    }
+
+    /// Information about what the file was used for
+    pub struct FileUsedFor {
+        /// Type of the object
+        #[serde(rename = "type")]
+        pub object_type: FileUsedForType,
+        /// ID of the object
+        pub id: String,
+    }
 );
 
 impl File {
