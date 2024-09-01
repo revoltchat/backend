@@ -33,6 +33,8 @@ Before getting started, you'll want to install:
 > A **default.nix** is available for Nix users!
 > Just run `nix-shell` and continue.
 
+> Windows users must perform the steps below within **Git Bash** and not Powershell or Command Prompt. Otherwise, you will likely encounter build errors because Windows does not recognize Linux commands like 'cp'.
+
 Now you can clone and build the project:
 
 ```bash
