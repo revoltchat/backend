@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-revolt-config = { version = "0.7.15", path = "../core/config" }
-revolt-database = { version = "0.7.15", path = "../core/database" }
-revolt-models = { version = "0.7.15", path = "../core/models", features = [
+revolt-config = { version = "0.7.15", path = "../../core/config" }
+revolt-database = { version = "0.7.15", path = "../../core/database" }
+revolt-models = { version = "0.7.15", path = "../../core/models", features = [
     "validator",
 ] }
 
