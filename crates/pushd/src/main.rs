@@ -41,7 +41,7 @@ async fn main() {
     connections.push(
         make_queue_and_consume(
             &config,
-            &config.pushd.message_queue,
+            &config.pushd.generic_queue,
             GenericConsumer::new(db.clone(), authifier.clone()),
         )
         .await,
