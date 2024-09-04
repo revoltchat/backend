@@ -63,6 +63,11 @@ hcaptcha_sitekey = ""
 max_concurrent_connections = 50
 
 [pushd]
+# this changes the names of the queues to not overlap 
+# prod/beta if they happen to be on the same exchange/instance.
+# Usually they have to be, so that messages sent from one or the other get sent to everyone
+production = true
+
 exchange = "revolt.notifications"
 message_queue = "notifications.origin.message"
 fr_accepted_queue = "notifications.ingest.fr_accepted" # friend request accepted

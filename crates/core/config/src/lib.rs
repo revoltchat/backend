@@ -86,7 +86,6 @@ pub struct PushVapid {
 #[derive(Deserialize, Debug, Clone)]
 pub struct PushFcm {
     pub queue: String,
-    pub api_key: String,
     pub key_type: String,
     pub project_id: String,
     pub private_key_id: String,
@@ -137,6 +136,7 @@ pub struct Api {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Pushd {
+    pub production: bool,
     pub exchange: String,
     pub message_queue: String,
     pub fr_accepted_queue: String,
@@ -146,6 +146,31 @@ pub struct Pushd {
     pub vapid: PushVapid,
     pub fcm: PushFcm,
     pub apn: PushApn,
+}
+
+impl Pushd {
+    fn get_routing_key(&self, key: String) -> String {
+        match self.production {
+            true => key + "-prd",
+            false => key + "-tst",
+        }
+    }
+
+    pub fn get_message_routing_key(&self) -> String {
+        self.get_routing_key(self.message_queue.clone())
+    }
+
+    pub fn get_fr_accepted_routing_key(&self) -> String {
+        self.get_routing_key(self.fr_accepted_queue.clone())
+    }
+
+    pub fn get_fr_received_routing_key(&self) -> String {
+        self.get_routing_key(self.fr_received_queue.clone())
+    }
+
+    pub fn get_generic_routing_key(&self) -> String {
+        self.get_routing_key(self.generic_queue.clone())
+    }
 }
 
 #[derive(Deserialize, Debug, Clone)]

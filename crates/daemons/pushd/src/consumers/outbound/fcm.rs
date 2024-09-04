@@ -1,4 +1,4 @@
-use std::{any::Any, collections::HashMap, time::Duration};
+use std::{collections::HashMap, time::Duration};
 
 use amqprs::{channel::Channel as AmqpChannel, consumer::AsyncConsumer, BasicProperties, Deliver};
 
@@ -11,6 +11,7 @@ use fcm_v1::{
 };
 use revolt_database::{events::rabbit::*, Database};
 use revolt_models::v0::{Channel, PushNotification};
+use serde_json::Value;
 
 pub struct FcmOutboundConsumer {
     db: Database,
@@ -39,10 +40,6 @@ impl FcmOutboundConsumer {
 impl FcmOutboundConsumer {
     pub async fn new(db: Database) -> Result<FcmOutboundConsumer, &'static str> {
         let config = revolt_config::config().await;
-
-        if config.pushd.fcm.api_key.is_empty() {
-            return Err("No FCM key present");
-        }
 
         Ok(FcmOutboundConsumer {
             db,
@@ -85,7 +82,7 @@ impl AsyncConsumer for FcmOutboundConsumer {
         let config = revolt_config::config().await;
 
         #[allow(clippy::needless_late_init)]
-        let resp: Result<FcmResponse, FcmError>;
+        let resp: Result<Message, FcmError>;
 
         match payload.notification {
             PayloadKind::FRReceived(alert) => {
@@ -100,13 +97,16 @@ impl AsyncConsumer for FcmOutboundConsumer {
                     .unwrap();
 
                 let mut data = HashMap::new();
-                data.insert("type", "push.fr.receive");
-                data.insert("id", &alert.from_user.id);
-                data.insert("username", &name);
+                data.insert(
+                    "type".to_string(),
+                    Value::String("push.fr.receive".to_string()),
+                );
+                data.insert("id".to_string(), Value::String(alert.from_user.id));
+                data.insert("username".to_string(), Value::String(name));
 
                 let msg = Message {
                     token: Some(payload.token),
-                    data: Some(data),
+                    data: Some(data.into()),
                     ..Default::default()
                 };
 
@@ -124,10 +124,13 @@ impl AsyncConsumer for FcmOutboundConsumer {
                     .clone()
                     .unwrap();
 
-                let mut data = HashMap::new();
-                data.insert("type", "push.fr.accepted");
-                data.insert("id", &alert.accepted_user.id);
-                data.insert("username", &name);
+                let mut data: HashMap<String, Value> = HashMap::new();
+                data.insert(
+                    "type".to_string(),
+                    Value::String("push.fr.accept".to_string()),
+                );
+                data.insert("id".to_string(), Value::String(alert.accepted_user.id));
+                data.insert("username".to_string(), Value::String(name));
 
                 let msg = Message {
                     token: Some(payload.token),
@@ -168,7 +171,7 @@ impl AsyncConsumer for FcmOutboundConsumer {
                     ..Default::default()
                 };
 
-                resp = self.client.send(message_builder.finalize()).await;
+                resp = self.client.send(&msg).await;
             }
         }
 
