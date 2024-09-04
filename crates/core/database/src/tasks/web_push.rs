@@ -66,29 +66,29 @@ pub async fn worker(db: Database, authifier_db: AuthifierDatabase) {
     let config = config().await;
 
     // let web_push_client = IsahcWebPushClient::new().unwrap();
-    let fcm_client = if config.api.fcm.key_type.is_empty() {
-        None
-    } else {
-        Some(fcm_v1::Client::new(
-            Authenticator::service_account::<&str>(ServiceAccountKey {
-                key_type: Some(config.api.fcm.key_type),
-                project_id: Some(config.api.fcm.project_id.clone()),
-                private_key_id: Some(config.api.fcm.private_key_id),
-                private_key: config.api.fcm.private_key,
-                client_email: config.api.fcm.client_email,
-                client_id: Some(config.api.fcm.client_id),
-                auth_uri: Some(config.api.fcm.auth_uri),
-                token_uri: config.api.fcm.token_uri,
-                auth_provider_x509_cert_url: Some(config.api.fcm.auth_provider_x509_cert_url),
-                client_x509_cert_url: Some(config.api.fcm.client_x509_cert_url),
-            })
-            .await
-            .unwrap(),
-            config.api.fcm.project_id,
-            false,
-            Duration::from_secs(5),
-        ))
-    };
+    // let fcm_client = if config.api.fcm.key_type.is_empty() {
+    //     None
+    // } else {
+    //     Some(fcm_v1::Client::new(
+    //         Authenticator::service_account::<&str>(ServiceAccountKey {
+    //             key_type: Some(config.api.fcm.key_type),
+    //             project_id: Some(config.api.fcm.project_id.clone()),
+    //             private_key_id: Some(config.api.fcm.private_key_id),
+    //             private_key: config.api.fcm.private_key,
+    //             client_email: config.api.fcm.client_email,
+    //             client_id: Some(config.api.fcm.client_id),
+    //             auth_uri: Some(config.api.fcm.auth_uri),
+    //             token_uri: config.api.fcm.token_uri,
+    //             auth_provider_x509_cert_url: Some(config.api.fcm.auth_provider_x509_cert_url),
+    //             client_x509_cert_url: Some(config.api.fcm.client_x509_cert_url),
+    //         })
+    //         .await
+    //         .unwrap(),
+    //         config.api.fcm.project_id,
+    //         false,
+    //         Duration::from_secs(5),
+    //     ))
+    // };
 
     // let web_push_private_key = engine::general_purpose::URL_SAFE_NO_PAD
     //     .decode(config.pushd.vapid.private_key)
