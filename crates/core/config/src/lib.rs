@@ -25,6 +25,8 @@ static CONFIG_BUILDER: Lazy<RwLock<Config>> = Lazy::new(|| {
             ));
         } else if std::path::Path::new("Revolt.toml").exists() {
             builder = builder.add_source(File::new("Revolt.toml", FileFormat::Toml));
+        } else if std::path::Path::new("/Revolt.toml").exists() {
+            builder = builder.add_source(File::new("/Revolt.toml", FileFormat::Toml));
         }
 
         builder.build().unwrap()
@@ -85,6 +87,16 @@ pub struct PushVapid {
 pub struct PushFcm {
     pub queue: String,
     pub api_key: String,
+    pub key_type: String,
+    pub project_id: String,
+    pub private_key_id: String,
+    pub private_key: String,
+    pub client_email: String,
+    pub client_id: String,
+    pub auth_uri: String,
+    pub token_uri: String,
+    pub auth_provider_x509_cert_url: String,
+    pub client_x509_cert_url: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -137,6 +149,31 @@ pub struct Pushd {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+pub struct FilesLimit {
+    pub min_resolution: [usize; 2],
+    pub max_mega_pixels: usize,
+    pub max_pixel_side: usize,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct FilesS3 {
+    pub endpoint: String,
+    pub region: String,
+    pub access_key_id: String,
+    pub secret_access_key: String,
+    pub default_bucket: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct Files {
+    pub encryption_key: String,
+    pub webp_quality: f32,
+    pub limit: FilesLimit,
+    pub preview: HashMap<String, [usize; 2]>,
+    pub s3: FilesS3,
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct GlobalLimits {
     pub group_size: usize,
     pub message_embeds: usize,
@@ -147,6 +184,8 @@ pub struct GlobalLimits {
     pub server_channels: usize,
 
     pub new_user_days: usize,
+
+    pub body_limit_size: usize,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -196,6 +235,7 @@ pub struct Settings {
     pub hosts: Hosts,
     pub api: Api,
     pub pushd: Pushd,
+    pub files: Files,
     pub features: Features,
     pub sentry: Sentry,
 }

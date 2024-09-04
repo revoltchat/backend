@@ -9,19 +9,21 @@ const WORKER_COUNT: usize = 5;
 
 pub mod ack;
 pub mod apple_notifications;
+pub mod authifier_relay;
 pub mod last_message_id;
 pub mod process_embeds;
 pub mod web_push;
 
 /// Spawn background workers
-pub async fn start_workers(db: Database, authifier_db: authifier::Database) {
+pub fn start_workers(db: Database, authifier_db: authifier::Database) {
+    task::spawn(authifier_relay::worker());
     task::spawn(apple_notifications::worker(db.clone()));
 
     for _ in 0..WORKER_COUNT {
         task::spawn(ack::worker(db.clone(), authifier_db.clone()));
         task::spawn(last_message_id::worker(db.clone()));
         task::spawn(process_embeds::worker(db.clone()));
-        task::spawn(web_push::worker(authifier_db.clone()));
+        task::spawn(web_push::worker(db.clone(), authifier_db.clone()));
     }
 }
 

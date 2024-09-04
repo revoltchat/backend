@@ -2,12 +2,15 @@ use std::{collections::HashSet, str::FromStr, time::Duration};
 
 use crate::{events::client::EventV1, Database, File, RatelimitEvent, AMQP};
 
+use authifier::config::{EmailVerificationConfig, Template};
+use iso8601_timestamp::Timestamp;
 use once_cell::sync::Lazy;
 use rand::seq::SliceRandom;
 use revolt_config::{config, FeaturesLimits};
-use revolt_models::v0;
+use revolt_models::v0::{self, UserFlags};
 use revolt_presence::filter_online;
 use revolt_result::{create_error, Result};
+use serde_json::json;
 use ulid::Ulid;
 
 auto_derived_partial!(
@@ -49,6 +52,10 @@ auto_derived_partial!(
         /// Bot information
         #[serde(skip_serializing_if = "Option::is_none")]
         pub bot: Option<BotInformation>,
+
+        /// Time until user is unsuspended
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub suspended_until: Option<Timestamp>,
     },
     "PartialUser"
 );
@@ -62,6 +69,10 @@ auto_derived!(
         ProfileContent,
         ProfileBackground,
         DisplayName,
+
+        // internal fields
+        Suspension,
+        None,
     }
 
     /// User's relationship with another user (or themselves)
@@ -165,6 +176,7 @@ impl Default for User {
             flags: Default::default(),
             privileged: Default::default(),
             bot: Default::default(),
+            suspended_until: Default::default(),
         }
     }
 }
@@ -668,7 +680,104 @@ impl User {
                 }
             }
             FieldsUser::DisplayName => self.display_name = None,
+            FieldsUser::Suspension => self.suspended_until = None,
+            FieldsUser::None => {}
         }
+    }
+
+    /// Suspend the user
+    ///
+    /// - If a duration is specified, the user will be automatically unsuspended after the given time.
+    /// - If a reason is specified, an email will be sent.
+    pub async fn suspend(
+        &mut self,
+        db: &Database,
+        duration_days: Option<usize>,
+        reason: Option<Vec<String>>,
+    ) -> Result<()> {
+        let authifier = db.clone().to_authifier().await;
+        let mut account = authifier
+            .database
+            .find_account(&self.id)
+            .await
+            .map_err(|_| create_error!(InternalError))?;
+
+        account
+            .disable(&authifier)
+            .await
+            .map_err(|_| create_error!(InternalError))?;
+
+        account
+            .delete_all_sessions(&authifier, None)
+            .await
+            .map_err(|_| create_error!(InternalError))?;
+
+        self.update(
+            db,
+            PartialUser {
+                flags: Some(UserFlags::SuspendedUntil as i32),
+                suspended_until: duration_days.and_then(|dur| {
+                    Timestamp::now_utc().checked_add(iso8601_timestamp::Duration::days(dur as i64))
+                }),
+                ..Default::default()
+            },
+            vec![],
+        )
+        .await?;
+
+        if let Some(reason) = reason {
+            if let EmailVerificationConfig::Enabled { smtp, .. } =
+                authifier.config.email_verification
+            {
+                smtp.send_email(
+                    account.email.clone(),
+                    // maybe move this to common area?
+                    &Template {
+                        title: "Account Suspension".to_string(),
+                        html: Some(include_str!("../../../templates/suspension.html").to_owned()),
+                        text: include_str!("../../../templates/suspension.txt").to_owned(),
+                        url: Default::default(),
+                    },
+                    json!({
+                        "email": account.email,
+                        "list": reason.join(", "),
+                        "duration": duration_days,
+                        "duration_display": if duration_days.is_some() {
+                            "block"
+                        } else {
+                            "none"
+                        }
+                    }),
+                )
+                .map_err(|_| create_error!(InternalError))?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Unsuspend the user
+    pub async fn unsuspend(&mut self, db: &Database) -> Result<()> {
+        self.update(
+            db,
+            PartialUser {
+                flags: Some(0),
+                suspended_until: None,
+                ..Default::default()
+            },
+            vec![],
+        )
+        .await?;
+
+        unimplemented!()
+    }
+
+    /// Permanently ban the user
+    ///
+    /// - If a reason is specified, an email will be sent.
+    pub async fn ban(&mut self, _db: &Database, _reason: Option<String>) -> Result<()> {
+        // Send ban email (if reason provided)
+        unimplemented!()
     }
 
     /// Mark as deleted
@@ -686,6 +795,7 @@ impl User {
                 FieldsUser::StatusPresence,
                 FieldsUser::ProfileContent,
                 FieldsUser::ProfileBackground,
+                FieldsUser::Suspension,
             ],
         )
         .await

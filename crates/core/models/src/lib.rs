@@ -6,6 +6,10 @@ extern crate serde;
 #[macro_use]
 extern crate schemars;
 
+#[cfg(feature = "utoipa")]
+#[macro_use]
+extern crate utoipa;
+
 #[cfg(feature = "partials")]
 #[macro_use]
 extern crate revolt_optional_struct;
@@ -18,6 +22,7 @@ macro_rules! auto_derived {
         $(
             #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
             #[cfg_attr(feature = "schemas", derive(JsonSchema))]
+            #[cfg_attr(feature = "utoipa", derive(ToSchema))]
             #[derive(Debug, Clone, Eq, PartialEq)]
             $item
         )+

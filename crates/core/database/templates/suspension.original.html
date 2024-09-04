@@ -13,14 +13,25 @@
         src="https://app.revolt.chat/assets/logo_round.png"
       />
       <div class="card p-6 p-lg-10 space-y-4">
-        <h1 class="h3 fw-700">Almost there!</h1>
-        <p>To complete your sign up, we just need to verify your email.</p>
-        <a class="btn btn-primary p-3 fw-700" href="{{url}}">Confirm</a>
+        <h1 class="h3 fw-700">Account Suspended</h1>
+        <p>Your account has been suspended, for one or more reasons:</p>
+        <ul>
+          {{list}}
+        </ul>
+        <p style="display:{{duration_display}}">
+          You will be able to use your account again in {{duration}} days.
+        </p>
+        <p>
+          Further violations may result in a permanent ban depending on
+          severity, please abide by the
+          <a href="https://revolt.chat/aup">Acceptable Usage Policy</a>.
+        </p>
+        <p>Ban evasion is prohibited and will be dealt with accordingly.</p>
       </div>
       <div class="text-muted text-center my-6">
         This email is intended for {{email}}<br />
         Sent from Revolt<br />
-        Made in the EU
+        Made in Europe
       </div>
     </div>
   </body>

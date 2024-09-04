@@ -5,6 +5,7 @@ mod channel_unreads;
 mod channel_webhooks;
 mod channels;
 mod emojis;
+mod file_hashes;
 mod files;
 mod messages;
 mod ratelimit_events;
@@ -23,6 +24,7 @@ pub use channel_unreads::*;
 pub use channel_webhooks::*;
 pub use channels::*;
 pub use emojis::*;
+pub use file_hashes::*;
 pub use files::*;
 pub use messages::*;
 pub use ratelimit_events::*;
@@ -46,6 +48,7 @@ pub trait AbstractDatabase:
     + channel_unreads::AbstractChannelUnreads
     + channel_webhooks::AbstractWebhooks
     + emojis::AbstractEmojis
+    + file_hashes::AbstractAttachmentHashes
     + files::AbstractAttachments
     + messages::AbstractMessages
     + ratelimit_events::AbstractRatelimitEvents

@@ -1,6 +1,6 @@
 [package]
 name = "revolt-models"
-version = "0.7.15"
+version = "0.7.16"
 edition = "2021"
 license = "MIT"
 authors = ["Paul Makles <me@insrt.uk>"]
@@ -11,16 +11,17 @@ description = "Revolt Backend: API Models"
 [features]
 serde = ["dep:serde", "revolt-permissions/serde", "indexmap/serde"]
 schemas = ["dep:schemars", "revolt-permissions/schemas"]
+utoipa = ["dep:utoipa"]
 validator = ["dep:validator"]
 rocket = ["dep:rocket"]
-partials = ["dep:revolt_optional_struct", "serde", "schemas"]
+partials = ["dep:revolt_optional_struct", "serde", "schemas", "utoipa"]
 
 default = ["serde", "partials", "rocket"]
 
 [dependencies]
 # Core
-revolt-config = { version = "0.7.15", path = "../config" }
-revolt-permissions = { version = "0.7.15", path = "../permissions" }
+revolt-config = { version = "0.7.16", path = "../config" }
+revolt-permissions = { version = "0.7.16", path = "../permissions" }
 
 # Utility
 regex = "1"
@@ -37,6 +38,7 @@ iso8601-timestamp = { version = "0.2.11", features = ["schema", "bson"] }
 
 # Spec Generation
 schemars = { version = "0.8.8", optional = true, features = ["indexmap1"] }
+utoipa = { version = "4.2.3", optional = true }
 
 # Validation
 validator = { version = "0.16.0", optional = true, features = ["derive"] }

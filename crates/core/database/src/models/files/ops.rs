@@ -10,6 +10,9 @@ pub trait AbstractAttachments: Sync + Send {
     /// Insert attachment into database.
     async fn insert_attachment(&self, attachment: &File) -> Result<()>;
 
+    /// Fetch an attachment by its id.
+    async fn fetch_attachment(&self, tag: &str, file_id: &str) -> Result<File>;
+
     /// Find an attachment by its details and mark it as used by a given parent.
     async fn find_and_use_attachment(
         &self,

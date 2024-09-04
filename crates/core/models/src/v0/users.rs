@@ -88,6 +88,9 @@ auto_derived!(
         ProfileContent,
         ProfileBackground,
         DisplayName,
+
+        /// Internal field, ignore this.
+        Internal,
     }
 
     /// User's relationship with another user (or themselves)
@@ -190,7 +193,7 @@ auto_derived!(
     #[repr(u32)]
     pub enum UserFlags {
         /// User has been suspended from the platform
-        Suspended = 1,
+        SuspendedUntil = 1,
         /// User has deleted their account
         Deleted = 2,
         /// User was banned off the platform

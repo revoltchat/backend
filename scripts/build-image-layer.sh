@@ -22,20 +22,28 @@ tools() {
 
 deps() {
   mkdir -p \
+    crates/bindings/node/src \
     crates/bonfire/src \
     crates/delta/src \
     crates/core/config/src \
     crates/core/database/src \
+    crates/core/files/src \
     crates/core/models/src \
     crates/core/permissions/src \
     crates/core/presence/src \
-    crates/core/result/src
+    crates/core/result/src \
+    crates/services/autumn/src \
+    crates/services/january/src
   echo 'fn main() { panic!("stub"); }' |
     tee crates/bonfire/src/main.rs |
-    tee crates/delta/src/main.rs
+    tee crates/delta/src/main.rs |
+    tee crates/services/autumn/src/main.rs |
+    tee crates/services/january/src/main.rs
   echo '' |
+    tee crates/bindings/node/src/lib.rs |
     tee crates/core/config/src/lib.rs |
     tee crates/core/database/src/lib.rs |
+    tee crates/core/files/src/lib.rs |
     tee crates/core/models/src/lib.rs |
     tee crates/core/permissions/src/lib.rs |
     tee crates/core/presence/src/lib.rs |

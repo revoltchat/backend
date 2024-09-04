@@ -1,0 +1,43 @@
+services:
+  # Redis
+  redis:
+    image: eqalpha/keydb
+    ports:
+      - "14079:6379"
+
+  # MongoDB
+  database:
+    image: mongo
+    ports:
+      - "14017:27017"
+    volumes:
+      - ./.data/db:/data/db
+
+  # MinIO
+  minio:
+    image: minio/minio
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: minioautumn
+      MINIO_ROOT_PASSWORD: minioautumn
+    volumes:
+      - ./.data/minio:/data
+    ports:
+      - "14009:9000"
+    restart: always
+
+  # Create buckets for minio.
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      - minio
+    environment:
+      MINIO_ROOT_USER: minioautumn
+      MINIO_ROOT_PASSWORD: minioautumn
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc config host add minio http://minio:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD;
+      while ! /usr/bin/mc ready minio; do echo 'Waiting minio...' && sleep 1; done;
+      /usr/bin/mc mb minio/revolt-uploads;
+      exit 0;
+      "

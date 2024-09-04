@@ -1,7 +1,7 @@
 use revolt_models::v0::*;
 use revolt_permissions::{calculate_user_permissions, UserPermission};
 
-use crate::{util::permissions::DatabasePermissionQuery, Database};
+use crate::{util::permissions::DatabasePermissionQuery, Database, FileUsedFor};
 
 impl crate::Bot {
     pub fn into_public_bot(self, user: crate::User) -> PublicBot {
@@ -419,6 +419,10 @@ impl From<File> for crate::File {
             user_id: value.user_id,
             server_id: value.server_id,
             object_id: value.object_id,
+            hash: None,
+            uploaded_at: None,
+            uploaded_id: None,
+            used_for: None,
         }
     }
 }
@@ -1171,6 +1175,7 @@ impl From<User> for crate::User {
             flags: Some(value.flags as i32),
             privileged: value.privileged,
             bot: value.bot.map(Into::into),
+            suspended_until: None,
         }
     }
 }
@@ -1209,6 +1214,8 @@ impl From<FieldsUser> for crate::FieldsUser {
             FieldsUser::StatusPresence => crate::FieldsUser::StatusPresence,
             FieldsUser::StatusText => crate::FieldsUser::StatusText,
             FieldsUser::DisplayName => crate::FieldsUser::DisplayName,
+
+            FieldsUser::Internal => crate::FieldsUser::None,
         }
     }
 }
@@ -1222,6 +1229,9 @@ impl From<crate::FieldsUser> for FieldsUser {
             crate::FieldsUser::StatusPresence => FieldsUser::StatusPresence,
             crate::FieldsUser::StatusText => FieldsUser::StatusText,
             crate::FieldsUser::DisplayName => FieldsUser::DisplayName,
+
+            crate::FieldsUser::Suspension => FieldsUser::Internal,
+            crate::FieldsUser::None => FieldsUser::Internal,
         }
     }
 }
