@@ -35,9 +35,16 @@ services:
       MINIO_ROOT_USER: minioautumn
       MINIO_ROOT_PASSWORD: minioautumn
     entrypoint: >
-      /bin/sh -c "
-      /usr/bin/mc config host add minio http://minio:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD;
-      while ! /usr/bin/mc ready minio; do echo 'Waiting minio...' && sleep 1; done;
-      /usr/bin/mc mb minio/revolt-uploads;
-      exit 0;
-      "
+      /bin/sh -c " /usr/bin/mc config host add minio http://minio:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD; while ! /usr/bin/mc ready minio; do echo 'Waiting minio...' && sleep 1; done; /usr/bin/mc mb minio/revolt-uploads; exit 0; "
+
+  # Rabbit
+  rabbit:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: rabbituser
+      RABBITMQ_DEFAULT_PASS: rabbitpass
+    volumes:
+      - ./.data/rabbit:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672" # management UI, for development
