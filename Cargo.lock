@@ -5730,6 +5730,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "revolt-pushd"
+version = "0.1.0"
+dependencies = [
+ "amqprs",
+ "async-trait",
+ "authifier",
+ "base64 0.22.1",
+ "fcm_v1",
+ "isahc",
+ "iso8601-timestamp 0.2.17",
+ "log",
+ "revolt-config",
+ "revolt-database",
+ "revolt-models",
+ "revolt_a2",
+ "revolt_optional_struct",
+ "serde",
+ "serde_json",
+ "tokio 1.40.0",
+ "ulid 1.1.3",
+ "web-push",
+]
+
+[[package]]
 name = "revolt-result"
 version = "0.7.16"
 dependencies = [

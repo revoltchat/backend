@@ -1,9 +1,14 @@
-use std::collections::HashMap;
+use std::{any::Any, collections::HashMap, time::Duration};
 
 use amqprs::{channel::Channel as AmqpChannel, consumer::AsyncConsumer, BasicProperties, Deliver};
 
 use async_trait::async_trait;
-use fcm::{Client, FcmError, FcmResponse, MessageBuilder};
+use fcm_v1::{
+    android::AndroidConfig,
+    auth::{Authenticator, ServiceAccountKey},
+    message::{Message, Notification},
+    Client, Error as FcmError,
+};
 use revolt_database::{events::rabbit::*, Database};
 use revolt_models::v0::{Channel, PushNotification};
 
@@ -41,7 +46,25 @@ impl FcmOutboundConsumer {
 
         Ok(FcmOutboundConsumer {
             db,
-            client: Client::new(),
+            client: Client::new(
+                Authenticator::service_account::<&str>(ServiceAccountKey {
+                    key_type: Some(config.pushd.fcm.key_type),
+                    project_id: Some(config.pushd.fcm.project_id.clone()),
+                    private_key_id: Some(config.pushd.fcm.private_key_id),
+                    private_key: config.pushd.fcm.private_key,
+                    client_email: config.pushd.fcm.client_email,
+                    client_id: Some(config.pushd.fcm.client_id),
+                    auth_uri: Some(config.pushd.fcm.auth_uri),
+                    token_uri: config.pushd.fcm.token_uri,
+                    auth_provider_x509_cert_url: Some(config.pushd.fcm.auth_provider_x509_cert_url),
+                    client_x509_cert_url: Some(config.pushd.fcm.client_x509_cert_url),
+                })
+                .await
+                .unwrap(),
+                config.pushd.fcm.project_id,
+                false,
+                Duration::from_secs(5),
+            ),
         })
     }
 }
@@ -81,11 +104,13 @@ impl AsyncConsumer for FcmOutboundConsumer {
                 data.insert("id", &alert.from_user.id);
                 data.insert("username", &name);
 
-                let mut message_builder =
-                    MessageBuilder::new(&config.pushd.fcm.api_key, &payload.token);
-                _ = message_builder.data(&data);
+                let msg = Message {
+                    token: Some(payload.token),
+                    data: Some(data),
+                    ..Default::default()
+                };
 
-                resp = self.client.send(message_builder.finalize()).await;
+                resp = self.client.send(&msg).await;
             }
 
             PayloadKind::FRAccepted(alert) => {
@@ -104,42 +129,44 @@ impl AsyncConsumer for FcmOutboundConsumer {
                 data.insert("id", &alert.accepted_user.id);
                 data.insert("username", &name);
 
-                let mut message_builder =
-                    MessageBuilder::new(&config.pushd.fcm.api_key, &payload.token);
-                _ = message_builder.data(&data);
+                let msg = Message {
+                    token: Some(payload.token),
+                    data: Some(data),
+                    ..Default::default()
+                };
 
-                resp = self.client.send(message_builder.finalize()).await;
+                resp = self.client.send(&msg).await;
             }
             PayloadKind::Generic(alert) => {
-                let mut notification = fcm::NotificationBuilder::new();
-                notification.title(alert.title.as_str());
-                if alert.icon.is_some() {
-                    notification.icon(alert.icon.as_ref().unwrap());
-                }
-                notification.body(&alert.body);
-                let notification = notification.finalize();
+                let msg = Message {
+                    token: Some(payload.token),
+                    notification: Some(Notification {
+                        title: Some(alert.title),
+                        body: Some(alert.body),
+                        image: alert.icon,
+                    }),
+                    ..Default::default()
+                };
 
-                let mut message_builder =
-                    MessageBuilder::new(&config.pushd.fcm.api_key, &payload.token);
-                message_builder.notification(notification);
-
-                resp = self.client.send(message_builder.finalize()).await;
+                resp = self.client.send(&msg).await;
             }
 
             PayloadKind::MessageNotification(alert) => {
                 let title = self.format_title(&alert);
 
-                let mut notification = fcm::NotificationBuilder::new();
-                notification.title(title.as_str());
-                notification.icon(&alert.icon);
-                notification.body(&alert.body);
-                notification.tag(alert.channel.id());
-                // TODO: expand support for fields
-                let notification = notification.finalize();
-
-                let mut message_builder =
-                    MessageBuilder::new(&config.pushd.fcm.api_key, &payload.token);
-                message_builder.notification(notification);
+                let msg = Message {
+                    token: Some(payload.token),
+                    notification: Some(Notification {
+                        title: Some(title),
+                        body: Some(alert.body),
+                        image: Some(alert.icon),
+                    }),
+                    android: Some(AndroidConfig {
+                        collapse_key: Some(alert.tag),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                };
 
                 resp = self.client.send(message_builder.finalize()).await;
             }
@@ -147,7 +174,7 @@ impl AsyncConsumer for FcmOutboundConsumer {
 
         if let Err(err) = resp {
             match err {
-                FcmError::Unauthorized => {
+                FcmError::Auth => {
                     if let Err(err) = self
                         .db
                         .remove_push_subscription_by_session_id(&payload.session_id)
