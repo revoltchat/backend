@@ -11,6 +11,8 @@ use aws_sdk_s3::{
 
 use base64::prelude::*;
 
+pub static AUTHENTICATION_TAG_SIZE_BYTES: usize = 16;
+
 /// Create an S3 client
 pub fn create_client(s3_config: FilesS3) -> Client {
     let provider_name = "my-creds";

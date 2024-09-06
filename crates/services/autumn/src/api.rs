@@ -1,4 +1,7 @@
-use std::{io::Cursor, time::Duration};
+use std::{
+    io::{Cursor, Read},
+    time::Duration,
+};
 
 use axum::{
     extract::{DefaultBodyLimit, Path, State},
@@ -12,16 +15,15 @@ use image::ImageReader;
 use lazy_static::lazy_static;
 use revolt_config::config;
 use revolt_database::{Database, FileHash, Metadata};
-use revolt_files::fetch_from_s3;
+use revolt_files::{fetch_from_s3, AUTHENTICATION_TAG_SIZE_BYTES};
 use revolt_result::{create_error, Result};
 use serde::{Deserialize, Serialize};
+use sha2::Digest;
 use tempfile::NamedTempFile;
+use tokio::time::Instant;
 use utoipa::ToSchema;
 
-use crate::{
-    metadata::{generate_metadata, temp_file_size},
-    mime_type::determine_mime_type,
-};
+use crate::{exif::strip_metadata, metadata::generate_metadata, mime_type::determine_mime_type};
 
 /// Build the API router
 pub async fn router() -> Router<Database> {
@@ -139,27 +141,59 @@ async fn upload_file(
     Path(tag): Path<Tag>,
     TypedMultipart(UploadPayload { mut file }): TypedMultipart<UploadPayload>,
 ) -> axum::response::Result<Json<UploadResponse>> {
-    // Extract the filename, or give it a generic name.
+    // Keep track of processing time
+    let now = Instant::now();
+
+    // TODO: authenticate the user
+
+    // Extract the filename, or give it a generic name
     let file_name = file.metadata.file_name.unwrap_or("unnamed-file".to_owned());
+
+    // Load file to memory
+    let mut buf = Vec::<u8>::new();
+    file.contents
+        .read_to_end(&mut buf)
+        .map_err(|_| create_error!(InternalError))?;
+
+    // Take note of original file size
+    let original_file_size = buf.len();
+
+    // TODO: check against tag
+
+    // Generate sha256 hash
+    let original_hash = {
+        let mut hasher = sha2::Sha256::new();
+        hasher.update(&buf);
+        hasher.finalize()
+    };
 
     // TODO: find existing `hash` (or match `processed`) and use that if possible
     // then: create attachment and return UploadResponse { id }
 
-    // Determine file size
-    let original_file_size = temp_file_size(&file.contents)?;
-
     // Determine the mime type for the file
-    let mime_type = determine_mime_type(&mut file.contents, &file_name, original_file_size);
+    let mime_type = determine_mime_type(&mut file.contents, &buf, &file_name);
 
     // TODO: block mime types here
 
     // Determine metadata for the file
     let metadata = generate_metadata(&file.contents, mime_type);
 
-    // TODO: Re-encode MIMES_WITH_EXIF to remove EXIF data (this needs orientation data: https://github.com/revoltchat/autumn/blob/master/src/routes/upload.rs#L96)
-    // TODO: Re-encode videos to remove EXIF data (this may need orientation data?)
+    // Strip metadata
+    let (buf, metadata) = strip_metadata(file.contents, buf, metadata, mime_type).await?;
 
-    // TODO: Virus scan Metadata::Text/File
+    // TODO: Virus scan Metadata::File
+
+    // Print file information for debug purposes
+    let new_file_size = buf.len() + AUTHENTICATION_TAG_SIZE_BYTES;
+    let processed_hash = {
+        let mut hasher = sha2::Sha256::new();
+        hasher.update(&buf);
+        hasher.finalize()
+    };
+    let process_ratio = new_file_size as f32 / original_file_size as f32;
+    let time_to_process = Instant::now() - now;
+
+    tracing::info!("Received file {file_name}\nOriginal hash: {original_hash:02X}\nOriginal size: {original_file_size} bytes\nMime type: {mime_type}\nMetadata: {metadata:?}\nProcessed file size: {new_file_size} bytes ({:.2}%).\nProcessed hash: {processed_hash:02X}\nProcessing took {time_to_process:?}", process_ratio * 100.0);
 
     // TODO: encrypt the file and generate FileHash
     // note: file_size is processed file's size (incl. authTag in encrypted buffer)

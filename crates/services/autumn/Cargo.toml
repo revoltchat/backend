@@ -6,8 +6,12 @@ edition = "2021"
 [dependencies]
 # Media processing
 webp = "0.3.0"
+sha2 = "0.10.8"
 jxl-oxide = "0.8.1"
-image = { version = "0.25.2" } # requires dav1d system library: features = ["avif-native"]
+kamadak-exif = "0.5.4"
+# revolt_little_exif = "0.4.0"
+simdutf8 = { version = "0.1.4", features = ["aarch64_neon"] }
+image = { version = "0.25.2" }                                # requires dav1d system library: features = ["avif-native"]
 
 # Content type processing
 infer = "0.16.0"

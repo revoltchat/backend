@@ -11,6 +11,7 @@ use utoipa::{
 use utoipa_scalar::{Scalar, Servable as ScalarServable};
 
 mod api;
+pub mod exif;
 pub mod metadata;
 pub mod mime_type;
 
