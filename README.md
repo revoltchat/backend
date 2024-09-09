@@ -19,6 +19,9 @@ Note: `january`, `autumn`, and `vortex` are yet to be moved into this monorepo.
 
 Rust 1.76 or higher.
 
+> [!CAUTION]
+> The events server has a significant performance regression between Rust 1.77.2 and 1.78.0 onwards, see [issue #341](https://github.com/revoltchat/backend/issues/341).
+
 ## Development Guide
 
 Before contributing, make yourself familiar with [our contribution guidelines](https://developers.revolt.chat/contrib.html) and the [technical documentation for this project](https://revoltchat.github.io/backend/).
@@ -33,6 +36,20 @@ Before getting started, you'll want to install:
 > A **default.nix** is available for Nix users!
 > Just run `nix-shell` and continue.
 
+As a heads-up, the development environment uses the following ports:
+
+| Service                   |      Port      |
+| ------------------------- | :------------: |
+| MongoDB                   |     14017      |
+| Redis                     |     14079      |
+| MinIO                     |     14009      |
+| Maildev                   | 14025<br>14080 |
+| Revolt Web App            |     14701      |
+| `crates/delta`            |     14702      |
+| `crates/bonfire`          |     14703      |
+| `crates/services/autumn`  |     14704      |
+| `crates/services/january` |     14705      |
+
 Now you can clone and build the project:
 
 ```bash
@@ -41,33 +58,14 @@ cd revolt-backend
 cargo build
 ```
 
-If you want to run the API and event servers:
+A default configuration `Revolt.toml` is present in this project that is suited for development.
+
+If you'd like to change anything, create a `Revolt.overrides.toml` file to overwrite it.
+
+You may need to configure the legacy environment options:
 
 ```bash
-# create environment file (will be deprecated in future)
 cp .env.example .env
-
-# (optionally) copy the default configuration file
-cp crates/core/config/Revolt.toml Revolt.toml
-# configure as necessary...
-```
-
-You may want to copy the following configuration:
-
-```toml
-# Revolt.toml
-[database]
-mongodb = "mongodb://localhost"
-redis = "redis://localhost"
-
-[hosts]
-app = "http://local.revolt.chat"
-api = "http://local.revolt.chat:8000"
-events = "ws://local.revolt.chat:9000"
-autumn = "http://local.revolt.chat:3000"
-january = "http://local.revolt.chat:7000"
-voso_legacy = ""
-voso_legacy_ws = ""
 ```
 
 Then continue:
@@ -80,6 +78,10 @@ docker compose up -d
 cargo run --bin revolt-delta
 # run the events server
 cargo run --bin revolt-bonfire
+# run the file server
+cargo run --bin revolt-autumn
+# run th proxy server
+cargo run --bin revolt-january
 
 # hint:
 # mold -run <cargo build, cargo run, etc...>
@@ -96,10 +98,10 @@ git clone --recursive https://github.com/revoltchat/revite
 cd revite
 yarn
 yarn build:deps
-yarn dev --port 3001
+yarn dev --port 14701
 ```
 
-Then go to https://local.revolt.chat:3001
+Then go to https://local.revolt.chat:14701
 
 ## Deployment Guide
 
