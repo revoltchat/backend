@@ -222,22 +222,10 @@ pub struct Settings {
 impl Settings {
     pub fn preflight_checks(&self) {
         if self.api.smtp.host.is_empty() {
-            #[cfg(not(debug_assertions))]
-            if !env::var("REVOLT_UNSAFE_NO_EMAIL").map_or(false, |v| v == *"1") {
-                panic!("Running in production without email is not recommended, set REVOLT_UNSAFE_NO_EMAIL=1 to override.");
-            }
-
-            #[cfg(debug_assertions)]
             log::warn!("No SMTP settings specified! Remember to configure email.");
         }
 
         if self.api.security.captcha.hcaptcha_key.is_empty() {
-            #[cfg(not(debug_assertions))]
-            if !env::var("REVOLT_UNSAFE_NO_CAPTCHA").map_or(false, |v| v == *"1") {
-                panic!("Running in production without CAPTCHA is not recommended, set REVOLT_UNSAFE_NO_CAPTCHA=1 to override.");
-            }
-
-            #[cfg(debug_assertions)]
             log::warn!("No Captcha key specified! Remember to add hCaptcha key.");
         }
     }
