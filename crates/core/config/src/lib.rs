@@ -8,9 +8,17 @@ use serde::Deserialize;
 
 pub use sentry::capture_error;
 
-#[cfg(not(debug_assertions))]
-use std::env;
+/// Paths to search for configuration
+static CONFIG_SEARCH_PATHS: [&str; 3] = [
+    // current working directory
+    "Revolt.toml",
+    // current working directory - overrides file
+    "Revolt.overrides.toml",
+    // root directory, for Docker containers
+    "/Revolt.toml",
+];
 
+/// Configuration builder
 static CONFIG_BUILDER: Lazy<RwLock<Config>> = Lazy::new(|| {
     RwLock::new({
         let mut builder = Config::builder().add_source(File::from_str(
@@ -23,17 +31,17 @@ static CONFIG_BUILDER: Lazy<RwLock<Config>> = Lazy::new(|| {
                 include_str!("../Revolt.test.toml"),
                 FileFormat::Toml,
             ));
-        } else if std::path::Path::new("Revolt.toml").exists() {
-            builder = builder.add_source(File::new("Revolt.toml", FileFormat::Toml));
-        } else if std::path::Path::new("/Revolt.toml").exists() {
-            builder = builder.add_source(File::new("/Revolt.toml", FileFormat::Toml));
+        }
+
+        for path in CONFIG_SEARCH_PATHS {
+            if std::path::Path::new(path).exists() {
+                builder = builder.add_source(File::new(path, FileFormat::Toml));
+            }
         }
 
         builder.build().unwrap()
     })
 });
-
-// https://gifbox.me/view/gT5mqxYKCZv-twilight-meow
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Database {
@@ -257,6 +265,12 @@ pub async fn setup_logging(release: &'static str, dsn: String) -> Option<sentry:
 
     if std::env::var("ROCKET_ADDRESS").is_err() {
         std::env::set_var("ROCKET_ADDRESS", "0.0.0.0");
+    }
+
+    if std::env::var("REDIS_URL").is_err() {
+        // Configure redis-kiss library
+        let config = config().await;
+        std::env::set_var("REDIS_URI", config.database.redis);
     }
 
     pretty_env_logger::init();

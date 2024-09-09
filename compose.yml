@@ -46,7 +46,7 @@ services:
   maildev:
     image: soulteary/maildev
     ports:
-      - "14025:8080"
+      - "14025:25"
       - "14080:8080"
     environment:
       MAILDEV_SMTP_PORT: 25

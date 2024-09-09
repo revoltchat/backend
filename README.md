@@ -60,13 +60,7 @@ cargo build
 
 A default configuration `Revolt.toml` is present in this project that is suited for development.
 
-If you'd like to change anything, create a `Revolt.overrides.toml` file to overwrite it.
-
-You may need to configure the legacy environment options:
-
-```bash
-cp .env.example .env
-```
+If you'd like to change anything, create a `Revolt.overrides.toml` file and specify relevant variables.
 
 Then continue:
 
@@ -98,10 +92,13 @@ git clone --recursive https://github.com/revoltchat/revite
 cd revite
 yarn
 yarn build:deps
+echo "VITE_API_URL=http://local.revolt.chat:14702" > .env.local
 yarn dev --port 14701
 ```
 
-Then go to https://local.revolt.chat:14701
+Then go to http://local.revolt.chat:14701 to create an account/login.
+
+When signing up, go to http://localhost:14080 to find confirmation/password reset emails.
 
 ## Deployment Guide
 
