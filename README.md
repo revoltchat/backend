@@ -1,19 +1,34 @@
-# Revolt Backend
+<div align="center">
+<h1>
+  Revolt Backend
+  
+  [![Stars](https://img.shields.io/github/stars/revoltchat/backend?style=flat-square&logoColor=white)](https://github.com/revoltchat/backend/stargazers)
+  [![Forks](https://img.shields.io/github/forks/revoltchat/backend?style=flat-square&logoColor=white)](https://github.com/revoltchat/backend/network/members)
+  [![Pull Requests](https://img.shields.io/github/issues-pr/revoltchat/backend?style=flat-square&logoColor=white)](https://github.com/revoltchat/backend/pulls)
+  [![Issues](https://img.shields.io/github/issues/revoltchat/backend?style=flat-square&logoColor=white)](https://github.com/revoltchat/backend/issues)
+  [![Contributors](https://img.shields.io/github/contributors/revoltchat/backend?style=flat-square&logoColor=white)](https://github.com/revoltchat/backend/graphs/contributors)
+  [![License](https://img.shields.io/github/license/revoltchat/backend?style=flat-square&logoColor=white)](https://github.com/revoltchat/backend/blob/main/LICENSE)
+</h1>
+The services and libraries that power the Revolt service.<br/>
+<br/>
 
-This is a monorepo for the Revolt backend.
+| Crate              | Path                                               | Description                              |
+| ------------------ | -------------------------------------------------- | ---------------------------------------- |
+| `core/config`      | [crates/core/config](crates/core/config)           | Core: Configuration                      |
+| `core/database`    | [crates/core/database](crates/core/database)       | Core: Database Implementation            |
+| `core/files`       | [crates/core/files](crates/core/files)             | Core: S3 and encryption subroutines      |
+| `core/models`      | [crates/core/models](crates/core/models)           | Core: API Models                         |
+| `core/permissions` | [crates/core/permissions](crates/core/permissions) | Core: Permission Logic                   |
+| `core/presence`    | [crates/core/presence](crates/core/presence)       | Core: User Presence                      |
+| `core/result`      | [crates/core/result](crates/core/result)           | Core: Result and Error types             |
+| `delta`            | [crates/delta](crates/delta)                       | REST API server                          |
+| `bonfire`          | [crates/bonfire](crates/bonfire)                   | WebSocket events server                  |
+| `services/january` | [crates/services/january](crates/services/january) | Proxy server                             |
+| `services/autumn`  | [crates/services/autumn](crates/services/autumn)   | File server                              |
+| `bindings/node`    | [crates/bindings/node](crates/bindings/node)       | Node.js bindings for the Revolt software |
 
-| Crate              | Path                                               | Description                   |
-| ------------------ | -------------------------------------------------- | ----------------------------- |
-| `core/config`      | [crates/core/config](crates/core/config)           | Core: Configuration           |
-| `core/database`    | [crates/core/database](crates/core/database)       | Core: Database Implementation |
-| `core/models`      | [crates/core/models](crates/core/models)           | Core: API Models              |
-| `core/permissions` | [crates/core/permissions](crates/core/permissions) | Core: Permission Logic        |
-| `core/presence`    | [crates/core/presence](crates/core/presence)       | Core: User Presence           |
-| `core/result`      | [crates/core/result](crates/core/result)           | Core: Result and Error types  |
-| `delta`            | [crates/delta](crates/delta)                       | REST API server               |
-| `bonfire`          | [crates/bonfire](crates/bonfire)                   | WebSocket events server       |
-
-Note: `january`, `autumn`, and `vortex` are yet to be moved into this monorepo.
+</div>
+<br/>
 
 ## Minimum Supported Rust Version
 
