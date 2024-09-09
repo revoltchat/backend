@@ -65,7 +65,7 @@ async fn main() -> Result<(), std::io::Error> {
         .nest("/", api::router().await);
 
     // Configure TCP listener and bind
-    let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 3000));
+    let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 14705));
     let listener = TcpListener::bind(&address).await?;
     axum::serve(listener, app.into_make_service()).await
 }

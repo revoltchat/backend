@@ -40,7 +40,11 @@ auto_derived!(
         /// File contains textual data and should be displayed as such
         Text,
         /// File is an image with specific dimensions
-        Image { width: isize, height: isize },
+        Image {
+            width: isize,
+            height: isize,
+            // animated: bool // TODO: https://docs.rs/image/latest/image/trait.AnimationDecoder.html
+        },
         /// File is a video with specific dimensions
         Video { width: isize, height: isize },
         /// File is audio

@@ -146,6 +146,9 @@ pub struct FilesS3 {
 pub struct Files {
     pub encryption_key: String,
     pub webp_quality: f32,
+    pub blocked_mime_types: Vec<String>,
+    pub clamd_host: String,
+
     pub limit: FilesLimit,
     pub preview: HashMap<String, [usize; 2]>,
     pub s3: FilesS3,
