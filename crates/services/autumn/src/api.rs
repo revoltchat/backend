@@ -5,7 +5,7 @@ use std::{
 
 use axum::{
     extract::{DefaultBodyLimit, Path, State},
-    http::header,
+    http::{header, HeaderMap},
     response::{IntoResponse, Redirect, Response},
     routing::{get, post},
     Json, Router,
@@ -14,7 +14,7 @@ use axum_typed_multipart::{FieldData, TryFromMultipart, TypedMultipart};
 use image::ImageReader;
 use lazy_static::lazy_static;
 use revolt_config::config;
-use revolt_database::{Database, FileHash, Metadata};
+use revolt_database::{Database, FileHash, Metadata, User};
 use revolt_files::{fetch_from_s3, AUTHENTICATION_TAG_SIZE_BYTES};
 use revolt_result::{create_error, Result};
 use serde::{Deserialize, Serialize};
@@ -136,15 +136,22 @@ pub struct UploadResponse {
         ("tag" = Tag, Path, description = "Tag to upload to (e.g. attachments, icons, ...)")
     ),
     request_body(content_type = "multipart/form-data", content = UploadPayload),
+    security(
+        ("session_token" = []),
+        ("bot_token" = [])
+    )
 )]
 async fn upload_file(
+    State(db): State<Database>,
+    user: User,
     Path(tag): Path<Tag>,
     TypedMultipart(UploadPayload { mut file }): TypedMultipart<UploadPayload>,
 ) -> axum::response::Result<Json<UploadResponse>> {
+    // Fetch configuration
+    let config = config().await;
+
     // Keep track of processing time
     let now = Instant::now();
-
-    // TODO: authenticate the user
 
     // Extract the filename, or give it a generic name
     let file_name = file.metadata.file_name.unwrap_or("unnamed-file".to_owned());
@@ -158,7 +165,21 @@ async fn upload_file(
     // Take note of original file size
     let original_file_size = buf.len();
 
-    // TODO: check against tag
+    // Ensure the file is not empty
+    if original_file_size < config.files.limit.min_file_size {
+        return Err(create_error!(FileTooSmall).into());
+    }
+
+    // Get user's file upload limits
+    let limits = user.limits().await;
+    let size_limit = *limits
+        .file_upload_size_limit
+        .get(tag.into())
+        .expect("size limit");
+
+    if original_file_size > size_limit {
+        return Err(create_error!(FileTooLarge { max: size_limit }).into());
+    }
 
     // Generate sha256 hash
     let original_hash = {
@@ -167,13 +188,28 @@ async fn upload_file(
         hasher.finalize()
     };
 
-    // TODO: find existing `hash` (or match `processed`) and use that if possible
-    // then: create attachment and return UploadResponse { id }
+    // Find an existing hash and use that if possible
+    if let Ok(file_hash) = db
+        .fetch_attachment_hash(&format!("{original_hash:02x}"))
+        // or match processed (add to query TODO)
+        .await
+    {
+        unimplemented!() // TODO
+                         // then: create attachment and return UploadResponse { id }
+    }
 
     // Determine the mime type for the file
     let mime_type = determine_mime_type(&mut file.contents, &buf, &file_name);
 
-    // TODO: block mime types here
+    // Check blocklist for mime type
+    if config
+        .files
+        .blocked_mime_types
+        .iter()
+        .any(|m| m == mime_type)
+    {
+        return Err(create_error!(FileTypeNotAllowed).into());
+    }
 
     // Determine metadata for the file
     let metadata = generate_metadata(&file.contents, mime_type);
@@ -193,7 +229,7 @@ async fn upload_file(
     let process_ratio = new_file_size as f32 / original_file_size as f32;
     let time_to_process = Instant::now() - now;
 
-    tracing::info!("Received file {file_name}\nOriginal hash: {original_hash:02X}\nOriginal size: {original_file_size} bytes\nMime type: {mime_type}\nMetadata: {metadata:?}\nProcessed file size: {new_file_size} bytes ({:.2}%).\nProcessed hash: {processed_hash:02X}\nProcessing took {time_to_process:?}", process_ratio * 100.0);
+    tracing::info!("Received file {file_name}\nOriginal hash: {original_hash:02x}\nOriginal size: {original_file_size} bytes\nMime type: {mime_type}\nMetadata: {metadata:?}\nProcessed file size: {new_file_size} bytes ({:.2}%).\nProcessed hash: {processed_hash:02x}\nProcessing took {time_to_process:?}", process_ratio * 100.0);
 
     // TODO: encrypt the file and generate FileHash
     // note: file_size is processed file's size (incl. authTag in encrypted buffer)

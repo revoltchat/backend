@@ -1,7 +1,6 @@
-use std::{io::Cursor, os::unix::fs::MetadataExt};
+use std::io::Cursor;
 
 use revolt_database::Metadata;
-use revolt_result::{create_error, Result};
 use tempfile::NamedTempFile;
 
 /// Intersection of what infer can detect and what image-rs supports

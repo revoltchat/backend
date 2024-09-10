@@ -74,6 +74,9 @@ impl IntoResponse for Error {
             ErrorType::FailedValidation { .. } => StatusCode::BAD_REQUEST,
 
             ErrorType::ProxyError => StatusCode::BAD_REQUEST,
+            ErrorType::FileTooSmall => StatusCode::UNPROCESSABLE_ENTITY,
+            ErrorType::FileTooLarge { .. } => StatusCode::UNPROCESSABLE_ENTITY,
+            ErrorType::FileTypeNotAllowed => StatusCode::BAD_REQUEST,
         };
 
         (status, Json(&self)).into_response()

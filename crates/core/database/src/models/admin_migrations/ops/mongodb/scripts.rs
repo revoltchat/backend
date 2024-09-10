@@ -20,7 +20,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 28;
+pub const LATEST_REVISION: i32 = 29;
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -1092,6 +1092,51 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             )
             .await
             .expect("Failed to create message index.");
+    }
+
+    if revision <= 28 {
+        info!("Running migration [revision 28 / 10-09-2024]: Add support for new Autumn.");
+
+        db.db()
+            .create_collection("attachment_hashes", None)
+            .await
+            .ok();
+
+        db.db()
+            .run_command(
+                doc! {
+                    "createIndexes": "attachments",
+                    "indexes": [
+                        {
+                            "key": {
+                                "hash": 1_i32
+                            },
+                            "name": "hash"
+                        }
+                    ]
+                },
+                None,
+            )
+            .await
+            .expect("Failed to create attachments index.");
+
+        db.db()
+            .run_command(
+                doc! {
+                    "createIndexes": "attachment_hashes",
+                    "indexes": [
+                        {
+                            "key": {
+                                "processed_hash": 1_i32
+                            },
+                            "name": "processed_hash"
+                        }
+                    ]
+                },
+                None,
+            )
+            .await
+            .expect("Failed to create attachment_hashes index.");
     }
 
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.

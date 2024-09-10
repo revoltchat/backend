@@ -136,6 +136,7 @@ pub struct Api {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct FilesLimit {
+    pub min_file_size: usize,
     pub min_resolution: [usize; 2],
     pub max_mega_pixels: usize,
     pub max_pixel_side: usize,
@@ -172,7 +173,7 @@ pub struct GlobalLimits {
     pub server_roles: usize,
     pub server_channels: usize,
 
-    pub new_user_days: usize,
+    pub new_user_hours: usize,
 
     pub body_limit_size: usize,
 }
@@ -186,12 +187,7 @@ pub struct FeaturesLimits {
     pub message_attachments: usize,
     pub servers: usize,
 
-    pub attachment_size: usize,
-    pub avatar_size: usize,
-    pub background_size: usize,
-    pub icon_size: usize,
-    pub banner_size: usize,
-    pub emoji_size: usize,
+    pub file_upload_size_limit: HashMap<String, usize>,
 }
 
 #[derive(Deserialize, Debug, Clone)]

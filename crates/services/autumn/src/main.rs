@@ -52,9 +52,13 @@ async fn main() -> Result<(), std::io::Error> {
         fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
             if let Some(components) = openapi.components.as_mut() {
                 components.add_security_scheme(
-                    "api_key",
-                    SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("todo_apikey"))),
-                )
+                    "bot_token",
+                    SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("X-Bot-Token"))),
+                );
+                components.add_security_scheme(
+                    "session_token",
+                    SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("X-Session-Token"))),
+                );
             }
         }
     }
@@ -69,6 +73,7 @@ async fn main() -> Result<(), std::io::Error> {
         .with_state(db);
 
     // Configure TCP listener and bind
+    tracing::info!("hi vscode, please port forward http://127.0.0.1:14704, thank you!");
     let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 14704));
     let listener = TcpListener::bind(&address).await?;
     axum::serve(listener, app.into_make_service()).await

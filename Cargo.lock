@@ -5381,6 +5381,7 @@ dependencies = [
  "async-std",
  "async-trait",
  "authifier",
+ "axum",
  "base64 0.21.3",
  "bson",
  "deadqueue",

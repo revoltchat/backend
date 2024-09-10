@@ -80,6 +80,9 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::FailedValidation { .. } => Status::BadRequest,
 
             ErrorType::ProxyError => Status::BadRequest,
+            ErrorType::FileTooSmall => Status::UnprocessableEntity,
+            ErrorType::FileTooLarge { .. } => Status::UnprocessableEntity,
+            ErrorType::FileTypeNotAllowed => Status::BadRequest,
         };
 
         // Serialize the error data structure into JSON.

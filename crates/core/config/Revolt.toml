@@ -100,6 +100,8 @@ blocked_mime_types = []
 clamd_host = ""
 
 [files.limit]
+# Minimum file size (in bytes)
+min_file_size = 1
 # Minimum image resolution
 min_resolution = [1, 1]
 # Maximum MP of images
@@ -153,42 +155,66 @@ server_emoji = 100
 server_roles = 200
 server_channels = 200
 
-# How many days since creation a user is considered new
-new_user_days = 3
+# How many hours since creation a user is considered new
+new_user_hours = 72
 
 # Maximum permissible body size in bytes for uploads
 # (should be greater than any one file upload limit)
 body_limit_size = 20_000_000
 
 [features.limits.new_user]
+# Limits imposed on new users
+
+# Number of outgoing friend requests permitted at any time
 outgoing_friend_requests = 5
 
+# Maximum number of owned bots
 bots = 2
-message_length = 2000
-message_attachments = 5
-servers = 100
 
-attachment_size = 20_000_000
-avatar_size = 4_000_000
-background_size = 6_000_000
-icon_size = 2_500_000
-banner_size = 6_000_000
-emoji_size = 500_000
+# Message content length
+message_length = 2000
+
+# Number of attachments that can be included
+message_attachments = 5
+
+# Maximum number of servers the user can create/join
+servers = 50
+
+[features.limits.new_user.file_upload_size_limit]
+# Maximum file size limits (in bytes)
+attachments = 20_000_000
+avatars = 4_000_000
+backgrounds = 6_000_000
+icons = 2_500_000
+banners = 6_000_000
+emojis = 500_000
 
 [features.limits.default]
+# Limits imposed on users by default
+
+# Number of outgoing friend requests permitted at any time
 outgoing_friend_requests = 10
 
+# Maximum number of owned bots
 bots = 5
+
+# Message content length
 message_length = 2000
+
+# Number of attachments that can be included
 message_attachments = 5
+
+# Maximum number of servers the user can create/join
 servers = 100
 
-attachment_size = 20_000_000
-avatar_size = 4_000_000
-background_size = 6_000_000
-icon_size = 2_500_000
-banner_size = 6_000_000
-emoji_size = 500_000
+[features.limits.default.file_upload_size_limit]
+# Maximum file size limits (in bytes)
+attachments = 20_000_000
+avatars = 4_000_000
+backgrounds = 6_000_000
+icons = 2_500_000
+banners = 6_000_000
+emojis = 500_000
 
 [sentry]
 # Configuration for Sentry error reporting
