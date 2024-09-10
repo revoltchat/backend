@@ -16,6 +16,7 @@ mongodb = ["dep:mongodb", "bson"]
 tasks = ["isahc", "linkify", "url-escape"]
 async-std-runtime = ["async-std"]
 rocket-impl = ["rocket", "schemars", "revolt_okapi", "revolt_rocket_okapi"]
+axum-impl = ["axum"]
 redis-is-patched = ["revolt-presence/redis-is-patched"]
 
 # Default Features
@@ -75,6 +76,9 @@ async-recursion = "1.0.4"
 
 # Async
 async-std = { version = "1.8.0", features = ["attributes"], optional = true }
+
+# Axum Impl
+axum = { version = "0.7.5", optional = true }
 
 # Rocket Impl
 schemars = { version = "0.8.8", optional = true }
