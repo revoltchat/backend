@@ -1,5 +1,7 @@
 use iso8601_timestamp::Timestamp;
 
+use crate::File;
+
 auto_derived_partial!(
     /// File hash
     pub struct FileHash {
@@ -51,3 +53,40 @@ auto_derived!(
         Audio,
     }
 );
+
+impl FileHash {
+    /// Create a file from a file hash
+    pub fn into_file(
+        &self,
+        id: String,
+        tag: String,
+        filename: String,
+        uploader_id: String,
+    ) -> File {
+        File {
+            id,
+            tag,
+            filename,
+            hash: Some(self.id.clone()),
+
+            uploaded_at: Some(Timestamp::now_utc()),
+            uploader_id: Some(uploader_id),
+
+            used_for: None,
+
+            deleted: None,
+            reported: None,
+
+            // TODO: remove this data
+            metadata: self.metadata.clone(),
+            content_type: self.content_type.clone(),
+            size: self.size,
+
+            // TODO: superseded by "used_for"
+            message_id: None,
+            object_id: None,
+            server_id: None,
+            user_id: None,
+        }
+    }
+}

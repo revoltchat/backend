@@ -14,5 +14,7 @@ typenum = "1.17.0"
 aws-config = "1.5.5"
 aws-sdk-s3 = { version = "1.46.0", features = ["behavior-version-latest"] }
 
-revolt-config = { version = "0.7.16", path = "../config" }
+revolt-config = { version = "0.7.16", path = "../config", features = [
+    "report-macros",
+] }
 revolt-result = { version = "0.7.16", path = "../result" }

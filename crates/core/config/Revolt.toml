@@ -98,6 +98,14 @@ blocked_mime_types = []
 # ClamAV service
 # hostname:port
 clamd_host = ""
+# Mime types that should be virus scanned
+#
+# Leave empty to scan all file types
+scan_mime_types = [
+    "application/vnd.microsoft.portable-executable",
+    "application/vnd.android.package-archive",
+    "application/zip",
+]
 
 [files.limit]
 # Minimum file size (in bytes)
@@ -220,3 +228,5 @@ emojis = 500_000
 # Configuration for Sentry error reporting
 api = ""
 events = ""
+files = ""
+proxy = ""

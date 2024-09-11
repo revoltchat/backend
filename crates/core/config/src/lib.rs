@@ -8,6 +8,30 @@ use serde::Deserialize;
 
 pub use sentry::capture_error;
 
+#[cfg(feature = "report-macros")]
+#[macro_export]
+macro_rules! report_error {
+    ( $expr: expr, $error: ident $( $tt:tt )? ) => {
+        $expr
+            .inspect_err(|err| {
+                $crate::capture_error(err);
+            })
+            .map_err(|_| ::revolt_result::create_error!($error))
+    };
+}
+
+#[cfg(feature = "report-macros")]
+#[macro_export]
+macro_rules! report_internal_error {
+    ( $expr: expr ) => {
+        $expr
+            .inspect_err(|err| {
+                $crate::capture_error(err);
+            })
+            .map_err(|_| ::revolt_result::create_error!(InternalError))
+    };
+}
+
 /// Paths to search for configuration
 static CONFIG_SEARCH_PATHS: [&str; 3] = [
     // current working directory
@@ -157,6 +181,7 @@ pub struct Files {
     pub webp_quality: f32,
     pub blocked_mime_types: Vec<String>,
     pub clamd_host: String,
+    pub scan_mime_types: Vec<String>,
 
     pub limit: FilesLimit,
     pub preview: HashMap<String, [usize; 2]>,
@@ -211,6 +236,8 @@ pub struct Features {
 pub struct Sentry {
     pub api: String,
     pub events: String,
+    pub files: String,
+    pub proxy: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]

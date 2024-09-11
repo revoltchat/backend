@@ -77,6 +77,18 @@ A default configuration `Revolt.toml` is present in this project that is suited 
 
 If you'd like to change anything, create a `Revolt.overrides.toml` file and specify relevant variables.
 
+> [!TIP]
+> Use Sentry to catch unexpected service errors:
+>
+> ```toml
+> # Revolt.overrides.toml
+> [sentry]
+> api = "https://abc@your.sentry/1"
+> events = "https://abc@your.sentry/1"
+> files = "https://abc@your.sentry/1"
+> proxy = "https://abc@your.sentry/1"
+> ```
+
 Then continue:
 
 ```bash

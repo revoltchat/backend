@@ -24,6 +24,7 @@ services:
       - ./.data/minio:/data
     ports:
       - "14009:9000"
+      - "14010:9001"
     restart: always
 
   # Create buckets for minio.

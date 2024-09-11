@@ -4,10 +4,10 @@
 [database]
 # MongoDB connection URL
 # Defaults to the container name specified in self-hosted
-mongodb = "mongodb://localhost:14017"
+mongodb = "mongodb://127.0.0.1:14017"
 # Redis connection URL
 # Defaults to the container name specified in self-hosted
-redis = "redis://localhost:14079/"
+redis = "redis://127.0.0.1:14079/"
 
 [hosts]
 # Web locations of various services
@@ -38,7 +38,7 @@ use_tls = false
 
 [files.s3]
 # S3 protocol endpoint
-endpoint = "http://localhost:14009"
+endpoint = "http://127.0.0.1:14009"
 # S3 region name
 region = "minio"
 # S3 protocol key ID

@@ -15,7 +15,7 @@ pub mod requests;
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
     // Configure logging and environment
-    revolt_config::configure!(api);
+    revolt_config::configure!(proxy);
 
     // Configure API schema
     #[derive(OpenApi)]

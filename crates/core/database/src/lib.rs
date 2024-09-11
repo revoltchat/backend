@@ -16,6 +16,8 @@ extern crate revolt_optional_struct;
 #[macro_use]
 extern crate revolt_result;
 
+pub use iso8601_timestamp;
+
 #[cfg(feature = "mongodb")]
 pub use mongodb;
 

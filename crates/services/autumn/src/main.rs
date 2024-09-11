@@ -11,6 +11,7 @@ use utoipa::{
 use utoipa_scalar::{Scalar, Servable as ScalarServable};
 
 mod api;
+pub mod clamav;
 pub mod exif;
 pub mod metadata;
 pub mod mime_type;
@@ -18,7 +19,10 @@ pub mod mime_type;
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
     // Configure logging and environment
-    revolt_config::configure!(api);
+    revolt_config::configure!(files);
+
+    // Wait for ClamAV
+    clamav::init().await;
 
     // Configure API schema
     #[derive(OpenApi)]
