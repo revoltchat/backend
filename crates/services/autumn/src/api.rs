@@ -1,4 +1,7 @@
-use std::{io::Cursor, time::Duration};
+use std::{
+    io::{Cursor, Read},
+    time::Duration,
+};
 
 use axum::{
     extract::{DefaultBodyLimit, Path, State},
@@ -10,18 +13,17 @@ use axum::{
 use axum_typed_multipart::{FieldData, TryFromMultipart, TypedMultipart};
 use image::ImageReader;
 use lazy_static::lazy_static;
-use revolt_config::config;
-use revolt_database::{Database, FileHash, Metadata};
-use revolt_files::fetch_from_s3;
+use revolt_config::{config, report_internal_error};
+use revolt_database::{iso8601_timestamp::Timestamp, Database, FileHash, Metadata, User};
+use revolt_files::{fetch_from_s3, upload_to_s3, AUTHENTICATION_TAG_SIZE_BYTES};
 use revolt_result::{create_error, Result};
 use serde::{Deserialize, Serialize};
+use sha2::Digest;
 use tempfile::NamedTempFile;
+use tokio::time::Instant;
 use utoipa::ToSchema;
 
-use crate::{
-    metadata::{generate_metadata, temp_file_size},
-    mime_type::determine_mime_type,
-};
+use crate::{exif::strip_metadata, metadata::generate_metadata, mime_type::determine_mime_type};
 
 /// Build the API router
 pub async fn router() -> Router<Database> {
@@ -85,7 +87,7 @@ async fn root() -> Json<RootResponse> {
 }
 
 /// Available tags to upload to
-#[derive(Deserialize, Debug, ToSchema, strum_macros::IntoStaticStr)]
+#[derive(Clone, Deserialize, Debug, ToSchema, strum_macros::IntoStaticStr)]
 #[allow(non_camel_case_types)]
 pub enum Tag {
     attachments,
@@ -109,7 +111,7 @@ pub struct UploadPayload {
 #[derive(Serialize, Debug, ToSchema)]
 pub struct UploadResponse {
     /// ID to attach uploaded file to object
-    id: &'static str,
+    id: String,
 }
 
 /// Upload a file
@@ -134,40 +136,148 @@ pub struct UploadResponse {
         ("tag" = Tag, Path, description = "Tag to upload to (e.g. attachments, icons, ...)")
     ),
     request_body(content_type = "multipart/form-data", content = UploadPayload),
+    security(
+        ("session_token" = []),
+        ("bot_token" = [])
+    )
 )]
 async fn upload_file(
+    State(db): State<Database>,
+    user: User,
     Path(tag): Path<Tag>,
     TypedMultipart(UploadPayload { mut file }): TypedMultipart<UploadPayload>,
-) -> axum::response::Result<Json<UploadResponse>> {
-    // Extract the filename, or give it a generic name.
-    let file_name = file.metadata.file_name.unwrap_or("unnamed-file".to_owned());
+) -> Result<Json<UploadResponse>> {
+    // Fetch configuration
+    let config = config().await;
 
-    // TODO: find existing `hash` (or match `processed`) and use that if possible
-    // then: create attachment and return UploadResponse { id }
+    // Keep track of processing time
+    let now = Instant::now();
 
-    // Determine file size
-    let original_file_size = temp_file_size(&file.contents)?;
+    // Extract the filename, or give it a generic name
+    let filename = file.metadata.file_name.unwrap_or("unnamed-file".to_owned());
+
+    // Load file to memory
+    let mut buf = Vec::<u8>::new();
+    report_internal_error!(file.contents.read_to_end(&mut buf))?;
+
+    // Take note of original file size
+    let original_file_size = buf.len();
+
+    // Ensure the file is not empty
+    if original_file_size < config.files.limit.min_file_size {
+        return Err(create_error!(FileTooSmall));
+    }
+
+    // Get user's file upload limits
+    let limits = user.limits().await;
+    let size_limit = *limits
+        .file_upload_size_limit
+        .get(tag.clone().into())
+        .expect("size limit");
+
+    if original_file_size > size_limit {
+        return Err(create_error!(FileTooLarge { max: size_limit }));
+    }
+
+    // Generate sha256 hash
+    let original_hash = {
+        let mut hasher = sha2::Sha256::new();
+        hasher.update(&buf);
+        hasher.finalize()
+    };
+
+    // Generate an ID for this file
+    let id = if matches!(tag, Tag::emojis) {
+        ulid::Ulid::new().to_string()
+    } else {
+        nanoid::nanoid!(42)
+    };
+
+    // Find an existing hash and use that if possible
+    if let Ok(file_hash) = db
+        .fetch_attachment_hash(&format!("{original_hash:02x}"))
+        .await
+    {
+        let tag: &'static str = tag.into();
+        db.insert_attachment(&file_hash.into_file(id.clone(), tag.to_owned(), filename, user.id))
+            .await?;
+
+        return Ok(Json(UploadResponse { id }));
+    }
 
     // Determine the mime type for the file
-    let mime_type = determine_mime_type(&mut file.contents, &file_name, original_file_size);
+    let mime_type = determine_mime_type(&mut file.contents, &buf, &filename);
 
-    // TODO: block mime types here
+    // Check blocklist for mime type
+    if config
+        .files
+        .blocked_mime_types
+        .iter()
+        .any(|m| m == mime_type)
+    {
+        return Err(create_error!(FileTypeNotAllowed));
+    }
 
     // Determine metadata for the file
     let metadata = generate_metadata(&file.contents, mime_type);
 
-    // TODO: Re-encode MIMES_WITH_EXIF to remove EXIF data (this needs orientation data: https://github.com/revoltchat/autumn/blob/master/src/routes/upload.rs#L96)
-    // TODO: Re-encode videos to remove EXIF data (this may need orientation data?)
+    // Strip metadata
+    let (buf, metadata) = strip_metadata(file.contents, buf, metadata, mime_type).await?;
 
-    // TODO: Virus scan Metadata::Text/File
+    // Virus scan files if ClamAV is configured
+    if matches!(metadata, Metadata::File)
+        && (config.files.scan_mime_types.is_empty()
+            || config.files.scan_mime_types.iter().any(|v| v == mime_type))
+        && crate::clamav::is_malware(&buf).await?
+    {
+        return Err(create_error!(InternalError));
+    }
 
-    // TODO: encrypt the file and generate FileHash
-    // note: file_size is processed file's size (incl. authTag in encrypted buffer)
-    // TODO: insert FileHash
-    // TODO: upload to S3
-    // TODO: create attachment
+    // Print file information for debug purposes
+    let new_file_size = buf.len() + AUTHENTICATION_TAG_SIZE_BYTES;
+    let processed_hash = {
+        let mut hasher = sha2::Sha256::new();
+        hasher.update(&buf);
+        hasher.finalize()
+    };
+    let process_ratio = new_file_size as f32 / original_file_size as f32;
+    let time_to_process = Instant::now() - now;
 
-    Ok(Json(UploadResponse { id: "aaa" }))
+    tracing::info!("Received file {filename}\nOriginal hash: {original_hash:02x}\nOriginal size: {original_file_size} bytes\nMime type: {mime_type}\nMetadata: {metadata:?}\nProcessed file size: {new_file_size} bytes ({:.2}%).\nProcessed hash: {processed_hash:02x}\nProcessing took {time_to_process:?}", process_ratio * 100.0);
+
+    // Create hash entry in database
+    let file_hash = FileHash {
+        id: format!("{original_hash:02x}"),
+        processed_hash: format!("{processed_hash:02x}"),
+
+        created_at: Timestamp::now_utc(),
+
+        bucket_id: config.files.s3.default_bucket,
+        path: format!("{original_hash:02x}"),
+        iv: String::new(), // indicates file is not uploaded yet
+
+        metadata,
+        content_type: mime_type.to_owned(),
+        size: new_file_size as isize,
+    };
+
+    db.insert_attachment_hash(&file_hash).await?;
+
+    // Upload the file to S3 and commit nonce to database
+    let upload_start = Instant::now();
+    let nonce = upload_to_s3(&file_hash.bucket_id, &file_hash.id, &buf).await?;
+    db.set_attachment_hash_nonce(&file_hash.id, &nonce).await?;
+
+    // Debug information
+    let time_to_upload = Instant::now() - upload_start;
+    tracing::info!("Took {time_to_upload:?} to upload {new_file_size} bytes to S3.");
+
+    // Finally, create the file and return its ID
+    let tag: &'static str = tag.into();
+    db.insert_attachment(&file_hash.into_file(id.clone(), tag.to_owned(), filename, user.id))
+        .await?;
+
+    Ok(Json(UploadResponse { id }))
 }
 
 /// Header value used for cache control
@@ -236,16 +346,16 @@ async fn fetch_preview(
 
     // Read the image and resize it
     // TODO: use jxl_oxide to process image/jxl files
-    let image = ImageReader::new(Cursor::new(data))
-        .with_guessed_format()
-        .map_err(|_| create_error!(InternalError))?
-        .decode()
-        .map_err(|_| create_error!(InternalError))?
-        //.resize(width as u32, height as u32, image::imageops::FilterType::Gaussian)
-        // resize is about 2.5x slower,
-        // thumbnail doesn't have terrible quality
-        // so we use thumbnail
-        .thumbnail(*w as u32, *h as u32);
+    let image = report_internal_error!(report_internal_error!(ImageReader::new(Cursor::new(
+        data
+    ))
+    .with_guessed_format())?
+    .decode())?
+    //.resize(width as u32, height as u32, image::imageops::FilterType::Gaussian)
+    // resize is about 2.5x slower,
+    // thumbnail doesn't have terrible quality
+    // so we use thumbnail
+    .thumbnail(*w as u32, *h as u32);
 
     // Encode it into WEBP
     let encoder = webp::Encoder::from_image(&image).expect("Could not create encoder.");

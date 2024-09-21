@@ -421,7 +421,7 @@ impl From<File> for crate::File {
             object_id: value.object_id,
             hash: None,
             uploaded_at: None,
-            uploaded_id: None,
+            uploader_id: None,
             used_for: None,
         }
     }

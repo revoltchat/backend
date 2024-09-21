@@ -156,6 +156,11 @@ pub enum ErrorType {
 
     // ? Micro-service errors
     ProxyError,
+    FileTooSmall,
+    FileTooLarge {
+        max: usize,
+    },
+    FileTypeNotAllowed,
 
     // ? Legacy errors
     VosoUnavailable,

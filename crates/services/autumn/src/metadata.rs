@@ -1,7 +1,6 @@
-use std::{io::Cursor, os::unix::fs::MetadataExt};
+use std::io::Cursor;
 
 use revolt_database::Metadata;
-use revolt_result::{create_error, Result};
 use tempfile::NamedTempFile;
 
 /// Intersection of what infer can detect and what image-rs supports
@@ -18,21 +17,6 @@ static SUPPORTED_IMAGE_MIME: [&str; 9] = [
     "image/tiff",
     "image/webp",
 ];
-
-/// Image mime types that have EXIF data
-static IMAGE_MIMES_WITH_EXIF: [&str; 4] = ["image/avif", "image/jpeg", "image/jxl", "image/tiff"];
-
-/// Get the size of a temp file
-pub fn temp_file_size(f: &NamedTempFile) -> Result<u64> {
-    // Check the size of the file
-    if let Ok(file) = f.reopen() {
-        if let Ok(metadata) = file.metadata() {
-            return Ok(metadata.size());
-        }
-    }
-
-    Err(create_error!(InternalError))
-}
 
 /// Generate metadata from file, using mime type as a hint
 pub fn generate_metadata(f: &NamedTempFile, mime_type: &str) -> Metadata {

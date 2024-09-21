@@ -218,7 +218,7 @@ impl User {
             .datetime()
             .elapsed()
             .expect("time went backwards")
-            <= Duration::from_secs(86400u64 * config.features.limits.global.new_user_days as u64)
+            <= Duration::from_secs(3600u64 * config.features.limits.global.new_user_hours as u64)
         {
             config.features.limits.new_user
         } else {

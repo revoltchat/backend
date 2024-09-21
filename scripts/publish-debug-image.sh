@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# fail asap
+set -e
+
 # Check if an argument was provided
 if [ $# -eq 0 ]; then
     echo "No arguments provided"
@@ -10,16 +13,22 @@ if [ $# -eq 0 ]; then
 fi
 
 DEBUG=$2
-echo "[profile.release]" >> Cargo.toml
-echo "debug = $2" >> Cargo.toml
+if [ "$DEBUG" = "true" ]; then
+  echo "[profile.release]" >> Cargo.toml
+  echo "debug = true" >> Cargo.toml
+fi
 
 TAG=$1-debug
 echo "Building images, will tag for ghcr.io with $TAG!"
 docker build -t ghcr.io/revoltchat/base:latest -f Dockerfile.useCurrentArch .
 docker build -t ghcr.io/revoltchat/server:$TAG - < crates/delta/Dockerfile
 docker build -t ghcr.io/revoltchat/bonfire:$TAG - < crates/bonfire/Dockerfile
+docker build -t ghcr.io/revoltchat/autumn:$TAG - < crates/services/autumn/Dockerfile
 
-git restore Cargo.toml
+if [ "$DEBUG" = "true" ]; then
+  git restore Cargo.toml
+fi
 
 docker push ghcr.io/revoltchat/server:$TAG
 docker push ghcr.io/revoltchat/bonfire:$TAG
+docker push ghcr.io/revoltchat/autumn:$TAG

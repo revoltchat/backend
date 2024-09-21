@@ -8,9 +8,41 @@ use serde::Deserialize;
 
 pub use sentry::capture_error;
 
-#[cfg(not(debug_assertions))]
-use std::env;
+#[cfg(feature = "report-macros")]
+#[macro_export]
+macro_rules! report_error {
+    ( $expr: expr, $error: ident $( $tt:tt )? ) => {
+        $expr
+            .inspect_err(|err| {
+                $crate::capture_error(err);
+            })
+            .map_err(|_| ::revolt_result::create_error!($error))
+    };
+}
 
+#[cfg(feature = "report-macros")]
+#[macro_export]
+macro_rules! report_internal_error {
+    ( $expr: expr ) => {
+        $expr
+            .inspect_err(|err| {
+                $crate::capture_error(err);
+            })
+            .map_err(|_| ::revolt_result::create_error!(InternalError))
+    };
+}
+
+/// Paths to search for configuration
+static CONFIG_SEARCH_PATHS: [&str; 3] = [
+    // current working directory
+    "Revolt.toml",
+    // current working directory - overrides file
+    "Revolt.overrides.toml",
+    // root directory, for Docker containers
+    "/Revolt.toml",
+];
+
+/// Configuration builder
 static CONFIG_BUILDER: Lazy<RwLock<Config>> = Lazy::new(|| {
     RwLock::new({
         let mut builder = Config::builder().add_source(File::from_str(
@@ -23,17 +55,17 @@ static CONFIG_BUILDER: Lazy<RwLock<Config>> = Lazy::new(|| {
                 include_str!("../Revolt.test.toml"),
                 FileFormat::Toml,
             ));
-        } else if std::path::Path::new("Revolt.toml").exists() {
-            builder = builder.add_source(File::new("Revolt.toml", FileFormat::Toml));
-        } else if std::path::Path::new("/Revolt.toml").exists() {
-            builder = builder.add_source(File::new("/Revolt.toml", FileFormat::Toml));
+        }
+
+        for path in CONFIG_SEARCH_PATHS {
+            if std::path::Path::new(path).exists() {
+                builder = builder.add_source(File::new(path, FileFormat::Toml));
+            }
         }
 
         builder.build().unwrap()
     })
 });
-
-// https://gifbox.me/view/gT5mqxYKCZv-twilight-meow
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Database {
@@ -176,6 +208,7 @@ impl Pushd {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct FilesLimit {
+    pub min_file_size: usize,
     pub min_resolution: [usize; 2],
     pub max_mega_pixels: usize,
     pub max_pixel_side: usize,
@@ -194,6 +227,10 @@ pub struct FilesS3 {
 pub struct Files {
     pub encryption_key: String,
     pub webp_quality: f32,
+    pub blocked_mime_types: Vec<String>,
+    pub clamd_host: String,
+    pub scan_mime_types: Vec<String>,
+
     pub limit: FilesLimit,
     pub preview: HashMap<String, [usize; 2]>,
     pub s3: FilesS3,
@@ -209,7 +246,7 @@ pub struct GlobalLimits {
     pub server_roles: usize,
     pub server_channels: usize,
 
-    pub new_user_days: usize,
+    pub new_user_hours: usize,
 
     pub body_limit_size: usize,
 }
@@ -223,12 +260,7 @@ pub struct FeaturesLimits {
     pub message_attachments: usize,
     pub servers: usize,
 
-    pub attachment_size: usize,
-    pub avatar_size: usize,
-    pub background_size: usize,
-    pub icon_size: usize,
-    pub banner_size: usize,
-    pub emoji_size: usize,
+    pub file_upload_size_limit: HashMap<String, usize>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -252,6 +284,8 @@ pub struct Features {
 pub struct Sentry {
     pub api: String,
     pub events: String,
+    pub files: String,
+    pub proxy: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -269,22 +303,10 @@ pub struct Settings {
 impl Settings {
     pub fn preflight_checks(&self) {
         if self.api.smtp.host.is_empty() {
-            #[cfg(not(debug_assertions))]
-            if !env::var("REVOLT_UNSAFE_NO_EMAIL").map_or(false, |v| v == *"1") {
-                panic!("Running in production without email is not recommended, set REVOLT_UNSAFE_NO_EMAIL=1 to override.");
-            }
-
-            #[cfg(debug_assertions)]
             log::warn!("No SMTP settings specified! Remember to configure email.");
         }
 
         if self.api.security.captcha.hcaptcha_key.is_empty() {
-            #[cfg(not(debug_assertions))]
-            if !env::var("REVOLT_UNSAFE_NO_CAPTCHA").map_or(false, |v| v == *"1") {
-                panic!("Running in production without CAPTCHA is not recommended, set REVOLT_UNSAFE_NO_CAPTCHA=1 to override.");
-            }
-
-            #[cfg(debug_assertions)]
             log::warn!("No Captcha key specified! Remember to add hCaptcha key.");
         }
     }
@@ -316,6 +338,12 @@ pub async fn setup_logging(release: &'static str, dsn: String) -> Option<sentry:
 
     if std::env::var("ROCKET_ADDRESS").is_err() {
         std::env::set_var("ROCKET_ADDRESS", "0.0.0.0");
+    }
+
+    if std::env::var("REDIS_URL").is_err() {
+        // Configure redis-kiss library
+        let config = config().await;
+        std::env::set_var("REDIS_URI", config.database.redis);
     }
 
     pretty_env_logger::init();

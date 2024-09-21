@@ -24,6 +24,7 @@ services:
       - ./.data/minio:/data
     ports:
       - "14009:9000"
+      - "14010:9001"
     restart: always
 
   # Create buckets for minio.
@@ -51,3 +52,15 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672" # management UI, for development
+
+  # Mock SMTP server
+  maildev:
+    image: soulteary/maildev
+    ports:
+      - "14025:25"
+      - "14080:8080"
+    environment:
+      MAILDEV_SMTP_PORT: 25
+      MAILDEV_WEB_PORT: 8080
+      MAILDEV_INCOMING_USER: smtp
+      MAILDEV_INCOMING_PASS: smtp

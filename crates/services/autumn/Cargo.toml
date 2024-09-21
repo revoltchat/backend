@@ -4,10 +4,21 @@ version = "0.7.14"
 edition = "2021"
 
 [dependencies]
+# ID generation
+ulid = "1.1.3"
+nanoid = "0.4.0"
+
 # Media processing
 webp = "0.3.0"
+sha2 = "0.10.8"
 jxl-oxide = "0.8.1"
-image = { version = "0.25.2" } # requires dav1d system library: features = ["avif-native"]
+kamadak-exif = "0.5.4"
+# revolt_little_exif = "0.4.0"
+image = { version = "0.25.2" } # avif encode requires dav1d system library: features = ["avif-native"]
+
+# File processing
+revolt_clamav-client = { version = "0.1.5" }
+simdutf8 = { version = "0.1.4", features = ["aarch64_neon"] }
 
 # Content type processing
 infer = "0.16.0"
@@ -33,7 +44,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Core crates
 revolt-files = { version = "0.7.16", path = "../../core/files" }
 revolt-config = { version = "0.7.16", path = "../../core/config" }
-revolt-database = { version = "0.7.16", path = "../../core/database" }
+revolt-database = { version = "0.7.16", path = "../../core/database", features = [
+    "axum-impl",
+] }
 revolt-result = { version = "0.7.16", path = "../../core/result", features = [
     "utoipa",
     "axum",

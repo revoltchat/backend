@@ -19,7 +19,7 @@ auto_derived_partial!(
         /// When this file was uploaded
         pub uploaded_at: Option<Timestamp>, // these are Option<>s to not break file uploads on legacy Autumn
         /// ID of user who uploaded this file
-        pub uploaded_id: Option<String>, // these are Option<>s to not break file uploads on legacy Autumn
+        pub uploader_id: Option<String>, // these are Option<>s to not break file uploads on legacy Autumn
 
         /// What the file was used for
         pub used_for: Option<FileUsedFor>,
@@ -59,15 +59,14 @@ auto_derived_partial!(
 auto_derived!(
     /// Type of object file was used for
     pub enum FileUsedForType {
-        // TODO: changing this requires a db migration
-        message,
-        serverBanner,
-        emoji,
-        userAvatar,
-        userProfileBackground,
-        legacyGroupIcon,
-        channelIcon,
-        serverIcon,
+        Message,
+        ServerBanner,
+        Emoji,
+        UserAvatar,
+        UserProfileBackground,
+        LegacyGroupIcon,
+        ChannelIcon,
+        ServerIcon,
     }
 
     /// Information about what the file was used for

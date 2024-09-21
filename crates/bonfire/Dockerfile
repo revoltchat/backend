@@ -7,4 +7,5 @@ COPY --from=builder /home/rust/src/target/release/revolt-bonfire ./
 
 EXPOSE 9000
 USER nonroot
+ENV HOST=0.0.0.0:9000
 CMD ["./revolt-bonfire"]

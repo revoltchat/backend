@@ -11,13 +11,18 @@ use utoipa::{
 use utoipa_scalar::{Scalar, Servable as ScalarServable};
 
 mod api;
+pub mod clamav;
+pub mod exif;
 pub mod metadata;
 pub mod mime_type;
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
     // Configure logging and environment
-    revolt_config::configure!(api);
+    revolt_config::configure!(files);
+
+    // Wait for ClamAV
+    clamav::init().await;
 
     // Configure API schema
     #[derive(OpenApi)]
@@ -51,9 +56,13 @@ async fn main() -> Result<(), std::io::Error> {
         fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
             if let Some(components) = openapi.components.as_mut() {
                 components.add_security_scheme(
-                    "api_key",
-                    SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("todo_apikey"))),
-                )
+                    "bot_token",
+                    SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("X-Bot-Token"))),
+                );
+                components.add_security_scheme(
+                    "session_token",
+                    SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("X-Session-Token"))),
+                );
             }
         }
     }
@@ -68,7 +77,7 @@ async fn main() -> Result<(), std::io::Error> {
         .with_state(db);
 
     // Configure TCP listener and bind
-    let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 3000));
+    let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 14704));
     let listener = TcpListener::bind(&address).await?;
     axum::serve(listener, app.into_make_service()).await
 }
