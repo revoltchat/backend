@@ -38,6 +38,7 @@ pub enum PayloadKind {
     MessageNotification(PushNotification),
     FRAccepted(FRAcceptedPayload),
     FRReceived(FRReceivedPayload),
+    BadgeUpdate(usize),
     Generic(GenericPayload),
 }
 
@@ -48,4 +49,11 @@ pub struct PayloadToService {
     pub session_id: String,
     pub token: String,
     pub extras: HashMap<String, String>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct AckPayload {
+    pub user_id: String,
+    pub channel_id: String,
+    pub message_id: String,
 }

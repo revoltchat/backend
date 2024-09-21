@@ -4,7 +4,7 @@ use crate::events::rabbit::*;
 use crate::User;
 use amqprs::channel::BasicPublishArguments;
 use amqprs::BasicProperties;
-use amqprs::{channel::Channel, connection::Connection};
+use amqprs::{channel::Channel, connection::Connection, error::Error as AMQPError};
 use revolt_models::v0::PushNotification;
 use revolt_presence::filter_online;
 
@@ -29,7 +29,7 @@ impl AMQP {
         &self,
         accepted_request_user: &User,
         sent_request_user: &User,
-    ) -> Result<(), amqprs::error::Error> {
+    ) -> Result<(), AMQPError> {
         let config = revolt_config::config().await;
         let payload = FRAcceptedPayload {
             accepted_user: accepted_request_user.to_owned(),
@@ -55,7 +55,7 @@ impl AMQP {
         &self,
         received_request_user: &User,
         sent_request_user: &User,
-    ) -> Result<(), amqprs::error::Error> {
+    ) -> Result<(), AMQPError> {
         let config = revolt_config::config().await;
         let payload = FRReceivedPayload {
             from_user: sent_request_user.to_owned(),
@@ -83,7 +83,7 @@ impl AMQP {
         title: String,
         body: String,
         icon: Option<String>,
-    ) -> Result<(), amqprs::error::Error> {
+    ) -> Result<(), AMQPError> {
         let config = revolt_config::config().await;
         let payload = GenericPayload {
             title,
@@ -109,12 +109,12 @@ impl AMQP {
         &self,
         recipients: Vec<String>,
         payload: PushNotification,
-    ) -> Result<(), amqprs::error::Error> {
+    ) -> Result<(), AMQPError> {
         if recipients.is_empty() {
             return Ok(());
         }
 
-        let config: revolt_config::Settings = revolt_config::config().await;
+        let config = revolt_config::config().await;
 
         let online_ids = filter_online(&recipients).await;
         let recipients = (&recipients.into_iter().collect::<HashSet<String>>() - &online_ids)
@@ -124,6 +124,33 @@ impl AMQP {
         let payload = MessageSentPayload {
             notification: payload,
             users: recipients,
+        };
+        let payload = to_string(&payload).unwrap();
+
+        self.channel
+            .basic_publish(
+                BasicProperties::default()
+                    .with_content_type("application/json")
+                    .with_persistence(true)
+                    .finish(),
+                payload.into(),
+                BasicPublishArguments::new(&config.pushd.exchange, &config.pushd.message_queue),
+            )
+            .await
+    }
+
+    pub async fn ack_message(
+        &self,
+        user_id: String,
+        channel_id: String,
+        message_id: String,
+    ) -> Result<(), AMQPError> {
+        let config = revolt_config::config().await;
+
+        let payload = AckPayload {
+            user_id,
+            channel_id,
+            message_id,
         };
         let payload = to_string(&payload).unwrap();
 

@@ -9,7 +9,7 @@ use ulid::Ulid;
 
 use crate::{
     events::client::EventV1, tasks::ack::AckEvent, Database, File, IntoDocumentPath, PartialServer,
-    Server, SystemMessage, User,
+    Server, SystemMessage, User, AMQP,
 };
 
 auto_derived!(
@@ -337,6 +337,7 @@ impl Channel {
     pub async fn add_user_to_group(
         &mut self,
         db: &Database,
+        amqp: &AMQP,
         user: &User,
         by_id: &str,
     ) -> Result<()> {
@@ -373,6 +374,7 @@ impl Channel {
                 .into_message(id.to_string())
                 .send(
                     db,
+                    amqp,
                     MessageAuthor::System {
                         username: &user.username,
                         avatar: user.avatar.as_ref().map(|file| file.id.as_ref()),
@@ -655,6 +657,7 @@ impl Channel {
     pub async fn remove_user_from_group(
         &self,
         db: &Database,
+        amqp: &AMQP,
         user: &User,
         by_id: Option<&str>,
         silent: bool,
@@ -686,6 +689,7 @@ impl Channel {
                         .into_message(id.to_string())
                         .send(
                             db,
+                            amqp,
                             MessageAuthor::System {
                                 username: name,
                                 avatar: None,
@@ -725,6 +729,7 @@ impl Channel {
                     .into_message(id.to_string())
                     .send(
                         db,
+                        amqp,
                         MessageAuthor::System {
                             username: &user.username,
                             avatar: user.avatar.as_ref().map(|file| file.id.as_ref()),

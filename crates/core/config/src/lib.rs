@@ -142,6 +142,7 @@ pub struct Pushd {
     pub fr_accepted_queue: String,
     pub fr_received_queue: String,
     pub generic_queue: String,
+    pub ack_queue: String,
 
     pub vapid: PushVapid,
     pub fcm: PushFcm,

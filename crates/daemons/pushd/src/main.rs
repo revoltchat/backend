@@ -2,6 +2,7 @@ use amqprs::{
     channel::{BasicConsumeArguments, Channel, QueueBindArguments, QueueDeclareArguments},
     connection::{Connection, OpenConnectionArguments},
     consumer::AsyncConsumer,
+    FieldTable,
 };
 use revolt_config::{config, Settings};
 use tokio::sync::Notify;
@@ -9,12 +10,11 @@ use tokio::sync::Notify;
 mod consumers;
 use consumers::{
     inbound::{
-        fr_accepted::FRAcceptedConsumer, fr_received::FRReceivedConsumer, generic::GenericConsumer,
-        message::MessageConsumer,
+        ack::AckConsumer, fr_accepted::FRAcceptedConsumer, fr_received::FRReceivedConsumer,
+        generic::GenericConsumer, message::MessageConsumer,
     },
     outbound::{apn::ApnsOutboundConsumer, fcm::FcmOutboundConsumer, vapid::VapidOutboundConsumer},
 };
-use log::info;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() {
@@ -51,6 +51,7 @@ async fn main() {
             &config,
             &config.pushd.generic_queue,
             config.pushd.get_generic_routing_key().as_str(),
+            None,
             GenericConsumer::new(db.clone(), authifier.clone()),
         )
         .await,
@@ -62,6 +63,7 @@ async fn main() {
             &config,
             &config.pushd.message_queue,
             config.pushd.get_message_routing_key().as_str(),
+            None,
             MessageConsumer::new(db.clone(), authifier.clone()),
         )
         .await,
@@ -73,6 +75,7 @@ async fn main() {
             &config,
             &config.pushd.fr_received_queue,
             config.pushd.get_fr_received_routing_key().as_str(),
+            None,
             FRReceivedConsumer::new(db.clone(), authifier.clone()),
         )
         .await,
@@ -84,6 +87,7 @@ async fn main() {
             &config,
             &config.pushd.fr_accepted_queue,
             config.pushd.get_fr_accepted_routing_key().as_str(),
+            None,
             FRAcceptedConsumer::new(db.clone(), authifier.clone()),
         )
         .await,
@@ -95,7 +99,22 @@ async fn main() {
                 &config,
                 &config.pushd.apn.queue,
                 &config.pushd.apn.queue,
+                None,
                 ApnsOutboundConsumer::new(db.clone()).await.unwrap(),
+            )
+            .await,
+        );
+
+        let mut table = FieldTable::new();
+        table.insert("x-message-deduplication".try_into().unwrap(), "true".into());
+
+        connections.push(
+            make_queue_and_consume(
+                &config,
+                &config.pushd.apn.queue,
+                &config.pushd.apn.queue,
+                Some(table),
+                AckConsumer::new(db.clone(), authifier.clone()),
             )
             .await,
         );
@@ -107,6 +126,7 @@ async fn main() {
                 &config,
                 &config.pushd.fcm.queue,
                 &config.pushd.fcm.queue,
+                None,
                 FcmOutboundConsumer::new(db.clone()).await.unwrap(),
             )
             .await,
@@ -119,6 +139,7 @@ async fn main() {
                 &config,
                 &config.pushd.vapid.queue,
                 &config.pushd.vapid.queue,
+                None,
                 VapidOutboundConsumer::new(db.clone()).await.unwrap(),
             )
             .await,
@@ -138,6 +159,7 @@ async fn make_queue_and_consume<F>(
     config: &Settings,
     queue_name: &str,
     routing_key: &str,
+    queue_args: Option<FieldTable>,
     consumer: F,
 ) -> (Channel, Connection)
 where
@@ -164,9 +186,14 @@ where
 
     let queue_name = queue_name.as_str();
 
-    let args = QueueDeclareArguments::new(queue_name)
-        .durable(true)
-        .finish();
+    let mut args = QueueDeclareArguments::new(queue_name);
+    args.durable(true);
+
+    if let Some(arg) = queue_args {
+        args.arguments(arg);
+    }
+
+    let args = args.finish();
     _ = channel.queue_declare(args).await.unwrap().unwrap();
 
     channel
@@ -183,9 +210,10 @@ where
         .finish();
 
     channel.basic_consume(consumer, args).await.unwrap();
-    info!(
+    log::info!(
         "Consuming routing key {} as queue {}",
-        routing_key, queue_name
+        routing_key,
+        queue_name
     );
     (channel, connection)
 }

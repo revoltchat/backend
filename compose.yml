@@ -45,6 +45,9 @@ services:
       RABBITMQ_DEFAULT_PASS: rabbitpass
     volumes:
       - ./.data/rabbit:/var/lib/rabbitmq
+      #- ./rabbit_plugins:/opt/rabbitmq/plugins/
+      #- ./rabbit_enabled_plugins:/etc/rabbitmq/enabled_plugins
+      # uncomment this if you need to enable other plugins
     ports:
       - "5672:5672"
       - "15672:15672" # management UI, for development

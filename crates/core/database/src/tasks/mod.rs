@@ -1,6 +1,6 @@
 //! Semi-important background task management
 
-use crate::Database;
+use crate::{Database, AMQP};
 
 use async_std::task;
 use std::time::Instant;
@@ -8,22 +8,18 @@ use std::time::Instant;
 const WORKER_COUNT: usize = 5;
 
 pub mod ack;
-pub mod apple_notifications;
 pub mod authifier_relay;
 pub mod last_message_id;
 pub mod process_embeds;
-pub mod web_push;
 
 /// Spawn background workers
-pub fn start_workers(db: Database, authifier_db: authifier::Database) {
+pub fn start_workers(db: Database, amqp: AMQP) {
     task::spawn(authifier_relay::worker());
-    task::spawn(apple_notifications::worker(db.clone()));
 
     for _ in 0..WORKER_COUNT {
-        task::spawn(ack::worker(db.clone(), authifier_db.clone()));
+        task::spawn(ack::worker(db.clone(), amqp.clone()));
         task::spawn(last_message_id::worker(db.clone()));
         task::spawn(process_embeds::worker(db.clone()));
-        task::spawn(web_push::worker(db.clone(), authifier_db.clone()));
     }
 }
 

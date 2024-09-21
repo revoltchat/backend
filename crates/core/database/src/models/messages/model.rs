@@ -1,4 +1,4 @@
-use std::{collections::HashSet, ops::Deref};
+use std::collections::HashSet;
 
 use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
@@ -16,7 +16,7 @@ use crate::{
     events::client::EventV1,
     tasks::{self, ack::AckEvent},
     util::idempotency::IdempotencyKey,
-    Channel, Database, Emoji, File, User,
+    Channel, Database, Emoji, File, User, AMQP,
 };
 
 auto_derived_partial!(
@@ -230,6 +230,7 @@ impl Message {
     #[allow(clippy::too_many_arguments)]
     pub async fn create_from_api(
         db: &Database,
+        amqp: &AMQP,
         channel: Channel,
         data: DataMessageSend,
         author: MessageAuthor<'_>,
@@ -393,7 +394,7 @@ impl Message {
 
         // Send the message
         message
-            .send(db, author, user, member, &channel, generate_embeds)
+            .send(db, amqp, author, user, member, &channel, generate_embeds)
             .await?;
 
         Ok(message)
@@ -448,9 +449,11 @@ impl Message {
     }
 
     /// Send a message
+    #[allow(clippy::too_many_arguments)]
     pub async fn send(
         &mut self,
         db: &Database,
+        amqp: &AMQP,
         author: MessageAuthor<'_>,
         user: Option<v0::User>,
         member: Option<v0::Member>,
@@ -467,24 +470,30 @@ impl Message {
         .await?;
 
         if !self.has_suppressed_notifications() {
-            // Push out Web Push notifications
-            crate::tasks::web_push::queue(
-                {
-                    match channel {
-                        Channel::DirectMessage { recipients, .. }
-                        | Channel::Group { recipients, .. } => recipients.clone(),
-                        Channel::TextChannel { .. } => self.mentions.clone().unwrap_or_default(),
-                        _ => vec![],
-                    }
-                },
-                PushNotification::from(
-                    self.clone().into_model(user, member),
-                    Some(author),
-                    channel.to_owned().into(),
+            // send Push notifications
+            if let Err(resp) = amqp
+                .message_sent(
+                    {
+                        match channel {
+                            Channel::DirectMessage { recipients, .. }
+                            | Channel::Group { recipients, .. } => recipients.clone(),
+                            Channel::TextChannel { .. } => {
+                                self.mentions.clone().unwrap_or_default()
+                            }
+                            _ => vec![],
+                        }
+                    },
+                    PushNotification::from(
+                        self.clone().into_model(user, member),
+                        Some(author),
+                        channel.to_owned().into(),
+                    )
+                    .await,
                 )
-                .await,
-            )
-            .await;
+                .await
+            {
+                revolt_config::capture_error(&resp);
+            }
         }
 
         Ok(())

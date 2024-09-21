@@ -106,7 +106,7 @@ impl AsyncConsumer for FcmOutboundConsumer {
 
                 let msg = Message {
                     token: Some(payload.token),
-                    data: Some(data.into()),
+                    data: Some(data),
                     ..Default::default()
                 };
 
@@ -172,6 +172,10 @@ impl AsyncConsumer for FcmOutboundConsumer {
                 };
 
                 resp = self.client.send(&msg).await;
+            }
+
+            PayloadKind::BadgeUpdate(_) => {
+                panic!("FCM cannot handle badge updates, and they should not be sent here.")
             }
         }
 

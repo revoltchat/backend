@@ -1,5 +1,5 @@
 // Queue Type: Debounced
-use crate::Database;
+use crate::{Database, AMQP};
 
 use deadqueue::limited::Queue;
 use once_cell::sync::Lazy;
@@ -7,7 +7,10 @@ use std::{collections::HashMap, time::Duration};
 
 use revolt_result::Result;
 
-use super::{apple_notifications::{self, ApnJob}, DelayedTask};
+use super::{
+    //apple_notifications::{self, ApnJob},
+    DelayedTask,
+};
 
 /// Enumeration of possible events
 #[derive(Debug, Eq, PartialEq)]
@@ -54,33 +57,27 @@ pub async fn queue(channel: String, user: String, event: AckEvent) {
     info!("Queue is using {} slots from {}.", Q.len(), Q.capacity());
 }
 
-pub async fn handle_ack_event(event: &AckEvent, db: &Database, authifier_db: &authifier::Database, user: &str, channel: &str) -> Result<()> {
+pub async fn handle_ack_event(
+    event: &AckEvent,
+    db: &Database,
+    amqp: &AMQP,
+    user: &str,
+    channel: &str,
+) -> Result<()> {
     match &event {
         #[allow(clippy::disallowed_methods)] // event is sent by higher level function
         AckEvent::AckMessage { id } => {
-            let unread = db.fetch_unread(user, channel).await?;
-            let updated = db.acknowledge_message(channel, user, id).await?;
-
-            if let (Some(before), Some(after)) = (unread, updated) {
-                let before_mentions = before.mentions.unwrap_or_default().len();
-                let after_mentions = after.mentions.unwrap_or_default().len();
-
-                let mentions_acked = before_mentions - after_mentions;
-
-                if mentions_acked > 0 {
-                    if let Ok(sessions) = authifier_db.find_sessions(user).await {
-                        for session in sessions {
-                            if let Some(sub) = session.subscription {
-                                if sub.endpoint == "apn" {
-                                    apple_notifications::queue(ApnJob::from_ack(session.id, user.to_string(), sub.auth)).await;
-                                }
-                            }
-                        }
-                    }
-                };
-
+            if let Err(resp) = db.acknowledge_message(channel, user, id).await {
+                revolt_config::capture_error(&resp);
             }
-        },
+
+            if let Err(resp) = amqp
+                .ack_message(user.into(), channel.into(), id.into())
+                .await
+            {
+                revolt_config::capture_error(&resp);
+            }
+        }
         AckEvent::AddMention { ids } => {
             db.add_mention_to_unread(channel, user, ids).await?;
         }
@@ -90,7 +87,7 @@ pub async fn handle_ack_event(event: &AckEvent, db: &Database, authifier_db: &au
 }
 
 /// Start a new worker
-pub async fn worker(db: Database, authifier_db: authifier::Database) {
+pub async fn worker(db: Database, amqp: AMQP) {
     let mut tasks = HashMap::<(String, String), DelayedTask<Task>>::new();
     let mut keys = vec![];
 
@@ -108,7 +105,7 @@ pub async fn worker(db: Database, authifier_db: authifier::Database) {
                 let Task { event } = task.data;
                 let (user, channel) = key;
 
-                if let Err(err) = handle_ack_event(&event, &db, &authifier_db, user, channel).await {
+                if let Err(err) = handle_ack_event(&event, &db, &amqp, user, channel).await {
                     error!("{err:?} for {event:?}. ({user}, {channel})");
                 } else {
                     info!("User {user} ack in {channel} with {event:?}");

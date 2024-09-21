@@ -124,6 +124,9 @@ impl AsyncConsumer for VapidOutboundConsumer {
             PayloadKind::MessageNotification(alert) => {
                 payload_body = serde_json::to_string(&alert).unwrap();
             }
+            PayloadKind::BadgeUpdate(_) => {
+                panic!("Vapid cannot handle badge updates, and they should not be sent here.")
+            }
         }
 
         match VapidSignatureBuilder::from_pem(std::io::Cursor::new(&self.pkey), &subscription) {

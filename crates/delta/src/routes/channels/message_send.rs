@@ -3,7 +3,7 @@ use revolt_database::util::permissions::DatabasePermissionQuery;
 use revolt_database::{
     util::idempotency::IdempotencyKey, util::reference::Reference, Database, User,
 };
-use revolt_database::{Interactions, Message};
+use revolt_database::{Interactions, Message, AMQP};
 use revolt_models::v0;
 use revolt_permissions::PermissionQuery;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
@@ -19,6 +19,7 @@ use validator::Validate;
 #[post("/<target>/messages", data = "<data>")]
 pub async fn message_send(
     db: &State<Database>,
+    amqp: &State<AMQP>,
     user: User,
     target: Reference,
     data: Json<v0::DataMessageSend>,
@@ -93,6 +94,7 @@ pub async fn message_send(
     Ok(Json(
         Message::create_from_api(
             db,
+            amqp,
             channel,
             data,
             v0::MessageAuthor::User(&author),

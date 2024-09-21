@@ -73,7 +73,7 @@ impl ApnsOutboundConsumer {
     }
 
     async fn get_badge_count(&self, user: &str) -> Option<u32> {
-        if let Ok(unreads) = self.db.fetch_unreads(user).await {
+        if let Ok(unreads) = self.db.fetch_unread_mentions(user).await {
             let mut mention_count = 0;
             for channel in unreads {
                 if let Some(mentions) = channel.mentions {
@@ -290,6 +290,19 @@ impl AsyncConsumer for ApnsOutboundConsumer {
                     author_avatar: &alert.icon,
                     author_display_name: &alert.author,
                     channel_name: alert.channel.name(),
+                };
+
+                resp = self.client.send(apn_payload).await;
+            }
+            PayloadKind::BadgeUpdate(badge) => {
+                let apn_payload = Payload {
+                    aps: APS {
+                        badge: Some(badge as u32),
+                        ..Default::default()
+                    },
+                    device_token: &payload.token,
+                    options: payload_options.clone(),
+                    data: BTreeMap::new(),
                 };
 
                 resp = self.client.send(apn_payload).await;
