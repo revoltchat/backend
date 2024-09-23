@@ -72,6 +72,7 @@ impl AsyncConsumer for AckConsumer {
         // Step 1: fetch unreads and don't continue if there's no unreads
         #[allow(clippy::disallowed_methods)]
         let unreads = self.db.fetch_unread_mentions(&payload.user_id).await;
+        println!("unreads: {:?}", unreads);
 
         if let Ok(u) = &unreads {
             if u.is_empty() {
@@ -100,11 +101,15 @@ impl AsyncConsumer for AckConsumer {
                 return;
             }
 
+            println!("sessions: {:?}", apple_sessions);
+
             // Step 3: calculate the actual mention count, since we have to send it out
             let mut mention_count = 0;
             for u in &unreads.unwrap() {
                 mention_count += u.mentions.as_ref().unwrap().len()
             }
+
+            println!("mention count: {}", mention_count);
 
             // Step 4: loop through each apple session and send the badge update
             for session in apple_sessions {
@@ -124,12 +129,19 @@ impl AsyncConsumer for AckConsumer {
                     )
                     .finish();
 
+                    println!(
+                        "Publishing ack to apn session {}",
+                        session.subscription.as_ref().unwrap().auth
+                    );
+
                     publish_message(self, p.into(), args).await;
                 } else {
-                    log::error!("Failed to serialize ack badge update payload!");
-                    log::error!("{:?}", raw_service_payload.unwrap_err())
+                    println!("Failed to serialize ack badge update payload!");
+                    println!("{:?}", raw_service_payload.unwrap_err())
                 }
             }
+
+            println!("Done!");
         }
     }
 }

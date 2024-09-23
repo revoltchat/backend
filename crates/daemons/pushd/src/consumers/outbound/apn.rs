@@ -81,6 +81,8 @@ impl ApnsOutboundConsumer {
                 }
             }
 
+            println!("Got badge count for APN: {}", mention_count);
+
             return Some(mention_count);
         }
         None

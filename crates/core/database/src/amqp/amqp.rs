@@ -3,8 +3,8 @@ use std::collections::HashSet;
 use crate::events::rabbit::*;
 use crate::User;
 use amqprs::channel::BasicPublishArguments;
-use amqprs::BasicProperties;
 use amqprs::{channel::Channel, connection::Connection, error::Error as AMQPError};
+use amqprs::{BasicProperties, FieldTable};
 use revolt_models::v0::PushNotification;
 use revolt_presence::filter_online;
 
@@ -37,8 +37,11 @@ impl AMQP {
         };
         let payload = to_string(&payload).unwrap();
 
-        info!("Sending friend request accepted event: {}", &payload);
-
+        debug!(
+            "Sending friend request accept payload on channel {}: {}",
+            config.pushd.get_fr_accepted_routing_key(),
+            payload
+        );
         self.channel
             .basic_publish(
                 BasicProperties::default()
@@ -46,7 +49,10 @@ impl AMQP {
                     .with_persistence(true)
                     .finish(),
                 payload.into(),
-                BasicPublishArguments::new(&config.pushd.exchange, &config.pushd.fr_accepted_queue),
+                BasicPublishArguments::new(
+                    &config.pushd.exchange,
+                    &config.pushd.get_fr_accepted_routing_key(),
+                ),
             )
             .await
     }
@@ -63,7 +69,11 @@ impl AMQP {
         };
         let payload = to_string(&payload).unwrap();
 
-        info!("Sending friend request received event: {}", &payload);
+        debug!(
+            "Sending friend request received payload on channel {}: {}",
+            config.pushd.get_fr_received_routing_key(),
+            payload
+        );
 
         self.channel
             .basic_publish(
@@ -72,7 +82,10 @@ impl AMQP {
                     .with_persistence(true)
                     .finish(),
                 payload.into(),
-                BasicPublishArguments::new(&config.pushd.exchange, &config.pushd.fr_received_queue),
+                BasicPublishArguments::new(
+                    &config.pushd.exchange,
+                    &config.pushd.get_fr_received_routing_key(),
+                ),
             )
             .await
     }
@@ -93,6 +106,12 @@ impl AMQP {
         };
         let payload = to_string(&payload).unwrap();
 
+        debug!(
+            "Sending generic payload on channel {}: {}",
+            config.pushd.get_generic_routing_key(),
+            payload
+        );
+
         self.channel
             .basic_publish(
                 BasicProperties::default()
@@ -100,7 +119,10 @@ impl AMQP {
                     .with_persistence(true)
                     .finish(),
                 payload.into(),
-                BasicPublishArguments::new(&config.pushd.exchange, &config.pushd.generic_queue),
+                BasicPublishArguments::new(
+                    &config.pushd.exchange,
+                    &config.pushd.get_generic_routing_key(),
+                ),
             )
             .await
     }
@@ -127,6 +149,12 @@ impl AMQP {
         };
         let payload = to_string(&payload).unwrap();
 
+        debug!(
+            "Sending message payload on channel {}: {}",
+            config.pushd.get_message_routing_key(),
+            payload
+        );
+
         self.channel
             .basic_publish(
                 BasicProperties::default()
@@ -134,7 +162,10 @@ impl AMQP {
                     .with_persistence(true)
                     .finish(),
                 payload.into(),
-                BasicPublishArguments::new(&config.pushd.exchange, &config.pushd.message_queue),
+                BasicPublishArguments::new(
+                    &config.pushd.exchange,
+                    &config.pushd.get_message_routing_key(),
+                ),
             )
             .await
     }
@@ -148,20 +179,32 @@ impl AMQP {
         let config = revolt_config::config().await;
 
         let payload = AckPayload {
-            user_id,
-            channel_id,
+            user_id: user_id.clone(),
+            channel_id: channel_id.clone(),
             message_id,
         };
         let payload = to_string(&payload).unwrap();
+
+        info!(
+            "Sending ack payload on channel {}: {}",
+            config.pushd.ack_queue, payload
+        );
+
+        let mut headers = FieldTable::new();
+        headers.insert(
+            "x-deduplication-header".try_into().unwrap(),
+            format!("{}-{}", &user_id, &channel_id).into(),
+        );
 
         self.channel
             .basic_publish(
                 BasicProperties::default()
                     .with_content_type("application/json")
                     .with_persistence(true)
+                    //.with_headers(headers)
                     .finish(),
                 payload.into(),
-                BasicPublishArguments::new(&config.pushd.exchange, &config.pushd.message_queue),
+                BasicPublishArguments::new(&config.pushd.exchange, &config.pushd.ack_queue),
             )
             .await
     }

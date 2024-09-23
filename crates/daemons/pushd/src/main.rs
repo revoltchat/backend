@@ -111,8 +111,8 @@ async fn main() {
         connections.push(
             make_queue_and_consume(
                 &config,
-                &config.pushd.apn.queue,
-                &config.pushd.apn.queue,
+                &config.pushd.ack_queue,
+                &config.pushd.ack_queue,
                 Some(table),
                 AckConsumer::new(db.clone(), authifier.clone()),
             )

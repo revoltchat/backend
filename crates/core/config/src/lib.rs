@@ -189,6 +189,10 @@ impl Pushd {
         }
     }
 
+    pub fn get_ack_routing_key(&self) -> String {
+        self.get_routing_key(self.ack_queue.clone())
+    }
+
     pub fn get_message_routing_key(&self) -> String {
         self.get_routing_key(self.message_queue.clone())
     }

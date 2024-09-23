@@ -123,24 +123,21 @@ pub async fn worker(db: Database, amqp: AMQP) {
             mut event,
         }) = Q.try_pop()
         {
-            let key = (user, channel);
-            if let Some(task) = tasks.get_mut(&key) {
-                task.delay();
-
-                match &mut event {
-                    AckEvent::AddMention { ids } => {
-                        if let AckEvent::AddMention { ids: existing } = &mut task.data.event {
-                            existing.append(ids);
-                        } else {
-                            task.data.event = event;
-                        }
-                    }
-                    AckEvent::AckMessage { .. } => {
+            match &mut event {
+                // this is a bit of a test, we're no longer delaying/batching AddMentions in an effort for
+                // pushd to have the mention in the db when it sends a message notification.
+                AckEvent::AddMention { .. } => {
+                    handle_ack_event(&event, &db, &amqp, &user, &channel).await;
+                }
+                AckEvent::AckMessage { .. } => {
+                    let key = (user, channel);
+                    if let Some(task) = tasks.get_mut(&key) {
+                        task.delay();
                         task.data.event = event;
+                    } else {
+                        tasks.insert(key, DelayedTask::new(Task { event }));
                     }
                 }
-            } else {
-                tasks.insert(key, DelayedTask::new(Task { event }));
             }
         }
 
