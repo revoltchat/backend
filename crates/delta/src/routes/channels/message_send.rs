@@ -94,7 +94,7 @@ pub async fn message_send(
     Ok(Json(
         Message::create_from_api(
             db,
-            amqp,
+            Some(amqp),
             channel,
             data,
             v0::MessageAuthor::User(&author),

@@ -230,7 +230,7 @@ impl Message {
     #[allow(clippy::too_many_arguments)]
     pub async fn create_from_api(
         db: &Database,
-        amqp: &AMQP,
+        amqp: Option<&AMQP>,
         channel: Channel,
         data: DataMessageSend,
         author: MessageAuthor<'_>,
@@ -453,7 +453,7 @@ impl Message {
     pub async fn send(
         &mut self,
         db: &Database,
-        amqp: &AMQP,
+        amqp: Option<&AMQP>, // this is optional mostly for tests.
         author: MessageAuthor<'_>,
         user: Option<v0::User>,
         member: Option<v0::Member>,
@@ -469,9 +469,10 @@ impl Message {
         )
         .await?;
 
-        if !self.has_suppressed_notifications() {
+        if !self.has_suppressed_notifications() && amqp.is_some() {
             // send Push notifications
             if let Err(resp) = amqp
+                .unwrap()
                 .message_sent(
                     {
                         match channel {

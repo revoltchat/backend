@@ -55,9 +55,6 @@ pub async fn web() -> Rocket<Build> {
         }
     });
 
-    // Launch background task workers
-    revolt_database::tasks::start_workers(db.clone(), authifier.database.clone());
-
     // Configure CORS
     let cors = CorsOptions {
         allowed_origins: AllowedOrigins::All,
@@ -93,6 +90,9 @@ pub async fn web() -> Rocket<Build> {
     let channel = connection.open_channel(None).await.unwrap();
 
     let amqp = AMQP::new(connection, channel);
+
+    // Launch background task workers
+    revolt_database::tasks::start_workers(db.clone(), amqp.clone());
 
     // Configure Rocket
     let rocket = rocket::build();

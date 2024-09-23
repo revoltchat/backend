@@ -374,7 +374,7 @@ impl Channel {
                 .into_message(id.to_string())
                 .send(
                     db,
-                    amqp,
+                    Some(amqp),
                     MessageAuthor::System {
                         username: &user.username,
                         avatar: user.avatar.as_ref().map(|file| file.id.as_ref()),
@@ -689,7 +689,7 @@ impl Channel {
                         .into_message(id.to_string())
                         .send(
                             db,
-                            amqp,
+                            Some(amqp),
                             MessageAuthor::System {
                                 username: name,
                                 avatar: None,
@@ -729,7 +729,7 @@ impl Channel {
                     .into_message(id.to_string())
                     .send(
                         db,
-                        amqp,
+                        Some(amqp),
                         MessageAuthor::System {
                             username: &user.username,
                             avatar: user.avatar.as_ref().map(|file| file.id.as_ref()),
