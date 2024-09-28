@@ -279,9 +279,25 @@ pub struct FeaturesLimitsCollection {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+pub struct FeaturesAdvanced {
+    #[serde(default)]
+    pub process_message_delay_limit: u16,
+}
+
+impl Default for FeaturesAdvanced {
+    fn default() -> Self {
+        Self {
+            process_message_delay_limit: 5,
+        }
+    }
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct Features {
     pub limits: FeaturesLimitsCollection,
     pub webhooks_enabled: bool,
+    #[serde(default)]
+    pub advanced: FeaturesAdvanced,
 }
 
 #[derive(Deserialize, Debug, Clone)]

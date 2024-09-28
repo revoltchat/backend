@@ -641,7 +641,7 @@ impl Channel {
         .private(user.to_string())
         .await;
 
-        crate::tasks::ack::queue(
+        crate::tasks::ack::queue_ack(
             self.id().to_string(),
             user.to_string(),
             AckEvent::AckMessage {

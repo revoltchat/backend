@@ -243,6 +243,11 @@ icons = 2_500_000
 banners = 6_000_000
 emojis = 500_000
 
+[features.advanced]
+# The max amount of messages the rabbitmq provider/db mention adder job will delay for before forcing handling of a channel.
+# default: 5
+process_message_delay_limit = 5
+
 [sentry]
 # Configuration for Sentry error reporting
 api = ""

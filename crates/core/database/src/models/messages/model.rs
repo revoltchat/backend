@@ -408,6 +408,9 @@ impl Message {
         member: Option<v0::Member>,
         is_dm: bool,
         generate_embeds: bool,
+        // This determines if this function should queue the mentions task or if somewhere else will.
+        // If this is true, you MUST call tasks::ack::queue yourself.
+        mentions_elsewhere: bool,
     ) -> Result<()> {
         db.insert_message(self).await?;
 
@@ -420,13 +423,12 @@ impl Message {
         tasks::last_message_id::queue(self.channel.to_string(), self.id.to_string(), is_dm).await;
 
         // Add mentions for affected users
-        if let Some(mentions) = &self.mentions {
-            for user in mentions {
-                tasks::ack::queue(
+        if !mentions_elsewhere {
+            if let Some(mentions) = &self.mentions {
+                tasks::ack::queue_message(
                     self.channel.to_string(),
-                    user.to_string(),
-                    AckEvent::AddMention {
-                        ids: vec![self.id.to_string()],
+                    AckEvent::ProcessMessage {
+                        messages: vec![(None, self.clone(), mentions.clone(), true)],
                     },
                 )
                 .await;
@@ -466,15 +468,25 @@ impl Message {
             member.clone(),
             matches!(channel, Channel::DirectMessage { .. }),
             generate_embeds,
+            true,
         )
         .await?;
 
-        if !self.has_suppressed_notifications() && amqp.is_some() {
+        if !self.has_suppressed_notifications() {
             // send Push notifications
-            if let Err(resp) = amqp
-                .unwrap()
-                .message_sent(
-                    {
+            tasks::ack::queue_message(
+                self.channel.to_string(),
+                AckEvent::ProcessMessage {
+                    messages: vec![(
+                        Some(
+                            PushNotification::from(
+                                self.clone().into_model(user, member),
+                                Some(author),
+                                channel.to_owned().into(),
+                            )
+                            .await,
+                        ),
+                        self.clone(),
                         match channel {
                             Channel::DirectMessage { recipients, .. }
                             | Channel::Group { recipients, .. } => recipients.clone(),
@@ -482,19 +494,12 @@ impl Message {
                                 self.mentions.clone().unwrap_or_default()
                             }
                             _ => vec![],
-                        }
-                    },
-                    PushNotification::from(
-                        self.clone().into_model(user, member),
-                        Some(author),
-                        channel.to_owned().into(),
-                    )
-                    .await,
-                )
-                .await
-            {
-                revolt_config::capture_error(&resp);
-            }
+                        },
+                        true,
+                    )],
+                },
+            )
+            .await;
         }
 
         Ok(())
