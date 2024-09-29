@@ -1,6 +1,6 @@
 use revolt_database::{
     util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Database, PartialWebhook, User,
+    Database, File, PartialWebhook, User,
 };
 use revolt_models::v0::{DataEditWebhook, Webhook};
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
@@ -52,10 +52,7 @@ pub async fn webhook_edit(
     };
 
     if let Some(avatar) = avatar {
-        let file = db
-            .find_and_use_attachment(&avatar, "avatars", "user", &webhook.id)
-            .await?;
-
+        let file = File::use_webhook_avatar(db, &avatar, &webhook.id, &webhook.creator_id).await?;
         partial.avatar = Some(file)
     }
 

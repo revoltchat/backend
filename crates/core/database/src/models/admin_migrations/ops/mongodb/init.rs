@@ -222,6 +222,12 @@ pub async fn create_database(db: &MongoDb) {
                         "hash": 1_i32
                     },
                     "name": "hash"
+                },
+                {
+                    "key": {
+                        "used_for.id": 1_i32
+                    },
+                    "name": "used_for_id"
                 }
             ]
         },

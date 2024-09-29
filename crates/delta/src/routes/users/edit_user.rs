@@ -89,7 +89,7 @@ pub async fn edit(
 
     // 2. Apply new avatar
     if let Some(avatar) = data.avatar {
-        partial.avatar = Some(File::use_avatar(db, &avatar, &user.id).await?);
+        partial.avatar = Some(File::use_user_avatar(db, &avatar, &user.id, &user.id).await?);
     }
 
     // 3. Apply new status
@@ -114,7 +114,8 @@ pub async fn edit(
         }
 
         if let Some(background) = profile.background {
-            new_profile.background = Some(File::use_background(db, &background, &user.id).await?);
+            new_profile.background =
+                Some(File::use_background(db, &background, &user.id, &user.id).await?);
         }
 
         partial.profile = Some(new_profile);

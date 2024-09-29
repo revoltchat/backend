@@ -142,7 +142,7 @@ pub async fn edit(
 
     // 2. Apply new avatar
     if let Some(avatar) = avatar {
-        partial.avatar = Some(File::use_avatar(db, &avatar, &user.id).await?);
+        partial.avatar = Some(File::use_user_avatar(db, &avatar, &user.id, &user.id).await?);
     }
 
     member

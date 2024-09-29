@@ -5,7 +5,7 @@ use crate::{
         bson::{doc, from_bson, from_document, to_document, Bson, DateTime, Document},
         options::FindOptions,
     },
-    Invite, MongoDb, DISCRIMINATOR_SEARCH_SPACE,
+    AbstractChannels, AbstractServers, Channel, Invite, MongoDb, DISCRIMINATOR_SEARCH_SPACE,
 };
 use bson::oid::ObjectId;
 use futures::StreamExt;
@@ -20,7 +20,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 29;
+pub const LATEST_REVISION: i32 = 30;
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -1137,6 +1137,76 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             )
             .await
             .expect("Failed to create attachment_hashes index.");
+    }
+
+    if revision <= 29 {
+        info!("Running migration [revision 29 / 29-09-2024]: Add creator_id to webhooks.");
+
+        #[derive(serde::Serialize, serde::Deserialize)]
+        struct WebhookShell {
+            _id: String,
+            channel_id: String,
+        }
+
+        let invites = db
+            .db()
+            .collection::<WebhookShell>("channel_webhooks")
+            .find(doc! {}, None)
+            .await
+            .expect("webhooks")
+            .filter_map(|s| async { s.ok() })
+            .collect::<Vec<WebhookShell>>()
+            .await;
+
+        for invite in invites {
+            let channel = db.fetch_channel(&invite.channel_id).await.expect("channel");
+            let creator_id = match channel {
+                Channel::Group { owner, .. } => owner,
+                Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => {
+                    let server = db.fetch_server(&server).await.expect("server");
+                    server.owner
+                }
+                _ => unreachable!("not server or group channel!"),
+            };
+
+            db.db()
+                .collection::<Document>("channel_webhooks")
+                .update_one(
+                    doc! {
+                        "_id": invite._id,
+                    },
+                    doc! {
+                        "$set" : {
+                            "creator_id": creator_id
+                        }
+                    },
+                    None,
+                )
+                .await
+                .expect("update webhook");
+        }
+    }
+
+    if revision <= 30 {
+        info!("Running migration [revision 30 / 29-09-2024]: Add index for used_for.id to attachments.");
+
+        db.db()
+            .run_command(
+                doc! {
+                    "createIndexes": "attachments",
+                    "indexes": [
+                        {
+                            "key": {
+                                "used_for.id": 1_i32
+                            },
+                            "name": "used_for_id"
+                        }
+                    ]
+                },
+                None,
+            )
+            .await
+            .expect("Failed to create attachments index.");
     }
 
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.

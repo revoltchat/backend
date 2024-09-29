@@ -147,6 +147,7 @@ pub enum ErrorType {
     InvalidCredentials,
     InvalidProperty,
     InvalidSession,
+    NotAuthenticated,
     DuplicateNonce,
     NotFound,
     NoEffect,

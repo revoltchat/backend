@@ -1,6 +1,6 @@
 use revolt_database::{
     util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Channel, Database, User, Webhook,
+    Channel, Database, File, User, Webhook,
 };
 use revolt_models::v0;
 use revolt_permissions::{
@@ -43,10 +43,7 @@ pub async fn create_webhook(
     let webhook_id = Ulid::new().to_string();
 
     let avatar = match &data.avatar {
-        Some(id) => Some(
-            db.find_and_use_attachment(id, "avatars", "user", &webhook_id)
-                .await?,
-        ),
+        Some(id) => Some(File::use_webhook_avatar(db, id, &webhook_id, &user.id).await?),
         None => None,
     };
 
@@ -54,6 +51,7 @@ pub async fn create_webhook(
         id: webhook_id,
         name: data.name,
         avatar,
+        creator_id: user.id,
         channel_id: channel.id().to_string(),
         permissions: *DEFAULT_WEBHOOK_PERMISSIONS,
         token: Some(nanoid::nanoid!(64)),

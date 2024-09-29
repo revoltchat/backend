@@ -133,7 +133,7 @@ pub async fn edit(
             }
 
             if let Some(icon_id) = data.icon {
-                partial.icon = Some(File::use_icon(db, &icon_id, id).await?);
+                partial.icon = Some(File::use_channel_icon(db, &icon_id, id, &user.id).await?);
                 *icon = partial.icon.clone();
             }
 

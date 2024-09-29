@@ -261,7 +261,7 @@ impl AbstractChannels for MongoDb {
 
         // Delete associated attachments
         self.delete_many_attachments(doc! {
-            "object_id": &id
+            "used_for.id": &id
         })
         .await?;
 

@@ -14,6 +14,7 @@ use futures::{
     FutureExt, SinkExt, StreamExt, TryStreamExt,
 };
 use redis_kiss::{PayloadType, REDIS_PAYLOAD_TYPE, REDIS_URI};
+use revolt_config::report_internal_error;
 use revolt_database::{
     events::{client::EventV1, server::ClientMessage},
     Database, User, UserHint,
@@ -99,27 +100,21 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
     let user_id = state.cache.user_id.clone();
 
     // Notify socket we have authenticated.
-    if let Err(err) = write.send(config.encode(&EventV1::Authenticated)).await {
-        error!("Failed to write: {err:?}");
-        sentry::capture_error(&err);
+    if report_internal_error!(write.send(config.encode(&EventV1::Authenticated)).await).is_err() {
         return;
     }
 
     // Download required data to local cache and send Ready payload.
-    let ready_payload = match state
-        .generate_ready_payload(db, config.get_ready_payload_fields())
-        .await
-    {
+    let ready_payload = match report_internal_error!(
+        state
+            .generate_ready_payload(db, config.get_ready_payload_fields())
+            .await
+    ) {
         Ok(ready_payload) => ready_payload,
-        Err(err) => {
-            sentry::capture_error(&err);
-            return;
-        }
+        Err(_) => return,
     };
 
-    if let Err(err) = write.send(config.encode(&ready_payload)).await {
-        error!("Failed to write: {err:?}");
-        sentry::capture_error(&err);
+    if report_internal_error!(write.send(config.encode(&ready_payload)).await).is_err() {
         return;
     }
 
@@ -214,21 +209,16 @@ async fn listener(
     write: &Mutex<WsWriter>,
 ) {
     let redis_config = RedisConfig::from_url(&REDIS_URI).unwrap();
-    let subscriber = match fred::types::Builder::from_config(redis_config).build_subscriber_client()
-    {
+    let subscriber = match report_internal_error!(
+        fred::types::Builder::from_config(redis_config).build_subscriber_client()
+    ) {
         Ok(subscriber) => subscriber,
-        Err(err) => {
-            error!("Failed to build a subscriber: {err:?}");
-            sentry::capture_error(&err);
-            return;
-        }
+        Err(_) => return,
     };
 
-    if let Err(err) = subscriber.init().await {
-        error!("Failed to init subscriber: {err:?}");
-        sentry::capture_error(&err);
+    if report_internal_error!(subscriber.init().await).is_err() {
         return;
-    };
+    }
 
     // Handle Redis connection dropping
     let (clean_up_s, clean_up_r) = async_channel::bounded(1);
@@ -249,17 +239,13 @@ async fn listener(
         // Check for state changes for subscriptions.
         match state.apply_state().await {
             SubscriptionStateChange::Reset => {
-                if let Err(err) = subscriber.unsubscribe_all().await {
-                    error!("Unsubscribe all failed: {err:?}");
-                    sentry::capture_error(&err);
+                if report_internal_error!(subscriber.unsubscribe_all().await).is_err() {
                     break 'out;
                 }
 
                 let subscribed = state.subscribed.read().await;
                 for id in subscribed.iter() {
-                    if let Err(err) = subscriber.subscribe(id).await {
-                        error!("Subscribe failed: {err:?}");
-                        sentry::capture_error(&err);
+                    if report_internal_error!(subscriber.subscribe(id).await).is_err() {
                         break 'out;
                     }
                 }
@@ -272,9 +258,7 @@ async fn listener(
                     #[cfg(debug_assertions)]
                     info!("{addr:?} unsubscribing from {id}");
 
-                    if let Err(err) = subscriber.unsubscribe(id).await {
-                        error!("Unsubscribe failed: {err:?}");
-                        sentry::capture_error(&err);
+                    if report_internal_error!(subscriber.unsubscribe(id).await).is_err() {
                         break 'out;
                     }
                 }
@@ -283,9 +267,7 @@ async fn listener(
                     #[cfg(debug_assertions)]
                     info!("{addr:?} subscribing to {id}");
 
-                    if let Err(err) = subscriber.subscribe(id).await {
-                        error!("Subscribe failed: {err:?}");
-                        sentry::capture_error(&err);
+                    if report_internal_error!(subscriber.subscribe(id).await).is_err() {
                         break 'out;
                     }
                 }
@@ -310,13 +292,9 @@ async fn listener(
             _ = t2 => {},
             message = t1 => {
                 // Handle incoming events.
-                let message = match message {
+                let message = match report_internal_error!(message) {
                     Ok(message) => message,
-                    Err(e) => {
-                        error!("Error while consuming pub/sub messages: {e:?}");
-                        sentry::capture_error(&e);
-                        break 'out;
-                    }
+                    Err(_) => break 'out
                 };
 
                 let event = match *REDIS_PAYLOAD_TYPE {
@@ -393,10 +371,7 @@ async fn listener(
         }
     }
 
-    if let Err(err) = subscriber.quit().await {
-        error!("{}", err);
-        sentry::capture_error(&err);
-    }
+    report_internal_error!(subscriber.quit().await).ok();
 }
 
 #[allow(clippy::too_many_arguments)]

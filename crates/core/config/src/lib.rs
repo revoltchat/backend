@@ -6,7 +6,7 @@ use futures_locks::RwLock;
 use once_cell::sync::Lazy;
 use serde::Deserialize;
 
-pub use sentry::capture_error;
+pub use sentry::{capture_error, capture_message, Level};
 
 #[cfg(feature = "report-macros")]
 #[macro_export]
@@ -14,7 +14,10 @@ macro_rules! report_error {
     ( $expr: expr, $error: ident $( $tt:tt )? ) => {
         $expr
             .inspect_err(|err| {
-                $crate::capture_error(err);
+                $crate::capture_message(
+                    &format!("{err:?} ({}:{}:{})", file!(), line!(), column!()),
+                    $crate::Level::Error,
+                );
             })
             .map_err(|_| ::revolt_result::create_error!($error))
     };
@@ -26,7 +29,10 @@ macro_rules! report_internal_error {
     ( $expr: expr ) => {
         $expr
             .inspect_err(|err| {
-                $crate::capture_error(err);
+                $crate::capture_message(
+                    &format!("{err:?} ({}:{}:{})", file!(), line!(), column!()),
+                    $crate::Level::Error,
+                );
             })
             .map_err(|_| ::revolt_result::create_error!(InternalError))
     };

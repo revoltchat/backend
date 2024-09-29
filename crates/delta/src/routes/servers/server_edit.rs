@@ -138,13 +138,13 @@ pub async fn edit(
 
     // 3. Apply new icon
     if let Some(icon) = icon {
-        partial.icon = Some(File::use_server_icon(db, &icon, &server.id).await?);
+        partial.icon = Some(File::use_server_icon(db, &icon, &server.id, &user.id).await?);
         server.icon = partial.icon.clone();
     }
 
     // 4. Apply new banner
     if let Some(banner) = banner {
-        partial.banner = Some(File::use_banner(db, &banner, &server.id).await?);
+        partial.banner = Some(File::use_server_banner(db, &banner, &server.id, &user.id).await?);
         server.banner = partial.banner.clone();
     }
 

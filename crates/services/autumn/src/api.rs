@@ -5,7 +5,7 @@ use std::{
 
 use axum::{
     extract::{DefaultBodyLimit, Path, State},
-    http::header,
+    http::{header, Method},
     response::{IntoResponse, Redirect, Response},
     routing::{get, post},
     Json, Router,
@@ -21,6 +21,7 @@ use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use tempfile::NamedTempFile;
 use tokio::time::Instant;
+use tower_http::cors::{AllowHeaders, Any, CorsLayer};
 use utoipa::ToSchema;
 
 use crate::{exif::strip_metadata, metadata::generate_metadata, mime_type::determine_mime_type};
@@ -29,16 +30,24 @@ use crate::{exif::strip_metadata, metadata::generate_metadata, mime_type::determ
 pub async fn router() -> Router<Database> {
     let config = config().await;
 
+    let cors = CorsLayer::new()
+        .allow_methods([Method::POST])
+        .allow_headers(AllowHeaders::mirror_request())
+        .allow_origin(Any);
+
     Router::new()
         .route("/", get(root))
         .route(
             "/:tag",
-            post(upload_file).layer(DefaultBodyLimit::max(
-                config.features.limits.global.body_limit_size,
-            )),
+            post(upload_file)
+                .options(options)
+                .layer(DefaultBodyLimit::max(
+                    config.features.limits.global.body_limit_size,
+                )),
         )
         .route("/:tag/:file_id", get(fetch_preview))
         .route("/:tag/:file_id/:file_name", get(fetch_file))
+        .layer(cors)
 }
 
 lazy_static! {
@@ -85,6 +94,9 @@ async fn root() -> Json<RootResponse> {
         version: CRATE_VERSION,
     })
 }
+
+/// Empty handler for OPTIONS routes
+async fn options() {}
 
 /// Available tags to upload to
 #[derive(Clone, Deserialize, Debug, ToSchema, strum_macros::IntoStaticStr)]
