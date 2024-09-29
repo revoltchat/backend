@@ -1187,6 +1187,28 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
         }
     }
 
+    if revision <= 30 {
+        info!("Running migration [revision 30 / 29-09-2024]: Add index for used_for.id to attachments.");
+
+        db.db()
+            .run_command(
+                doc! {
+                    "createIndexes": "attachments",
+                    "indexes": [
+                        {
+                            "key": {
+                                "used_for.id": 1_i32
+                            },
+                            "name": "used_for_id"
+                        }
+                    ]
+                },
+                None,
+            )
+            .await
+            .expect("Failed to create attachments index.");
+    }
+
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.
 
     // Reminder to update LATEST_REVISION when adding new migrations.

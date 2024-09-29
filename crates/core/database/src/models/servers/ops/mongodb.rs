@@ -260,7 +260,7 @@ impl MongoDb {
 
         // Update many attachments with parent id.
         self.delete_many_attachments(doc! {
-            "object_id": &server_id
+            "used_for.id": &server_id
         })
         .await?;
 
