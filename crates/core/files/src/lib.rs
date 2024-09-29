@@ -62,6 +62,11 @@ pub async fn fetch_from_s3(bucket_id: &str, path: &str, nonce: &str) -> Result<V
         // we just want the Vec<u8>
     }
 
+    // File is not encrypted
+    if nonce.is_empty() {
+        return Ok(buf);
+    }
+
     // Recover nonce as bytes
     let nonce = &BASE64_STANDARD.decode(nonce).unwrap()[..];
     let nonce: &Nonce<typenum::consts::U12> = nonce.into();
