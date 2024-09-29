@@ -41,11 +41,7 @@ jobs:
 
       - name: Run services in background
         run: |
-          docker compose -f docker-compose.db.yml up -d
-
-      - name: Copy .env.example
-        run: |
-          cp .env.example .env
+          docker compose -f compose.yml up -d
 
       - name: Run cargo test
         env:
