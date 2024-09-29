@@ -370,10 +370,8 @@ impl Message {
         }
 
         for attachment_id in data.attachments.as_deref().unwrap_or_default() {
-            attachments.push(
-                db.find_and_use_attachment(attachment_id, "attachments", "message", &message_id)
-                    .await?,
-            );
+            attachments
+                .push(File::use_attachment(db, attachment_id, &message_id, author.id()).await?);
         }
 
         if !attachments.is_empty() {
@@ -499,10 +497,7 @@ impl Message {
         })?;
 
         let media = if let Some(id) = embed.media {
-            Some(
-                db.find_and_use_attachment(&id, "attachments", "message", &self.id)
-                    .await?,
-            )
+            Some(File::use_attachment(db, &id, &self.id, &self.author).await?)
         } else {
             None
         };
@@ -661,7 +656,7 @@ impl Message {
     ) -> Result<()> {
         let media: Option<v0::File> = if let Some(id) = embed.media {
             Some(
-                db.find_and_use_attachment(&id, "attachments", "message", &self.id)
+                File::use_attachment(db, &id, &self.id, &self.author)
                     .await?
                     .into(),
             )

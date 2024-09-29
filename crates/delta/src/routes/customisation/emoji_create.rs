@@ -55,7 +55,7 @@ pub async fn create_emoji(
     };
 
     // Find the relevant attachment
-    let attachment = File::use_emoji(db, &id, &id).await?;
+    let attachment = File::use_emoji(db, &id, &id, &user.id).await?;
 
     // Create the emoji object
     let emoji = Emoji {

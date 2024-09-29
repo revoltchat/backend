@@ -2,6 +2,8 @@ use revolt_result::Result;
 
 use crate::File;
 
+use super::FileUsedFor;
+
 mod mongodb;
 mod reference;
 
@@ -18,8 +20,8 @@ pub trait AbstractAttachments: Sync + Send {
         &self,
         id: &str,
         tag: &str,
-        parent_type: &str,
-        parent_id: &str,
+        used_for: FileUsedFor,
+        uploader_id: String,
     ) -> Result<File>;
 
     /// Mark an attachment as having been reported.

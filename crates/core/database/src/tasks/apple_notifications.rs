@@ -20,6 +20,7 @@ use crate::Database;
 
 /// Payload information, before assembly
 #[derive(Debug)]
+#[allow(non_snake_case)]
 pub struct ApnPayload {
     message: Message,
     url: String,
@@ -29,6 +30,7 @@ pub struct ApnPayload {
 }
 
 #[derive(Serialize, Debug)]
+#[allow(non_snake_case)]
 struct Payload<'a> {
     aps: APS<'a>,
     #[serde(skip_serializing)]

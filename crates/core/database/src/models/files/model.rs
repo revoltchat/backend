@@ -19,9 +19,11 @@ auto_derived_partial!(
         /// When this file was uploaded
         pub uploaded_at: Option<Timestamp>, // these are Option<>s to not break file uploads on legacy Autumn
         /// ID of user who uploaded this file
+        #[serde(skip_serializing_if = "Option::is_none")]
         pub uploader_id: Option<String>, // these are Option<>s to not break file uploads on legacy Autumn
 
         /// What the file was used for
+        #[serde(skip_serializing_if = "Option::is_none")]
         pub used_for: Option<FileUsedFor>,
 
         /// Whether this file was deleted
@@ -63,6 +65,7 @@ auto_derived!(
         ServerBanner,
         Emoji,
         UserAvatar,
+        WebhookAvatar,
         UserProfileBackground,
         LegacyGroupIcon,
         ChannelIcon,
@@ -86,44 +89,154 @@ impl File {
     }
 
     /// Use a file for a message attachment
-    pub async fn use_attachment(db: &Database, id: &str, parent: &str) -> Result<File> {
-        db.find_and_use_attachment(id, "attachments", "message", parent)
-            .await
+    pub async fn use_attachment(
+        db: &Database,
+        id: &str,
+        parent: &str,
+        uploader_id: &str,
+    ) -> Result<File> {
+        db.find_and_use_attachment(
+            id,
+            "attachments",
+            FileUsedFor {
+                id: parent.to_owned(),
+                object_type: FileUsedForType::Message,
+            },
+            uploader_id.to_owned(),
+        )
+        .await
     }
 
     /// Use a file for a user profile background
-    pub async fn use_background(db: &Database, id: &str, parent: &str) -> Result<File> {
-        db.find_and_use_attachment(id, "backgrounds", "user", parent)
-            .await
+    pub async fn use_background(
+        db: &Database,
+        id: &str,
+        parent: &str,
+        uploader_id: &str,
+    ) -> Result<File> {
+        db.find_and_use_attachment(
+            id,
+            "backgrounds",
+            FileUsedFor {
+                id: parent.to_owned(),
+                object_type: FileUsedForType::UserProfileBackground,
+            },
+            uploader_id.to_owned(),
+        )
+        .await
     }
 
     /// Use a file for a user avatar
-    pub async fn use_avatar(db: &Database, id: &str, parent: &str) -> Result<File> {
-        db.find_and_use_attachment(id, "avatars", "user", parent)
-            .await
+    pub async fn use_user_avatar(
+        db: &Database,
+        id: &str,
+        parent: &str,
+        uploader_id: &str,
+    ) -> Result<File> {
+        db.find_and_use_attachment(
+            id,
+            "avatars",
+            FileUsedFor {
+                id: parent.to_owned(),
+                object_type: FileUsedForType::UserAvatar,
+            },
+            uploader_id.to_owned(),
+        )
+        .await
     }
 
-    /// Use a file for an icon
-    pub async fn use_icon(db: &Database, id: &str, parent: &str) -> Result<File> {
-        db.find_and_use_attachment(id, "icons", "object", parent)
-            .await
+    /// Use a file for a webhook avatar
+    pub async fn use_webhook_avatar(
+        db: &Database,
+        id: &str,
+        parent: &str,
+        uploader_id: &str,
+    ) -> Result<File> {
+        db.find_and_use_attachment(
+            id,
+            "avatars",
+            FileUsedFor {
+                id: parent.to_owned(),
+                object_type: FileUsedForType::WebhookAvatar,
+            },
+            uploader_id.to_owned(),
+        )
+        .await
     }
 
     /// Use a file for a server icon
-    pub async fn use_server_icon(db: &Database, id: &str, parent: &str) -> Result<File> {
-        db.find_and_use_attachment(id, "icons", "object", parent)
-            .await
+    pub async fn use_server_icon(
+        db: &Database,
+        id: &str,
+        parent: &str,
+        uploader_id: &str,
+    ) -> Result<File> {
+        db.find_and_use_attachment(
+            id,
+            "icons",
+            FileUsedFor {
+                id: parent.to_owned(),
+                object_type: FileUsedForType::ServerIcon,
+            },
+            uploader_id.to_owned(),
+        )
+        .await
+    }
+
+    /// Use a file for a channel icon
+    pub async fn use_channel_icon(
+        db: &Database,
+        id: &str,
+        parent: &str,
+        uploader_id: &str,
+    ) -> Result<File> {
+        db.find_and_use_attachment(
+            id,
+            "icons",
+            FileUsedFor {
+                id: parent.to_owned(),
+                object_type: FileUsedForType::ChannelIcon,
+            },
+            uploader_id.to_owned(),
+        )
+        .await
     }
 
     /// Use a file for a server banner
-    pub async fn use_banner(db: &Database, id: &str, parent: &str) -> Result<File> {
-        db.find_and_use_attachment(id, "banners", "server", parent)
-            .await
+    pub async fn use_server_banner(
+        db: &Database,
+        id: &str,
+        parent: &str,
+        uploader_id: &str,
+    ) -> Result<File> {
+        db.find_and_use_attachment(
+            id,
+            "banners",
+            FileUsedFor {
+                id: parent.to_owned(),
+                object_type: FileUsedForType::ServerBanner,
+            },
+            uploader_id.to_owned(),
+        )
+        .await
     }
 
     /// Use a file for an emoji
-    pub async fn use_emoji(db: &Database, id: &str, parent: &str) -> Result<File> {
-        db.find_and_use_attachment(id, "emojis", "object", parent)
-            .await
+    pub async fn use_emoji(
+        db: &Database,
+        id: &str,
+        parent: &str,
+        uploader_id: &str,
+    ) -> Result<File> {
+        db.find_and_use_attachment(
+            id,
+            "emojis",
+            FileUsedFor {
+                id: parent.to_owned(),
+                object_type: FileUsedForType::Emoji,
+            },
+            uploader_id.to_owned(),
+        )
+        .await
     }
 }

@@ -11,7 +11,7 @@ use base64::{
 use deadqueue::limited::Queue;
 use fcm_v1::auth::{Authenticator, ServiceAccountKey};
 use once_cell::sync::Lazy;
-use revolt_config::config;
+use revolt_config::{config, report_internal_error};
 use revolt_models::v0::PushNotification;
 use revolt_presence::filter_online;
 use serde_json::json;
@@ -116,12 +116,11 @@ pub async fn worker(db: Database, authifier_db: AuthifierDatabase) {
                                     if fcm_error.contains("404 (Not Found)") {
                                         println!("Unregistering {:?}", session.id);
 
-                                        if let Err(err) = db
-                                            .remove_push_subscription_by_session_id(&session.id)
-                                            .await
-                                        {
-                                            revolt_config::capture_error(&err);
-                                        }
+                                        report_internal_error!(
+                                            db.remove_push_subscription_by_session_id(&session.id)
+                                                .await
+                                        )
+                                        .ok();
                                     }
                                 }
                             } else {

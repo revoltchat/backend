@@ -17,6 +17,9 @@ auto_derived_partial!(
         #[serde(skip_serializing_if = "Option::is_none")]
         pub avatar: Option<File>,
 
+        /// User that created this webhook
+        pub creator_id: String,
+
         /// The channel this webhook belongs to
         pub channel_id: String,
 
@@ -43,6 +46,7 @@ impl Default for Webhook {
             id: Default::default(),
             name: Default::default(),
             avatar: None,
+            creator_id: Default::default(),
             channel_id: Default::default(),
             permissions: Default::default(),
             token: Default::default(),
