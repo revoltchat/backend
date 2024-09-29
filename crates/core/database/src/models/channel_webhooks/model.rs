@@ -70,7 +70,7 @@ impl Webhook {
         if self.token.as_deref() == Some(token) {
             Ok(())
         } else {
-            Err(create_error!(InvalidCredentials))
+            Err(create_error!(NotAuthenticated))
         }
     }
 

@@ -18,7 +18,7 @@ impl FromRequestParts<Database> for User {
             let session = db.fetch_session_by_token(session_token).await?;
             db.fetch_user(&session.user_id).await
         } else {
-            Err(create_error!(InvalidCredentials))
+            Err(create_error!(NotAuthenticated))
         }
     }
 }

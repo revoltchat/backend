@@ -73,6 +73,7 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::InvalidCredentials => Status::Unauthorized,
             ErrorType::InvalidProperty => Status::BadRequest,
             ErrorType::InvalidSession => Status::Unauthorized,
+            ErrorType::NotAuthenticated => Status::Unauthorized,
             ErrorType::DuplicateNonce => Status::Conflict,
             ErrorType::VosoUnavailable => Status::BadRequest,
             ErrorType::NotFound => Status::NotFound,
