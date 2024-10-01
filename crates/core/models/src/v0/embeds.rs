@@ -14,9 +14,9 @@ auto_derived!(
         /// URL to the original image
         pub url: String,
         /// Width of the image
-        pub width: isize,
+        pub width: usize,
         /// Height of the image
-        pub height: isize,
+        pub height: usize,
         /// Positioning and size
         pub size: ImageSize,
     }
@@ -26,9 +26,9 @@ auto_derived!(
         /// URL to the original video
         pub url: String,
         /// Width of the video
-        pub width: isize,
+        pub width: usize,
         /// Height of the video
-        pub height: isize,
+        pub height: usize,
     }
 
     /// Type of remote Twitch content
@@ -86,7 +86,7 @@ auto_derived!(
         },
         AppleMusic {
             album_id: String,
-            
+
             #[serde(skip_serializing_if = "Option::is_none")]
             track_id: Option<String>,
         },

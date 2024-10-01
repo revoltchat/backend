@@ -91,7 +91,7 @@ async fn proxy(Query(UrlQuery { url }): Query<UrlQuery>) -> Result<impl IntoResp
 )]
 async fn embed(
     Query(UrlQuery { url }): Query<UrlQuery>,
-    TypedHeader(Authorization(_bearer)): TypedHeader<Authorization<Bearer>>,
+    // TypedHeader(Authorization(_bearer)): TypedHeader<Authorization<Bearer>>,
 ) -> Result<Json<Embed>> {
     Request::generate_embed(&url).await.map(Json)
 }

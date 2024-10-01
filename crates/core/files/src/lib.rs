@@ -122,6 +122,17 @@ pub fn image_size(f: &NamedTempFile) -> Option<(usize, usize)> {
     }
 }
 
+/// Determine size of image with buffer
+pub fn image_size_vec(v: &[u8]) -> Option<(usize, usize)> {
+    if let Ok(size) = imagesize::blob_size(v)
+        .inspect_err(|err| tracing::error!("Failed to generate image size! {err:?}"))
+    {
+        Some((size.width, size.height))
+    } else {
+        None
+    }
+}
+
 /// Determine size of video at temp file
 pub fn video_size(f: &NamedTempFile) -> Option<(i64, i64)> {
     if let Ok(data) = ffprobe::ffprobe(f.path())

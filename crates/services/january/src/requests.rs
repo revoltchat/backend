@@ -7,8 +7,8 @@ use lazy_static::lazy_static;
 use mime::Mime;
 use reqwest::{header::CONTENT_TYPE, redirect, Client, Response};
 use revolt_config::report_internal_error;
-use revolt_files::{create_thumbnail, decode_image, is_valid_image, video_size};
-use revolt_models::v0::Embed;
+use revolt_files::{create_thumbnail, decode_image, image_size_vec, is_valid_image, video_size};
+use revolt_models::v0::{Embed, Image, ImageSize, Video};
 use revolt_result::{create_error, Result};
 
 lazy_static! {
@@ -79,6 +79,7 @@ impl Request {
                         } else {
                             let mut file = report_internal_error!(tempfile::NamedTempFile::new())?;
                             report_internal_error!(file.write_all(&bytes))?;
+
                             if video_size(&file).is_some() {
                                 Ok((mime.to_string(), bytes.to_vec()))
                             } else {
@@ -92,8 +93,7 @@ impl Request {
                 PROXY_CACHE.insert(url.to_owned(), result.clone()).await;
                 result
             } else {
-                // Err(create_error!())
-                todo!() // no proxy
+                Err(create_error!(LabelMe))
             }
         }
     }
@@ -103,7 +103,52 @@ impl Request {
         if let Some(hit) = EMBED_CACHE.get(url).await {
             hit
         } else {
-            todo!()
+            let Request { response, mime } = Request::new(url).await?;
+
+            match (mime.type_(), mime.subtype()) {
+                (_, mime::HTML) => {
+                    // let mut metadata = Metadata::from(resp, url).await?;
+                    // metadata.resolve_external().await;
+
+                    // if metadata.is_none() {
+                    //     return Ok(Embed::None);
+                    // }
+
+                    // Ok(Embed::Website(metadata))
+                    todo!()
+                }
+                (mime::IMAGE, _) => {
+                    if let Some((width, height)) =
+                        image_size_vec(&report_internal_error!(response.bytes().await)?)
+                    {
+                        Ok(Embed::Image(Image {
+                            url: url.to_owned(),
+                            width,
+                            height,
+                            size: ImageSize::Large,
+                        }))
+                    } else {
+                        Ok(Embed::None)
+                    }
+                }
+                (mime::VIDEO, _) => {
+                    let mut file = report_internal_error!(tempfile::NamedTempFile::new())?;
+                    report_internal_error!(
+                        file.write_all(&report_internal_error!(response.bytes().await)?)
+                    )?;
+
+                    if let Some((width, height)) = video_size(&file) {
+                        Ok(Embed::Video(Video {
+                            url: url.to_owned(),
+                            width: width as usize,
+                            height: height as usize,
+                        }))
+                    } else {
+                        Ok(Embed::None)
+                    }
+                }
+                _ => Ok(Embed::None),
+            }
         }
     }
 
