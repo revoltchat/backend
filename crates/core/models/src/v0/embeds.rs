@@ -119,8 +119,6 @@ auto_derived!(
         #[serde(skip_serializing_if = "Option::is_none")]
         pub video: Option<Video>,
 
-        // #[serde(skip_serializing_if = "Option::is_none")]
-        // opengraph_type: Option<String>,
         /// Site name
         #[serde(skip_serializing_if = "Option::is_none")]
         pub site_name: Option<String>,
@@ -156,11 +154,44 @@ auto_derived!(
 
     /// Embed
     #[serde(tag = "type")]
+    #[derive(Default)]
     pub enum Embed {
         Website(WebsiteMetadata),
         Image(Image),
         Video(Video),
         Text(Text),
+        #[default]
         None,
     }
 );
+
+impl WebsiteMetadata {
+    /// Truncate strings in metadata
+    pub fn truncate(&mut self) {
+        if let Some(s) = self.title.as_mut() {
+            s.truncate(100);
+        }
+
+        if let Some(s) = self.description.as_mut() {
+            s.truncate(1000);
+        }
+
+        if let Some(s) = self.site_name.as_mut() {
+            s.truncate(32);
+        }
+
+        if let Some(s) = self.colour.as_mut() {
+            s.truncate(32);
+        }
+    }
+
+    /// Check if this is considered "empty"
+    pub fn is_empty(&self) -> bool {
+        (self.title.is_none() || self.title.as_ref().is_some_and(|f| f.is_empty()))
+            && (self.description.is_none()
+                || self.description.as_ref().is_some_and(|f| f.is_empty()))
+            && self.special.is_none()
+            && self.video.is_none()
+            && self.image.is_none()
+    }
+}

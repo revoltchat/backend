@@ -1,19 +1,23 @@
+use encoding_rs::{Encoding, UTF_8_INIT};
+use lazy_static::lazy_static;
+use mime::Mime;
+use regex::Regex;
+use reqwest::{
+    header::{self, CONTENT_TYPE},
+    redirect, Client, Response,
+};
+use revolt_config::report_internal_error;
+use revolt_files::{create_thumbnail, decode_image, image_size_vec, is_valid_image, video_size};
+use revolt_models::v0::{Embed, Image, ImageSize, Video};
+use revolt_result::{create_error, Result};
 use std::{
     io::{Cursor, Write},
     time::Duration,
 };
 
-use lazy_static::lazy_static;
-use mime::Mime;
-use reqwest::{header::CONTENT_TYPE, redirect, Client, Response};
-use revolt_config::report_internal_error;
-use revolt_files::{create_thumbnail, decode_image, image_size_vec, is_valid_image, video_size};
-use revolt_models::v0::{Embed, Image, ImageSize, Video};
-use revolt_result::{create_error, Result};
-
 lazy_static! {
+    /// Request client
     static ref CLIENT: Client = reqwest::Client::builder()
-        .user_agent("Mozilla/5.0 (compatible; January/2.0; +https://github.com/revoltchat/backend)")
         .timeout(Duration::from_secs(10)) // TODO config
         .connect_timeout(Duration::from_secs(5)) // TODO config
         .redirect(redirect::Policy::custom(|attempt| {
@@ -28,6 +32,9 @@ lazy_static! {
         .build()
         .expect("reqwest Client");
 
+    /// Spoof User Agent as Discord
+    static ref RE_USER_AGENT_SPOOFING_AS_DISCORD: Regex = Regex::new("^(?:(?:https?:)?//)?(?:(?:vx|fx)?twitter|(?:fixv|fixup)?x).com").expect("valid regex");
+
     /// Cache for proxy results
     static ref PROXY_CACHE: moka::future::Cache<String, Result<(String, Vec<u8>)>> = moka::future::Cache::builder()
         .max_capacity(10_000) // TODO config
@@ -35,7 +42,7 @@ lazy_static! {
         .build();
 
     /// Cache for embed results
-    static ref EMBED_CACHE: moka::future::Cache<String, Result<Embed>> = moka::future::Cache::builder()
+    static ref EMBED_CACHE: moka::future::Cache<String, Embed> = moka::future::Cache::builder()
         .max_capacity(1_000) // TODO config
         .time_to_live(Duration::from_secs(60)) // TODO config
         .build();
@@ -98,57 +105,126 @@ impl Request {
         }
     }
 
-    /// Generate embed for a given URL
-    pub async fn generate_embed(url: &str) -> Result<Embed> {
+    /// Fetch metadata for an image
+    pub async fn fetch_image_metadata(
+        url: &str,
+        request: Option<Request>,
+    ) -> Result<Option<Image>> {
         if let Some(hit) = EMBED_CACHE.get(url).await {
-            hit
-        } else {
-            let Request { response, mime } = Request::new(url).await?;
-
-            match (mime.type_(), mime.subtype()) {
-                (_, mime::HTML) => {
-                    // let mut metadata = Metadata::from(resp, url).await?;
-                    // metadata.resolve_external().await;
-
-                    // if metadata.is_none() {
-                    //     return Ok(Embed::None);
-                    // }
-
-                    // Ok(Embed::Website(metadata))
-                    todo!()
-                }
-                (mime::IMAGE, _) => {
-                    if let Some((width, height)) =
-                        image_size_vec(&report_internal_error!(response.bytes().await)?)
-                    {
-                        Ok(Embed::Image(Image {
-                            url: url.to_owned(),
-                            width,
-                            height,
-                            size: ImageSize::Large,
-                        }))
-                    } else {
-                        Ok(Embed::None)
-                    }
-                }
-                (mime::VIDEO, _) => {
-                    let mut file = report_internal_error!(tempfile::NamedTempFile::new())?;
-                    report_internal_error!(
-                        file.write_all(&report_internal_error!(response.bytes().await)?)
-                    )?;
-
-                    if let Some((width, height)) = video_size(&file) {
-                        Ok(Embed::Video(Video {
-                            url: url.to_owned(),
-                            width: width as usize,
-                            height: height as usize,
-                        }))
-                    } else {
-                        Ok(Embed::None)
-                    }
-                }
-                _ => Ok(Embed::None),
+            match hit {
+                Embed::Image(img) => Ok(Some(img)),
+                _ => Ok(None),
             }
+        } else {
+            let response = if let Some(Request { response, .. }) = request {
+                response
+            } else {
+                let Request { response, mime } = Request::new(url).await?;
+                if matches!(mime.type_(), mime::IMAGE) {
+                    response
+                } else {
+                    return Err(create_error!(LabelMe));
+                }
+            };
+
+            if let Some((width, height)) =
+                image_size_vec(&report_internal_error!(response.bytes().await)?)
+            {
+                Ok(Some(Image {
+                    url: url.to_owned(),
+                    width,
+                    height,
+                    size: ImageSize::Large,
+                }))
+            } else {
+                Ok(None)
+            }
+        }
+    }
+
+    /// Fetch metadata for an video
+    pub async fn fetch_video_metadata(
+        url: &str,
+        request: Option<Request>,
+    ) -> Result<Option<Video>> {
+        if let Some(hit) = EMBED_CACHE.get(url).await {
+            match hit {
+                Embed::Video(vid) => Ok(Some(vid)),
+                _ => Ok(None),
+            }
+        } else {
+            let response = if let Some(Request { response, .. }) = request {
+                response
+            } else {
+                let Request { response, mime } = Request::new(&url).await?;
+                if matches!(mime.type_(), mime::VIDEO) {
+                    response
+                } else {
+                    return Err(create_error!(LabelMe));
+                }
+            };
+
+            let mut file = report_internal_error!(tempfile::NamedTempFile::new())?;
+            report_internal_error!(
+                file.write_all(&report_internal_error!(response.bytes().await)?)
+            )?;
+
+            if let Some((width, height)) = video_size(&file) {
+                Ok(Some(Video {
+                    url: url.to_owned(),
+                    width: width as usize,
+                    height: height as usize,
+                }))
+            } else {
+                Ok(None)
+            }
+        }
+    }
+
+    /// Generate embed for a given URL
+    pub async fn generate_embed(url: String) -> Result<Embed> {
+        if let Some(hit) = EMBED_CACHE.get(&url).await {
+            Ok(hit)
+        } else {
+            let request = Request::new(&url).await?;
+            let embed = match (request.mime.type_(), request.mime.subtype()) {
+                (_, mime::HTML) => {
+                    let content_type = request
+                        .response
+                        .headers()
+                        .get(header::CONTENT_TYPE)
+                        .and_then(|value| value.to_str().ok())
+                        .and_then(|value| value.parse::<Mime>().ok());
+
+                    let encoding_name = content_type
+                        .as_ref()
+                        .and_then(|mime| mime.get_param("charset").map(|charset| charset.as_str()))
+                        .unwrap_or("utf-8");
+
+                    let encoding =
+                        Encoding::for_label(encoding_name.as_bytes()).unwrap_or(&UTF_8_INIT);
+
+                    let bytes = report_internal_error!(request.response.bytes().await)?;
+                    let (text, _, _) = encoding.decode(&bytes);
+
+                    crate::website_embed::create_website_embed(&url, &text)
+                        .await
+                        .map(Embed::Website)
+                        .unwrap_or_default()
+                }
+                (mime::IMAGE, _) => Request::fetch_image_metadata(&url, Some(request))
+                    .await
+                    .map(|res| res.map(Embed::Image).unwrap_or_default())
+                    .unwrap_or_default(),
+                (mime::VIDEO, _) => Request::fetch_video_metadata(&url, Some(request))
+                    .await
+                    .map(|res| res.map(Embed::Video).unwrap_or_default())
+                    .unwrap_or_default(),
+                _ => Embed::None,
+            };
+
+            EMBED_CACHE.insert(url.to_owned(), embed.clone()).await;
+            Ok(embed)
         }
     }
 
@@ -156,6 +232,14 @@ impl Request {
     pub async fn new(url: &str) -> Result<Request> {
         let response = CLIENT
             .get(url)
+            .header(
+                "User-Agent",
+                if RE_USER_AGENT_SPOOFING_AS_DISCORD.is_match(url) {
+                    "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)"
+                } else {
+                    "Mozilla/5.0 (compatible; January/2.0; +https://github.com/revoltchat/backend)"
+                },
+            )
             .send()
             .await
             .map_err(|_| create_error!(ProxyError))?;

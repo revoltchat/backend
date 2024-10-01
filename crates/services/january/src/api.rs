@@ -1,14 +1,8 @@
 use axum::{extract::Query, response::IntoResponse, routing::get, Json, Router};
 use reqwest::header;
-use revolt_models::v0::Embed;
 use revolt_result::Result;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-
-use axum_extra::{
-    headers::{authorization::Bearer, Authorization},
-    TypedHeader,
-};
 
 use crate::requests::Request;
 
@@ -92,6 +86,6 @@ async fn proxy(Query(UrlQuery { url }): Query<UrlQuery>) -> Result<impl IntoResp
 async fn embed(
     Query(UrlQuery { url }): Query<UrlQuery>,
     // TypedHeader(Authorization(_bearer)): TypedHeader<Authorization<Bearer>>,
-) -> Result<Json<Embed>> {
-    Request::generate_embed(&url).await.map(Json)
+) -> Result<impl IntoResponse> {
+    Request::generate_embed(url).await.map(Json)
 }
