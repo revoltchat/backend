@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 # Utility
 mime = "0.3.17"
+tempfile = "3.13.0"
 lazy_static = "1.5.0"
 moka = { version = "0.12.8", features = ["future"] }
 
@@ -30,6 +31,7 @@ revolt-result = { version = "0.7.16", path = "../../core/result", features = [
     "utoipa",
     "axum",
 ] }
+revolt-files = { version = "0.7.16", path = "../../core/files" }
 
 # Axum / web server
 axum = { version = "0.7.5" }

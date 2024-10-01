@@ -1,9 +1,13 @@
-use std::time::Duration;
+use std::{
+    io::{Cursor, Write},
+    time::Duration,
+};
 
-use axum::body::Bytes;
 use lazy_static::lazy_static;
 use mime::Mime;
 use reqwest::{header::CONTENT_TYPE, redirect, Client, Response};
+use revolt_config::report_internal_error;
+use revolt_files::{create_thumbnail, decode_image, is_valid_image, video_size};
 use revolt_models::v0::Embed;
 use revolt_result::{create_error, Result};
 
@@ -25,7 +29,7 @@ lazy_static! {
         .expect("reqwest Client");
 
     /// Cache for proxy results
-    static ref PROXY_CACHE: moka::future::Cache<String, Result<Bytes>> = moka::future::Cache::builder()
+    static ref PROXY_CACHE: moka::future::Cache<String, Result<(String, Vec<u8>)>> = moka::future::Cache::builder()
         .max_capacity(10_000) // TODO config
         .time_to_live(Duration::from_secs(60)) // TODO config
         .build();
@@ -45,11 +49,52 @@ pub struct Request {
 
 impl Request {
     /// Proxy a given URL
-    pub async fn proxy_file(url: &str) -> Result<Bytes> {
+    pub async fn proxy_file(url: &str) -> Result<(String, Vec<u8>)> {
         if let Some(hit) = PROXY_CACHE.get(url).await {
             hit
         } else {
-            todo!()
+            let Request { response, mime } = Request::new(url).await?;
+
+            if matches!(mime.type_(), mime::IMAGE | mime::VIDEO) {
+                let bytes = response.bytes().await.map_err(|_| create_error!(LabelMe));
+
+                let result = match bytes {
+                    Ok(bytes) => {
+                        if matches!(mime.type_(), mime::IMAGE) {
+                            let reader = &mut Cursor::new(&bytes);
+
+                            if matches!(mime.subtype(), mime::GIF) {
+                                if is_valid_image(reader, false) {
+                                    Ok(("image/gif".to_owned(), bytes.to_vec()))
+                                } else {
+                                    Err(create_error!(LabelMe))
+                                }
+                            } else {
+                                Ok((
+                                    "image/webp".to_owned(),
+                                    create_thumbnail(decode_image(reader, false)?, "attachments")
+                                        .await,
+                                ))
+                            }
+                        } else {
+                            let mut file = report_internal_error!(tempfile::NamedTempFile::new())?;
+                            report_internal_error!(file.write_all(&bytes))?;
+                            if video_size(&file).is_some() {
+                                Ok((mime.to_string(), bytes.to_vec()))
+                            } else {
+                                Err(create_error!(LabelMe))
+                            }
+                        }
+                    }
+                    Err(err) => Err(err),
+                };
+
+                PROXY_CACHE.insert(url.to_owned(), result.clone()).await;
+                result
+            } else {
+                // Err(create_error!())
+                todo!() // no proxy
+            }
         }
     }
 

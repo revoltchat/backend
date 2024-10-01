@@ -1,4 +1,5 @@
-use axum::{body::Bytes, extract::Query, routing::get, Json, Router};
+use axum::{extract::Query, response::IntoResponse, routing::get, Json, Router};
+use reqwest::header;
 use revolt_models::v0::Embed;
 use revolt_result::Result;
 use serde::{Deserialize, Serialize};
@@ -10,6 +11,8 @@ use axum_extra::{
 };
 
 use crate::requests::Request;
+
+pub static CACHE_CONTROL: &str = "public, max-age=600, immutable";
 
 pub async fn router() -> Router {
     Router::new()
@@ -59,8 +62,17 @@ struct UrlQuery {
         ("url" = String, Query, description = "URL to fetch")
     ),
 )]
-async fn proxy(Query(UrlQuery { url }): Query<UrlQuery>) -> Result<Bytes> {
-    Request::proxy_file(&url).await
+async fn proxy(Query(UrlQuery { url }): Query<UrlQuery>) -> Result<impl IntoResponse> {
+    Request::proxy_file(&url).await.map(|(content_type, data)| {
+        (
+            [
+                (header::CONTENT_TYPE, content_type),
+                (header::CONTENT_DISPOSITION, "inline".to_owned()),
+                (header::CACHE_CONTROL, CACHE_CONTROL.to_owned()),
+            ],
+            data,
+        )
+    })
 }
 
 /// Generate embed for a given URL

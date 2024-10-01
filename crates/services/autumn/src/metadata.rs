@@ -1,6 +1,7 @@
 use std::io::Cursor;
 
 use revolt_database::Metadata;
+use revolt_files::{image_size, video_size};
 use tempfile::NamedTempFile;
 
 /// Intersection of what infer can detect and what image-rs supports
@@ -21,32 +22,19 @@ static SUPPORTED_IMAGE_MIME: [&str; 9] = [
 /// Generate metadata from file, using mime type as a hint
 pub fn generate_metadata(f: &NamedTempFile, mime_type: &str) -> Metadata {
     if SUPPORTED_IMAGE_MIME.contains(&mime_type) {
-        if let Ok(size) = imagesize::size(f.path())
-            .inspect_err(|err| tracing::error!("Failed to generate image size! {err:?}"))
-        {
-            if let (Ok(width), Ok(height)) = (size.width.try_into(), size.height.try_into()) {
-                return Metadata::Image { width, height };
-            }
-        }
-
-        Metadata::File
+        image_size(f)
+            .map(|(width, height)| Metadata::Image {
+                width: width as isize,
+                height: height as isize,
+            })
+            .unwrap_or_default()
     } else if mime_type.starts_with("video/") {
-        if let Ok(data) = ffprobe::ffprobe(f.path())
-            .inspect_err(|err| tracing::error!("Failed to ffprobe file! {err:?}"))
-        {
-            // Use first valid stream
-            for stream in data.streams {
-                if let (Some(w), Some(h)) = (stream.width, stream.height) {
-                    if let (Ok(width), Ok(height)) = (w.try_into(), h.try_into()) {
-                        return Metadata::Video { width, height };
-                    }
-                }
-            }
-
-            Metadata::File
-        } else {
-            Metadata::File
-        }
+        video_size(f)
+            .map(|(width, height)| Metadata::Video {
+                width: width as isize,
+                height: height as isize,
+            })
+            .unwrap_or_default()
     } else if mime_type.starts_with("audio/") {
         Metadata::Audio
     } else if mime_type == "plain/text" {
