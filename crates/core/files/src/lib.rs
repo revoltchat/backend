@@ -15,6 +15,7 @@ use aws_sdk_s3::{
 
 use base64::prelude::*;
 use tempfile::NamedTempFile;
+use tiny_skia::Pixmap;
 
 /// Size of the authentication tag in the buffer
 pub const AUTHENTICATION_TAG_SIZE_BYTES: usize = 16;
@@ -188,7 +189,28 @@ pub fn decode_image<R: Read + BufRead + Seek>(reader: &mut R, mime: &str) -> Res
             }
         }
         // Read image using resvg
-        "image/svg+xml" => Err(create_error!(LabelMe)),
+        "image/svg+xml" => {
+            // usvg doesn't support Read trait so copy to buffer
+            let mut buf = Vec::new();
+            report_internal_error!(reader.read_to_end(&mut buf))?;
+
+            let tree = report_internal_error!(usvg::Tree::from_data(&buf, &Default::default()))?;
+            let size = tree.size();
+            let mut pixmap = Pixmap::new(size.width() as u32, size.height() as u32)
+                .ok_or_else(|| create_error!(LabelMe))?;
+
+            let mut pixmap_mut = pixmap.as_mut();
+            resvg::render(&tree, Default::default(), &mut pixmap_mut);
+
+            Ok(DynamicImage::ImageRgba8(
+                ImageBuffer::from_vec(
+                    size.width() as u32,
+                    size.height() as u32,
+                    pixmap.data().to_vec(),
+                )
+                .ok_or_else(|| create_error!(LabelMe))?,
+            ))
+        }
         // Check if we can read using image-rs crate
         _ => report_internal_error!(report_internal_error!(
             image::ImageReader::new(reader).with_guessed_format()

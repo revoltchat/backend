@@ -19,7 +19,11 @@ pub fn determine_mime_type(f: &mut NamedTempFile, buf: &[u8], file_name: &str) -
 
     // See if the file is actually just plain Unicode/ASCII text
     if mime_type == "application/octet-stream" && simdutf8::basic::from_utf8(buf).is_ok() {
-        return "plain/text";
+        if file_name.to_lowercase().ends_with(".svg") {
+            return "image/svg+xml";
+        } else {
+            return "plain/text";
+        }
     }
 
     mime_type
