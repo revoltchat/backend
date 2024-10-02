@@ -305,18 +305,6 @@ impl Message {
             ..Default::default()
         };
 
-        // Parse mentions in message.
-        let mut mentions = HashSet::new();
-        if allow_mentions {
-            if let Some(content) = &data.content {
-                for capture in RE_MENTION.captures_iter(content) {
-                    if let Some(mention) = capture.get(1) {
-                        mentions.insert(mention.as_str().to_string());
-                    }
-                }
-            }
-        }
-
         // Verify replies are valid.
         let mut replies = HashSet::new();
         if let Some(entries) = data.replies {
@@ -337,8 +325,37 @@ impl Message {
             }
         }
 
+        // Parse mentions in message.
+        let mut mentions = HashSet::new();
+        if allow_mentions {
+            if let Some(content) = &data.content {
+                for capture in RE_MENTION.captures_iter(content) {
+                    if let Some(mention) = capture.get(1) {
+                        mentions.insert(mention.as_str().to_string());
+                    }
+                }
+            }
+        }
+
         if !mentions.is_empty() {
-            message.mentions.replace(mentions.into_iter().collect());
+            // FIXME: temp fix to stop spam attacks
+            match channel {
+                Channel::DirectMessage { recipients, .. } | Channel::Group { recipients, .. } => {
+                    mentions = mentions.intersection(recipients);
+                }
+                Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => {
+                    let valid_members = db.fetch_members(server.into(), mentions).await;
+                    if let Ok(valid_members) = valid_members {
+                        let valid_ids = valid_members.iter().map(|member| member.id.user);
+                        mentions = mentions.intersection(valid_ids);
+                    }
+                }
+                Channel::SavedMessages { .. } => mentions.clear(),
+            }
+
+            if !mentions.is_empty() {
+                message.mentions.replace(mentions.into_iter().collect());
+            }
         }
 
         if !replies.is_empty() {
