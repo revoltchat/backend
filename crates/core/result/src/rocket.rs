@@ -84,6 +84,7 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::FileTooSmall => Status::UnprocessableEntity,
             ErrorType::FileTooLarge { .. } => Status::UnprocessableEntity,
             ErrorType::FileTypeNotAllowed => Status::BadRequest,
+            ErrorType::ImageProcessingFailed => Status::InternalServerError,
         };
 
         // Serialize the error data structure into JSON.

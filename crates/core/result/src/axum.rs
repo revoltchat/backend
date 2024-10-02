@@ -1,4 +1,5 @@
 use axum::{http::StatusCode, response::IntoResponse, Json};
+use rocket::http::Status;
 
 use crate::{Error, ErrorType};
 
@@ -78,6 +79,7 @@ impl IntoResponse for Error {
             ErrorType::FileTooSmall => StatusCode::UNPROCESSABLE_ENTITY,
             ErrorType::FileTooLarge { .. } => StatusCode::UNPROCESSABLE_ENTITY,
             ErrorType::FileTypeNotAllowed => StatusCode::BAD_REQUEST,
+            ErrorType::ImageProcessingFailed => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
         (status, Json(&self)).into_response()

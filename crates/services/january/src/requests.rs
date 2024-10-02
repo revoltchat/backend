@@ -66,7 +66,7 @@ impl Request {
             let Request { response, mime } = Request::new(url).await?;
 
             if matches!(mime.type_(), mime::IMAGE | mime::VIDEO) {
-                let bytes = response.bytes().await.map_err(|_| create_error!(LabelMe));
+                let bytes = report_internal_error!(response.bytes().await)?;
 
                 let result = match bytes {
                     Ok(bytes) => {
@@ -77,7 +77,7 @@ impl Request {
                                 if is_valid_image(reader, "image/gif") {
                                     Ok(("image/gif".to_owned(), bytes.to_vec()))
                                 } else {
-                                    Err(create_error!(LabelMe))
+                                    Err(create_error!(FileTypeNotAllowed))
                                 }
                             } else {
                                 Ok((
@@ -96,7 +96,7 @@ impl Request {
                             if video_size(&file).is_some() {
                                 Ok((mime.to_string(), bytes.to_vec()))
                             } else {
-                                Err(create_error!(LabelMe))
+                                Err(create_error!(FileTypeNotAllowed))
                             }
                         }
                     }
@@ -106,7 +106,7 @@ impl Request {
                 PROXY_CACHE.insert(url.to_owned(), result.clone()).await;
                 result
             } else {
-                Err(create_error!(LabelMe))
+                Err(create_error!(FileTypeNotAllowed))
             }
         }
     }
@@ -129,7 +129,7 @@ impl Request {
                 if matches!(mime.type_(), mime::IMAGE) {
                     response
                 } else {
-                    return Err(create_error!(LabelMe));
+                    return Err(create_error!(FileTypeNotAllowed));
                 }
             };
 
@@ -166,7 +166,7 @@ impl Request {
                 if matches!(mime.type_(), mime::VIDEO) {
                     response
                 } else {
-                    return Err(create_error!(LabelMe));
+                    return Err(create_error!(FileTypeNotAllowed));
                 }
             };
 

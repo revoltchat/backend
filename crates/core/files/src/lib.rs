@@ -167,7 +167,7 @@ pub fn decode_image<R: Read + BufRead + Seek>(reader: &mut R, mime: &str) -> Res
                                 jxl_image.height(),
                                 frame.image().buf().to_vec(),
                             )
-                            .ok_or_else(|| create_error!(LabelMe))?,
+                            .ok_or_else(|| create_error!(ImageProcessingFailed))?,
                         )
                         .to_rgb8(),
                     )),
@@ -178,14 +178,14 @@ pub fn decode_image<R: Read + BufRead + Seek>(reader: &mut R, mime: &str) -> Res
                                 jxl_image.height(),
                                 frame.image().buf().to_vec(),
                             )
-                            .ok_or_else(|| create_error!(LabelMe))?,
+                            .ok_or_else(|| create_error!(LabeImageProcessingFailedlMe))?,
                         )
                         .to_rgba8(),
                     )),
-                    _ => Err(create_error!(LabelMe)),
+                    _ => Err(create_error!(ImageProcessingFailed)),
                 }
             } else {
-                Err(create_error!(LabelMe))
+                Err(create_error!(ImageProcessingFailed))
             }
         }
         // Read image using resvg
@@ -197,7 +197,7 @@ pub fn decode_image<R: Read + BufRead + Seek>(reader: &mut R, mime: &str) -> Res
             let tree = report_internal_error!(usvg::Tree::from_data(&buf, &Default::default()))?;
             let size = tree.size();
             let mut pixmap = Pixmap::new(size.width() as u32, size.height() as u32)
-                .ok_or_else(|| create_error!(LabelMe))?;
+                .ok_or_else(|| create_error!(ImageProcessingFailed))?;
 
             let mut pixmap_mut = pixmap.as_mut();
             resvg::render(&tree, Default::default(), &mut pixmap_mut);
@@ -208,7 +208,7 @@ pub fn decode_image<R: Read + BufRead + Seek>(reader: &mut R, mime: &str) -> Res
                     size.height() as u32,
                     pixmap.data().to_vec(),
                 )
-                .ok_or_else(|| create_error!(LabelMe))?,
+                .ok_or_else(|| create_error!(ImageProcessingFailed))?,
             ))
         }
         // Check if we can read using image-rs crate
