@@ -9,34 +9,38 @@ use scraper::{Html, Selector};
 
 /// Create website metadata from URL and document
 pub async fn create_website_embed(original_url: &str, document: &str) -> Option<WebsiteMetadata> {
-    let document = Html::parse_document(document);
+    let (mut meta, mut link) = {
+        let document = Html::parse_document(document);
 
-    // create selectors
-    let meta_selector = Selector::parse("meta").ok()?;
-    let link_selector = Selector::parse("link").ok()?;
+        // create selectors
+        let meta_selector = Selector::parse("meta").ok()?;
+        let link_selector = Selector::parse("link").ok()?;
 
-    // extract meta tags
-    let mut meta = HashMap::new();
-    for el in document.select(&meta_selector) {
-        let node = el.value();
+        // extract meta tags
+        let mut meta = HashMap::new();
+        for el in document.select(&meta_selector) {
+            let node = el.value();
 
-        if let (Some(property), Some(content)) = (
-            node.attr("property").or_else(|| node.attr("name")),
-            node.attr("content"),
-        ) {
-            meta.insert(property.to_string(), content.to_string());
+            if let (Some(property), Some(content)) = (
+                node.attr("property").or_else(|| node.attr("name")),
+                node.attr("content"),
+            ) {
+                meta.insert(property.to_string(), content.to_string());
+            }
         }
-    }
 
-    // extract rel links
-    let mut link = HashMap::new();
-    for el in document.select(&link_selector) {
-        let node = el.value();
+        // extract rel links
+        let mut link = HashMap::new();
+        for el in document.select(&link_selector) {
+            let node = el.value();
 
-        if let (Some(property), Some(content)) = (node.attr("rel"), node.attr("href")) {
-            link.insert(property.to_string(), content.to_string());
+            if let (Some(property), Some(content)) = (node.attr("rel"), node.attr("href")) {
+                link.insert(property.to_string(), content.to_string());
+            }
         }
-    }
+
+        (meta, link)
+    };
 
     // build metadata
     let mut metadata = WebsiteMetadata {
@@ -137,32 +141,36 @@ pub async fn create_website_embed(original_url: &str, document: &str) -> Option<
     };
 
     // populate extra metadata for popular websites
-    populate_special(original_url.to_owned(), &mut metadata);
-
-    // TODO: these do not work because compiler is tripping:
+    populate_special(original_url.to_owned(), &mut metadata).await;
 
     // fetch video size if missing
-    // if let Some(Video { width, height, url }) = &metadata.video {
-    //     if width == &0 || height == &0 {
-    //         metadata.video = match crate::requests::Request::fetch_video_metadata(url, None).await {
-    //             Ok(Some(video)) => Some(video),
-    //             _ => None,
-    //         }
-    //     }
-    // }
+    if metadata.special.is_none() {
+        if let Some(Video { width, height, url }) = &metadata.video {
+            if width == &0 || height == &0 {
+                metadata.video =
+                    match crate::requests::Request::fetch_video_metadata(url, None).await {
+                        Ok(Some(video)) => Some(video),
+                        _ => None,
+                    }
+            }
+        }
+    }
 
     // fetch image size if missing
-    // if let Some(Image {
-    //     width, height, url, ..
-    // }) = &metadata.image
-    // {
-    //     if width == &0 || height == &0 {
-    //         metadata.image = match crate::requests::Request::fetch_image_metadata(url, None).await {
-    //             Ok(Some(image)) => Some(image),
-    //             _ => None,
-    //         }
-    //     }
-    // }
+    if metadata.special.is_none() && metadata.image.is_none() {
+        if let Some(Image {
+            width, height, url, ..
+        }) = &metadata.image
+        {
+            if width == &0 || height == &0 {
+                metadata.image =
+                    match crate::requests::Request::fetch_image_metadata(url, None).await {
+                        Ok(Some(image)) => Some(image),
+                        _ => None,
+                    }
+            }
+        }
+    }
 
     // truncate data
     metadata.truncate();
@@ -175,7 +183,7 @@ pub async fn create_website_embed(original_url: &str, document: &str) -> Option<
     }
 }
 
-pub fn populate_special(original_url: String, metadata: &mut WebsiteMetadata) {
+pub async fn populate_special(original_url: String, metadata: &mut WebsiteMetadata) {
     lazy_static! {
         static ref RE_YOUTUBE: Regex = Regex::new("^(?:(?:https?:)?//)?(?:(?:www|m)\\.)?(?:(?:youtube\\.com|youtu.be))(?:/(?:[\\w\\-]+\\?v=|embed/|v/)?)([\\w\\-]+)(?:\\S+)?$").unwrap();
 
@@ -223,15 +231,14 @@ pub fn populate_special(original_url: String, metadata: &mut WebsiteMetadata) {
             metadata.site_name.take();
 
             // Verify the video exists
-            // TODO: breaks axum :(
-            // if !crate::requests::Request::exists(&format!(
-            //     "http://img.youtube.com/vi/{}/sddefault.jpg",
-            //     id
-            // ))
-            // .await
-            // {
-            //     return;
-            // }
+            if !crate::requests::Request::exists(&format!(
+                "http://img.youtube.com/vi/{}/sddefault.jpg",
+                id
+            ))
+            .await
+            {
+                return;
+            }
         }
 
         if let Some(timestamp_captures) = RE_TIMESTAMP.captures_iter(url).next() {
