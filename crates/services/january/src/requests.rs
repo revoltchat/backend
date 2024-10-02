@@ -240,6 +240,7 @@ impl Request {
                     "Mozilla/5.0 (compatible; January/2.0; +https://github.com/revoltchat/backend)"
                 },
             )
+            .header("Accept-Language", "en-US,en;q=0.5")
             .send()
             .await
             .map_err(|_| create_error!(ProxyError))?;
