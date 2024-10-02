@@ -168,6 +168,14 @@ auto_derived!(
 impl WebsiteMetadata {
     /// Truncate strings in metadata
     pub fn truncate(&mut self) {
+        if let Some(s) = self.url.as_mut() {
+            s.truncate(256);
+        }
+
+        if let Some(s) = self.original_url.as_mut() {
+            s.truncate(256);
+        }
+
         if let Some(s) = self.title.as_mut() {
             s.truncate(100);
         }
@@ -178,6 +186,10 @@ impl WebsiteMetadata {
 
         if let Some(s) = self.site_name.as_mut() {
             s.truncate(32);
+        }
+
+        if let Some(s) = self.icon_url.as_mut() {
+            s.truncate(256);
         }
 
         if let Some(s) = self.colour.as_mut() {
