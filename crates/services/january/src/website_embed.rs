@@ -156,8 +156,13 @@ pub async fn create_website_embed(original_url: &str, document: &str) -> Option<
         }
     }
 
+    // remove image if video exists
+    if metadata.video.is_some() {
+        metadata.image.take();
+    }
+
     // fetch image size if missing
-    if metadata.special.is_none() && metadata.image.is_none() {
+    if metadata.special.is_none() {
         if let Some(Image {
             width, height, url, ..
         }) = &metadata.image

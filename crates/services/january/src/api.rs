@@ -1,6 +1,7 @@
 use axum::{extract::Query, response::IntoResponse, routing::get, Json, Router};
 use reqwest::header;
-use revolt_result::Result;
+use revolt_models::v0::Embed;
+use revolt_result::{create_error, Result};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -87,5 +88,9 @@ async fn embed(
     Query(UrlQuery { url }): Query<UrlQuery>,
     // TypedHeader(Authorization(_bearer)): TypedHeader<Authorization<Bearer>>,
 ) -> Result<impl IntoResponse> {
-    Request::generate_embed(url).await.map(Json)
+    match Request::generate_embed(url).await {
+        Ok(Embed::None) => Err(create_error!(NoEmbedData)),
+        result => result,
+    }
+    .map(Json)
 }
