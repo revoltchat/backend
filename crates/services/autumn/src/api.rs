@@ -11,7 +11,6 @@ use axum::{
     Json, Router,
 };
 use axum_typed_multipart::{FieldData, TryFromMultipart, TypedMultipart};
-use image::ImageReader;
 use lazy_static::lazy_static;
 use revolt_config::{config, report_internal_error};
 use revolt_database::{iso8601_timestamp::Timestamp, Database, FileHash, Metadata, User};
@@ -355,7 +354,11 @@ async fn fetch_preview(
     let data = retrieve_file_by_hash(&hash).await?;
 
     // Read image and create thumbnail
-    let data = create_thumbnail(decode_image(&mut Cursor::new(data), false)?, tag).await;
+    let data = create_thumbnail(
+        decode_image(&mut Cursor::new(data), &file.content_type)?,
+        tag,
+    )
+    .await;
 
     Ok((
         [

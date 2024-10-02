@@ -4,7 +4,7 @@ use aes_gcm::{
     aead::{AeadCore, AeadMutInPlace, OsRng},
     Aes256Gcm, Key, KeyInit, Nonce,
 };
-use image::DynamicImage;
+use image::{DynamicImage, ImageBuffer};
 use revolt_config::{config, report_internal_error, FilesS3};
 use revolt_result::{create_error, Result};
 
@@ -152,38 +152,67 @@ pub fn video_size(f: &NamedTempFile) -> Option<(i64, i64)> {
 }
 
 /// Decode image from reader
-pub fn decode_image<R: Read + BufRead + Seek>(
-    reader: &mut R,
-    is_jxl: bool,
-) -> Result<DynamicImage> {
-    if is_jxl {
-        Err(create_error!(LabelMe))
-    } else {
+pub fn decode_image<R: Read + BufRead + Seek>(reader: &mut R, mime: &str) -> Result<DynamicImage> {
+    match mime {
+        // Read image using jxl-oxide crate
+        "image/jxl" => {
+            let jxl_image = report_internal_error!(jxl_oxide::JxlImage::builder().read(reader))?;
+            if let Ok(frame) = jxl_image.render_frame(0) {
+                match frame.color_channels().len() {
+                    3 => Ok(DynamicImage::ImageRgb8(
+                        DynamicImage::ImageRgb32F(
+                            ImageBuffer::from_vec(
+                                jxl_image.width(),
+                                jxl_image.height(),
+                                frame.image().buf().to_vec(),
+                            )
+                            .ok_or_else(|| create_error!(LabelMe))?,
+                        )
+                        .to_rgb8(),
+                    )),
+                    4 => Ok(DynamicImage::ImageRgba8(
+                        DynamicImage::ImageRgba32F(
+                            ImageBuffer::from_vec(
+                                jxl_image.width(),
+                                jxl_image.height(),
+                                frame.image().buf().to_vec(),
+                            )
+                            .ok_or_else(|| create_error!(LabelMe))?,
+                        )
+                        .to_rgba8(),
+                    )),
+                    _ => Err(create_error!(LabelMe)),
+                }
+            } else {
+                Err(create_error!(LabelMe))
+            }
+        }
+        // Read image using resvg
+        "image/svg+xml" => Err(create_error!(LabelMe)),
         // Check if we can read using image-rs crate
-        report_internal_error!(report_internal_error!(
+        _ => report_internal_error!(report_internal_error!(
             image::ImageReader::new(reader).with_guessed_format()
         )?
-        .decode())
+        .decode()),
     }
 }
 
 /// Check whether given reader has a valid image
-pub fn is_valid_image<R: Read + BufRead + Seek>(reader: &mut R, is_jxl: bool) -> bool {
-    if is_jxl {
+pub fn is_valid_image<R: Read + BufRead + Seek>(reader: &mut R, mime: &str) -> bool {
+    match mime {
         // Check if we can read using jxl-oxide crate
-        jxl_oxide::JxlImage::builder()
+        "image/jxl" => jxl_oxide::JxlImage::builder()
             .read(reader)
             .inspect_err(|err| tracing::error!("Failed to read JXL! {err:?}"))
-            .is_ok()
-    } else {
-        !matches!(
-            // Check if we can read using image-rs crate
+            .is_ok(),
+        // Check if we can read using image-rs crate
+        _ => !matches!(
             image::ImageReader::new(reader)
                 .with_guessed_format()
                 .inspect_err(|err| tracing::error!("Failed to read image! {err:?}"))
                 .map(|f| f.decode()),
             Err(_) | Ok(Err(_))
-        )
+        ),
     }
 }
 

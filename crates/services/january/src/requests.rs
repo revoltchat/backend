@@ -71,7 +71,7 @@ impl Request {
                             let reader = &mut Cursor::new(&bytes);
 
                             if matches!(mime.subtype(), mime::GIF) {
-                                if is_valid_image(reader, false) {
+                                if is_valid_image(reader, "image/gif") {
                                     Ok(("image/gif".to_owned(), bytes.to_vec()))
                                 } else {
                                     Err(create_error!(LabelMe))
@@ -79,8 +79,11 @@ impl Request {
                             } else {
                                 Ok((
                                     "image/webp".to_owned(),
-                                    create_thumbnail(decode_image(reader, false)?, "attachments")
-                                        .await,
+                                    create_thumbnail(
+                                        decode_image(reader, mime.as_ref())?,
+                                        "attachments",
+                                    )
+                                    .await,
                                 ))
                             }
                         } else {
