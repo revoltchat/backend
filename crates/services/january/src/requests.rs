@@ -66,7 +66,7 @@ impl Request {
             let Request { response, mime } = Request::new(url).await?;
 
             if matches!(mime.type_(), mime::IMAGE | mime::VIDEO) {
-                let bytes = report_internal_error!(response.bytes().await)?;
+                let bytes = report_internal_error!(response.bytes().await);
 
                 let result = match bytes {
                     Ok(bytes) => {
