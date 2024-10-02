@@ -178,7 +178,7 @@ pub fn decode_image<R: Read + BufRead + Seek>(reader: &mut R, mime: &str) -> Res
                                 jxl_image.height(),
                                 frame.image().buf().to_vec(),
                             )
-                            .ok_or_else(|| create_error!(LabeImageProcessingFailedlMe))?,
+                            .ok_or_else(|| create_error!(ImageProcessingFailed))?,
                         )
                         .to_rgba8(),
                     )),
