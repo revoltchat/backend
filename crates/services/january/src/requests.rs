@@ -122,20 +122,21 @@ impl Request {
                 _ => Ok(None),
             }
         } else {
-            let response = if let Some(Request { response, .. }) = request {
-                response
+            let request = if let Some(request) = request {
+                request
             } else {
-                let Request { response, mime } = Request::new(url).await?;
-                if matches!(mime.type_(), mime::IMAGE) {
-                    response
+                let request = Request::new(url).await?;
+                if matches!(request.mime.type_(), mime::IMAGE) {
+                    request
                 } else {
                     return Err(create_error!(FileTypeNotAllowed));
                 }
             };
 
-            if let Some((width, height)) =
-                image_size_vec(&report_internal_error!(response.bytes().await)?)
-            {
+            if let Some((width, height)) = image_size_vec(
+                &report_internal_error!(request.response.bytes().await)?,
+                request.mime.as_ref(),
+            ) {
                 Ok(Some(Image {
                     url: url.to_owned(),
                     width,

@@ -124,13 +124,24 @@ pub fn image_size(f: &NamedTempFile) -> Option<(usize, usize)> {
 }
 
 /// Determine size of image with buffer
-pub fn image_size_vec(v: &[u8]) -> Option<(usize, usize)> {
-    if let Ok(size) = imagesize::blob_size(v)
-        .inspect_err(|err| tracing::error!("Failed to generate image size! {err:?}"))
-    {
-        Some((size.width, size.height))
-    } else {
-        None
+pub fn image_size_vec(v: &[u8], mime: &str) -> Option<(usize, usize)> {
+    match mime {
+        "image/svg+xml" => {
+            let tree =
+                report_internal_error!(usvg::Tree::from_data(v, &Default::default())).ok()?;
+
+            let size = tree.size();
+            Some((size.width() as usize, size.height() as usize))
+        }
+        _ => {
+            if let Ok(size) = imagesize::blob_size(v)
+                .inspect_err(|err| tracing::error!("Failed to generate image size! {err:?}"))
+            {
+                Some((size.width, size.height))
+            } else {
+                None
+            }
+        }
     }
 }
 
