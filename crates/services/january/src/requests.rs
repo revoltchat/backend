@@ -33,7 +33,10 @@ lazy_static! {
         .expect("reqwest Client");
 
     /// Spoof User Agent as Discord
-    static ref RE_USER_AGENT_SPOOFING_AS_DISCORD: Regex = Regex::new("^(?:(?:https?:)?//)?(?:(?:vx|fx)?twitter|(?:fixv|fixup)?x).com").expect("valid regex");
+    static ref RE_USER_AGENT_SPOOFING_AS_DISCORD: Regex = Regex::new("^(?:(?:https?:)?//)?(?:(?:vx|fx)?twitter|(?:fixv|fixup)?x|(?:old\\.|new\\.|www\\.)reddit).com").expect("valid regex");
+
+    /// Regex for matching new Reddit URLs
+    static ref RE_URL_NEW_REDDIT: Regex = Regex::new("^(?:(?:https?:)?//)?(?:(?:new\\.|www\\.)?reddit).com").expect("valid regex");
 
     /// Cache for proxy results
     static ref PROXY_CACHE: moka::future::Cache<String, Result<(String, Vec<u8>)>> = moka::future::Cache::builder()
@@ -185,7 +188,16 @@ impl Request {
     }
 
     /// Generate embed for a given URL
-    pub async fn generate_embed(url: String) -> Result<Embed> {
+    pub async fn generate_embed(mut url: String) -> Result<Embed> {
+        // Re-map certain links for better metadata generation
+        if RE_URL_NEW_REDDIT.is_match(&url) {
+            url = RE_URL_NEW_REDDIT
+                // Reddit has a bunch of clickbait-y marketing on the new URLs, so we use the old site instead
+                .replace(&url, "https://old.reddit.com")
+                .to_string();
+        }
+
+        // Generate the actual embed
         if let Some(hit) = EMBED_CACHE.get(&url).await {
             Ok(hit)
         } else {
