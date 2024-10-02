@@ -156,7 +156,7 @@ impl Request {
             let response = if let Some(Request { response, .. }) = request {
                 response
             } else {
-                let Request { response, mime } = Request::new(&url).await?;
+                let Request { response, mime } = Request::new(url).await?;
                 if matches!(mime.type_(), mime::VIDEO) {
                     response
                 } else {
@@ -261,5 +261,14 @@ impl Request {
             .map_err(|_| create_error!(ProxyError))?;
 
         Ok(Request { response, mime })
+    }
+
+    /// Check if something exists
+    pub async fn exists(url: &str) -> bool {
+        if let Ok(response) = CLIENT.head(url).send().await {
+            response.status().is_success()
+        } else {
+            false
+        }
     }
 }

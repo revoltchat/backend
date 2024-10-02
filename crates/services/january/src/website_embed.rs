@@ -207,24 +207,43 @@ pub fn populate_special(original_url: String, metadata: &mut WebsiteMetadata) {
             id: captures[1].to_string(),
         })
     } else if let Some(captures) = RE_YOUTUBE.captures_iter(url).next() {
+        let id = captures[1].to_string();
+
         lazy_static! {
             static ref RE_TIMESTAMP: Regex = Regex::new("(?:\\?|&)(?:t|start)=([\\w]+)").unwrap();
         }
 
-        if let Some(video) = &metadata.video {
-            if let Some(timestamp_captures) = RE_TIMESTAMP.captures_iter(&video.url).next() {
-                Some(Special::YouTube {
-                    id: captures[1].to_string(),
-                    timestamp: Some(timestamp_captures[1].to_string()),
-                })
-            } else {
-                Some(Special::YouTube {
-                    id: captures[1].to_string(),
-                    timestamp: None,
-                })
-            }
+        // YouTube now blocks datacentre IPs from fetching information
+        // This is a fallback to prevent the embed from looking weird
+        if metadata.video.is_none() {
+            metadata.title.replace("YouTube".to_owned());
+            metadata.description.take();
+            metadata.colour.take();
+            metadata.icon_url.take();
+            metadata.site_name.take();
+
+            // Verify the video exists
+            // TODO: breaks axum :(
+            // if !crate::requests::Request::exists(&format!(
+            //     "http://img.youtube.com/vi/{}/sddefault.jpg",
+            //     id
+            // ))
+            // .await
+            // {
+            //     return;
+            // }
+        }
+
+        if let Some(timestamp_captures) = RE_TIMESTAMP.captures_iter(url).next() {
+            Some(Special::YouTube {
+                id,
+                timestamp: Some(timestamp_captures[1].to_string()),
+            })
         } else {
-            None
+            Some(Special::YouTube {
+                id,
+                timestamp: None,
+            })
         }
     } else if let Some(captures) = RE_LIGHTSPEED.captures_iter(url).next() {
         Some(Special::Lightspeed {
