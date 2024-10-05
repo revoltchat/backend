@@ -118,12 +118,14 @@ pub async fn handle_ack_event(
                     .map(|(_, message, _, _)| message.id.clone())
                     .collect();
 
-                db.add_mention_to_unread(channel, user, &message_ids)
-                    .await?;
+                if !message_ids.is_empty() {
+                    db.add_mention_to_unread(channel, user, &message_ids)
+                        .await?;
+                }
             }
 
             for (push, _, recipients, silenced) in messages {
-                if *silenced || push.is_none() {
+                if *silenced || recipients.is_empty() || push.is_none() {
                     continue;
                 }
 
