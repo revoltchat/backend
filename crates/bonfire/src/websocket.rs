@@ -1,18 +1,22 @@
-use std::{collections::HashSet, net::SocketAddr, sync::Arc};
+use std::{collections::HashSet, sync::Arc};
 
-use async_tungstenite::WebSocketStream;
+use fastwebsockets::upgrade::UpgradeFut;
 use authifier::AuthifierEvent;
+use fastwebsockets::{FragmentCollectorRead, Frame, WebSocket, WebSocketError, WebSocketRead, WebSocketWrite};
 use fred::{
     error::{RedisError, RedisErrorKind},
     interfaces::{ClientLike, EventInterface, PubsubInterface},
     types::RedisConfig,
 };
+use flume::bounded;
+use tokio::select;
 use futures::{
-    channel::oneshot,
-    join, pin_mut, select,
+    FutureExt,
+    join, pin_mut,
     stream::{SplitSink, SplitStream},
-    FutureExt, SinkExt, StreamExt, TryStreamExt,
 };
+use hyper::upgrade::Upgraded;
+use hyper_util::rt::TokioIo;
 use redis_kiss::{PayloadType, REDIS_PAYLOAD_TYPE, REDIS_URI};
 use revolt_config::report_internal_error;
 use revolt_database::{
@@ -21,55 +25,47 @@ use revolt_database::{
 };
 use revolt_presence::{create_session, delete_session};
 
-use async_std::{
+use tokio::{
     net::TcpStream,
     sync::{Mutex, RwLock},
     task::spawn,
 };
 use revolt_result::create_error;
 use sentry::Level;
+use tokio::io::{ReadHalf, WriteHalf};
 
-use crate::config::{ProtocolConfiguration, WebsocketHandshakeCallback};
+use crate::config::{ProtocolConfiguration};
 use crate::events::state::{State, SubscriptionStateChange};
 
-type WsReader = SplitStream<WebSocketStream<TcpStream>>;
-type WsWriter = SplitSink<WebSocketStream<TcpStream>, async_tungstenite::tungstenite::Message>;
+type Ws = TokioIo<Upgraded>;
 
-/// Start a new WebSocket client worker given access to the database,
-/// the relevant TCP stream and the remote address of the client.
-pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) {
+type WsReader = FragmentCollectorRead<ReadHalf<Ws>>;
+type WsWriter = WebSocketWrite<WriteHalf<Ws>>;
+
+/// Start a new WebSocket client worker given access to the database
+/// and upgrade future
+pub async fn client(db: &'static Database, fut: UpgradeFut, mut config: ProtocolConfiguration) {
+    let mut ws = fut.await.expect("Could not upgrade");
     // Upgrade the TCP connection to a WebSocket connection.
     // In this process, we also parse any additional parameters given.
     // e.g. wss://example.com?format=json&version=1
-    let (sender, receiver) = oneshot::channel();
-    let Ok(ws) = async_tungstenite::accept_hdr_async_with_config(
-        stream,
-        WebsocketHandshakeCallback::from(sender),
-        None,
-    )
-    .await
-    else {
-        return;
-    };
-
-    // Verify we've received a valid config, otherwise we should just drop the connection.
-    let Ok(mut config) = receiver.await else {
-        return;
-    };
 
     info!(
-        "User {addr:?} provided protocol configuration (version = {}, format = {:?})",
+        "User provided protocol configuration (version = {}, format = {:?})",
         config.get_protocol_version(),
         config.get_protocol_format()
     );
 
     // Split the socket for simultaneously read and write.
-    let (mut write, mut read) = ws.split();
+    let (read, mut write) = ws.split(tokio::io::split);
+    let mut read = FragmentCollectorRead::new(read);
 
     // If the user has not provided authentication, request information.
     if config.get_session_token().is_none() {
-        while let Ok(Some(message)) = read.try_next().await {
-            if let Ok(ClientMessage::Authenticate { token }) = config.decode(&message) {
+        while let Ok(frame) = read.read_frame::<_, WebSocketError>(&mut move |_| async {
+            unreachable!();
+        }).await {
+            if let Ok(ClientMessage::Authenticate { token }) = config.decode(&frame) {
                 config.set_session_token(token);
                 break;
             }
@@ -79,7 +75,7 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
     // Try to authenticate the user.
     let Some(token) = config.get_session_token().as_ref() else {
         write
-            .send(config.encode(&create_error!(InvalidSession)))
+            .write_frame(config.encode(&create_error!(InvalidSession)))
             .await
             .ok();
         return;
@@ -88,19 +84,17 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
     let (user, session_id) = match User::from_token(db, token, UserHint::Any).await {
         Ok(user) => user,
         Err(err) => {
-            write.send(config.encode(&err)).await.ok();
+            write.write_frame(config.encode(&err)).await.ok();
             return;
         }
     };
-
-    info!("User {addr:?} authenticated as @{}", user.username);
 
     // Create local state.
     let mut state = State::from(user, session_id);
     let user_id = state.cache.user_id.clone();
 
     // Notify socket we have authenticated.
-    if report_internal_error!(write.send(config.encode(&EventV1::Authenticated)).await).is_err() {
+    if report_internal_error!(write.write_frame(config.encode(&EventV1::Authenticated)).await).is_err() {
         return;
     }
 
@@ -114,7 +108,7 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
         Err(_) => return,
     };
 
-    if report_internal_error!(write.send(config.encode(&ready_payload)).await).is_err() {
+    if report_internal_error!(write.write_frame(config.encode(&ready_payload)).await).is_err() {
         return;
     }
 
@@ -131,18 +125,17 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
         let write = Mutex::new(write);
         let subscribed = state.subscribed.clone();
         let active_servers = state.active_servers.clone();
-        let (topic_signal_s, topic_signal_r) = async_channel::unbounded();
+        let (topic_signal_s, topic_signal_r) = flume::unbounded();
 
         // TODO: this needs to be rewritten
         // Create channels through which the tasks can signal to each other they need to clean up
-        let (kill_signal_1_s, kill_signal_1_r) = async_channel::bounded(1);
-        let (kill_signal_2_s, kill_signal_2_r) = async_channel::bounded(1);
+        let (kill_signal_1_s, kill_signal_1_r) = bounded(1);
+        let (kill_signal_2_s, kill_signal_2_r) = bounded(1);
 
         // Create a PubSub connection to poll on.
         let listener = listener_with_kill_signal(
             db,
             &mut state,
-            addr,
             &config,
             topic_signal_r,
             kill_signal_1_r,
@@ -152,7 +145,6 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
 
         // Read from WebSocket stream.
         let worker = worker_with_kill_signal(
-            addr,
             subscribed,
             active_servers,
             user_id.clone(),
@@ -179,33 +171,30 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
 async fn listener_with_kill_signal(
     db: &'static Database,
     state: &mut State,
-    addr: SocketAddr,
     config: &ProtocolConfiguration,
-    topic_signal_r: async_channel::Receiver<()>,
-    kill_signal_r: async_channel::Receiver<()>,
+    topic_signal_r: flume::Receiver<()>,
+    kill_signal_r: flume::Receiver<()>,
     write: &Mutex<WsWriter>,
-    kill_signal_s: async_channel::Sender<()>,
+    kill_signal_s: flume::Sender<()>,
 ) {
     listener(
         db,
         state,
-        addr,
         config,
         topic_signal_r,
         kill_signal_r,
         write,
     )
     .await;
-    kill_signal_s.send(()).await.ok();
+    kill_signal_s.send_async(()).await.ok();
 }
 
 async fn listener(
     db: &'static Database,
     state: &mut State,
-    addr: SocketAddr,
     config: &ProtocolConfiguration,
-    topic_signal_r: async_channel::Receiver<()>,
-    kill_signal_r: async_channel::Receiver<()>,
+    topic_signal_r: flume::Receiver<()>,
+    kill_signal_r: flume::Receiver<()>,
     write: &Mutex<WsWriter>,
 ) {
     let redis_config = RedisConfig::from_url(&REDIS_URI).unwrap();
@@ -221,13 +210,13 @@ async fn listener(
     }
 
     // Handle Redis connection dropping
-    let (clean_up_s, clean_up_r) = async_channel::bounded(1);
+    let (clean_up_s, clean_up_r) = bounded(1);
     let clean_up_s = Arc::new(Mutex::new(clean_up_s));
     subscriber.on_error(move |err| {
         if let RedisErrorKind::Canceled = err.kind() {
             let clean_up_s = clean_up_s.clone();
             spawn(async move {
-                clean_up_s.lock().await.send(()).await.ok();
+                clean_up_s.lock().await.send_async(()).await.ok();
             });
         }
 
@@ -250,13 +239,9 @@ async fn listener(
                     }
                 }
 
-                #[cfg(debug_assertions)]
-                info!("{addr:?} has reset their subscriptions");
             }
             SubscriptionStateChange::Change { add, remove } => {
                 for id in remove {
-                    #[cfg(debug_assertions)]
-                    info!("{addr:?} unsubscribing from {id}");
 
                     if report_internal_error!(subscriber.unsubscribe(id).await).is_err() {
                         break 'out;
@@ -264,8 +249,6 @@ async fn listener(
                 }
 
                 for id in add {
-                    #[cfg(debug_assertions)]
-                    info!("{addr:?} subscribing to {id}");
 
                     if report_internal_error!(subscriber.subscribe(id).await).is_err() {
                         break 'out;
@@ -276,9 +259,9 @@ async fn listener(
         }
 
         let t1 = message_rx.recv().fuse();
-        let t2 = topic_signal_r.recv().fuse();
-        let t3 = kill_signal_r.recv().fuse();
-        let t4 = clean_up_r.recv().fuse();
+        let t2 = topic_signal_r.recv_async().fuse();
+        let t3 = kill_signal_r.recv_async().fuse();
+        let t4 = clean_up_r.recv_async().fuse();
 
         pin_mut!(t1, t2, t3, t4);
 
@@ -351,11 +334,11 @@ async fn listener(
                     }
                 }
 
-                let result = write.lock().await.send(config.encode(&event)).await;
+                let result = write.lock().await.write_frame(config.encode(&event)).await;
                 if let Err(e) = result {
-                    use async_tungstenite::tungstenite::Error;
-                    if !matches!(e, Error::AlreadyClosed | Error::ConnectionClosed) {
-                        let err = format!("Error while sending an event to {addr:?}: {e:?}");
+                    use fastwebsockets::WebSocketError;
+                    if !matches!(e, WebSocketError::ConnectionClosed) {
+                        let err = format!("Error while sending an event to client: {e:?}");
                         warn!("{}", err);
                         sentry::capture_message(&err, Level::Warning);
                     }
@@ -364,7 +347,6 @@ async fn listener(
                 }
 
                 if let EventV1::Logout = event {
-                    info!("User {addr:?} received log out event!");
                     break 'out;
                 }
             }
@@ -376,19 +358,17 @@ async fn listener(
 
 #[allow(clippy::too_many_arguments)]
 async fn worker_with_kill_signal(
-    addr: SocketAddr,
     subscribed: Arc<RwLock<HashSet<String>>>,
     active_servers: Arc<Mutex<lru_time_cache::LruCache<String, ()>>>,
     user_id: String,
     config: &ProtocolConfiguration,
-    topic_signal_s: async_channel::Sender<()>,
-    kill_signal_r: async_channel::Receiver<()>,
+    topic_signal_s: flume::Sender<()>,
+    kill_signal_r: flume::Receiver<()>,
     read: WsReader,
     write: &Mutex<WsWriter>,
-    kill_signal_s: async_channel::Sender<()>,
+    kill_signal_s: flume::Sender<()>,
 ) {
     worker(
-        addr,
         subscribed,
         active_servers,
         user_id,
@@ -399,24 +379,26 @@ async fn worker_with_kill_signal(
         write,
     )
     .await;
-    kill_signal_s.send(()).await.ok();
+    kill_signal_s.send_async(()).await.ok();
 }
 
 #[allow(clippy::too_many_arguments)]
 async fn worker(
-    addr: SocketAddr,
     subscribed: Arc<RwLock<HashSet<String>>>,
     active_servers: Arc<Mutex<lru_time_cache::LruCache<String, ()>>>,
     user_id: String,
     config: &ProtocolConfiguration,
-    topic_signal_s: async_channel::Sender<()>,
-    kill_signal_r: async_channel::Receiver<()>,
+    topic_signal_s: flume::Sender<()>,
+    kill_signal_r: flume::Receiver<()>,
     mut read: WsReader,
     write: &Mutex<WsWriter>,
 ) {
+    let send_fn = &mut move |_| async {
+        unreachable!();
+    };
     loop {
-        let t1 = read.try_next().fuse();
-        let t2 = kill_signal_r.recv().fuse();
+        let t1 = read.read_frame::<_, WebSocketError>(send_fn);
+        let t2 = kill_signal_r.recv_async().fuse();
 
         pin_mut!(t1, t2);
 
@@ -426,16 +408,11 @@ async fn worker(
             },
             result = t1 => {
                 let msg = match result {
-                    Ok(Some(msg)) => msg,
-                    Ok(None) => {
-                        warn!("Received a None message!");
-                        sentry::capture_message("Received a None message!", Level::Warning);
-                        return;
-                    }
+                    Ok(msg) => msg,
                     Err(e) => {
-                        use async_tungstenite::tungstenite::Error;
-                        if !matches!(e, Error::AlreadyClosed | Error::ConnectionClosed) {
-                            let err = format!("Error while reading an event from {addr:?}: {e:?}");
+                        use fastwebsockets::WebSocketError;
+                        if !matches!(e, WebSocketError::ConnectionClosed) {
+                            let err = format!("Error while reading an event from client: {e:?}");
                             warn!("{}", err);
                             sentry::capture_message(&err, Level::Warning);
                         }
@@ -480,7 +457,7 @@ async fn worker(
 
                         if !has_item {
                             // Poke the listener to adjust subscriptions
-                            topic_signal_s.send(()).await.ok();
+                            topic_signal_s.send_async(()).await.ok();
                         }
                     }
                     ClientMessage::Ping { data, responded } => {
@@ -488,7 +465,7 @@ async fn worker(
                             write
                                 .lock()
                                 .await
-                                .send(config.encode(&EventV1::Pong { data }))
+                                .write_frame(config.encode(&EventV1::Pong { data }))
                                 .await
                                 .ok();
                         }
