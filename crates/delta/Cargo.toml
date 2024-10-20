@@ -61,13 +61,13 @@ rocket_prometheus = "0.10.0-rc.3"
 
 # spec generation
 schemars = "0.8.8"
-revolt_rocket_okapi = { version = "0.9.1", features = ["swagger"] }
+revolt_rocket_okapi = { version = "0.10.0", features = ["swagger"] }
 
 # rabbit
 amqprs = { version = "1.7.0" }
 
 # core
-authifier = "1.0.8"
+authifier = "1.0.9"
 revolt-config = { path = "../core/config" }
 revolt-database = { path = "../core/database", features = [
     "rocket-impl",
