@@ -100,17 +100,15 @@ impl TestHarness {
         }
 
         let mut stream = self.sub.on_message();
-        while let Some(underlying) = stream.next().await {
-            if let Ok(item) = underlying {
-                let msg_topic = item.get_channel_name();
-                let payload: EventV1 = redis_kiss::decode_payload(&item).unwrap();
+        while let Some(item) = stream.next().await {
+            let msg_topic = item.get_channel_name();
+            let payload: EventV1 = redis_kiss::decode_payload(&item).unwrap();
 
-                if topic == msg_topic && predicate(&payload) {
-                    return payload;
-                }
-
-                self.event_buffer.push((msg_topic.to_string(), payload));
+            if topic == msg_topic && predicate(&payload) {
+                return payload;
             }
+
+            self.event_buffer.push((msg_topic.to_string(), payload));
         }
 
         // WARNING: if predicate is never satisfied, this will never return
