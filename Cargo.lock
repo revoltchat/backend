@@ -446,9 +446,7 @@ dependencies = [
 
 [[package]]
 name = "authifier"
-version = "1.0.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30269caf0aaf1e1b542b150030e9688bf41d50026e09a51efd9408f332636c9d"
+version = "1.0.9"
 dependencies = [
  "async-std",
  "async-trait",
@@ -467,7 +465,7 @@ dependencies = [
  "regex",
  "reqwest 0.11.10",
  "revolt_okapi",
- "revolt_rocket_okapi 0.9.1",
+ "revolt_rocket_okapi 0.10.0",
  "rocket",
  "rust-argon2",
  "schemars",
@@ -5802,12 +5800,12 @@ dependencies = [
 
 [[package]]
 name = "rocket_empty"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c0922e47f981204fee38578a8efcf47a5c1a4ac0eb7f59e6bdfa3e61c8e3d69"
+checksum = "97a55000e1ef5f4a9b20ae3d9de2a0bd22620c78ebd1aa568776ae12276125a6"
 dependencies = [
  "revolt_okapi",
- "revolt_rocket_okapi 0.9.1",
+ "revolt_rocket_okapi 0.10.0",
  "rocket",
 ]
 
