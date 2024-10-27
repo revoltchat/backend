@@ -175,6 +175,7 @@ pub struct FilesLimit {
 #[derive(Deserialize, Debug, Clone)]
 pub struct FilesS3 {
     pub endpoint: String,
+    pub path_style_buckets: bool,
     pub region: String,
     pub access_key_id: String,
     pub secret_access_key: String,
