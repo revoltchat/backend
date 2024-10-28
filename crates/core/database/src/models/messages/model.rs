@@ -493,7 +493,7 @@ impl Message {
                             }
                             _ => vec![],
                         },
-                        false,
+                        self.has_suppressed_notifications(),
                     )],
                 },
             )
