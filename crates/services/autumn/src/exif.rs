@@ -17,23 +17,24 @@ pub async fn strip_metadata(
 ) -> Result<(Vec<u8>, Metadata)> {
     match &metadata {
         Metadata::Image { width, height } => match mime {
-            // little_exif does not appear to parse JPEGs correctly? had 2/2 files fail
-            /* "image/jpeg" | "image/png" => {
-                // use little_exif to strip metadata except for orientation and colour profile
-                // PNGs must also be re-encoded to mitigate CVE-2023-21036
-                let metadata = revolt_little_exif::metadata::Metadata::new_from_path_with_filetype(
-                    file.path(),
-                    match mime {
-                        "image/jpeg" => revolt_little_exif::filetype::FileExtension::JPEG,
-                        "image/png" => revolt_little_exif::filetype::FileExtension::PNG {
-                            as_zTXt_chunk: true,
-                        },
-                        _ => unreachable!(),
-                    },
-                )
-                .unwrap();
-                dbg!(metadata.data());
-            } */
+            // // little_exif does not appear to parse JPEGs correctly? had 2/2 files fail
+            // "image/jpeg" | "image/png" => {
+            //     // use little_exif to strip metadata except for orientation and colour profile
+            //     // PNGs must also be re-encoded to mitigate CVE-2023-21036
+            //     let metadata = revolt_little_exif::metadata::Metadata::new_from_path_with_filetype(
+            //         file.path(),
+            //         match mime {
+            //             "image/jpeg" => revolt_little_exif::filetype::FileExtension::JPEG,
+            //             "image/png" => revolt_little_exif::filetype::FileExtension::PNG {
+            //                 as_zTXt_chunk: true,
+            //             },
+            //             _ => unreachable!(),
+            //         },
+            //     )
+            //     .unwrap();
+            //     dbg!(metadata.data());
+            //     todo!()
+            // }
             // Apply orientation manually & strip all other EXIF data
             "image/jpeg" | "image/png" | "image/avif" | "image/tiff" => {
                 // Create a reader
