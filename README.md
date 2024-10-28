@@ -95,17 +95,21 @@ Then continue:
 # start other necessary services
 docker compose up -d
 
+# run everything together
+./scripts/start.sh
+# .. or individually
 # run the API server
 cargo run --bin revolt-delta
 # run the events server
 cargo run --bin revolt-bonfire
 # run the file server
 cargo run --bin revolt-autumn
-# run th proxy server
+# run the proxy server
 cargo run --bin revolt-january
 
 # hint:
 # mold -run <cargo build, cargo run, etc...>
+# mold -run ./scripts/start.sh
 ```
 
 You can start a web client by doing the following:
