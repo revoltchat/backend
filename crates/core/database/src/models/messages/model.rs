@@ -7,7 +7,7 @@ use revolt_models::v0::{
     self, BulkMessageResponse, DataMessageSend, Embed, MessageAuthor, MessageFlags, MessageSort,
     MessageWebhook, PushNotification, ReplyIntent, SendableEmbed, Text, RE_MENTION,
 };
-use revolt_permissions::ChannelPermission;
+use revolt_permissions::{ChannelPermission, PermissionValue};
 use revolt_result::Result;
 use ulid::Ulid;
 use validator::Validate;
