@@ -57,7 +57,11 @@ pub async fn queue_ack(channel: String, user: String, event: AckEvent) {
     })
     .ok();
 
-    info!("Queue is using {} slots from {}.", Q.len(), Q.capacity());
+    info!(
+        "Queue is using {} slots from {}. Queued type: ACK",
+        Q.len(),
+        Q.capacity()
+    );
 }
 
 pub async fn queue_message(channel: String, event: AckEvent) {
@@ -68,7 +72,11 @@ pub async fn queue_message(channel: String, event: AckEvent) {
     })
     .ok();
 
-    info!("Queue is using {} slots from {}.", Q.len(), Q.capacity());
+    info!(
+        "Queue is using {} slots from {}. Queued type: MENTION",
+        Q.len(),
+        Q.capacity()
+    );
 }
 
 pub async fn handle_ack_event(
@@ -105,11 +113,18 @@ pub async fn handle_ack_event(
         }
         AckEvent::ProcessMessage { messages } => {
             let mut users: HashSet<&String> = HashSet::new();
+            debug!(
+                "Processing {} messages from channel {}",
+                messages.len(),
+                messages[0].1.channel
+            );
 
             // find all the users we'll be notifying
             messages
                 .iter()
                 .for_each(|(_, _, recipents, _)| users.extend(recipents.iter()));
+
+            debug!("Found {} users to notify.", users.len());
 
             for user in users {
                 let message_ids: Vec<String> = messages
@@ -122,13 +137,25 @@ pub async fn handle_ack_event(
                     db.add_mention_to_unread(channel, user, &message_ids)
                         .await?;
                 }
+                debug!("Added {} mentions for user {}", message_ids.len(), &user);
             }
 
             for (push, _, recipients, silenced) in messages {
                 if *silenced || recipients.is_empty() || push.is_none() {
+                    debug!(
+                        "Rejecting push: silenced: {}, recipient count: {}, push exists: {:?}",
+                        *silenced,
+                        recipients.length(),
+                        push
+                    );
                     continue;
                 }
 
+                debug!(
+                    "Sending push event to AMQP; message {} for {} users",
+                    push.as_ref().unwrap().message.id,
+                    recipients.len()
+                );
                 if let Err(err) = amqp
                     .message_sent(recipients.clone(), push.clone().unwrap())
                     .await
@@ -162,6 +189,7 @@ pub async fn worker(db: Database, amqp: AMQP) {
                 let (user, channel, _) = key;
 
                 if let Err(err) = handle_ack_event(&event, &db, &amqp, user, channel).await {
+                    revolt_config::capture_error(&err);
                     error!("{err:?} for {event:?}. ({user:?}, {channel})");
                 } else {
                     info!("User {user:?} ack in {channel} with {event:?}");
