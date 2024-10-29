@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, hash::RandomState};
 
 use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
@@ -7,7 +7,7 @@ use revolt_models::v0::{
     self, BulkMessageResponse, DataMessageSend, Embed, MessageAuthor, MessageFlags, MessageSort,
     MessageWebhook, PushNotification, ReplyIntent, SendableEmbed, Text, RE_MENTION,
 };
-use revolt_permissions::{ChannelPermission, PermissionValue};
+use revolt_permissions::ChannelPermission;
 use revolt_result::Result;
 use ulid::Ulid;
 use validator::Validate;
@@ -335,6 +335,48 @@ impl Message {
                 }
 
                 replies.insert(message.id);
+            }
+        }
+
+        // Validate the mentions go to users in the channel/server
+        if !mentions.is_empty() {
+            match channel {
+                Channel::DirectMessage { ref recipients, .. }
+                | Channel::Group { ref recipients, .. } => {
+                    let recipients_hash: HashSet<&String, RandomState> =
+                        HashSet::from_iter(recipients);
+                    mentions.retain(|m| recipients_hash.contains(m));
+                }
+                Channel::TextChannel { ref server, .. }
+                | Channel::VoiceChannel { ref server, .. } => {
+                    let mentions_vec = Vec::from_iter(mentions.iter().cloned());
+
+                    let valid_members = db.fetch_members(server.as_str(), &mentions_vec[..]).await;
+                    if let Ok(valid_members) = valid_members {
+                        let valid_mentions: HashSet<&String, RandomState> =
+                            HashSet::from_iter(valid_members.iter().map(|m| &m.id.user));
+
+                        mentions.retain(|m| valid_mentions.contains(m)); // quick pass, validate mentions are in the server
+
+                    // Need to build a struct for bulk querying user permissions for a channel,
+                    // as this would involve fetching all the requisite information (server permissions, channel permissions, etc) for every user.
+                    // if !mentions.is_empty() {
+                    //     // if there are still mentions, drill down to a channel-level
+                    //     for member in valid_members.iter() {
+                    //         DatabasePermissionQuery::new(db, member.into())
+                    //             .channel(&channel)
+                    //             .member(&member)
+                    //             .
+                    //    }
+                    // }
+                    } else {
+                        revolt_config::capture_error(&valid_members.unwrap_err());
+                        return Err(create_error!(InternalError));
+                    }
+                }
+                Channel::SavedMessages { .. } => {
+                    mentions.clear();
+                }
             }
         }
 
