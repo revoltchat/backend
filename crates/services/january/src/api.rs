@@ -1,15 +1,13 @@
-use axum::{body::Bytes, extract::Query, routing::get, Json, Router};
+use axum::{extract::Query, response::IntoResponse, routing::get, Json, Router};
+use reqwest::header;
 use revolt_models::v0::Embed;
-use revolt_result::Result;
+use revolt_result::{create_error, Result};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use axum_extra::{
-    headers::{authorization::Bearer, Authorization},
-    TypedHeader,
-};
-
 use crate::requests::Request;
+
+pub static CACHE_CONTROL: &str = "public, max-age=600, immutable";
 
 pub async fn router() -> Router {
     Router::new()
@@ -59,8 +57,17 @@ struct UrlQuery {
         ("url" = String, Query, description = "URL to fetch")
     ),
 )]
-async fn proxy(Query(UrlQuery { url }): Query<UrlQuery>) -> Result<Bytes> {
-    Request::proxy_file(&url).await
+async fn proxy(Query(UrlQuery { url }): Query<UrlQuery>) -> Result<impl IntoResponse> {
+    Request::proxy_file(&url).await.map(|(content_type, data)| {
+        (
+            [
+                (header::CONTENT_TYPE, content_type),
+                (header::CONTENT_DISPOSITION, "inline".to_owned()),
+                (header::CACHE_CONTROL, CACHE_CONTROL.to_owned()),
+            ],
+            data,
+        )
+    })
 }
 
 /// Generate embed for a given URL
@@ -79,7 +86,11 @@ async fn proxy(Query(UrlQuery { url }): Query<UrlQuery>) -> Result<Bytes> {
 )]
 async fn embed(
     Query(UrlQuery { url }): Query<UrlQuery>,
-    TypedHeader(Authorization(_bearer)): TypedHeader<Authorization<Bearer>>,
-) -> Result<Json<Embed>> {
-    Request::generate_embed(&url).await.map(Json)
+    // TypedHeader(Authorization(_bearer)): TypedHeader<Authorization<Bearer>>,
+) -> Result<impl IntoResponse> {
+    match Request::generate_embed(url).await {
+        Ok(Embed::None) => Err(create_error!(NoEmbedData)),
+        result => result,
+    }
+    .map(Json)
 }

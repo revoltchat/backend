@@ -1,19 +1,26 @@
 [package]
 name = "revolt-january"
-version = "0.7.14"
+version = "0.7.18"
 edition = "2021"
 
 [dependencies]
 # Utility
 mime = "0.3.17"
+regex = "1.11.0"
+tempfile = "3.13.0"
 lazy_static = "1.5.0"
 moka = { version = "0.12.8", features = ["future"] }
+
+# Web scraping
+scraper = "0.20.0"
+encoding_rs = "0.8.34"
 
 # Serialisation
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.68"
 
 # Async runtime
+async-recursion = "1.1.1"
 tokio = { version = "1.0", features = ["full"] }
 
 # Web requests
@@ -24,12 +31,13 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Core crates
-revolt-config = { version = "0.7.16", path = "../../core/config" }
-revolt-models = { version = "0.7.16", path = "../../core/models" }
-revolt-result = { version = "0.7.16", path = "../../core/result", features = [
+revolt-config = { version = "0.7.18", path = "../../core/config" }
+revolt-models = { version = "0.7.18", path = "../../core/models" }
+revolt-result = { version = "0.7.18", path = "../../core/result", features = [
     "utoipa",
     "axum",
 ] }
+revolt-files = { version = "0.7.18", path = "../../core/files" }
 
 # Axum / web server
 axum = { version = "0.7.5" }

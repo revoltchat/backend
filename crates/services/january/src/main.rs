@@ -11,6 +11,7 @@ use utoipa_scalar::{Scalar, Servable as ScalarServable};
 
 mod api;
 pub mod requests;
+pub mod website_embed;
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -65,6 +66,8 @@ async fn main() -> Result<(), std::io::Error> {
         .nest("/", api::router().await);
 
     // Configure TCP listener and bind
+    tracing::info!("Listening on 0.0.0.0:14705");
+    tracing::info!("Play around with the API: http://localhost:14705/scalar");
     let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 14705));
     let listener = TcpListener::bind(&address).await?;
     axum::serve(listener, app.into_make_service()).await

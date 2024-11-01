@@ -162,6 +162,8 @@ pub enum ErrorType {
         max: usize,
     },
     FileTypeNotAllowed,
+    ImageProcessingFailed,
+    NoEmbedData,
 
     // ? Legacy errors
     VosoUnavailable,

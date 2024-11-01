@@ -11,11 +11,12 @@ use axum::{
     Json, Router,
 };
 use axum_typed_multipart::{FieldData, TryFromMultipart, TypedMultipart};
-use image::ImageReader;
 use lazy_static::lazy_static;
 use revolt_config::{config, report_internal_error};
 use revolt_database::{iso8601_timestamp::Timestamp, Database, FileHash, Metadata, User};
-use revolt_files::{fetch_from_s3, upload_to_s3, AUTHENTICATION_TAG_SIZE_BYTES};
+use revolt_files::{
+    create_thumbnail, decode_image, fetch_from_s3, upload_to_s3, AUTHENTICATION_TAG_SIZE_BYTES,
+};
 use revolt_result::{create_error, Result};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
@@ -352,30 +353,12 @@ async fn fetch_preview(
     // Original image data
     let data = retrieve_file_by_hash(&hash).await?;
 
-    // Dimensions we need to resize to
-    let config = config().await;
-    let [w, h] = config.files.preview.get(tag).unwrap();
-
-    // Read the image and resize it
-    // TODO: use jxl_oxide to process image/jxl files
-    let image = report_internal_error!(report_internal_error!(ImageReader::new(Cursor::new(
-        data
-    ))
-    .with_guessed_format())?
-    .decode())?
-    //.resize(width as u32, height as u32, image::imageops::FilterType::Gaussian)
-    // resize is about 2.5x slower,
-    // thumbnail doesn't have terrible quality
-    // so we use thumbnail
-    .thumbnail(*w as u32, *h as u32);
-
-    // Encode it into WEBP
-    let encoder = webp::Encoder::from_image(&image).expect("Could not create encoder.");
-    let data = if config.files.webp_quality != 100.0 {
-        encoder.encode(config.files.webp_quality).to_vec()
-    } else {
-        encoder.encode_lossless().to_vec()
-    };
+    // Read image and create thumbnail
+    let data = create_thumbnail(
+        decode_image(&mut Cursor::new(data), &file.content_type)?,
+        tag,
+    )
+    .await;
 
     Ok((
         [
