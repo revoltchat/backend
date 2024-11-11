@@ -1,4 +1,5 @@
 use authifier::AuthifierEvent;
+use revolt_result::Error;
 use serde::{Deserialize, Serialize};
 
 use revolt_models::v0::{
@@ -7,21 +8,8 @@ use revolt_models::v0::{
     PartialChannel, PartialMember, PartialMessage, PartialRole, PartialServer, PartialUser,
     PartialWebhook, RemovalIntention, Report, Server, User, UserSettings, Webhook,
 };
-use revolt_result::Error;
 
 use crate::Database;
-
-/// WebSocket Client Errors
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "error")]
-pub enum WebSocketError {
-    LabelMe,
-    InternalError { at: String },
-    InvalidSession,
-    OnboardingNotFinished,
-    AlreadyAuthenticated,
-    MalformedData { msg: String },
-}
 
 /// Ping Packet
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -29,14 +17,6 @@ pub enum WebSocketError {
 pub enum Ping {
     Binary(Vec<u8>),
     Number(usize),
-}
-
-/// Untagged Error
-#[derive(Serialize)]
-#[serde(untagged)]
-pub enum ErrorEvent {
-    Error(WebSocketError),
-    APIError(Error),
 }
 
 /// Fields provided in Ready payload
@@ -58,6 +38,8 @@ pub enum ReadyPayloadFields {
 pub enum EventV1 {
     /// Multiple events
     Bulk { v: Vec<EventV1> },
+    /// Error event
+    Error { data: Error },
 
     /// Successfully authenticated
     Authenticated,

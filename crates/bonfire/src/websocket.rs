@@ -79,7 +79,9 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
     // Try to authenticate the user.
     let Some(token) = config.get_session_token().as_ref() else {
         write
-            .send(config.encode(&create_error!(InvalidSession)))
+            .send(config.encode(&EventV1::Error {
+                data: create_error!(InvalidSession),
+            }))
             .await
             .ok();
         return;
@@ -88,7 +90,10 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
     let (user, session_id) = match User::from_token(db, token, UserHint::Any).await {
         Ok(user) => user,
         Err(err) => {
-            write.send(config.encode(&err)).await.ok();
+            write
+                .send(config.encode(&EventV1::Error { data: err }))
+                .await
+                .ok();
             return;
         }
     };
