@@ -203,7 +203,9 @@ where
             routing_key,
         ))
         .await
-        .unwrap();
+        .expect(
+            "This probably means the revolt.notifications exchange does not exist in rabbitmq!",
+        );
 
     let args = BasicConsumeArguments::new(queue_name, "")
         .manual_ack(false)

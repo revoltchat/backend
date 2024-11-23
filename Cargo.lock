@@ -466,7 +466,7 @@ dependencies = [
  "regex",
  "reqwest 0.11.10",
  "revolt_okapi",
- "revolt_rocket_okapi 0.10.0",
+ "revolt_rocket_okapi",
  "rocket",
  "rust-argon2",
  "schemars",
@@ -5646,7 +5646,7 @@ dependencies = [
  "revolt_a2",
  "revolt_okapi",
  "revolt_optional_struct",
- "revolt_rocket_okapi 0.10.0",
+ "revolt_rocket_okapi",
  "rocket",
  "schemars",
  "serde",
@@ -5691,7 +5691,7 @@ dependencies = [
  "revolt-permissions",
  "revolt-presence",
  "revolt-result",
- "revolt_rocket_okapi 0.10.0",
+ "revolt_rocket_okapi",
  "rocket",
  "rocket_authifier",
  "rocket_cors",
@@ -5844,7 +5844,7 @@ version = "0.7.18"
 dependencies = [
  "axum",
  "revolt_okapi",
- "revolt_rocket_okapi 0.10.0",
+ "revolt_rocket_okapi",
  "rocket",
  "schemars",
  "serde",
@@ -5902,22 +5902,6 @@ checksum = "0d342739658623fe9d72b42f7a36ba19094d1d9bf9b423c3e337ab203c15d53e"
 dependencies = [
  "quote 0.3.15",
  "syn 0.11.11",
-]
-
-[[package]]
-name = "revolt_rocket_okapi"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "275e1e9bd3343f75225cafa64f4bfb939c8b21c5f861141180fc0e24769ff6cf"
-dependencies = [
- "either",
- "log",
- "revolt_okapi",
- "revolt_rocket_okapi_codegen",
- "rocket",
- "schemars",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -6061,14 +6045,14 @@ dependencies = [
 
 [[package]]
 name = "rocket_authifier"
-version = "1.0.8"
+version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f89a12311f60e9288833fc3ce6029bce5d5c61870ceef74d4a50668a8b520ad"
+checksum = "810753b79106c44a4e76247fc7576b660663133a9e8f4b0afeb303589ec51d59"
 dependencies = [
  "authifier",
  "iso8601-timestamp 0.1.10",
  "revolt_okapi",
- "revolt_rocket_okapi 0.9.1",
+ "revolt_rocket_okapi",
  "rocket",
  "rocket_empty",
  "schemars",
@@ -6115,7 +6099,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97a55000e1ef5f4a9b20ae3d9de2a0bd22620c78ebd1aa568776ae12276125a6"
 dependencies = [
  "revolt_okapi",
- "revolt_rocket_okapi 0.10.0",
+ "revolt_rocket_okapi",
  "rocket",
 ]
 

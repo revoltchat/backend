@@ -15,7 +15,7 @@ use validator::Validate;
 use crate::{
     events::client::EventV1,
     tasks::{self, ack::AckEvent},
-    util::idempotency::IdempotencyKey,
+    util::{bulk_permissions::BulkDatabasePermissionQuery, idempotency::IdempotencyKey},
     Channel, Database, Emoji, File, User, AMQP,
 };
 
@@ -358,17 +358,19 @@ impl Message {
 
                         mentions.retain(|m| valid_mentions.contains(m)); // quick pass, validate mentions are in the server
 
-                    // Need to build a struct for bulk querying user permissions for a channel,
-                    // as this would involve fetching all the requisite information (server permissions, channel permissions, etc) for every user.
-                    // if !mentions.is_empty() {
-                    //     // if there are still mentions, drill down to a channel-level
-                    //     for member in valid_members.iter() {
-                    //         DatabasePermissionQuery::new(db, member.into())
-                    //             .channel(&channel)
-                    //             .member(&member)
-                    //             .
-                    //    }
-                    // }
+                        if !mentions.is_empty() {
+                            // if there are still mentions, drill down to a channel-level
+                            let member_channel_view_perms =
+                                BulkDatabasePermissionQuery::from_server_id(db, server)
+                                    .await
+                                    .channel(&channel)
+                                    .members(&valid_members)
+                                    .members_can_see_channel()
+                                    .await;
+
+                            mentions
+                                .retain(|m| *member_channel_view_perms.get(m).unwrap_or(&false));
+                        }
                     } else {
                         revolt_config::capture_error(&valid_members.unwrap_err());
                         return Err(create_error!(InternalError));
