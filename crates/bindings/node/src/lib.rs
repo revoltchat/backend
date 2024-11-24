@@ -7,25 +7,25 @@ use neon::prelude::*;
 use revolt_database::{Database, DatabaseInfo};
 
 fn js_init(mut cx: FunctionContext) -> JsResult<JsUndefined> {
-    static INIT: OnceLock<()> = OnceLock::new();
-    if INIT.get().is_none() {
-        INIT.get_or_init(|| {
-            async_std::task::block_on(async {
-                revolt_config::configure!(api);
+    // static INIT: OnceLock<()> = OnceLock::new();
+    // if INIT.get().is_none() {
+    //     INIT.get_or_init(|| {
+    //         async_std::task::block_on(async {
+    //             revolt_config::configure!(api);
 
-                match DatabaseInfo::Auto.connect().await {
-                    Ok(db) => {
-                        let authifier_db = db.clone().to_authifier().await.database;
-                        revolt_database::tasks::start_workers(db, authifier_db);
-                        Ok(())
-                    }
-                    Err(err) => Err(err),
-                }
-            })
-            .or_else(|err| cx.throw_error(err))
-            .unwrap();
-        });
-    }
+    //             match DatabaseInfo::Auto.connect().await {
+    //                 Ok(db) => {
+    //                     let authifier_db = db.clone().to_authifier().await.database;
+    //                     revolt_database::tasks::start_workers(db, authifier_db);
+    //                     Ok(())
+    //                 }
+    //                 Err(err) => Err(err),
+    //             }
+    //         })
+    //         .or_else(|err| cx.throw_error(err))
+    //         .unwrap();
+    //     });
+    // }
 
     Ok(cx.undefined())
 }
