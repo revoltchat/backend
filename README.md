@@ -56,8 +56,8 @@ As a heads-up, the development environment uses the following ports:
 
 | Service                   |      Port      |
 | ------------------------- | :------------: |
-| MongoDB                   |     14017      |
-| Redis                     |     14079      |
+| MongoDB                   |     27017      |
+| Redis                     |      6379      |
 | MinIO                     |     14009      |
 | Maildev                   | 14025<br>14080 |
 | Revolt Web App            |     14701      |
