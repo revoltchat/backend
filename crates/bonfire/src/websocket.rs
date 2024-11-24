@@ -79,7 +79,9 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
     // Try to authenticate the user.
     let Some(token) = config.get_session_token().as_ref() else {
         write
-            .send(config.encode(&create_error!(InvalidSession)))
+            .send(config.encode(&EventV1::Error {
+                data: create_error!(InvalidSession),
+            }))
             .await
             .ok();
         return;
@@ -88,7 +90,10 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
     let (user, session_id) = match User::from_token(db, token, UserHint::Any).await {
         Ok(user) => user,
         Err(err) => {
-            write.send(config.encode(&err)).await.ok();
+            write
+                .send(config.encode(&EventV1::Error { data: err }))
+                .await
+                .ok();
             return;
         }
     };
@@ -301,25 +306,23 @@ async fn listener(
                     PayloadType::Json => message
                         .value
                         .as_str()
-                        .and_then(|s| serde_json::from_str::<EventV1>(s.as_ref()).ok()),
+                        .and_then(|s| report_internal_error!(serde_json::from_str::<EventV1>(s.as_ref())).ok()),
                     PayloadType::Msgpack => message
                         .value
                         .as_bytes()
-                        .and_then(|b| rmp_serde::from_slice::<EventV1>(b).ok()),
+                        .and_then(|b| report_internal_error!(rmp_serde::from_slice::<EventV1>(b)).ok()),
                     PayloadType::Bincode => message
                         .value
                         .as_bytes()
-                        .and_then(|b| bincode::deserialize::<EventV1>(b).ok()),
+                        .and_then(|b| report_internal_error!(bincode::deserialize::<EventV1>(b)).ok()),
                 };
 
                 let Some(mut event) = event else {
                     let err = format!(
-                        "Failed to deserialise an event for {}! Introspection: `{:?}`",
+                        "Failed to deserialise event for {}: `{:?}`",
                         message.channel,
                         message
                             .value
-                            .as_string()
-                            .map(|x| x.chars().take(32).collect::<String>())
                     );
 
                     error!("{}", err);

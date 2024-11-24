@@ -150,6 +150,7 @@ emojis = [128, 128]
 #
 # Backblaze B2:
 # - endpoint is listed on the "Buckets" page
+# - path_style_buckets is set to true
 # - region is `eu-central-003` string from endpoint URL
 # - access_key_id is keyID generated on the "Application Keys" page
 # - secret_access_key is token generated on the "Application Keys" page
@@ -157,6 +158,9 @@ emojis = [128, 128]
 
 # S3 protocol endpoint
 endpoint = "http://minio:9000"
+# Whether to use path-style buckets
+# Generally true, except for MinIO
+path_style_buckets = false
 # S3 region name
 region = "minio"
 # S3 protocol key ID

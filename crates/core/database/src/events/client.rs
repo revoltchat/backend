@@ -1,24 +1,15 @@
 use authifier::AuthifierEvent;
+use revolt_result::Error;
 use serde::{Deserialize, Serialize};
 
 use revolt_models::v0::{
-    AppendMessage, Channel, ChannelUnread, Emoji, FieldsChannel, FieldsMember, FieldsMessage, FieldsRole, FieldsServer, FieldsUser, FieldsWebhook, Member, MemberCompositeKey, Message, PartialChannel, PartialMember, PartialMessage, PartialRole, PartialServer, PartialUser, PartialWebhook, RemovalIntention, Report, Server, User, UserSettings, Webhook
+    AppendMessage, Channel, ChannelUnread, Emoji, FieldsChannel, FieldsMember, FieldsMessage,
+    FieldsRole, FieldsServer, FieldsUser, FieldsWebhook, Member, MemberCompositeKey, Message,
+    PartialChannel, PartialMember, PartialMessage, PartialRole, PartialServer, PartialUser,
+    PartialWebhook, RemovalIntention, Report, Server, User, UserSettings, Webhook,
 };
-use revolt_result::Error;
 
 use crate::Database;
-
-/// WebSocket Client Errors
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "error")]
-pub enum WebSocketError {
-    LabelMe,
-    InternalError { at: String },
-    InvalidSession,
-    OnboardingNotFinished,
-    AlreadyAuthenticated,
-    MalformedData { msg: String },
-}
 
 /// Ping Packet
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -26,14 +17,6 @@ pub enum WebSocketError {
 pub enum Ping {
     Binary(Vec<u8>),
     Number(usize),
-}
-
-/// Untagged Error
-#[derive(Serialize)]
-#[serde(untagged)]
-pub enum ErrorEvent {
-    Error(WebSocketError),
-    APIError(Error),
 }
 
 /// Fields provided in Ready payload
@@ -55,6 +38,8 @@ pub enum ReadyPayloadFields {
 pub enum EventV1 {
     /// Multiple events
     Bulk { v: Vec<EventV1> },
+    /// Error event
+    Error { data: Error },
 
     /// Successfully authenticated
     Authenticated,
@@ -89,6 +74,7 @@ pub enum EventV1 {
         id: String,
         channel: String,
         data: PartialMessage,
+        #[serde(default)]
         clear: Vec<FieldsMessage>,
     },
 
@@ -140,6 +126,7 @@ pub enum EventV1 {
     ServerUpdate {
         id: String,
         data: PartialServer,
+        #[serde(default)]
         clear: Vec<FieldsServer>,
     },
 
@@ -150,6 +137,7 @@ pub enum EventV1 {
     ServerMemberUpdate {
         id: MemberCompositeKey,
         data: PartialMember,
+        #[serde(default)]
         clear: Vec<FieldsMember>,
     },
 
@@ -168,6 +156,7 @@ pub enum EventV1 {
         id: String,
         role_id: String,
         data: PartialRole,
+        #[serde(default)]
         clear: Vec<FieldsRole>,
     },
 
@@ -178,6 +167,7 @@ pub enum EventV1 {
     UserUpdate {
         id: String,
         data: PartialUser,
+        #[serde(default)]
         clear: Vec<FieldsUser>,
         event_id: Option<String>,
     },
@@ -212,6 +202,7 @@ pub enum EventV1 {
     ChannelUpdate {
         id: String,
         data: PartialChannel,
+        #[serde(default)]
         clear: Vec<FieldsChannel>,
     },
 

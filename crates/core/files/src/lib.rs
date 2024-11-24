@@ -34,6 +34,7 @@ pub fn create_client(s3_config: FilesS3) -> Client {
     let config = Config::builder()
         .region(Region::new(s3_config.region))
         .endpoint_url(s3_config.endpoint)
+        .force_path_style(s3_config.path_style_buckets)
         .credentials_provider(creds)
         .build();
 

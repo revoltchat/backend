@@ -1,6 +1,6 @@
 [package]
 name = "revolt-autumn"
-version = "0.7.18"
+version = "0.7.19"
 edition = "2021"
 
 [dependencies]
@@ -13,7 +13,7 @@ webp = "0.3.0"
 sha2 = "0.10.8"
 jxl-oxide = "0.8.1"
 kamadak-exif = "0.5.4"
-# revolt_little_exif = "0.4.0"
+# revolt_little_exif = "0.5.1"
 image = { version = "0.25.2" } # avif encode requires dav1d system library: features = ["avif-native"]
 
 # File processing
@@ -42,12 +42,12 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Core crates
-revolt-files = { version = "0.7.18", path = "../../core/files" }
-revolt-config = { version = "0.7.18", path = "../../core/config" }
-revolt-database = { version = "0.7.18", path = "../../core/database", features = [
+revolt-files = { version = "0.7.19", path = "../../core/files" }
+revolt-config = { version = "0.7.19", path = "../../core/config" }
+revolt-database = { version = "0.7.19", path = "../../core/database", features = [
     "axum-impl",
 ] }
-revolt-result = { version = "0.7.18", path = "../../core/result", features = [
+revolt-result = { version = "0.7.19", path = "../../core/result", features = [
     "utoipa",
     "axum",
 ] }

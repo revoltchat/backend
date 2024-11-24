@@ -207,16 +207,27 @@ async fn upload_file(
     };
 
     // Find an existing hash and use that if possible
-    if let Ok(file_hash) = db
+    let file_hash_exists = if let Ok(file_hash) = db
         .fetch_attachment_hash(&format!("{original_hash:02x}"))
         .await
     {
-        let tag: &'static str = tag.into();
-        db.insert_attachment(&file_hash.into_file(id.clone(), tag.to_owned(), filename, user.id))
+        if !file_hash.iv.is_empty() {
+            let tag: &'static str = tag.into();
+            db.insert_attachment(&file_hash.into_file(
+                id.clone(),
+                tag.to_owned(),
+                filename,
+                user.id,
+            ))
             .await?;
 
-        return Ok(Json(UploadResponse { id }));
-    }
+            return Ok(Json(UploadResponse { id }));
+        }
+
+        true
+    } else {
+        false
+    };
 
     // Determine the mime type for the file
     let mime_type = determine_mime_type(&mut file.contents, &buf, &filename);
@@ -274,7 +285,10 @@ async fn upload_file(
         size: new_file_size as isize,
     };
 
-    db.insert_attachment_hash(&file_hash).await?;
+    // Add attachment hash if it doesn't exist
+    if !file_hash_exists {
+        db.insert_attachment_hash(&file_hash).await?;
+    }
 
     // Upload the file to S3 and commit nonce to database
     let upload_start = Instant::now();

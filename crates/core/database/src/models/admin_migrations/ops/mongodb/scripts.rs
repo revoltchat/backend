@@ -11,6 +11,7 @@ use bson::oid::ObjectId;
 use futures::StreamExt;
 use rand::seq::SliceRandom;
 use revolt_permissions::DEFAULT_WEBHOOK_PERMISSIONS;
+use revolt_result::{Error, ErrorType};
 use serde::{Deserialize, Serialize};
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -20,7 +21,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 30;
+pub const LATEST_REVISION: i32 = 31;
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -1139,53 +1140,7 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             .expect("Failed to create attachment_hashes index.");
     }
 
-    if revision <= 29 {
-        info!("Running migration [revision 29 / 29-09-2024]: Add creator_id to webhooks.");
-
-        #[derive(serde::Serialize, serde::Deserialize)]
-        struct WebhookShell {
-            _id: String,
-            channel_id: String,
-        }
-
-        let invites = db
-            .db()
-            .collection::<WebhookShell>("channel_webhooks")
-            .find(doc! {}, None)
-            .await
-            .expect("webhooks")
-            .filter_map(|s| async { s.ok() })
-            .collect::<Vec<WebhookShell>>()
-            .await;
-
-        for invite in invites {
-            let channel = db.fetch_channel(&invite.channel_id).await.expect("channel");
-            let creator_id = match channel {
-                Channel::Group { owner, .. } => owner,
-                Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => {
-                    let server = db.fetch_server(&server).await.expect("server");
-                    server.owner
-                }
-                _ => unreachable!("not server or group channel!"),
-            };
-
-            db.db()
-                .collection::<Document>("channel_webhooks")
-                .update_one(
-                    doc! {
-                        "_id": invite._id,
-                    },
-                    doc! {
-                        "$set" : {
-                            "creator_id": creator_id
-                        }
-                    },
-                    None,
-                )
-                .await
-                .expect("update webhook");
-        }
-    }
+    // Revision 29 omitted due to bug.
 
     if revision <= 30 {
         info!("Running migration [revision 30 / 29-09-2024]: Add index for used_for.id to attachments.");
@@ -1209,7 +1164,68 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             .expect("Failed to create attachments index.");
     }
 
-    // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.
+    if revision <= 31 {
+        info!("Running migration [revision 31 / 31-10-2024]: Add creator_id to webhooks and delete those whose channels don't exist.");
+
+        #[derive(serde::Serialize, serde::Deserialize)]
+        struct WebhookShell {
+            _id: String,
+            channel_id: String,
+        }
+
+        let webhooks = db
+            .db()
+            .collection::<WebhookShell>("channel_webhooks")
+            .find(doc! {}, None)
+            .await
+            .expect("webhooks")
+            .filter_map(|s| async { s.ok() })
+            .collect::<Vec<WebhookShell>>()
+            .await;
+
+        for webhook in webhooks {
+            match db.fetch_channel(&webhook.channel_id).await {
+                Ok(channel) => {
+                    let creator_id = match channel {
+                        Channel::Group { owner, .. } => owner,
+                        Channel::TextChannel { server, .. }
+                        | Channel::VoiceChannel { server, .. } => {
+                            let server = db.fetch_server(&server).await.expect("server");
+                            server.owner
+                        }
+                        _ => unreachable!("not server or group channel!"),
+                    };
+
+                    db.db()
+                        .collection::<Document>("channel_webhooks")
+                        .update_one(
+                            doc! {
+                                "_id": webhook._id,
+                            },
+                            doc! {
+                                "$set" : {
+                                    "creator_id": creator_id
+                                }
+                            },
+                            None,
+                        )
+                        .await
+                        .expect("update webhook");
+                }
+                Err(Error {
+                    error_type: ErrorType::NotFound,
+                    ..
+                }) => {
+                    db.db()
+                        .collection::<WebhookShell>("channel_webhooks")
+                        .delete_one(doc! { "_id": webhook._id }, None)
+                        .await
+                        .expect("failed to delete invalid webhook");
+                }
+                Err(err) => panic!("{err:?}"),
+            }
+        }
+    }
 
     // Reminder to update LATEST_REVISION when adding new migrations.
     LATEST_REVISION.max(revision)

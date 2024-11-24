@@ -32,11 +32,11 @@ services:
     image: minio/mc
     depends_on:
       - minio
-    environment:
-      MINIO_ROOT_USER: minioautumn
-      MINIO_ROOT_PASSWORD: minioautumn
     entrypoint: >
-      /bin/sh -c " /usr/bin/mc config host add minio http://minio:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD; while ! /usr/bin/mc ready minio; do echo 'Waiting minio...' && sleep 1; done; /usr/bin/mc mb minio/revolt-uploads; exit 0; "
+      " /bin/sh -c while ! /usr/bin/mc ready minio; do
+        /usr/bin/mc config host add minio http://minio:9000 minioautumn minioautumn;
+        echo 'Waiting minio...' && sleep 1;
+      done; /usr/bin/mc mb minio/revolt-uploads; exit 0; "
 
   # Rabbit
   rabbit:
