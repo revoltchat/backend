@@ -174,7 +174,7 @@ async fn calculate_members_permissions<'a>(
 ) -> HashMap<String, PermissionValue> {
     let mut resp = HashMap::new();
 
-    let (_, channel_role_permissions) = match query
+    let (_, channel_role_permissions, channel_default_permissions) = match query
         .channel
         .as_ref()
         .expect("A channel must be assigned to calculate channel permissions")
@@ -183,13 +183,15 @@ async fn calculate_members_permissions<'a>(
         Channel::TextChannel {
             id,
             role_permissions,
+            default_permissions,
             ..
         }
         | Channel::VoiceChannel {
             id,
             role_permissions,
+            default_permissions,
             ..
-        } => (id, role_permissions),
+        } => (id, role_permissions, default_permissions),
         _ => panic!("Calculation of member permissions must be done on a server channel"),
     };
 
@@ -272,6 +274,10 @@ async fn calculate_members_permissions<'a>(
 
         // Get the user's server permissions
         let mut permission = calculate_server_permissions(&query.server, user, member);
+
+        if let Some(defaults) = channel_default_permissions {
+            permission.apply(defaults.into());
+        }
 
         // Get the applicable role overrides
         let mut roles = channel_role_permissions

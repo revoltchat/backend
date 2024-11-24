@@ -3,13 +3,13 @@ services:
   redis:
     image: eqalpha/keydb
     ports:
-      - "14079:6379"
+      - "6379:6379"
 
   # MongoDB
   database:
     image: mongo
     ports:
-      - "14017:27017"
+      - "27017:27017"
     volumes:
       - ./.data/db:/data/db
 

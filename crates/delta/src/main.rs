@@ -10,7 +10,7 @@ pub mod util;
 
 use revolt_config::config;
 use revolt_database::events::client::EventV1;
-use revolt_database::{Database, MongoDb, AMQP};
+use revolt_database::AMQP;
 use rocket::{Build, Rocket};
 use rocket_cors::{AllowedOrigins, CorsOptions};
 use rocket_prometheus::PrometheusMetrics;
@@ -34,7 +34,7 @@ pub async fn web() -> Rocket<Build> {
     db.migrate_database().await.unwrap();
 
     // Setup Authifier event channel
-    let (sender, receiver) = unbounded();
+    let (_, receiver) = unbounded();
 
     // Setup Authifier
     let authifier = db.clone().to_authifier().await;
