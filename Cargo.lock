@@ -448,6 +448,8 @@ dependencies = [
 [[package]]
 name = "authifier"
 version = "1.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ba4df3b5df5cf1a08d4af71c407fb56a675b6aaf4d1fec704da32595497d73d"
 dependencies = [
  "async-std",
  "async-trait",
