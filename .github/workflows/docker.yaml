@@ -61,7 +61,7 @@ jobs:
     if: github.event_name != 'pull_request'
     strategy:
       matrix:
-        project: [delta, bonfire, autumn, january]
+        project: [delta, bonfire, autumn, january, pushd]
     name: Build ${{ matrix.project }} image
     steps:
       # Configure build environment
@@ -106,6 +106,10 @@ jobs:
               "january": {
                 "path": "crates/services/january",
                 "tag": "${{ github.repository_owner }}/january"
+              },
+              "pushd": {
+                "path": "crates/daemons/pushd",
+                "tag": "${{ github.repository_owner }}/pushd"
               }
             }
           export_to: output
