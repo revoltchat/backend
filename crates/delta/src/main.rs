@@ -17,7 +17,10 @@ use rocket_prometheus::PrometheusMetrics;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 
-use amqprs::connection::{Connection, OpenConnectionArguments};
+use amqprs::{
+    channel::ExchangeDeclareArguments,
+    connection::{Connection, OpenConnectionArguments},
+};
 use async_std::channel::unbounded;
 use authifier::AuthifierEvent;
 use rocket::data::ToByteUnit;
@@ -88,6 +91,15 @@ pub async fn web() -> Rocket<Build> {
     .await
     .unwrap();
     let channel = connection.open_channel(None).await.unwrap();
+
+    channel
+        .exchange_declare(
+            ExchangeDeclareArguments::new(&config.pushd.exchange, "direct")
+                .durable(true)
+                .finish(),
+        )
+        .await
+        .expect("Failed to declare exchange");
 
     let amqp = AMQP::new(connection, channel);
 

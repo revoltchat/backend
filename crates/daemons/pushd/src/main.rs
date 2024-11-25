@@ -1,5 +1,8 @@
 use amqprs::{
-    channel::{BasicConsumeArguments, Channel, QueueBindArguments, QueueDeclareArguments},
+    channel::{
+        BasicConsumeArguments, Channel, ExchangeDeclareArguments, QueueBindArguments,
+        QueueDeclareArguments,
+    },
     connection::{Connection, OpenConnectionArguments},
     consumer::AsyncConsumer,
     FieldTable,
@@ -175,6 +178,15 @@ where
     .unwrap();
 
     let channel = connection.open_channel(None).await.unwrap();
+
+    channel
+        .exchange_declare(
+            ExchangeDeclareArguments::new(&config.pushd.exchange, "direct")
+                .durable(true)
+                .finish(),
+        )
+        .await
+        .expect("Failed to declare pushd exchange");
 
     let mut queue_name = queue_name.to_string();
 
