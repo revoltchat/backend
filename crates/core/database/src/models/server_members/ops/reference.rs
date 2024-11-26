@@ -53,17 +53,17 @@ impl AbstractServerMembers for ReferenceDb {
     /// Fetch multiple members by their ids
     async fn fetch_members<'a>(&self, server_id: &str, ids: &'a [String]) -> Result<Vec<Member>> {
         let server_members = self.server_members.lock().await;
-        ids.iter()
-            .map(|id| {
+        Ok(ids
+            .iter()
+            .filter_map(|id| {
                 server_members
                     .get(&MemberCompositeKey {
                         server: server_id.to_string(),
                         user: id.to_string(),
                     })
                     .cloned()
-                    .ok_or_else(|| create_error!(NotFound))
             })
-            .collect()
+            .collect())
     }
 
     /// Fetch member count of a server
