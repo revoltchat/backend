@@ -383,34 +383,7 @@ impl Message {
         }
 
         if !mentions.is_empty() {
-            // FIXME: temp fix to stop spam attacks
-            match channel {
-                Channel::DirectMessage { ref recipients, .. }
-                | Channel::Group { ref recipients, .. } => {
-                    let recipients_hash: HashSet<&String, RandomState> =
-                        HashSet::from_iter(recipients.iter());
-
-                    mentions.retain(|m| recipients_hash.contains(m));
-                }
-                Channel::TextChannel { ref server, .. }
-                | Channel::VoiceChannel { ref server, .. } => {
-                    let mentions_vec = Vec::from_iter(mentions.iter().cloned());
-                    let valid_members = db.fetch_members(server.as_str(), &mentions_vec[..]).await;
-                    if let Ok(valid_members) = valid_members {
-                        let valid_ids: HashSet<String, RandomState> = HashSet::from_iter(
-                            valid_members.iter().map(|member| member.id.user.clone()),
-                        );
-                        mentions.retain(|m| valid_ids.contains(m));
-                    } else {
-                        revolt_config::capture_error(&valid_members.unwrap_err());
-                    }
-                }
-                Channel::SavedMessages { .. } => mentions.clear(),
-            }
-
-            if !mentions.is_empty() {
-                message.mentions.replace(mentions.into_iter().collect());
-            }
+            message.mentions.replace(mentions.into_iter().collect());
         }
 
         if !replies.is_empty() {
