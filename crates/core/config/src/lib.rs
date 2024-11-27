@@ -339,6 +339,7 @@ pub struct Sentry {
     pub voice_ingress: String,
     pub files: String,
     pub proxy: String,
+    pub crond: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
