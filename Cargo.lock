@@ -1574,6 +1574,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "crond"
+version = "0.7.19"
+dependencies = [
+ "revolt-database",
+ "revolt-files",
+]
+
+[[package]]
 name = "crossbeam-channel"
 version = "0.5.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"

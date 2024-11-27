@@ -6,6 +6,7 @@ members = [
     "crates/core/*",
     "crates/services/*",
     "crates/bindings/*",
+    "crates/daemons/*",
 ]
 
 [patch.crates-io]
