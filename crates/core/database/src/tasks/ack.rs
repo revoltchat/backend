@@ -89,8 +89,8 @@ pub async fn handle_ack_event(
     match &event {
         #[allow(clippy::disallowed_methods)] // event is sent by higher level function
         AckEvent::AckMessage { id } => {
-            let _u = user.as_ref().unwrap();
-            let user: &str = _u.as_str();
+            let user = user.as_ref().unwrap();
+            let user: &str = user.as_str();
 
             let unread = db.fetch_unread(user, channel).await?;
             let updated = db.acknowledge_message(channel, user, id).await?;
