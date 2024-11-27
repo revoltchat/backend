@@ -1,0 +1,14 @@
+[package]
+name = "crond"
+version = "0.7.19"
+license = "AGPL-3.0-or-later"
+authors = ["Paul Makles <me@insrt.uk>"]
+edition = "2021"
+description = "Revolt Daemon Service: Timed data clean up tasks"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# Core
+revolt-database = { version = "0.7.19", path = "../../core/database" }
+revolt-files = { version = "0.7.19", path = "../../core/files" }

@@ -153,7 +153,7 @@ pub static DISCRIMINATOR_SEARCH_SPACE: Lazy<HashSet<String>> = Lazy::new(|| {
         .collect::<HashSet<String>>();
 
     for discrim in [
-        123, 1234, 1111, 2222, 3333, 4444, 5555, 6666, 7777, 8888, 9999,
+        123, 1234, 1111, 2222, 3333, 4444, 5555, 6666, 7777, 8888, 9999, 1488,
     ] {
         set.remove(&format!("{:0>4}", discrim));
     }
@@ -294,7 +294,14 @@ impl User {
         }
 
         // Ensure none of the following substrings show up in the username
-        const BLOCKED_SUBSTRINGS: &[&str] = &["```"];
+        const BLOCKED_SUBSTRINGS: &[&str] = &[
+            "```",
+            "discord.gg",
+            "rvlt.gg",
+            "guilded.gg",
+            "https://",
+            "http://",
+        ];
 
         for substr in BLOCKED_SUBSTRINGS {
             if username_lowercase.contains(substr) {

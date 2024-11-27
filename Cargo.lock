@@ -1663,6 +1663,16 @@ dependencies = [
 [[package]]
 name = "crc64fast-nvme"
 version = "1.1.1"
+name = "crond"
+version = "0.7.19"
+dependencies = [
+ "revolt-database",
+ "revolt-files",
+]
+
+[[package]]
+name = "crossbeam-channel"
+version = "0.5.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d5e2ee08013e3f228d6d2394116c4549a6df77708442c62d887d83f68ef2ee37"
 dependencies = [
