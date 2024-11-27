@@ -287,8 +287,6 @@ pub async fn config() -> Settings {
 
 /// Configure logging and common Rust variables
 pub async fn setup_logging(release: &'static str, dsn: String) -> Option<sentry::ClientInitGuard> {
-    dotenv::dotenv().ok();
-
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
     }

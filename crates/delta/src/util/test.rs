@@ -19,8 +19,6 @@ pub struct TestHarness {
 
 impl TestHarness {
     pub async fn new() -> TestHarness {
-        dotenv::dotenv().ok();
-
         let client = Client::tracked(crate::web().await)
             .await
             .expect("valid rocket instance");
