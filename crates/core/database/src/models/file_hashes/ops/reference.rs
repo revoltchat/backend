@@ -23,8 +23,8 @@ impl AbstractAttachmentHashes for ReferenceDb {
         let hashes = self.file_hashes.lock().await;
         hashes
             .values()
+            .find(|&hash| hash.id == hash_value || hash.processed_hash == hash_value)
             .cloned()
-            .find(|hash| hash.id == hash_value || hash.processed_hash == hash_value)
             .ok_or(create_error!(NotFound))
     }
 
@@ -33,6 +33,16 @@ impl AbstractAttachmentHashes for ReferenceDb {
         let mut hashes = self.file_hashes.lock().await;
         if let Some(file) = hashes.get_mut(hash) {
             file.iv = nonce.to_owned();
+            Ok(())
+        } else {
+            Err(create_error!(NotFound))
+        }
+    }
+
+    /// Delete attachment hash by id.
+    async fn delete_attachment_hash(&self, id: &str) -> Result<()> {
+        let mut file_hashes = self.file_hashes.lock().await;
+        if file_hashes.remove(id).is_some() {
             Ok(())
         } else {
             Err(create_error!(NotFound))

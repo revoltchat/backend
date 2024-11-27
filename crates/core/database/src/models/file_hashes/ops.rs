@@ -15,4 +15,7 @@ pub trait AbstractAttachmentHashes: Sync + Send {
 
     /// Update an attachment hash nonce value.
     async fn set_attachment_hash_nonce(&self, hash: &str, nonce: &str) -> Result<()>;
+
+    /// Delete attachment hash by id.
+    async fn delete_attachment_hash(&self, id: &str) -> Result<()>;
 }
