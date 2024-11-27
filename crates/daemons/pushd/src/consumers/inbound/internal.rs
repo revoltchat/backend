@@ -43,19 +43,9 @@ pub(crate) async fn publish_message<T: Channeled>(
     }
 
     if let Some(chnl) = channel {
-        //if let Err(err) =
         chnl.basic_publish(BasicProperties::default(), payload.clone(), args.clone())
             .await
             .unwrap();
-        // {
-        //     match err {
-        //         Error::InternalChannelError(_) => {
-        //             self.make_channel().await;
-        //             self.publish_message(payload, args, attempt + 1).await;
-        //         }
-        //         _ => {}
-        //     }
-        // }
         debug!("Sent message to queue for target {}", routing_key);
     } else {
         warn!("Failed to unwrap channel (including attempt to make a channel)!")
