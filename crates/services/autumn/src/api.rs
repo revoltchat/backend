@@ -17,7 +17,7 @@ use revolt_database::{iso8601_timestamp::Timestamp, Database, FileHash, Metadata
 use revolt_files::{
     create_thumbnail, decode_image, fetch_from_s3, upload_to_s3, AUTHENTICATION_TAG_SIZE_BYTES,
 };
-use revolt_result::{create_error, Result};
+use revolt_result::{create_error, Error, Result};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use tempfile::NamedTempFile;
@@ -55,8 +55,17 @@ lazy_static! {
     /// Short-lived file cache to allow us to populate different CDN regions without increasing bandwidth to S3 provider
     /// Uploads will also be stored here to prevent immediately queued downloads from doing the entire round-trip
     static ref S3_CACHE: moka::future::Cache<String, Result<Vec<u8>>> = moka::future::Cache::builder()
-        .max_capacity(10_000) // TODO config
-        .time_to_live(Duration::from_secs(60)) // TODO config
+        .weigher(|_key, value: &Result<Vec<u8>>| -> u32 {
+            std::mem::size_of::<Result<Vec<u8>>>() as u32 + if let Ok(vec) = value {
+                vec.len().try_into().unwrap_or(u32::MAX)
+            } else {
+                std::mem::size_of::<Error>() as u32
+            }
+        })
+        // TODO config
+        // .max_capacity(1024 * 1024 * 1024) // Cache up to 1GiB in memory
+        .max_capacity(512 * 1024 * 1024) // Cache up to 512MiB in memory
+        .time_to_live(Duration::from_secs(5 * 60)) // For up to 5 minutes
         .build();
 }
 

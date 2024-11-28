@@ -9,7 +9,7 @@ use reqwest::{
 use revolt_config::report_internal_error;
 use revolt_files::{create_thumbnail, decode_image, image_size_vec, is_valid_image, video_size};
 use revolt_models::v0::{Embed, Image, ImageSize, Video};
-use revolt_result::{create_error, Result};
+use revolt_result::{create_error, Error, Result};
 use std::{
     io::{Cursor, Write},
     time::Duration,
@@ -40,14 +40,24 @@ lazy_static! {
 
     /// Cache for proxy results
     static ref PROXY_CACHE: moka::future::Cache<String, Result<(String, Vec<u8>)>> = moka::future::Cache::builder()
-        .max_capacity(10_000) // TODO config
-        .time_to_live(Duration::from_secs(60)) // TODO config
+        .weigher(|_key, value: &Result<(String, Vec<u8>)>| -> u32 {
+            std::mem::size_of::<Result<(String, Vec<u8>)>>() as u32 + if let Ok((url, vec)) = value {
+                url.len().try_into().unwrap_or(u32::MAX) +
+                vec.len().try_into().unwrap_or(u32::MAX)
+            } else {
+                std::mem::size_of::<Error>() as u32
+            }
+        })
+        // TODO config
+        .max_capacity(512 * 1024 * 1024) // Cache up to 512MiB in memory
+        .time_to_live(Duration::from_secs(60)) // For up to 1 minute
         .build();
 
     /// Cache for embed results
     static ref EMBED_CACHE: moka::future::Cache<String, Embed> = moka::future::Cache::builder()
-        .max_capacity(1_000) // TODO config
-        .time_to_live(Duration::from_secs(60)) // TODO config
+        // TODO config
+        .max_capacity(10_000) // Cache up to 10k embeds
+        .time_to_live(Duration::from_secs(60)) // For up to 1 minute
         .build();
 }
 
