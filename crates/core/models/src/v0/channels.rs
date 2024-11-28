@@ -307,13 +307,17 @@ impl Channel {
         }
     }
 
-    pub fn name(&self) -> &str {
+    /// This returns a Result because the recipient name can't be determined here without a db call,
+    /// which can't be done since this is models, which can't reference the database crate.
+    ///
+    /// If it returns Err, you need to fetch the name from the db.
+    pub fn name(&self) -> Result<&str, ()> {
         match self {
-            Channel::DirectMessage { .. } => "DMs",
-            Channel::SavedMessages { .. } => "Saved Messages",
+            Channel::DirectMessage { .. } => Err(()),
+            Channel::SavedMessages { .. } => Ok("Saved Messages"),
             Channel::TextChannel { name, .. }
             | Channel::Group { name, .. }
-            | Channel::VoiceChannel { name, .. } => name,
+            | Channel::VoiceChannel { name, .. } => Ok(name),
         }
     }
 }

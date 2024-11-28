@@ -291,7 +291,7 @@ impl AsyncConsumer for ApnsOutboundConsumer {
                     url: &alert.url,
                     author_avatar: &alert.icon,
                     author_display_name: &alert.author,
-                    channel_name: alert.channel.name(),
+                    channel_name: alert.channel.name().unwrap_or(&title),
                 };
 
                 resp = self.client.send(apn_payload).await;
