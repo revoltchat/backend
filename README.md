@@ -26,6 +26,7 @@ The services and libraries that power the Revolt service.<br/>
 | `services/january` | [crates/services/january](crates/services/january) | Proxy server                             | ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)                                                                                                                                                                                                                                |
 | `services/autumn`  | [crates/services/autumn](crates/services/autumn)   | File server                              | ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)                                                                                                                                                                                                                                |
 | `bindings/node`    | [crates/bindings/node](crates/bindings/node)       | Node.js bindings for the Revolt software | ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)                                                                                                                                                                                                                                |
+| `daemons/pushd`    | [crates/daemons/pushd](crates/daemons/pushd)       | Push notification daemon server          | ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)                                                                                                                                                                                                                                |
 
 </div>
 <br/>
@@ -55,11 +56,12 @@ As a heads-up, the development environment uses the following ports:
 
 | Service                   |      Port      |
 | ------------------------- | :------------: |
-| MongoDB                   |     14017      |
-| Redis                     |     14079      |
+| MongoDB                   |     27017      |
+| Redis                     |      6379      |
 | MinIO                     |     14009      |
 | Maildev                   | 14025<br>14080 |
 | Revolt Web App            |     14701      |
+| RabbitMQ                  |  5672<br>15672 |
 | `crates/delta`            |     14702      |
 | `crates/bonfire`          |     14703      |
 | `crates/services/autumn`  |     14704      |
@@ -106,6 +108,8 @@ cargo run --bin revolt-bonfire
 cargo run --bin revolt-autumn
 # run the proxy server
 cargo run --bin revolt-january
+# run the push daemon (not usually needed in regular development)
+cargo run --bin revolt-pushd
 
 # hint:
 # mold -run <cargo build, cargo run, etc...>

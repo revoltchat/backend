@@ -1,6 +1,6 @@
 use revolt_database::util::permissions::DatabasePermissionQuery;
-use revolt_database::Member;
 use revolt_database::{util::reference::Reference, Database, User};
+use revolt_database::{Member, AMQP};
 use revolt_models::v0;
 use revolt_permissions::{
     calculate_channel_permissions, calculate_server_permissions, ChannelPermission,
@@ -18,6 +18,7 @@ use rocket_empty::EmptyResponse;
 #[post("/<target>/invite", data = "<dest>")]
 pub async fn invite_bot(
     db: &State<Database>,
+    amqp: &State<AMQP>,
     user: User,
     target: Reference,
     dest: Json<v0::InviteBotDestination>,
@@ -55,7 +56,7 @@ pub async fn invite_bot(
                 .throw_if_lacking_channel_permission(ChannelPermission::InviteOthers)?;
 
             channel
-                .add_user_to_group(db, &bot_user, &user.id)
+                .add_user_to_group(db, amqp, &bot_user, &user.id)
                 .await
                 .map(|_| EmptyResponse)
         }
@@ -93,9 +94,12 @@ mod test {
             .client
             .post(format!("/bots/{}/invite", bot.id))
             .header(ContentType::JSON)
-            .body(json!(v0::InviteBotDestination::Group {
-                group: group.id().to_string()
-            }).to_string())
+            .body(
+                json!(v0::InviteBotDestination::Group {
+                    group: group.id().to_string()
+                })
+                .to_string(),
+            )
             .header(Header::new("x-session-token", session.token.to_string()))
             .dispatch()
             .await;

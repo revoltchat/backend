@@ -123,6 +123,18 @@ impl AbstractChannelUnreads for MongoDb {
         )
     }
 
+    async fn fetch_unread_mentions(&self, user_id: &str) -> Result<Vec<ChannelUnread>> {
+        query! {
+            self,
+            find,
+            COL,
+            doc! {
+                "_id.user": user_id,
+                "mentions": {"$ne": null}
+            }
+        }
+    }
+
     /// Fetch unread for a specific user in a channel.
     async fn fetch_unread(&self, user_id: &str, channel_id: &str) -> Result<Option<ChannelUnread>> {
         query!(
@@ -135,5 +147,4 @@ impl AbstractChannelUnreads for MongoDb {
             }
         )
     }
-
 }

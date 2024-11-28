@@ -5,7 +5,7 @@ use authifier::{
 use futures::StreamExt;
 use rand::Rng;
 use redis_kiss::redis::aio::PubSub;
-use revolt_database::{events::client::EventV1, Database, User};
+use revolt_database::{events::client::EventV1, Database, User, AMQP};
 use revolt_models::v0;
 use rocket::local::asynchronous::Client;
 
@@ -13,12 +13,15 @@ pub struct TestHarness {
     pub client: Client,
     authifier: Authifier,
     pub db: Database,
+    pub amqp: AMQP,
     sub: PubSub,
     event_buffer: Vec<(String, EventV1)>,
 }
 
 impl TestHarness {
     pub async fn new() -> TestHarness {
+        let config = revolt_config::config().await;
+
         let client = Client::tracked(crate::web().await)
             .await
             .expect("valid rocket instance");
@@ -41,10 +44,25 @@ impl TestHarness {
             .expect("`Authifier`")
             .clone();
 
+        let connection = amqprs::connection::Connection::open(
+            &amqprs::connection::OpenConnectionArguments::new(
+                &config.rabbit.host,
+                config.rabbit.port,
+                &config.rabbit.username,
+                &config.rabbit.password,
+            ),
+        )
+        .await
+        .unwrap();
+        let channel = connection.open_channel(None).await.unwrap();
+
+        let amqp = AMQP::new(connection, channel);
+
         TestHarness {
             client,
             authifier,
             db,
+            amqp,
             sub,
             event_buffer: vec![],
         }

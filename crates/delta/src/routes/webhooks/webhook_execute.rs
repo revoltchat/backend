@@ -1,7 +1,7 @@
 use revolt_config::config;
 use revolt_database::{
     util::{idempotency::IdempotencyKey, reference::Reference},
-    Database, Message,
+    Database, Message, AMQP,
 };
 use revolt_models::v0;
 use revolt_permissions::{ChannelPermission, PermissionValue};
@@ -17,6 +17,7 @@ use validator::Validate;
 #[post("/<webhook_id>/<token>", data = "<data>")]
 pub async fn webhook_execute(
     db: &State<Database>,
+    amqp: &State<AMQP>,
     webhook_id: Reference,
     token: String,
     data: Json<v0::DataMessageSend>,
@@ -56,6 +57,7 @@ pub async fn webhook_execute(
     Ok(Json(
         Message::create_from_api(
             db,
+            Some(amqp),
             channel,
             data,
             v0::MessageAuthor::Webhook(&webhook.into()),
