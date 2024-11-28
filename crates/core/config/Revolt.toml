@@ -21,10 +21,10 @@ voso_legacy = ""
 voso_legacy_ws = ""
 
 [rabbit]
-host = "127.0.0.1"
+host = "rabbit"
 port = 5672
-username = "guest"
-password = "guest"
+username = "rabbituser"
+password = "rabbitpass"
 
 [api]
 
