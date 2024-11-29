@@ -86,6 +86,8 @@ pub enum Channel {
         /// Custom icon attachment
         #[serde(skip_serializing_if = "Option::is_none")]
         icon: Option<File>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        banner: Option<Vec<ChannelBanner>>,
         /// Id of the last message sent in this channel
         #[serde(skip_serializing_if = "Option::is_none")]
         last_message_id: Option<String>,
@@ -153,6 +155,8 @@ pub struct PartialChannel {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub icon: Option<File>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub banner: Option<Vec<ChannelBanner>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub nsfw: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub active: Option<bool>,
@@ -174,4 +178,8 @@ pub enum FieldsChannel {
     Description,
     Icon,
     DefaultPermissions,
+}
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
+pub struct ChannelBanner {
+    pub icon: Option<File>,
 }

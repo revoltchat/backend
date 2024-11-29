@@ -85,6 +85,8 @@ pub async fn req(
             description,
 
             icon: None,
+            banner: None,
+
             last_message_id: None,
 
             default_permissions: None,

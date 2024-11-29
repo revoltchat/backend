@@ -1,6 +1,6 @@
 use revolt_quark::{
     models::{
-        channel::{Channel, FieldsChannel, PartialChannel},
+        channel::{Channel, ChannelBanner, FieldsChannel, PartialChannel},
         message::SystemMessage,
         File, User,
     },
@@ -10,6 +10,10 @@ use revolt_quark::{
 use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
+pub struct ChannelBannerField {
+    pub icon: Option<String>,
+}
 
 /// # Channel Details
 #[derive(Validate, Serialize, Deserialize, JsonSchema)]
@@ -27,6 +31,7 @@ pub struct DataEditChannel {
     /// Provide an Autumn attachment Id.
     #[validate(length(min = 1, max = 128))]
     icon: Option<String>,
+    banner: Option<Vec<ChannelBannerField>>,
     /// Whether this channel is age-restricted
     nsfw: Option<bool>,
     /// Whether this channel is archived
@@ -60,6 +65,7 @@ pub async fn req(
     if data.name.is_none()
         && data.description.is_none()
         && data.icon.is_none()
+        && data.banner.is_none()
         && data.nsfw.is_none()
         && data.owner.is_none()
         && data.remove.is_none()
@@ -155,6 +161,19 @@ pub async fn req(
             if let Some(icon_id) = data.icon {
                 partial.icon = Some(File::use_icon(db, &icon_id, id).await?);
                 *icon = partial.icon.clone();
+            }
+
+            if let Some(banner) = data.banner {
+                let mut banner_ids: Vec<ChannelBanner> = vec![];
+                for img in banner {
+                    if let Some(img_icon) = img.icon {
+                        let mut _icon: Option<File> =
+                            Some(File::use_icon(db, &img_icon, id).await?);
+                        let _banner = ChannelBanner { icon: _icon };
+                        banner_ids.push(_banner);
+                    }
+                }
+                partial.banner = Some(banner_ids);
             }
 
             if let Some(new_name) = data.name {

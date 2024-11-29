@@ -80,6 +80,8 @@ auto_derived!(
             /// Custom icon attachment
             #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
             icon: Option<File>,
+            #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+            banner: Option<Vec<ChannelBanner>>,
             /// Id of the last message sent in this channel
             #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
             last_message_id: Option<String>,
@@ -175,6 +177,10 @@ auto_derived!(
         DefaultPermissions,
     }
 
+    pub struct ChannelBanner {
+        pub icon: Option<File>,
+    }
+
     /// New webhook information
     #[cfg_attr(feature = "validator", derive(validator::Validate))]
     pub struct DataEditChannel {
@@ -194,6 +200,8 @@ auto_derived!(
         /// Provide an Autumn attachment Id.
         #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
         pub icon: Option<String>,
+
+        pub banner: Option<Vec<ChannelBanner>>,
 
         /// Whether this channel is age-restricted
         pub nsfw: Option<bool>,

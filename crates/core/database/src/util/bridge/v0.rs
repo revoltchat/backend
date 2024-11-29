@@ -125,6 +125,7 @@ impl From<crate::Channel> for Channel {
                 default_permissions,
                 role_permissions,
                 nsfw,
+                banner,
             } => Channel::TextChannel {
                 id,
                 server,
@@ -135,6 +136,7 @@ impl From<crate::Channel> for Channel {
                 default_permissions,
                 role_permissions,
                 nsfw,
+                banner: banner.map(|vec| vec.into_iter().map(|banner| banner.into()).collect()),
             },
             crate::Channel::VoiceChannel {
                 id,
@@ -211,6 +213,14 @@ impl From<crate::File> for File {
             user_id: value.user_id,
             server_id: value.server_id,
             object_id: value.object_id,
+        }
+    }
+}
+
+impl From<crate::ChannelBanner> for ChannelBanner {
+    fn from(value: crate::ChannelBanner) -> Self {
+        ChannelBanner {
+            icon: value.icon.map(|file| file.into()),
         }
     }
 }

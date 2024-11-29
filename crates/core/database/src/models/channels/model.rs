@@ -79,6 +79,11 @@ auto_derived!(
             /// Custom icon attachment
             #[serde(skip_serializing_if = "Option::is_none")]
             icon: Option<File>,
+
+            /// Custom channel banner
+            #[serde(skip_serializing_if = "Option::is_none")]
+            banner: Option<Vec<ChannelBanner>>,
+
             /// Id of the last message sent in this channel
             #[serde(skip_serializing_if = "Option::is_none")]
             last_message_id: Option<String>,
@@ -143,6 +148,8 @@ auto_derived!(
         #[serde(skip_serializing_if = "Option::is_none")]
         pub icon: Option<File>,
         #[serde(skip_serializing_if = "Option::is_none")]
+        pub banner: Option<Vec<ChannelBanner>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         pub nsfw: Option<bool>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub active: Option<bool>,
@@ -161,6 +168,10 @@ auto_derived!(
         Description,
         Icon,
         DefaultPermissions,
+    }
+
+    pub struct ChannelBanner {
+        pub icon: Option<File>,
     }
 );
 
