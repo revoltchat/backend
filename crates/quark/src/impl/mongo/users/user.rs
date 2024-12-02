@@ -40,6 +40,17 @@ impl AbstractUser for MongoDb {
         .await
     }
 
+    async fn fetch_user_only_by_username(&self, username: &str) -> Result<User> {
+        self.find_one_with_options(
+            COL,
+            doc! {
+                "username": username
+            },
+            FIND_USERNAME_OPTIONS.clone(),
+        )
+        .await
+    }
+
     async fn fetch_user_by_token(&self, token: &str) -> Result<User> {
         let session = self
             .col::<Document>("sessions")

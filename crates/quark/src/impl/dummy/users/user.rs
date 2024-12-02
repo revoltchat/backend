@@ -18,6 +18,10 @@ impl AbstractUser for DummyDb {
         self.fetch_user(username).await
     }
 
+    async fn fetch_user_only_by_username(&self, username: &str) -> Result<User> {
+        self.fetch_user(username).await
+    }
+
     async fn fetch_user_by_token(&self, token: &str) -> Result<User> {
         self.fetch_user(token).await
     }

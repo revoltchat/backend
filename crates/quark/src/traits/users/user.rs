@@ -9,6 +9,8 @@ pub trait AbstractUser: Sync + Send {
     /// Fetch a user from the database by their username
     async fn fetch_user_by_username(&self, username: &str, discriminator: &str) -> Result<User>;
 
+    async fn fetch_user_only_by_username(&self, username: &str) -> Result<User>;
+
     /// Fetch a user from the database by their session token
     async fn fetch_user_by_token(&self, token: &str) -> Result<User>;
 
