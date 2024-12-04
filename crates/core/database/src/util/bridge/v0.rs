@@ -221,6 +221,7 @@ impl From<crate::ChannelBanner> for ChannelBanner {
     fn from(value: crate::ChannelBanner) -> Self {
         ChannelBanner {
             icon: value.icon.map(|file| file.into()),
+            link: value.link,
         }
     }
 }

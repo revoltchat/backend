@@ -179,6 +179,7 @@ auto_derived!(
 
     pub struct ChannelBanner {
         pub icon: Option<File>,
+        pub link: Option<String>,
     }
 
     /// New webhook information

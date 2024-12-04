@@ -182,4 +182,5 @@ pub enum FieldsChannel {
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
 pub struct ChannelBanner {
     pub icon: Option<File>,
+    pub link: Option<String>,
 }

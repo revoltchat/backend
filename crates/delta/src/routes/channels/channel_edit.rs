@@ -13,6 +13,7 @@ use validator::Validate;
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
 pub struct ChannelBannerField {
     pub icon: Option<String>,
+    pub link: Option<String>,
 }
 
 /// # Channel Details
@@ -163,13 +164,16 @@ pub async fn req(
                 *icon = partial.icon.clone();
             }
 
-            if let Some(banner) = data.banner {
+            if let Some(banners) = data.banner {
                 let mut banner_ids: Vec<ChannelBanner> = vec![];
-                for img in banner {
+                for img in banners {
                     if let Some(img_icon) = img.icon {
                         let mut _icon: Option<File> =
                             Some(File::use_icon(db, &img_icon, id).await?);
-                        let _banner = ChannelBanner { icon: _icon };
+                        let _banner = ChannelBanner {
+                            icon: _icon,
+                            link: img.link,
+                        };
                         banner_ids.push(_banner);
                     }
                 }
@@ -234,5 +238,5 @@ pub async fn req(
         _ => return Err(Error::InvalidOperation),
     };
 
-    Ok(Json(channel))
+    Ok(Json(target.as_channel(db).await?))
 }
