@@ -24,6 +24,25 @@ impl AbstractAttachment for DummyDb {
             ..Default::default()
         })
     }
+    async fn find_use_attachment(
+        &self,
+        attachment_id: &str,
+        tag: &str,
+        _parent_type: &str,
+        parent_id: &str,
+    ) -> Result<File> {
+        Ok(File {
+            id: attachment_id.into(),
+            tag: tag.into(),
+            filename: "file.txt".into(),
+            content_type: "plain/text".into(),
+            size: 100,
+
+            object_id: Some(parent_id.into()),
+
+            ..Default::default()
+        })
+    }
 
     async fn insert_attachment(&self, attachment: &File) -> Result<()> {
         info!("Insert {attachment:?}");

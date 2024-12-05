@@ -76,6 +76,49 @@ impl AbstractAttachment for MongoDb {
             Err(error) => Err(error),
         }
     }
+    async fn find_use_attachment(
+        &self,
+        attachment_id: &str,
+        tag: &str,
+        parent_type: &str,
+        parent_id: &str,
+    ) -> Result<File> {
+        let key = format!("{parent_type}_id");
+        match self
+            .find_one::<File>(
+                COL,
+                doc! {
+                    "_id": attachment_id,
+                    "tag": tag
+                },
+            )
+            .await
+        {
+            Ok(file) => {
+                self.col::<Document>(COL)
+                    .update_one(
+                        doc! {
+                            "_id": &file.id
+                        },
+                        doc! {
+                            "$set": {
+                                key: parent_id
+                            }
+                        },
+                        None,
+                    )
+                    .await
+                    .map_err(|_| Error::DatabaseError {
+                        operation: "update_one",
+                        with: "attachment",
+                    })?;
+
+                Ok(file)
+            }
+            Err(Error::NotFound) => Err(Error::UnknownAttachment),
+            Err(error) => Err(error),
+        }
+    }
 
     async fn insert_attachment(&self, attachment: &File) -> Result<()> {
         self.insert_one(COL, attachment).await.map(|_| ())

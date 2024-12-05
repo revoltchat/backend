@@ -19,6 +19,14 @@ pub trait AbstractAttachments: Sync + Send {
         parent_id: &str,
     ) -> Result<File>;
 
+    async fn find_use_attachment(
+        &self,
+        id: &str,
+        tag: &str,
+        parent_type: &str,
+        parent_id: &str,
+    ) -> Result<File>;
+
     /// Mark an attachment as having been reported.
     async fn mark_attachment_as_reported(&self, id: &str) -> Result<()>;
 

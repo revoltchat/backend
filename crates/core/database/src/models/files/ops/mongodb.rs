@@ -55,6 +55,40 @@ impl AbstractAttachments for MongoDb {
 
         Ok(file)
     }
+    async fn find_use_attachment(
+        &self,
+        id: &str,
+        tag: &str,
+        parent_type: &str,
+        parent_id: &str,
+    ) -> Result<File> {
+        let key = format!("{parent_type}_id");
+        let file = query!(
+            self,
+            find_one,
+            COL,
+            doc! {
+                "_id": id,
+                "tag": tag
+            }
+        )?
+        .ok_or_else(|| create_error!(NotFound))?;
+        self.col::<Document>(COL)
+            .update_one(
+                doc! {
+                    "_id": id
+                },
+                doc! {
+                    "$set": {
+                        key: parent_id
+                    }
+                },
+                None,
+            )
+            .await
+            .map_err(|_| create_database_error!("update_one", COL))?;
+        Ok(file)
+    }
 
     /// Mark an attachment as having been reported.
     async fn mark_attachment_as_reported(&self, id: &str) -> Result<()> {

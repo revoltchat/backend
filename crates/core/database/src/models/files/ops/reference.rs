@@ -35,6 +35,23 @@ impl AbstractAttachments for ReferenceDb {
             Err(create_error!(NotFound))
         }
     }
+    /// Find an attachment by its details and mark it as used by a given parent.
+    async fn find_use_attachment(
+        &self,
+        id: &str,
+        _tag: &str,
+        _parent_type: &str,
+        _parent_id: &str,
+    ) -> Result<File> {
+        let mut files = self.files.lock().await;
+        if let Some(file) = files.get_mut(id) {
+            // TODO: check tag
+            // TODO: set parent ID
+            Ok(file.clone())
+        } else {
+            Err(create_error!(NotFound))
+        }
+    }
 
     /// Mark an attachment as having been reported.
     async fn mark_attachment_as_reported(&self, id: &str) -> Result<()> {

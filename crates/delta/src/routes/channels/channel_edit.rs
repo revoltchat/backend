@@ -169,8 +169,8 @@ pub async fn req(
                 for img in banners {
                     if let Some(img_icon) = img.icon {
                         let mut _icon: Option<File> =
-                            Some(File::use_icon(db, &img_icon, id).await?);
-                        let _banner = ChannelBanner {
+                            Some(File::find_icon(db, &img_icon, id).await?);
+                        let _banner: ChannelBanner = ChannelBanner {
                             icon: _icon,
                             link: img.link,
                         };
