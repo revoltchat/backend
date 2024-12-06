@@ -120,9 +120,13 @@ pub async fn handle_ack_event(
             );
 
             // find all the users we'll be notifying
-            messages
-                .iter()
-                .for_each(|(_, _, recipents, _)| users.extend(recipents.iter()));
+            messages.iter().for_each(|(_, message, recipents, _)| {
+                users.extend(recipents.iter());
+
+                if message.contains_mass_mention() {
+                    todo!();
+                }
+            });
 
             debug!("Found {} users to notify.", users.len());
 
@@ -223,6 +227,12 @@ pub async fn worker(db: Database, amqp: AMQP) {
                         {
                             // add the new message to the list of messages to be processed.
                             existing.append(new_data);
+
+                            // if the message contains a mass mention, do not delay it any further.
+                            if new_data[0].1.contains_mass_mention() {
+                                task.run_immediately();
+                                continue;
+                            }
 
                             // put a cap on the amount of messages that can be queued, for particularly active channels
                             if (existing.length() as u16)

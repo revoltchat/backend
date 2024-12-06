@@ -303,6 +303,8 @@ impl Default for FeaturesAdvanced {
 pub struct Features {
     pub limits: FeaturesLimitsCollection,
     pub webhooks_enabled: bool,
+    pub mass_mentions_send_notifications: bool,
+    pub mass_mentions_enabled: bool,
     #[serde(default)]
     pub advanced: FeaturesAdvanced,
 }

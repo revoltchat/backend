@@ -167,13 +167,18 @@ region = "minio"
 access_key_id = "minioautumn"
 # S3 protocol access key
 secret_access_key = "minioautumn"
+# Bucket to upload to by default
 default_bucket = "revolt-uploads"
 
 
 [features]
-# Bucket to upload to by default
 # Feature gate options
 webhooks_enabled = false
+# Enable push notifications for mass pings (everyone, online, roles)
+# When false this will still ping in-client but will not send notifications from pushd
+mass_mentions_send_notifications = true
+# Can role/everyone pings be used at all
+mass_mentions_enabled = true
 
 [features.limits]
 
