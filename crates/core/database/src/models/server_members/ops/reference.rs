@@ -3,7 +3,7 @@ use revolt_result::Result;
 use crate::ReferenceDb;
 use crate::{FieldsMember, Member, MemberCompositeKey, PartialMember};
 
-use super::AbstractServerMembers;
+use super::{AbstractServerMembers, ChunkedServerMembersGenerator};
 
 #[async_trait]
 impl AbstractServerMembers for ReferenceDb {
@@ -38,6 +38,23 @@ impl AbstractServerMembers for ReferenceDb {
             .filter(|member| member.id.server == server_id)
             .cloned()
             .collect())
+    }
+
+    /// Fetch all members in a server as an iterator
+    async fn fetch_all_members_chunked(
+        &self,
+        server_id: &str,
+    ) -> Result<ChunkedServerMembersGenerator> {
+        let server_members = self.server_members.lock().await;
+
+        let members = server_members
+            .clone()
+            .into_values()
+            .filter(move |member| member.id.server == server_id)
+            .collect();
+
+        // this is inefficient as shit but its the reference db so its fine
+        Ok(ChunkedServerMembersGenerator::new_reference(members))
     }
 
     /// Fetch all memberships for a user

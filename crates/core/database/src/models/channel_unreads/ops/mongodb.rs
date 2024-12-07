@@ -37,6 +37,8 @@ impl AbstractChannelUnreads for MongoDb {
                         "last_id": message_id
                     }
                 },
+            )
+            .with_options(
                 FindOneAndUpdateOptions::builder()
                     .upsert(true)
                     .return_document(ReturnDocument::After)
@@ -51,15 +53,12 @@ impl AbstractChannelUnreads for MongoDb {
         let current_time = Ulid::new().to_string();
 
         self.col::<Document>(COL)
-            .delete_many(
-                doc! {
-                    "_id.channel": {
-                        "$in": channel_ids
-                    },
-                    "_id.user": user_id
+            .delete_many(doc! {
+                "_id.channel": {
+                    "$in": channel_ids
                 },
-                None,
-            )
+                "_id.user": user_id
+            })
             .await
             .map_err(|_| create_database_error!("delete_many", COL))?;
 
@@ -77,7 +76,6 @@ impl AbstractChannelUnreads for MongoDb {
                         }
                     })
                     .collect::<Vec<Document>>(),
-                None,
             )
             .await
             .map(|_| ())
@@ -104,8 +102,8 @@ impl AbstractChannelUnreads for MongoDb {
                         }
                     }
                 },
-                UpdateOptions::builder().upsert(true).build(),
             )
+            .with_options(UpdateOptions::builder().upsert(true).build())
             .await
             .map(|_| ())
             .map_err(|_| create_database_error!("update_one", COL))

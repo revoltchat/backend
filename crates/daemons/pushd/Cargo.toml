@@ -19,7 +19,7 @@ tokio = "1.39.2"
 async-trait = "0.1.81"
 ulid = "1.0.0"
 
-authifier = "1.0.8"
+authifier = "1.0.10"
 
 log = "0.4.11"
 
