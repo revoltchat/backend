@@ -171,7 +171,7 @@ impl AbstractMessages for MongoDb {
         self.find_with_options(
             COL,
             doc! {
-                "ids": {
+                "_id": {
                     "$in": ids
                 }
             },
