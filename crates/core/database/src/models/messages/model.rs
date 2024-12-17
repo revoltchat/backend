@@ -15,8 +15,8 @@ use validator::Validate;
 use crate::{
     events::client::EventV1,
     tasks::{self, ack::AckEvent},
-    util::idempotency::IdempotencyKey,
-    Channel, Database, Emoji, File, User,
+    util::{bulk_permissions::BulkDatabasePermissionQuery, idempotency::IdempotencyKey},
+    Channel, Database, Emoji, File, User, AMQP,
 };
 
 auto_derived_partial!(
@@ -230,6 +230,7 @@ impl Message {
     #[allow(clippy::too_many_arguments)]
     pub async fn create_from_api(
         db: &Database,
+        amqp: Option<&AMQP>,
         channel: Channel,
         data: DataMessageSend,
         author: MessageAuthor<'_>,
@@ -337,35 +338,52 @@ impl Message {
             }
         }
 
+        // Validate the mentions go to users in the channel/server
         if !mentions.is_empty() {
-            // FIXME: temp fix to stop spam attacks
             match channel {
                 Channel::DirectMessage { ref recipients, .. }
                 | Channel::Group { ref recipients, .. } => {
                     let recipients_hash: HashSet<&String, RandomState> =
-                        HashSet::from_iter(recipients.iter());
-
+                        HashSet::from_iter(recipients);
                     mentions.retain(|m| recipients_hash.contains(m));
                 }
                 Channel::TextChannel { ref server, .. }
                 | Channel::VoiceChannel { ref server, .. } => {
                     let mentions_vec = Vec::from_iter(mentions.iter().cloned());
+
                     let valid_members = db.fetch_members(server.as_str(), &mentions_vec[..]).await;
                     if let Ok(valid_members) = valid_members {
-                        let valid_ids: HashSet<String, RandomState> = HashSet::from_iter(
-                            valid_members.iter().map(|member| member.id.user.clone()),
-                        );
-                        mentions.retain(|m| valid_ids.contains(m));
+                        let valid_mentions: HashSet<&String, RandomState> =
+                            HashSet::from_iter(valid_members.iter().map(|m| &m.id.user));
+
+                        mentions.retain(|m| valid_mentions.contains(m)); // quick pass, validate mentions are in the server
+
+                        if !mentions.is_empty() {
+                            // if there are still mentions, drill down to a channel-level
+                            let member_channel_view_perms =
+                                BulkDatabasePermissionQuery::from_server_id(db, server)
+                                    .await
+                                    .channel(&channel)
+                                    .members(&valid_members)
+                                    .members_can_see_channel()
+                                    .await;
+
+                            mentions
+                                .retain(|m| *member_channel_view_perms.get(m).unwrap_or(&false));
+                        }
                     } else {
                         revolt_config::capture_error(&valid_members.unwrap_err());
+                        return Err(create_error!(InternalError));
                     }
                 }
-                Channel::SavedMessages { .. } => mentions.clear(),
+                Channel::SavedMessages { .. } => {
+                    mentions.clear();
+                }
             }
+        }
 
-            if !mentions.is_empty() {
-                message.mentions.replace(mentions.into_iter().collect());
-            }
+        if !mentions.is_empty() {
+            message.mentions.replace(mentions.into_iter().collect());
         }
 
         if !replies.is_empty() {
@@ -418,7 +436,7 @@ impl Message {
 
         // Send the message
         message
-            .send(db, author, user, member, &channel, generate_embeds)
+            .send(db, amqp, author, user, member, &channel, generate_embeds)
             .await?;
 
         Ok(message)
@@ -432,6 +450,9 @@ impl Message {
         member: Option<v0::Member>,
         is_dm: bool,
         generate_embeds: bool,
+        // This determines if this function should queue the mentions task or if somewhere else will.
+        // If this is true, you MUST call tasks::ack::queue yourself.
+        mentions_elsewhere: bool,
     ) -> Result<()> {
         db.insert_message(self).await?;
 
@@ -444,13 +465,12 @@ impl Message {
         tasks::last_message_id::queue(self.channel.to_string(), self.id.to_string(), is_dm).await;
 
         // Add mentions for affected users
-        if let Some(mentions) = &self.mentions {
-            for user in mentions {
-                tasks::ack::queue(
+        if !mentions_elsewhere {
+            if let Some(mentions) = &self.mentions {
+                tasks::ack::queue_message(
                     self.channel.to_string(),
-                    user.to_string(),
-                    AckEvent::AddMention {
-                        ids: vec![self.id.to_string()],
+                    AckEvent::ProcessMessage {
+                        messages: vec![(None, self.clone(), mentions.clone(), true)],
                     },
                 )
                 .await;
@@ -473,9 +493,11 @@ impl Message {
     }
 
     /// Send a message
+    #[allow(clippy::too_many_arguments)]
     pub async fn send(
         &mut self,
         db: &Database,
+        amqp: Option<&AMQP>, // this is optional mostly for tests.
         author: MessageAuthor<'_>,
         user: Option<v0::User>,
         member: Option<v0::Member>,
@@ -488,26 +510,36 @@ impl Message {
             member.clone(),
             matches!(channel, Channel::DirectMessage { .. }),
             generate_embeds,
+            true,
         )
         .await?;
 
         if !self.has_suppressed_notifications() {
-            // Push out Web Push notifications
-            crate::tasks::web_push::queue(
-                {
-                    match channel {
-                        Channel::DirectMessage { recipients, .. }
-                        | Channel::Group { recipients, .. } => recipients.clone(),
-                        Channel::TextChannel { .. } => self.mentions.clone().unwrap_or_default(),
-                        _ => vec![],
-                    }
+            // send Push notifications
+            tasks::ack::queue_message(
+                self.channel.to_string(),
+                AckEvent::ProcessMessage {
+                    messages: vec![(
+                        Some(
+                            PushNotification::from(
+                                self.clone().into_model(user, member),
+                                Some(author),
+                                channel.to_owned().into(),
+                            )
+                            .await,
+                        ),
+                        self.clone(),
+                        match channel {
+                            Channel::DirectMessage { recipients, .. }
+                            | Channel::Group { recipients, .. } => recipients.clone(),
+                            Channel::TextChannel { .. } => {
+                                self.mentions.clone().unwrap_or_default()
+                            }
+                            _ => vec![],
+                        },
+                        self.has_suppressed_notifications(),
+                    )],
                 },
-                PushNotification::from(
-                    self.clone().into_model(user, member),
-                    Some(author),
-                    channel.id(),
-                )
-                .await,
             )
             .await;
         }

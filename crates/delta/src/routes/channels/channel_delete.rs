@@ -1,6 +1,6 @@
 use revolt_database::{
     util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Channel, Database, PartialChannel, User,
+    Channel, Database, PartialChannel, User, AMQP,
 };
 use revolt_models::v0;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
@@ -15,6 +15,7 @@ use rocket_empty::EmptyResponse;
 #[delete("/<target>?<options..>")]
 pub async fn delete(
     db: &State<Database>,
+    amqp: &State<AMQP>,
     user: User,
     target: Reference,
     options: v0::OptionsChannelDelete,
@@ -39,7 +40,13 @@ pub async fn delete(
             .await
             .map(|_| EmptyResponse),
         Channel::Group { .. } => channel
-            .remove_user_from_group(db, &user, None, options.leave_silently.unwrap_or_default())
+            .remove_user_from_group(
+                db,
+                amqp,
+                &user,
+                None,
+                options.leave_silently.unwrap_or_default(),
+            )
             .await
             .map(|_| EmptyResponse),
         Channel::TextChannel { .. } | Channel::VoiceChannel { .. } => {

@@ -1,6 +1,6 @@
 [package]
 name = "revolt-nodejs-bindings"
-version = "0.7.18"
+version = "0.8.0"
 description = "Node.js bindings for the Revolt software"
 authors = ["Paul Makles <me@insrt.uk>"]
 license = "MIT"
@@ -20,6 +20,6 @@ serde = { version = "1", features = ["derive"] }
 
 async-std = "1.12.0"
 
-revolt-config = { version = "0.7.18", path = "../../core/config" }
-revolt-result = { version = "0.7.18", path = "../../core/result" }
-revolt-database = { version = "0.7.18", path = "../../core/database" }
+revolt-config = { version = "0.8.0", path = "../../core/config" }
+revolt-result = { version = "0.8.0", path = "../../core/result" }
+revolt-database = { version = "0.8.0", path = "../../core/database" }

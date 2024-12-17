@@ -1,4 +1,4 @@
-use revolt_database::{util::reference::Reference, Database, Message};
+use revolt_database::{util::reference::Reference, Database, Message, AMQP};
 use revolt_models::v0::{MessageAuthor, SendableEmbed, Webhook};
 use revolt_result::{create_error, Error, Result};
 use revolt_rocket_okapi::{
@@ -635,7 +635,10 @@ impl<'r> FromRequest<'r> for EventHeader<'r> {
     async fn from_request(request: &'r Request<'_>) -> rocket::request::Outcome<Self, Self::Error> {
         let headers = request.headers();
         let Some(event) = headers.get_one("X-GitHub-Event") else {
-            return rocket::request::Outcome::Failure((Status::BadRequest, create_error!(InvalidOperation)))
+            return rocket::request::Outcome::Error((
+                Status::BadRequest,
+                create_error!(InvalidOperation),
+            ));
         };
 
         rocket::request::Outcome::Success(Self(event))
@@ -747,6 +750,7 @@ fn convert_event(data: &str, event_name: &str) -> Result<Event> {
 #[post("/<webhook_id>/<token>/github", data = "<data>")]
 pub async fn webhook_execute_github(
     db: &State<Database>,
+    amqp: &State<AMQP>,
     webhook_id: Reference,
     token: String,
     event: EventHeader<'_>,
@@ -784,7 +788,9 @@ pub async fn webhook_execute_github(
             r#ref,
             ..
         }) => {
-            let Some(branch) = r#ref.split('/').nth(2) else { return Ok(()) };
+            let Some(branch) = r#ref.split('/').nth(2) else {
+                return Ok(());
+            };
 
             if forced {
                 let description = format!(
@@ -1074,6 +1080,7 @@ pub async fn webhook_execute_github(
     message
         .send(
             db,
+            Some(amqp),
             MessageAuthor::Webhook(&webhook.into()),
             None,
             None,

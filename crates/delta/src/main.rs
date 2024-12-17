@@ -10,12 +10,17 @@ pub mod util;
 
 use revolt_config::config;
 use revolt_database::events::client::EventV1;
+use revolt_database::AMQP;
 use rocket::{Build, Rocket};
 use rocket_cors::{AllowedOrigins, CorsOptions};
 use rocket_prometheus::PrometheusMetrics;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 
+use amqprs::{
+    channel::ExchangeDeclareArguments,
+    connection::{Connection, OpenConnectionArguments},
+};
 use async_std::channel::unbounded;
 use authifier::AuthifierEvent;
 use rocket::data::ToByteUnit;
@@ -32,7 +37,7 @@ pub async fn web() -> Rocket<Build> {
     db.migrate_database().await.unwrap();
 
     // Setup Authifier event channel
-    let (sender, receiver) = unbounded();
+    let (_, receiver) = unbounded();
 
     // Setup Authifier
     let authifier = db.clone().to_authifier().await;
@@ -52,9 +57,6 @@ pub async fn web() -> Rocket<Build> {
             }
         }
     });
-
-    // Launch background task workers
-    revolt_database::tasks::start_workers(db.clone(), authifier.database.clone());
 
     // Configure CORS
     let cors = CorsOptions {
@@ -79,6 +81,31 @@ pub async fn web() -> Rocket<Build> {
     )
     .into();
 
+    // Configure Rabbit
+    let connection = Connection::open(&OpenConnectionArguments::new(
+        &config.rabbit.host,
+        config.rabbit.port,
+        &config.rabbit.username,
+        &config.rabbit.password,
+    ))
+    .await
+    .unwrap();
+    let channel = connection.open_channel(None).await.unwrap();
+
+    channel
+        .exchange_declare(
+            ExchangeDeclareArguments::new(&config.pushd.exchange, "direct")
+                .durable(true)
+                .finish(),
+        )
+        .await
+        .expect("Failed to declare exchange");
+
+    let amqp = AMQP::new(connection, channel);
+
+    // Launch background task workers
+    revolt_database::tasks::start_workers(db.clone(), amqp.clone());
+
     // Configure Rocket
     let rocket = rocket::build();
     let prometheus = PrometheusMetrics::new();
@@ -91,6 +118,7 @@ pub async fn web() -> Rocket<Build> {
         .mount("/swagger/", swagger)
         .manage(authifier)
         .manage(db)
+        .manage(amqp)
         .manage(cors.clone())
         .attach(util::ratelimiter::RatelimitFairing)
         .attach(cors)

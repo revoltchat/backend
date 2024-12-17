@@ -80,6 +80,14 @@ pub struct Database {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+pub struct Rabbit {
+    pub host: String,
+    pub port: u16,
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct Hosts {
     pub app: String,
     pub api: String,
@@ -107,13 +115,15 @@ pub struct ApiSmtp {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct ApiVapid {
+pub struct PushVapid {
+    pub queue: String,
     pub private_key: String,
     pub public_key: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct ApiFcm {
+pub struct PushFcm {
+    pub queue: String,
     pub key_type: String,
     pub project_id: String,
     pub private_key_id: String,
@@ -127,7 +137,8 @@ pub struct ApiFcm {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct ApiApn {
+pub struct PushApn {
+    pub queue: String,
     pub sandbox: bool,
     pub pkcs8: String,
     pub key_id: String,
@@ -157,11 +168,52 @@ pub struct ApiWorkers {
 pub struct Api {
     pub registration: ApiRegistration,
     pub smtp: ApiSmtp,
-    pub vapid: ApiVapid,
-    pub fcm: ApiFcm,
-    pub apn: ApiApn,
     pub security: ApiSecurity,
     pub workers: ApiWorkers,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct Pushd {
+    pub production: bool,
+    pub exchange: String,
+    pub message_queue: String,
+    pub fr_accepted_queue: String,
+    pub fr_received_queue: String,
+    pub generic_queue: String,
+    pub ack_queue: String,
+
+    pub vapid: PushVapid,
+    pub fcm: PushFcm,
+    pub apn: PushApn,
+}
+
+impl Pushd {
+    fn get_routing_key(&self, key: String) -> String {
+        match self.production {
+            true => key + "-prd",
+            false => key + "-tst",
+        }
+    }
+
+    pub fn get_ack_routing_key(&self) -> String {
+        self.get_routing_key(self.ack_queue.clone())
+    }
+
+    pub fn get_message_routing_key(&self) -> String {
+        self.get_routing_key(self.message_queue.clone())
+    }
+
+    pub fn get_fr_accepted_routing_key(&self) -> String {
+        self.get_routing_key(self.fr_accepted_queue.clone())
+    }
+
+    pub fn get_fr_received_routing_key(&self) -> String {
+        self.get_routing_key(self.fr_received_queue.clone())
+    }
+
+    pub fn get_generic_routing_key(&self) -> String {
+        self.get_routing_key(self.generic_queue.clone())
+    }
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -175,6 +227,7 @@ pub struct FilesLimit {
 #[derive(Deserialize, Debug, Clone)]
 pub struct FilesS3 {
     pub endpoint: String,
+    pub path_style_buckets: bool,
     pub region: String,
     pub access_key_id: String,
     pub secret_access_key: String,
@@ -233,9 +286,25 @@ pub struct FeaturesLimitsCollection {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+pub struct FeaturesAdvanced {
+    #[serde(default)]
+    pub process_message_delay_limit: u16,
+}
+
+impl Default for FeaturesAdvanced {
+    fn default() -> Self {
+        Self {
+            process_message_delay_limit: 5,
+        }
+    }
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct Features {
     pub limits: FeaturesLimitsCollection,
     pub webhooks_enabled: bool,
+    #[serde(default)]
+    pub advanced: FeaturesAdvanced,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -249,8 +318,10 @@ pub struct Sentry {
 #[derive(Deserialize, Debug, Clone)]
 pub struct Settings {
     pub database: Database,
+    pub rabbit: Rabbit,
     pub hosts: Hosts,
     pub api: Api,
+    pub pushd: Pushd,
     pub files: Files,
     pub features: Features,
     pub sentry: Sentry,
@@ -286,8 +357,6 @@ pub async fn config() -> Settings {
 
 /// Configure logging and common Rust variables
 pub async fn setup_logging(release: &'static str, dsn: String) -> Option<sentry::ClientInitGuard> {
-    dotenv::dotenv().ok();
-
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
     }
