@@ -189,23 +189,6 @@ macro_rules! create_database_error {
     };
 }
 
-#[macro_export]
-#[cfg(debug_assertions)]
-macro_rules! query {
-    ( $self: ident, $type: ident, $collection: expr, $($rest:expr),+ ) => {
-        Ok($self.$type($collection, $($rest),+).await.unwrap())
-    };
-}
-
-#[macro_export]
-#[cfg(not(debug_assertions))]
-macro_rules! query {
-    ( $self: ident, $type: ident, $collection: expr, $($rest:expr),+ ) => {
-        $self.$type($collection, $($rest),+).await
-            .map_err(|_| create_database_error!(stringify!($type), $collection))
-    };
-}
-
 #[cfg(test)]
 mod tests {
     use crate::ErrorType;

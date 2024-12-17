@@ -25,6 +25,17 @@ macro_rules! report_error {
 
 #[cfg(feature = "report-macros")]
 #[macro_export]
+macro_rules! capture_internal_error {
+    ( $expr: expr ) => {
+        $crate::capture_message(
+            &format!("{:?} ({}:{}:{})", $expr, file!(), line!(), column!()),
+            $crate::Level::Error,
+        );
+    };
+}
+
+#[cfg(feature = "report-macros")]
+#[macro_export]
 macro_rules! report_internal_error {
     ( $expr: expr ) => {
         $expr
