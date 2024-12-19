@@ -169,3 +169,7 @@ pub fn preflight_checks() {
 // Production / staging configuration
 pub static IS_STAGING: Lazy<bool> =
     Lazy::new(|| env::var("REVOLT_IS_STAGING").map_or(false, |v| v == "1"));
+
+// TODO: Remove and get from settings
+pub static DEFAULT_SERVER: Lazy<String> =
+    Lazy::new(|| env::var("DEFAULT_SERVER").unwrap_or_else(|_| "".to_string()));

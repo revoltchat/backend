@@ -2,8 +2,11 @@ use rand::{thread_rng, Rng};
 use revolt_quark::authifier::config::{EmailVerificationConfig, Template};
 use revolt_quark::authifier::{models::Account, Authifier};
 use revolt_quark::models::File;
-use revolt_quark::variables::delta::APP_URL;
-use revolt_quark::{models::User, Database, EmptyResponse, Error, Result};
+use revolt_quark::{
+    models::User,
+    variables::delta::{APP_URL, DEFAULT_SERVER},
+    Database, EmptyResponse, Error, Result,
+};
 use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -124,5 +127,8 @@ pub async fn webhook_receive_application(
             }),
         );
     }
-    db.insert_user(&user).await.map(|_| EmptyResponse)
+    db.insert_user(&user).await?;
+    let server = db.fetch_server(&DEFAULT_SERVER).await?;
+    server.create_member(db, user, None).await?;
+    Ok(EmptyResponse)
 }
