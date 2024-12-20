@@ -64,7 +64,8 @@ lazy_static! {
         })
         // TODO config
         // .max_capacity(1024 * 1024 * 1024) // Cache up to 1GiB in memory
-        .max_capacity(512 * 1024 * 1024) // Cache up to 512MiB in memory
+        // .max_capacity(512 * 1024 * 1024) // Cache up to 512MiB in memory
+        .max_capacity(2 * 1024 * 1024 * 1024) // Cache up to 2GiB in memory
         .time_to_live(Duration::from_secs(5 * 60)) // For up to 5 minutes
         .build();
 }
@@ -366,8 +367,8 @@ async fn fetch_preview(
 
     let hash = file.as_hash(&db).await?;
 
-    // Only process image files
-    if !matches!(hash.metadata, Metadata::Image { .. }) {
+    // Only process image files and don't process GIFs
+    if !matches!(hash.metadata, Metadata::Image { .. }) || hash.content_type == "image/gif" {
         return Ok(
             Redirect::permanent(&format!("/{tag}/{file_id}/{}", file.filename)).into_response(),
         );
