@@ -23,7 +23,7 @@ pub async fn req(
     data: Json<DataSendFriendRequest>,
 ) -> Result<Json<User>> {
     if let username = &data.username {
-        let mut target = db.fetch_user_only_by_username(&username).await?;
+        let mut target = db.fetch_user(&username).await?;
 
         if user.bot.is_some() || target.bot.is_some() {
             return Err(Error::IsBot);
