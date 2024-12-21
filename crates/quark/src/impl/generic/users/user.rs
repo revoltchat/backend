@@ -303,12 +303,15 @@ impl User {
         local: RelationshipStatus,
         remote: RelationshipStatus,
     ) -> Result<()> {
-        if try_join!(
-            db.set_relationship(&self.id, &target.id, &local),
-            db.set_relationship(&target.id, &self.id, &remote)
-        )
-        .is_err()
-        {
+        if let Err(e) = db.set_relationship(&self.id, &target.id, &local).await {
+            return Err(Error::DatabaseError {
+                operation: "update_one",
+                with: "user",
+            });
+        }
+
+        // Await second operation
+        if let Err(e) = db.set_relationship(&target.id, &self.id, &remote).await {
             return Err(Error::DatabaseError {
                 operation: "update_one",
                 with: "user",
