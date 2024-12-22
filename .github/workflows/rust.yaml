@@ -67,7 +67,7 @@ jobs:
         if: github.event_name != 'pull_request' && github.ref_name == 'main'
         uses: nev7n/wait_for_response@v1
         with:
-          url: "http://localhost:8000/"
+          url: "http://localhost:14702/"
 
       - name: Checkout API repository
         if: github.event_name != 'pull_request' && github.ref_name == 'main'
@@ -79,7 +79,7 @@ jobs:
 
       - name: Download OpenAPI specification
         if: github.event_name != 'pull_request' && github.ref_name == 'main'
-        run: curl http://localhost:8000/openapi.json -o api/OpenAPI.json
+        run: curl http://localhost:14702/openapi.json -o api/OpenAPI.json
 
       - name: Commit changes
         if: github.event_name != 'pull_request' && github.ref_name == 'main'
