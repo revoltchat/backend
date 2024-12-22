@@ -27,7 +27,7 @@ permissions:
 
 jobs:
   base:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-20.04
     name: Build base image
     steps:
       # Configure build environment
@@ -59,7 +59,7 @@ jobs:
 
   publish:
     needs: [base]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-20.04
     if: github.event_name != 'pull_request'
     strategy:
       matrix:
