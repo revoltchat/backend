@@ -1,12 +1,12 @@
 [package]
 name = "revolt-pushd"
-version = "0.8.0"
+version = "0.8.1"
 edition = "2021"
 
 [dependencies]
-revolt-config = { version = "0.8.0", path = "../../core/config" }
-revolt-database = { version = "0.8.0", path = "../../core/database" }
-revolt-models = { version = "0.8.0", path = "../../core/models", features = [
+revolt-config = { version = "0.8.1", path = "../../core/config" }
+revolt-database = { version = "0.8.1", path = "../../core/database" }
+revolt-models = { version = "0.8.1", path = "../../core/models", features = [
     "validator",
 ] }
 

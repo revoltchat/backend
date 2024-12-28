@@ -1,6 +1,6 @@
 [package]
 name = "revolt-autumn"
-version = "0.8.0"
+version = "0.8.1"
 edition = "2021"
 
 [dependencies]
@@ -42,12 +42,12 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Core crates
-revolt-files = { version = "0.8.0", path = "../../core/files" }
-revolt-config = { version = "0.8.0", path = "../../core/config" }
-revolt-database = { version = "0.8.0", path = "../../core/database", features = [
+revolt-files = { version = "0.8.1", path = "../../core/files" }
+revolt-config = { version = "0.8.1", path = "../../core/config" }
+revolt-database = { version = "0.8.1", path = "../../core/database", features = [
     "axum-impl",
 ] }
-revolt-result = { version = "0.8.0", path = "../../core/result", features = [
+revolt-result = { version = "0.8.1", path = "../../core/result", features = [
     "utoipa",
     "axum",
 ] }
