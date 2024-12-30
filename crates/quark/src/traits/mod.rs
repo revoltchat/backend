@@ -24,6 +24,7 @@ mod users {
     pub mod bot;
     pub mod user;
     pub mod user_settings;
+    pub mod user_white_list;
 }
 
 mod safety {
@@ -48,6 +49,7 @@ pub use servers::server_member::AbstractServerMember;
 pub use users::bot::AbstractBot;
 pub use users::user::AbstractUser;
 pub use users::user_settings::AbstractUserSettings;
+pub use users::user_white_list::AbstractUserWhiteList;
 
 pub use safety::report::AbstractReport;
 pub use safety::snapshot::AbstractSnapshot;
@@ -70,5 +72,6 @@ pub trait AbstractDatabase:
     + AbstractUserSettings
     + AbstractReport
     + AbstractSnapshot
+    + AbstractUserWhiteList
 {
 }

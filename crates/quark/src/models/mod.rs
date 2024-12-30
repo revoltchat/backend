@@ -20,11 +20,11 @@ mod servers {
     pub mod server_ban;
     pub mod server_member;
 }
-
 mod users {
     pub mod bot;
     pub mod user;
     pub mod user_settings;
+    pub mod user_white_list;
 }
 
 mod safety {

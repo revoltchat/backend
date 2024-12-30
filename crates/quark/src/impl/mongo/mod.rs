@@ -37,6 +37,7 @@ pub mod users {
     pub mod bot;
     pub mod user;
     pub mod user_settings;
+    pub mod user_white_list;
 }
 
 pub mod safety {

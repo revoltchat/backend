@@ -2,8 +2,10 @@ use revolt_rocket_okapi::revolt_okapi::openapi3::OpenApi;
 use rocket::Route;
 
 mod add_friend;
+mod add_white_list;
 mod block_user;
 mod change_username;
+mod create_account;
 mod edit_user;
 mod fetch_dms;
 mod fetch_profile;
@@ -37,5 +39,11 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         block_user::req,
         unblock_user::req,
         send_friend_request::req,
+        // others
+        add_white_list::req
     ]
+}
+
+pub fn authifier_routes() -> (Vec<Route>, OpenApi) {
+    openapi_get_routes_spec![create_account::req]
 }

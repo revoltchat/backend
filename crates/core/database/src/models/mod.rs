@@ -8,6 +8,7 @@ mod safety_strikes;
 mod server_members;
 mod servers;
 mod user_settings;
+mod user_white_list;
 mod users;
 
 pub use admin_migrations::*;
@@ -20,6 +21,7 @@ pub use safety_strikes::*;
 pub use server_members::*;
 pub use servers::*;
 pub use user_settings::*;
+pub use user_white_list::*;
 pub use users::*;
 
 use crate::{Database, MongoDb, ReferenceDb};
@@ -38,6 +40,7 @@ pub trait AbstractDatabase:
     + servers::AbstractServers
     + user_settings::AbstractUserSettings
     + users::AbstractUsers
+    + user_white_list::AbstractUserWhiteList
 {
 }
 

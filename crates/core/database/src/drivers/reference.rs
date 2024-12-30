@@ -4,7 +4,7 @@ use futures::lock::Mutex;
 
 use crate::{
     AccountStrike, Bot, Channel, File, Member, MemberCompositeKey, Server, User, UserSettings,
-    Webhook,
+    UserWhiteList, Webhook,
 };
 
 database_derived!(
@@ -18,6 +18,7 @@ database_derived!(
         pub users: Arc<Mutex<HashMap<String, User>>>,
         pub server_members: Arc<Mutex<HashMap<MemberCompositeKey, Member>>>,
         pub servers: Arc<Mutex<HashMap<String, Server>>>,
+        pub user_white_lists: Arc<Mutex<HashMap<String, UserWhiteList>>>,
         pub files: Arc<Mutex<HashMap<String, File>>>,
         pub server_bans: Arc<Mutex<HashMap<String, ()>>>,
         pub safety_reports: Arc<Mutex<HashMap<String, ()>>>,
