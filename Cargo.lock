@@ -5934,9 +5934,11 @@ dependencies = [
  "isahc",
  "iso8601-timestamp 0.2.11",
  "log",
+ "pretty_env_logger",
  "revolt-config",
  "revolt-database",
  "revolt-models",
+ "revolt-presence",
  "revolt_a2",
  "revolt_optional_struct",
  "serde",
@@ -8785,8 +8787,3 @@ checksum = "16099418600b4d8f028622f73ff6e3deaabdff330fb9a2a131dea781ee8b0768"
 dependencies = [
  "zune-core",
 ]
-
-[[patch.unused]]
-name = "redis"
-version = "0.23.1"
-source = "git+https://github.com/revoltchat/redis-rs?rev=f8ca28ab85da59d2ccde526b4d2fb390eff5a5f9#f8ca28ab85da59d2ccde526b4d2fb390eff5a5f9"

@@ -109,6 +109,35 @@ impl AbstractChannelUnreads for MongoDb {
             .map_err(|_| create_database_error!("update_one", COL))
     }
 
+    /// Add a mention to multiple users.
+    async fn add_mention_to_many_unreads<'a>(
+        &self,
+        channel_id: &str,
+        user_ids: &[String],
+        message_ids: &[String],
+    ) -> Result<()> {
+        self.col::<Document>(COL)
+            .update_many(
+                doc! {
+                    "_id.channel": channel_id,
+                    "_id.user": {
+                        "$in": user_ids
+                    },
+                },
+                doc! {
+                    "$push": {
+                        "mentions": {
+                            "$each": message_ids
+                        }
+                    }
+                },
+            )
+            .with_options(UpdateOptions::builder().upsert(true).build())
+            .await
+            .map(|_| ())
+            .map_err(|_| create_database_error!("update_many", COL))
+    }
+
     /// Fetch all channel unreads for a user.
     async fn fetch_unreads(&self, user_id: &str) -> Result<Vec<ChannelUnread>> {
         query!(

@@ -50,11 +50,14 @@ impl AbstractServerMembers for MongoDb {
             .await)
     }
 
-    /// Fetch all members in a server as a generator
+    /// Fetch all members in a server as a generator.
+    /// Uses config key pushd.mass_mention_chunk_size as the batch size.
     async fn fetch_all_members_chunked(
         &self,
         server_id: &str,
     ) -> Result<ChunkedServerMembersGenerator> {
+        let config = revolt_config::config().await;
+
         let mut session = self
             .start_session()
             .await
@@ -72,10 +75,35 @@ impl AbstractServerMembers for MongoDb {
                 "_id.server": server_id
             })
             .session(&mut session)
+            .batch_size(config.pushd.mass_mention_chunk_size as u32)
             .await
             .map_err(|_| create_database_error!("find", COL))?;
 
         Ok(ChunkedServerMembersGenerator::new_mongo(session, cursor))
+    }
+
+    async fn fetch_all_members_with_roles(
+        &self,
+        server_id: &str,
+        roles: &Vec<String>,
+    ) -> Result<Vec<Member>> {
+        Ok(self
+            .col::<Member>(COL)
+            .find(doc! {
+                "_id.server": server_id,
+                "roles": {"$in": roles}
+            })
+            .await
+            .map_err(|_| create_database_error!("find", COL))?
+            .filter_map(|s| async {
+                if cfg!(debug_assertions) {
+                    Some(s.unwrap())
+                } else {
+                    s.ok()
+                }
+            })
+            .collect()
+            .await)
     }
 
     /// Fetch all memberships for a user

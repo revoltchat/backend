@@ -205,7 +205,7 @@ auto_derived!(
     }
 );
 
-pub struct MessageFlagsValue(u32);
+pub struct MessageFlagsValue(pub u32);
 
 impl MessageFlagsValue {
     pub fn has(&self, flag: MessageFlags) -> bool {
@@ -370,7 +370,7 @@ impl Message {
         let mut role_mentions = HashSet::new();
         let mut role_model_mentions = vec![];
 
-        if allow_mentions {
+        if allow_mentions && server_id.is_some() {
             if let Some(content) = &data.content {
                 for capture in RE_MENTION.captures_iter(content) {
                     if let Some(mention) = capture.get(1) {
@@ -379,42 +379,35 @@ impl Message {
                 }
 
                 // Second step of mass mention resolution.
-                if !mentions_everyone {
-                    for capture in RE_ROLE_MENTION.captures_iter(content) {
-                        let raw = capture.get(0).expect("No capture?").as_str();
-                        if raw == "@everyone" {
-                            mentions_everyone = true;
-                            // Can't break early here since we want to capture any role ids
-                        } else if raw == "@online" {
-                            mentions_online = true;
-                        } else if let Some(role_match) = capture.get(1) {
-                            role_mentions.insert(role_match.as_str().to_string());
-                        }
+                for capture in RE_ROLE_MENTION.captures_iter(content) {
+                    let raw = capture.get(0).expect("No capture?").as_str();
+                    if raw == "@everyone" {
+                        mentions_everyone = true;
+                        // Can't break early here since we want to capture any role ids
+                    } else if raw == "@online" {
+                        mentions_online = true;
+                    } else if let Some(role_match) = capture.get(1) {
+                        role_mentions.insert(role_match.as_str().to_string());
                     }
+                }
 
-                    if !role_mentions.is_empty() {
-                        if server_id.is_none() {
-                            // We are not in a server context, someone is trying to mess with us
-                            role_mentions.clear();
-                        } else {
-                            let server_data = db
-                                .fetch_server(server_id.unwrap().as_str())
-                                .await
-                                .expect("Failed to fetch server");
+                if !role_mentions.is_empty() {
+                    let server_data = db
+                        .fetch_server(server_id.unwrap().as_str())
+                        .await
+                        .expect("Failed to fetch server");
 
-                            role_mentions = role_mentions
-                                .iter()
-                                .filter(|role_id| server_data.roles.contains_key(*role_id))
-                                .cloned()
-                                .collect();
+                    role_mentions = role_mentions
+                        .iter()
+                        .filter(|role_id| server_data.roles.contains_key(*role_id))
+                        .cloned()
+                        .collect();
 
-                            role_model_mentions.extend(
-                                role_mentions
-                                    .iter()
-                                    .map(|role_id| server_data.roles.get(role_id).to_owned()),
-                            );
-                        }
-                    }
+                    role_model_mentions.extend(
+                        role_mentions
+                            .iter()
+                            .map(|role_id| server_data.roles.get(role_id).to_owned()),
+                    );
                 }
             }
         }
@@ -427,7 +420,7 @@ impl Message {
                 feature: "features.mass_mentions_enabled".to_string()
             }));
         } else if mentions_everyone || mentions_online || !role_mentions.is_empty() {
-            info!(
+            debug!(
                 "Mentioned everyone: {}, mentioned online: {}, mentioned roles: {:?}",
                 mentions_everyone, mentions_online, &role_mentions
             );
@@ -490,6 +483,7 @@ impl Message {
                     let recipients_hash: HashSet<&String, RandomState> =
                         HashSet::from_iter(recipients);
                     mentions.retain(|m| recipients_hash.contains(m));
+                    role_mentions.clear();
                 }
                 Channel::TextChannel { ref server, .. }
                 | Channel::VoiceChannel { ref server, .. } => {
@@ -679,7 +673,9 @@ impl Message {
         )
         .await?;
 
-        if !self.has_suppressed_notifications() {
+        if !self.has_suppressed_notifications()
+            && (self.mentions.is_some() || self.contains_mass_push_mention())
+        {
             // send Push notifications
             tasks::ack::queue_message(
                 self.channel.to_string(),
@@ -746,10 +742,10 @@ impl Message {
         }
     }
 
-    pub fn contains_mass_mention(&self) -> bool {
+    pub fn contains_mass_push_mention(&self) -> bool {
         let ping = if let Some(flags) = self.flags {
             let flags = MessageFlagsValue(flags);
-            flags.has(MessageFlags::MentionsEveryone) || flags.has(MessageFlags::MentionsOnline)
+            flags.has(MessageFlags::MentionsEveryone)
         } else {
             false
         };

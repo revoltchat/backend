@@ -82,6 +82,12 @@ pub trait AbstractServerMembers: Sync + Send {
         server_id: &str,
     ) -> Result<ChunkedServerMembersGenerator>;
 
+    async fn fetch_all_members_with_roles(
+        &self,
+        server_id: &str,
+        roles: &Vec<String>,
+    ) -> Result<Vec<Member>>;
+
     /// Fetch all memberships for a user
     async fn fetch_all_memberships<'a>(&self, user_id: &str) -> Result<Vec<Member>>;
 
