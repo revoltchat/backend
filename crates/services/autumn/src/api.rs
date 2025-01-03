@@ -17,7 +17,7 @@ use revolt_database::{iso8601_timestamp::Timestamp, Database, FileHash, Metadata
 use revolt_files::{
     create_thumbnail, decode_image, fetch_from_s3, upload_to_s3, AUTHENTICATION_TAG_SIZE_BYTES,
 };
-use revolt_result::{create_error, Result};
+use revolt_result::{create_error, Error, Result};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use tempfile::NamedTempFile;
@@ -55,8 +55,18 @@ lazy_static! {
     /// Short-lived file cache to allow us to populate different CDN regions without increasing bandwidth to S3 provider
     /// Uploads will also be stored here to prevent immediately queued downloads from doing the entire round-trip
     static ref S3_CACHE: moka::future::Cache<String, Result<Vec<u8>>> = moka::future::Cache::builder()
-        .max_capacity(10_000) // TODO config
-        .time_to_live(Duration::from_secs(60)) // TODO config
+        .weigher(|_key, value: &Result<Vec<u8>>| -> u32 {
+            std::mem::size_of::<Result<Vec<u8>>>() as u32 + if let Ok(vec) = value {
+                vec.len().try_into().unwrap_or(u32::MAX)
+            } else {
+                std::mem::size_of::<Error>() as u32
+            }
+        })
+        // TODO config
+        // .max_capacity(1024 * 1024 * 1024) // Cache up to 1GiB in memory
+        // .max_capacity(512 * 1024 * 1024) // Cache up to 512MiB in memory
+        .max_capacity(2 * 1024 * 1024 * 1024) // Cache up to 2GiB in memory
+        .time_to_live(Duration::from_secs(5 * 60)) // For up to 5 minutes
         .build();
 }
 
@@ -206,6 +216,27 @@ async fn upload_file(
         nanoid::nanoid!(42)
     };
 
+    // Determine the mime type for the file
+    let mime_type = determine_mime_type(&mut file.contents, &buf, &filename);
+
+    // Check blocklist for mime type
+    if config
+        .files
+        .blocked_mime_types
+        .iter()
+        .any(|m| m == mime_type)
+    {
+        return Err(create_error!(FileTypeNotAllowed));
+    }
+
+    // Determine metadata for the file
+    let metadata = generate_metadata(&file.contents, mime_type);
+
+    // Block non-images for non-attachment uploads
+    if !matches!(tag, Tag::attachments) && !matches!(metadata, Metadata::Image { .. }) {
+        return Err(create_error!(FileTypeNotAllowed));
+    }
+
     // Find an existing hash and use that if possible
     let file_hash_exists = if let Ok(file_hash) = db
         .fetch_attachment_hash(&format!("{original_hash:02x}"))
@@ -228,22 +259,6 @@ async fn upload_file(
     } else {
         false
     };
-
-    // Determine the mime type for the file
-    let mime_type = determine_mime_type(&mut file.contents, &buf, &filename);
-
-    // Check blocklist for mime type
-    if config
-        .files
-        .blocked_mime_types
-        .iter()
-        .any(|m| m == mime_type)
-    {
-        return Err(create_error!(FileTypeNotAllowed));
-    }
-
-    // Determine metadata for the file
-    let metadata = generate_metadata(&file.contents, mime_type);
 
     // Strip metadata
     let (buf, metadata) = strip_metadata(file.contents, buf, metadata, mime_type).await?;
@@ -312,21 +327,23 @@ pub static CACHE_CONTROL: &str = "public, max-age=604800, must-revalidate";
 
 /// Fetch preview of file
 ///
-/// This route will only return image content.
+/// This route will only return image content. <br>
 /// For all other file types, please use the fetch route (you will receive a redirect if you try to use this route anyways!).
 ///
 /// Depending on the given tag, the file will be re-processed to fit the criteria:
 ///
-/// | Tag | Image Resolution <sup>†</sup> |
-/// | :-: | --- |
-/// | attachments | Up to 1280px on any axis |
-/// | avatars | Up to 128px on any axis |
-/// | backgrounds | Up to 1280x720px |
-/// | icons | Up to 128px on any axis |
-/// | banners | Up to 480px on any axis |
-/// | emojis | Up to 128px on any axis |
+/// | Tag | Image Resolution <sup>†</sup> | Animations stripped by preview <sup>‡</sup> |
+/// | :-: | --- | :-: |
+/// | attachments | Up to 1280px on any axis | ❌ |
+/// | avatars | Up to 128px on any axis | ✅ |
+/// | backgrounds | Up to 1280x720px | ❌ |
+/// | icons | Up to 128px on any axis | ✅ |
+/// | banners | Up to 480px on any axis | ❌ |
+/// | emojis | Up to 128px on any axis | ❌ |
 ///
 /// <sup>†</sup> aspect ratio will always be preserved
+///
+/// <sup>‡</sup> to fetch animated variant, suffix `/{file_name}` or `/original` to the path
 #[utoipa::path(
     get,
     path = "/{tag}/{file_id}",
@@ -342,8 +359,8 @@ async fn fetch_preview(
     State(db): State<Database>,
     Path((tag, file_id)): Path<(Tag, String)>,
 ) -> Result<Response> {
-    let tag: &'static str = tag.into();
-    let file = db.fetch_attachment(tag, &file_id).await?;
+    let tag_str: &'static str = tag.clone().into();
+    let file = db.fetch_attachment(tag_str, &file_id).await?;
 
     // Ignore deleted files
     if file.deleted.is_some_and(|v| v) {
@@ -357,10 +374,14 @@ async fn fetch_preview(
 
     let hash = file.as_hash(&db).await?;
 
-    // Only process image files
-    if !matches!(hash.metadata, Metadata::Image { .. }) {
+    let is_animated = hash.content_type == "image/gif"; // TODO: extract this data from files
+
+    // Only process image files and don't process GIFs if not avatar or icon
+    if !matches!(hash.metadata, Metadata::Image { .. })
+        || (is_animated && !matches!(tag, Tag::avatars | Tag::icons))
+    {
         return Ok(
-            Redirect::permanent(&format!("/{tag}/{file_id}/{}", file.filename)).into_response(),
+            Redirect::permanent(&format!("/{tag_str}/{file_id}/{}", file.filename)).into_response(),
         );
     }
 
@@ -370,7 +391,7 @@ async fn fetch_preview(
     // Read image and create thumbnail
     let data = create_thumbnail(
         decode_image(&mut Cursor::new(data), &file.content_type)?,
-        tag,
+        tag_str,
     )
     .await;
 
@@ -388,6 +409,8 @@ async fn fetch_preview(
 /// Fetch original file
 ///
 /// Content disposition header will be set to 'attachment' to prevent browser from rendering anything.
+///
+/// Using `original` as the file name parameter will redirect you to the original file.
 #[utoipa::path(
     get,
     path = "/{tag}/{file_id}/{file_name}",
@@ -404,7 +427,8 @@ async fn fetch_file(
     State(db): State<Database>,
     Path((tag, file_id, file_name)): Path<(Tag, String, String)>,
 ) -> Result<Response> {
-    let file = db.fetch_attachment(tag.into(), &file_id).await?;
+    let tag: &'static str = tag.clone().into();
+    let file = db.fetch_attachment(tag, &file_id).await?;
 
     // Ignore deleted files
     if file.deleted.is_some_and(|v| v) {
@@ -418,6 +442,12 @@ async fn fetch_file(
 
     // Ensure filename is correct
     if file_name != file.filename {
+        if file_name == "original" {
+            return Ok(
+                Redirect::permanent(&format!("/{tag}/{file_id}/{}", file.filename)).into_response(),
+            );
+        }
+
         return Err(create_error!(NotFound));
     }
 

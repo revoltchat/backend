@@ -121,7 +121,7 @@ pub async fn handle_ack_event(
             );
 
             // find all the users we'll be notifying
-            messages.iter().for_each(|(_, _message, recipents, _)| {
+            messages.iter().for_each(|(_, _, recipents, _)| {
                 users.extend(recipents.iter());
             });
 

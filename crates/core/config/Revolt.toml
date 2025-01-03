@@ -21,10 +21,10 @@ voso_legacy = ""
 voso_legacy_ws = ""
 
 [rabbit]
-host = "127.0.0.1"
+host = "rabbit"
 port = 5672
-username = "guest"
-password = "guest"
+username = "rabbituser"
+password = "rabbitpass"
 
 [api]
 
@@ -80,6 +80,7 @@ fr_accepted_queue = "notifications.ingest.fr_accepted"   # friend request accept
 fr_received_queue = "notifications.ingest.fr_received"   # friend request received
 generic_queue = "notifications.ingest.generic"           # generic messages (title + body)
 ack_queue = "notifications.process.ack"                  # updates badges for apple devices
+
 
 [pushd.vapid]
 queue = "notifications.outbound.vapid"
@@ -172,11 +173,11 @@ region = "minio"
 access_key_id = "minioautumn"
 # S3 protocol access key
 secret_access_key = "minioautumn"
-# Bucket to upload to by default
 default_bucket = "revolt-uploads"
 
 
 [features]
+# Bucket to upload to by default
 # Feature gate options
 webhooks_enabled = false
 # Enable push notifications for mass pings (everyone, online, roles)
