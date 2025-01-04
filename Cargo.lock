@@ -5701,8 +5701,7 @@ dependencies = [
 [[package]]
 name = "redis"
 version = "0.23.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f49cdc0bb3f412bf8e7d1bd90fe1d9eb10bc5c399ba90973c14662a27b3f8ba"
+source = "git+https://github.com/revoltchat/redis-rs?rev=523b2937367e17bd0073722bf6e23d06042cb4e4#523b2937367e17bd0073722bf6e23d06042cb4e4"
 dependencies = [
  "async-std",
  "async-trait",
@@ -6244,6 +6243,7 @@ dependencies = [
  "revolt-config",
  "revolt-database",
  "revolt-models",
+ "revolt-presence",
  "revolt_a2",
  "revolt_optional_struct",
  "serde",
@@ -9301,8 +9301,3 @@ checksum = "99a5bab8d7dedf81405c4bb1f2b83ea057643d9cb28778cea9eecddeedd2e028"
 dependencies = [
  "zune-core",
 ]
-
-[[patch.unused]]
-name = "redis"
-version = "0.22.3"
-source = "git+https://github.com/revoltchat/redis-rs?rev=1a41faf356fd21aebba71cea7eb7eb2653e5f0ef#1a41faf356fd21aebba71cea7eb7eb2653e5f0ef"

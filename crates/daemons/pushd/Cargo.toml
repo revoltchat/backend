@@ -9,6 +9,9 @@ revolt-database = { version = "0.8.1", path = "../../core/database" }
 revolt-models = { version = "0.8.1", path = "../../core/models", features = [
     "validator",
 ] }
+revolt-presence = { version = "0.8.1", path = "../../core/presence", features = [
+    "redis-is-patched",
+] }
 
 amqprs = { version = "1.7.0" }
 fcm_v1 = "0.3.0"
