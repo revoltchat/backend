@@ -174,6 +174,7 @@ pub async fn req(
             if let Some(category_icon) = &category.icon {
                 File::find_background(db, &category_icon, &category.id).await?;
             }
+
             category
                 .channels
                 .retain(|item| server.channels.contains(item));
