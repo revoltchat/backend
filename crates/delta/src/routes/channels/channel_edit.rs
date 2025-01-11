@@ -160,7 +160,7 @@ pub async fn req(
             }
 
             if let Some(icon_id) = data.icon {
-                partial.icon = Some(File::use_icon(db, &icon_id, id).await?);
+                partial.icon = Some(File::use_background(db, &icon_id, id).await?);
                 *icon = partial.icon.clone();
             }
 

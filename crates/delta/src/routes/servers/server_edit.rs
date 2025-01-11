@@ -171,7 +171,9 @@ pub async fn req(
 
                 channel_ids.insert(channel.to_string());
             }
-
+            if let Some(category_icon) = &category.icon {
+                File::find_background(db, &category_icon, &category.id).await?;
+            }
             category
                 .channels
                 .retain(|item| server.channels.contains(item));
