@@ -46,6 +46,7 @@ pub struct Category {
     pub title: String,
     /// Channels in this category
     pub channels: Vec<String>,
+    pub icon: Option<String>,
 }
 
 /// System message channel assignments
