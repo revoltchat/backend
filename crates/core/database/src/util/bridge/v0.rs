@@ -340,6 +340,15 @@ impl From<crate::UserProfile> for UserProfile {
             country: value.country,
             city: value.city,
             occupation: value.occupation,
+            x_account: value.x_account,
+            facebook: value.facebook,
+            instagram: value.instagram,
+            relationship_status: value.relationship_status,
+            gender: value.gender,
+            likes_attending_to: value.likes_attending_to,
+            favorite_destinations: value.favorite_destinations,
+            languages_spoken: value.languages_spoken,
+            passions_and_hobbies: value.passions_and_hobbies,
         }
     }
 }

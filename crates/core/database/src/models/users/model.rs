@@ -120,6 +120,26 @@ auto_derived!(
         /// Occupation
         #[serde(skip_serializing_if = "Option::is_none")]
         pub occupation: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub x_account: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub tik_tok: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub facebook: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub instagram: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub relationship_status: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub gender: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub likes_attending_to: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub favorite_destinations: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub languages_spoken: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub passions_and_hobbies: Option<String>,
     }
 
     /// Bot information for if the user is a bot
