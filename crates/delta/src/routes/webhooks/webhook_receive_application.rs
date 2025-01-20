@@ -22,6 +22,26 @@ pub struct DataApplication {
     pub city: String,
     pub occupation: String,
     pub avatar: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub x_account: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub facebook: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub instagram: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tik_tok: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub relationship_status: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gender: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub likes_attending_to: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub favorite_destinations: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub languages_spoken: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub passions_and_hobbies: Option<String>,
 }
 
 /// # Webhook for application
@@ -91,6 +111,37 @@ pub async fn webhook_receive_application(
     new_profile.city = Some(city);
     let occupation = profile.occupation;
     new_profile.occupation = Some(occupation);
+    if let Some(x_account) = profile.x_account {
+        new_profile.x_account = Some(x_account);
+    }
+    if let Some(instagram) = profile.instagram {
+        new_profile.instagram = Some(instagram);
+    }
+    if let Some(facebook) = profile.facebook {
+        new_profile.facebook = Some(facebook);
+    }
+    if let Some(tik_tok) = profile.tik_tok {
+        new_profile.tik_tok = Some(tik_tok);
+    }
+    if let Some(gender) = profile.gender {
+        new_profile.gender = Some(gender);
+    }
+    if let Some(relationship_status) = profile.relationship_status {
+        new_profile.relationship_status = Some(relationship_status);
+    }
+    if let Some(likes_attending_to) = profile.likes_attending_to {
+        new_profile.likes_attending_to = Some(likes_attending_to);
+    }
+    if let Some(favorite_destinations) = profile.favorite_destinations {
+        new_profile.favorite_destinations = Some(favorite_destinations);
+    }
+    if let Some(languages_spoken) = profile.languages_spoken {
+        new_profile.languages_spoken = Some(languages_spoken);
+    }
+    if let Some(passions_and_hobbies) = profile.passions_and_hobbies {
+        new_profile.passions_and_hobbies = Some(passions_and_hobbies);
+    }
+
     user.profile = Some(new_profile);
     user.temporary_password = Some(true);
 
