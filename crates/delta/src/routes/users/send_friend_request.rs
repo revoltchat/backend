@@ -1,5 +1,5 @@
-use revolt_database::util::reference::Reference;
-use revolt_database::{Database, User};
+// use revolt_database::util::reference::Reference;
+use revolt_database::{Database, User, AMQP};
 use revolt_models::v0;
 use revolt_result::{create_error, Result};
 use rocket::serde::json::Json;
@@ -12,6 +12,7 @@ use rocket::State;
 #[post("/friend", data = "<data>")]
 pub async fn send_friend_request(
     db: &State<Database>,
+    amqp: &State<AMQP>,
     mut user: User,
     data: Json<v0::DataSendFriendRequest>,
 ) -> Result<Json<v0::User>> {
@@ -22,7 +23,7 @@ pub async fn send_friend_request(
             return Err(create_error!(IsBot));
         }
 
-        user.add_friend(db, &mut target).await?;
+        user.add_friend(db, amqp, &mut target).await?;
         Ok(Json(target.into(db, &user).await))
     } else {
         Err(create_error!(InvalidProperty))

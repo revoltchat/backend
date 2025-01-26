@@ -1,6 +1,7 @@
 use revolt_result::Result;
 
 use crate::File;
+use crate::FileUsedFor;
 use crate::ReferenceDb;
 
 use super::AbstractAttachments;
@@ -18,24 +19,33 @@ impl AbstractAttachments for ReferenceDb {
         }
     }
 
+    /// Fetch an attachment by its id.
+    async fn fetch_attachment(&self, tag: &str, file_id: &str) -> Result<File> {
+        let files = self.files.lock().await;
+        if let Some(file) = files.get(file_id) {
+            if file.tag == tag {
+                Ok(file.clone())
+            } else {
+                Err(create_error!(NotFound))
+            }
+        } else {
+            Err(create_error!(NotFound))
+        }
+    }
+
     /// Find an attachment by its details and mark it as used by a given parent.
     async fn find_and_use_attachment(
         &self,
         id: &str,
         tag: &str,
-        parent_type: &str,
-        parent_id: &str,
+        used_for: FileUsedFor,
+        uploader_id: String,
     ) -> Result<File> {
         let mut files = self.files.lock().await;
         if let Some(file) = files.get_mut(id) {
             if file.tag == tag {
-                match parent_type {
-                    "message" => file.message_id = Some(parent_id.to_owned()),
-                    "user" => file.user_id = Some(parent_id.to_owned()),
-                    "object" => file.object_id = Some(parent_id.to_owned()),
-                    "server" => file.server_id = Some(parent_id.to_owned()),
-                    _ => unreachable!(),
-                }
+                file.uploader_id = Some(uploader_id);
+                file.used_for = Some(used_for);
 
                 Ok(file.clone())
             } else {

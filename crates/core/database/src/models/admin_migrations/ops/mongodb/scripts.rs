@@ -5,11 +5,13 @@ use crate::{
         bson::{doc, from_bson, from_document, to_document, Bson, DateTime, Document},
         options::FindOptions,
     },
-    MongoDb, DISCRIMINATOR_SEARCH_SPACE,
+    AbstractChannels, AbstractServers, Channel, Invite, MongoDb, DISCRIMINATOR_SEARCH_SPACE,
 };
+use bson::oid::ObjectId;
 use futures::StreamExt;
 use rand::seq::SliceRandom;
 use revolt_permissions::DEFAULT_WEBHOOK_PERMISSIONS;
+use revolt_result::{Error, ErrorType};
 use serde::{Deserialize, Serialize};
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -19,7 +21,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 27;
+pub const LATEST_REVISION: i32 = 31;
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -984,24 +986,265 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
     }
 
     if revision <= 26 {
-        info!("Running migration [revision 26 / 17-04-2024]: Add `can_publish` and `can_receive` to members");
+        // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.
+        info!("Running migration [revision 26 / 15-05-2024]: fix invites being incorrectly serialized with wrong enum tagging.");
+
+        auto_derived!(
+            pub enum OldInvite {
+                Server {
+                    #[serde(rename = "_id")]
+                    code: String,
+                    server: String,
+                    creator: String,
+                    channel: String,
+                },
+                Group {
+                    #[serde(rename = "_id")]
+                    code: String,
+                    creator: String,
+                    channel: String,
+                },
+            }
+        );
+
+        #[derive(serde::Serialize, serde::Deserialize)]
+        struct Outer {
+            _id: ObjectId,
+            #[serde(flatten)]
+            invite: OldInvite,
+        }
+
+        let invites = db
+            .db()
+            .collection::<Outer>("channel_invites")
+            .find(
+                doc! {
+                    "type": { "$exists": false }
+                },
+                None,
+            )
+            .await
+            .expect("failed to find invites")
+            .filter_map(|s| async { s.ok() })
+            .collect::<Vec<Outer>>()
+            .await
+            .into_iter()
+            .map(|invite| match invite.invite {
+                OldInvite::Server {
+                    code,
+                    server,
+                    creator,
+                    channel,
+                } => Invite::Server {
+                    code,
+                    server,
+                    creator,
+                    channel,
+                },
+                OldInvite::Group {
+                    code,
+                    creator,
+                    channel,
+                } => Invite::Group {
+                    code,
+                    creator,
+                    channel,
+                },
+            })
+            .collect::<Vec<Invite>>();
+
+        if !invites.is_empty() {
+            db.db()
+                .collection("channel_invites")
+                .insert_many(invites, None)
+                .await
+                .expect("failed to insert corrected invite");
+
+            db.db()
+                .collection::<Outer>("channel_invites")
+                .delete_many(
+                    doc! {
+                        "type": { "$exists": false }
+                    },
+                    None,
+                )
+                .await
+                .expect("failed to find invites");
+        }
+    }
+
+    if revision <= 27 {
+        info!("Running migration [revision 27 / 21-07-2024]: create message pinned index.");
+
+        db.db()
+            .run_command(
+                doc! {
+                    "createIndexes": "messages",
+                    "indexes": [
+                        {
+                            "key": {
+                                "channel": 1_i32,
+                                "pinned": 1_i32
+                            },
+                            "name": "channel_pinned_compound"
+                        }
+                    ]
+                },
+                None,
+            )
+            .await
+            .expect("Failed to create message index.");
+    }
+
+    if revision <= 28 {
+        info!("Running migration [revision 28 / 10-09-2024]: Add support for new Autumn.");
+
+        db.db()
+            .create_collection("attachment_hashes", None)
+            .await
+            .ok();
+
+        db.db()
+            .run_command(
+                doc! {
+                    "createIndexes": "attachments",
+                    "indexes": [
+                        {
+                            "key": {
+                                "hash": 1_i32
+                            },
+                            "name": "hash"
+                        }
+                    ]
+                },
+                None,
+            )
+            .await
+            .expect("Failed to create attachments index.");
+
+        db.db()
+            .run_command(
+                doc! {
+                    "createIndexes": "attachment_hashes",
+                    "indexes": [
+                        {
+                            "key": {
+                                "processed_hash": 1_i32
+                            },
+                            "name": "processed_hash"
+                        }
+                    ]
+                },
+                None,
+            )
+            .await
+            .expect("Failed to create attachment_hashes index.");
+    }
+
+    // Revision 29 omitted due to bug.
+
+    if revision <= 30 {
+        info!("Running migration [revision 30 / 29-09-2024]: Add index for used_for.id to attachments.");
+
+        db.db()
+            .run_command(
+                doc! {
+                    "createIndexes": "attachments",
+                    "indexes": [
+                        {
+                            "key": {
+                                "used_for.id": 1_i32
+                            },
+                            "name": "used_for_id"
+                        }
+                    ]
+                },
+                None,
+            )
+            .await
+            .expect("Failed to create attachments index.");
+    }
+
+    if revision <= 31 {
+        info!("Running migration [revision 31 / 31-10-2024]: Add creator_id to webhooks and delete those whose channels don't exist.");
+
+        #[derive(serde::Serialize, serde::Deserialize)]
+        struct WebhookShell {
+            _id: String,
+            channel_id: String,
+        }
+
+        let webhooks = db
+            .db()
+            .collection::<WebhookShell>("channel_webhooks")
+            .find(doc! {}, None)
+            .await
+            .expect("webhooks")
+            .filter_map(|s| async { s.ok() })
+            .collect::<Vec<WebhookShell>>()
+            .await;
+
+        for webhook in webhooks {
+            match db.fetch_channel(&webhook.channel_id).await {
+                Ok(channel) => {
+                    let creator_id = match channel {
+                        Channel::Group { owner, .. } => owner,
+                        Channel::TextChannel { server, .. }
+                        | Channel::VoiceChannel { server, .. } => {
+                            let server = db.fetch_server(&server).await.expect("server");
+                            server.owner
+                        }
+                        _ => unreachable!("not server or group channel!"),
+                    };
+
+                    db.db()
+                        .collection::<Document>("channel_webhooks")
+                        .update_one(
+                            doc! {
+                                "_id": webhook._id,
+                            },
+                            doc! {
+                                "$set" : {
+                                    "creator_id": creator_id
+                                }
+                            },
+                            None,
+                        )
+                        .await
+                        .expect("update webhook");
+                }
+                Err(Error {
+                    error_type: ErrorType::NotFound,
+                    ..
+                }) => {
+                    db.db()
+                        .collection::<WebhookShell>("channel_webhooks")
+                        .delete_one(doc! { "_id": webhook._id }, None)
+                        .await
+                        .expect("failed to delete invalid webhook");
+                }
+                Err(err) => panic!("{err:?}"),
+            }
+        }
+    }
+
+    if revision <= 32 {
+        info!("Running migration [revision 32 / 26-01-2025]: Add `is_publishing` and `is_receiving` to members");
 
         db.col::<Document>("server_members")
             .update_many(
                 doc! {},
                 doc! {
                     "$set": {
-                        "can_publish": true,
-                        "can_receive": true
+                        "is_publishing": true,
+                        "is_receiving": true
                     }
                 },
-                None
+                None,
             )
             .await
             .expect("Failed to update members");
     }
-
-    // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.
 
     // Reminder to update LATEST_REVISION when adding new migrations.
     LATEST_REVISION.max(revision)

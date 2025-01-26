@@ -9,7 +9,7 @@ use ulid::Ulid;
 
 use crate::{
     events::client::EventV1, tasks::ack::AckEvent, Database, File, IntoDocumentPath, PartialServer,
-    Server, SystemMessage, User,
+    Server, SystemMessage, User, AMQP,
 };
 
 auto_derived!(
@@ -205,9 +205,9 @@ impl Channel {
         update_server: bool,
     ) -> Result<Channel> {
         let config = config().await;
-        if server.channels.len() > config.features.limits.default.server_channels {
+        if server.channels.len() > config.features.limits.global.server_channels {
             return Err(create_error!(TooManyChannels {
-                max: config.features.limits.default.server_channels,
+                max: config.features.limits.global.server_channels,
             }));
         };
 
@@ -268,9 +268,9 @@ impl Channel {
         data.users.insert(owner_id.to_string());
 
         let config = config().await;
-        if data.users.len() > config.features.limits.default.group_size {
+        if data.users.len() > config.features.limits.global.group_size {
             return Err(create_error!(GroupTooLarge {
-                max: config.features.limits.default.group_size,
+                max: config.features.limits.global.group_size,
             }));
         }
 
@@ -342,6 +342,7 @@ impl Channel {
     pub async fn add_user_to_group(
         &mut self,
         db: &Database,
+        amqp: &AMQP,
         user: &User,
         by_id: &str,
     ) -> Result<()> {
@@ -351,9 +352,9 @@ impl Channel {
             }
 
             let config = config().await;
-            if recipients.len() >= config.features.limits.default.group_size {
+            if recipients.len() >= config.features.limits.global.group_size {
                 return Err(create_error!(GroupTooLarge {
-                    max: config.features.limits.default.group_size
+                    max: config.features.limits.global.group_size
                 }));
             }
 
@@ -378,10 +379,13 @@ impl Channel {
                 .into_message(id.to_string())
                 .send(
                     db,
+                    Some(amqp),
                     MessageAuthor::System {
                         username: &user.username,
                         avatar: user.avatar.as_ref().map(|file| file.id.as_ref()),
                     },
+                    None,
+                    None,
                     self,
                     false,
                 )
@@ -420,13 +424,13 @@ impl Channel {
     }
 
     /// Clone this channel's id
-    pub fn id(&self) -> String {
+    pub fn id(&self) -> &str {
         match self {
             Channel::DirectMessage { id, .. }
             | Channel::Group { id, .. }
             | Channel::SavedMessages { id, .. }
             | Channel::TextChannel { id, .. }
-            | Channel::VoiceChannel { id, .. } => id.clone(),
+            | Channel::VoiceChannel { id, .. } => id,
         }
     }
 
@@ -659,7 +663,7 @@ impl Channel {
         .private(user.to_string())
         .await;
 
-        crate::tasks::ack::queue(
+        crate::tasks::ack::queue_ack(
             self.id().to_string(),
             user.to_string(),
             AckEvent::AckMessage {
@@ -675,6 +679,7 @@ impl Channel {
     pub async fn remove_user_from_group(
         &self,
         db: &Database,
+        amqp: &AMQP,
         user: &User,
         by_id: Option<&str>,
         silent: bool,
@@ -706,10 +711,13 @@ impl Channel {
                         .into_message(id.to_string())
                         .send(
                             db,
+                            Some(amqp),
                             MessageAuthor::System {
                                 username: name,
                                 avatar: None,
                             },
+                            None,
+                            None,
                             self,
                             false,
                         )
@@ -719,6 +727,8 @@ impl Channel {
                         return self.delete(db).await;
                     }
                 }
+
+                db.remove_user_from_group(id, &user.id).await?;
 
                 EventV1::ChannelGroupLeave {
                     id: id.to_string(),
@@ -741,10 +751,13 @@ impl Channel {
                     .into_message(id.to_string())
                     .send(
                         db,
+                        Some(amqp),
                         MessageAuthor::System {
                             username: &user.username,
                             avatar: user.avatar.as_ref().map(|file| file.id.as_ref()),
                         },
+                        None,
+                        None,
                         self,
                         false,
                     )

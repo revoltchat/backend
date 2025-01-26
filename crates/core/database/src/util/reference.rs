@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use revolt_result::Result;
 #[cfg(feature = "rocket-impl")]
 use rocket::request::FromParam;
@@ -44,9 +46,27 @@ impl Reference {
         db.fetch_channel(&self.id).await
     }
 
-    /// Fetch invite from Ref
+    /// Fetch invite from Ref or create invite to server if discoverable
     pub async fn as_invite(&self, db: &Database) -> Result<Invite> {
-        db.fetch_invite(&self.id).await
+        if ulid::Ulid::from_str(&self.id).is_ok() {
+            let server = self.as_server(db).await?;
+            if !server.discoverable {
+                return Err(create_error!(NotFound));
+            }
+
+            Ok(Invite::Server {
+                code: self.id.to_string(),
+                server: server.id,
+                creator: server.owner,
+                channel: server
+                    .channels
+                    .into_iter()
+                    .next()
+                    .ok_or(create_error!(NotFound))?,
+            })
+        } else {
+            db.fetch_invite(&self.id).await
+        }
     }
 
     /// Fetch message from Ref

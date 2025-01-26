@@ -36,7 +36,7 @@ pub async fn list(
         )
         .await?
         .into_iter()
-        .map(|u| u.into_self()),
+        .map(|u| u.into_self(false)),
     )
     .await;
 

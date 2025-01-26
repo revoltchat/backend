@@ -46,10 +46,9 @@ impl AbstractUsers for MongoDb {
         .ok_or_else(|| create_error!(NotFound))
     }
 
-    /// Fetch a user from the database by their session token
-    async fn fetch_user_by_token(&self, token: &str) -> Result<User> {
-        let session = self
-            .col::<Session>("sessions")
+    /// Fetch a session from the database by token
+    async fn fetch_session_by_token(&self, token: &str) -> Result<Session> {
+        self.col::<Session>("sessions")
             .find_one(
                 doc! {
                     "token": token
@@ -58,9 +57,7 @@ impl AbstractUsers for MongoDb {
             )
             .await
             .map_err(|_| create_database_error!("find_one", "sessions"))?
-            .ok_or_else(|| create_error!(InvalidSession))?;
-
-        self.fetch_user(&session.user_id).await
+            .ok_or_else(|| create_error!(InvalidSession))
     }
 
     /// Fetch multiple users by their ids
@@ -319,6 +316,25 @@ impl AbstractUsers for MongoDb {
     async fn delete_user(&self, id: &str) -> Result<()> {
         query!(self, delete_one_by_id, COL, id).map(|_| ())
     }
+
+    /// Remove push subscription for a session by session id (TODO: remove)
+    async fn remove_push_subscription_by_session_id(&self, session_id: &str) -> Result<()> {
+        self.col::<User>("sessions")
+            .update_one(
+                doc! {
+                    "_id": session_id
+                },
+                doc! {
+                    "$unset": {
+                        "subscription": 1
+                    }
+                },
+                None,
+            )
+            .await
+            .map(|_| ())
+            .map_err(|_| create_database_error!("update_one", COL))
+    }
 }
 
 impl IntoDocumentPath for FieldsUser {
@@ -329,6 +345,9 @@ impl IntoDocumentPath for FieldsUser {
             FieldsUser::ProfileContent => "profile.content",
             FieldsUser::StatusPresence => "status.presence",
             FieldsUser::StatusText => "status.text",
+            FieldsUser::DisplayName => "display_name",
+            FieldsUser::Suspension => "suspended_until",
+            FieldsUser::None => "none",
         })
     }
 }

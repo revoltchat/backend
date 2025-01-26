@@ -1,5 +1,5 @@
 Rocket.toml
-Revolt.toml
+Revolt.*.toml
 
 target
 .data
@@ -9,3 +9,5 @@ target
 .DS_Store
 
 livekit.yml
+.idea
+start

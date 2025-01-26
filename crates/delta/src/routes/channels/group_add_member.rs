@@ -1,6 +1,6 @@
 use revolt_database::{
     util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Channel, Database, User,
+    Channel, Database, User, AMQP,
 };
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
@@ -15,6 +15,7 @@ use rocket_empty::EmptyResponse;
 #[put("/<group_id>/recipients/<member_id>")]
 pub async fn add_member(
     db: &State<Database>,
+    amqp: &State<AMQP>,
     user: User,
     group_id: Reference,
     member_id: Reference,
@@ -38,7 +39,7 @@ pub async fn add_member(
             }
 
             channel
-                .add_user_to_group(db, &member, &user.id)
+                .add_user_to_group(db, amqp, &member, &user.id)
                 .await
                 .map(|_| EmptyResponse)
         }
@@ -102,8 +103,8 @@ mod test {
             .await;
 
         let event = harness
-            .wait_for_event(&group.id(), |event| match event {
-                EventV1::ChannelGroupJoin { id, .. } => id == &group.id(),
+            .wait_for_event(group.id(), |event| match event {
+                EventV1::ChannelGroupJoin { id, .. } => id == group.id(),
                 _ => false,
             })
             .await;
@@ -113,7 +114,7 @@ mod test {
             _ => unreachable!(),
         };
 
-        let message = harness.wait_for_message(&group.id()).await;
+        let message = harness.wait_for_message(group.id()).await;
 
         assert_eq!(
             message.system,

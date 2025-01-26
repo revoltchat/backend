@@ -92,7 +92,7 @@ impl Member {
         server: &Server,
         user: &User,
         channels: Option<Vec<Channel>>,
-    ) -> Result<Vec<Channel>> {
+    ) -> Result<(Member, Vec<Channel>)> {
         if db.fetch_ban(&server.id, &user.id).await.is_ok() {
             return Err(create_error!(Banned));
         }
@@ -161,12 +161,12 @@ impl Member {
                 id: user.id.clone(),
             }
             .into_message(id.to_string())
-            .send_without_notifications(db, false, false)
+            .send_without_notifications(db, None, None, false, false, false)
             .await
             .ok();
         }
 
-        Ok(channels)
+        Ok((member, channels))
     }
 
     /// Update member data
@@ -202,7 +202,7 @@ impl Member {
             FieldsMember::Roles => self.roles.clear(),
             FieldsMember::Timeout => self.timeout = None,
             FieldsMember::CanReceive => self.can_receive = None,
-            FieldsMember::CanPublish => self.can_publish = None
+            FieldsMember::CanPublish => self.can_publish = None,
         }
     }
 
@@ -242,6 +242,7 @@ impl Member {
         EventV1::ServerMemberLeave {
             id: self.id.server.to_string(),
             user: self.id.user.to_string(),
+            reason: intention.clone().into(),
         }
         .p(self.id.server.to_string())
         .await;
@@ -263,7 +264,7 @@ impl Member {
                 }
                 .into_message(id.to_string())
                 // TODO: support notifications here in the future?
-                .send_without_notifications(db, false, false)
+                .send_without_notifications(db, None, None, false, false, false)
                 .await
                 .ok();
             }

@@ -1,10 +1,11 @@
+use livekit_protocol::ParticipantPermission;
 use revolt_database::{
     util::{permissions::DatabasePermissionQuery, reference::Reference}, Channel, Database, User
 };
 use revolt_models::v0::PartialUserVoiceState;
 use revolt_permissions::{calculate_channel_permissions, calculate_server_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
-use revolt_voice::{get_allowed_sources, get_voice_channel_members, get_voice_state};
+use revolt_voice::{get_allowed_sources, get_voice_channel_members, get_voice_state, update_voice_state, VoiceClient};
 use rocket::State;
 use rocket_empty::EmptyResponse;
 
@@ -18,6 +19,7 @@ pub async fn delete(
     user: User,
     target: Reference,
     role_id: String,
+    voice_client: &State<VoiceClient>
 ) -> Result<EmptyResponse> {
     let mut server = target.as_server(db).await?;
     let mut query = DatabasePermissionQuery::new(db, &user).server(&server);
@@ -50,22 +52,27 @@ pub async fn delete(
 
                         let permissions = calculate_channel_permissions(&mut query).await;
 
-                        let sources = get_allowed_sources(permissions);
-
                         let mut update_event = PartialUserVoiceState {
                             id: Some(user.id.clone()),
                             ..Default::default()
                         };
 
-                        if !sources.contains(&"CAMERA".to_string()) {
-                            update_event.camera = 
-                            update_event
-                        }
+                        let can_video = permissions.has_channel_permission(ChannelPermission::Video);
+                        let can_speak = permissions.has_channel_permission(ChannelPermission::Speak);
+                        let can_listen = permissions.has_channel_permission(ChannelPermission::Listen);
 
-                        if voice_state.camera && !sources.contains(&"MICROPHONE".to_string()) {
-                            update_event. = Some(false);
-                        }
+                        update_event.camera = voice_state.camera.then_some(can_video);
+                        update_event.screensharing = voice_state.screensharing.then_some(can_video);
+                        update_event.is_publishing = voice_state.is_publishing.then_some(can_speak);
 
+                        update_voice_state(channel_id, Some(&server.id), &user.id, &update_event).await?;
+
+                        voice_client.update_permissions(&user, channel_id, ParticipantPermission {
+                            can_subscribe: can_listen,
+                            can_publish: can_speak,
+                            can_publish_data: can_speak,
+                            ..Default::default()
+                        }).await?;
                     }
                 }
             }

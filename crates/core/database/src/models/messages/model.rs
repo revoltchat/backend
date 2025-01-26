@@ -1,11 +1,11 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, hash::RandomState};
 
 use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
-use revolt_config::config;
+use revolt_config::{config, FeaturesLimits};
 use revolt_models::v0::{
-    self, BulkMessageResponse, DataMessageSend, Embed, MessageAuthor, MessageSort, MessageWebhook,
-    PushNotification, ReplyIntent, SendableEmbed, Text, RE_MENTION,
+    self, BulkMessageResponse, DataMessageSend, Embed, MessageAuthor, MessageFlags, MessageSort,
+    MessageWebhook, PushNotification, ReplyIntent, SendableEmbed, Text, RE_MENTION,
 };
 use revolt_permissions::{ChannelPermission, PermissionValue};
 use revolt_result::Result;
@@ -15,8 +15,8 @@ use validator::Validate;
 use crate::{
     events::client::EventV1,
     tasks::{self, ack::AckEvent},
-    util::idempotency::IdempotencyKey,
-    Channel, Database, Emoji, File, User,
+    util::{bulk_permissions::BulkDatabasePermissionQuery, idempotency::IdempotencyKey},
+    Channel, Database, Emoji, File, User, AMQP,
 };
 
 auto_derived_partial!(
@@ -65,6 +65,13 @@ auto_derived_partial!(
         /// Name and / or avatar overrides for this message
         #[serde(skip_serializing_if = "Option::is_none")]
         pub masquerade: Option<Masquerade>,
+        /// Whether or not the message in pinned
+        #[serde(skip_serializing_if = "crate::if_option_false")]
+        pub pinned: Option<bool>,
+
+        /// Bitfield of message flags
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub flags: Option<i32>,
     },
     "PartialMessage"
 );
@@ -95,6 +102,10 @@ auto_derived!(
         ChannelIconChanged { by: String },
         #[serde(rename = "channel_ownership_changed")]
         ChannelOwnershipChanged { from: String, to: String },
+        #[serde(rename = "message_pinned")]
+        MessagePinned { id: String, by: String },
+        #[serde(rename = "message_unpinned")]
+        MessageUnpinned { id: String, by: String },
     }
 
     /// Name and / or avatar override information
@@ -164,6 +175,8 @@ auto_derived!(
         pub author: Option<String>,
         /// Search query
         pub query: Option<String>,
+        /// Search for pinned
+        pub pinned: Option<bool>,
     }
 
     /// Message Query
@@ -178,6 +191,11 @@ auto_derived!(
         /// Time period to fetch
         #[serde(flatten)]
         pub time_period: MessageTimePeriod,
+    }
+
+    /// Optional fields on message
+    pub enum FieldsMessage {
+        Pinned,
     }
 );
 
@@ -200,6 +218,8 @@ impl Default for Message {
             reactions: Default::default(),
             interactions: Default::default(),
             masquerade: None,
+            flags: None,
+            pinned: None,
         }
     }
 }
@@ -207,11 +227,16 @@ impl Default for Message {
 #[allow(clippy::disallowed_methods)]
 impl Message {
     /// Create message from API data
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_from_api(
         db: &Database,
+        amqp: Option<&AMQP>,
         channel: Channel,
         data: DataMessageSend,
         author: MessageAuthor<'_>,
+        user: Option<v0::User>,
+        member: Option<v0::Member>,
+        limits: FeaturesLimits,
         mut idempotency: IdempotencyKey,
         generate_embeds: bool,
         allow_mentions: bool,
@@ -221,7 +246,7 @@ impl Message {
         Message::validate_sum(
             &data.content,
             data.embeds.as_deref().unwrap_or_default(),
-            config.features.limits.default.message_length,
+            limits.message_length,
         )?;
 
         idempotency
@@ -235,6 +260,13 @@ impl Message {
             && (data.embeds.as_ref().map_or(true, |v| v.is_empty()))
         {
             return Err(create_error!(EmptyMessage));
+        }
+
+        // Ensure flags are either not set or have permissible values
+        if let Some(flags) = &data.flags {
+            if flags != &0 && flags != &1 {
+                return Err(create_error!(InvalidProperty));
+            }
         }
 
         // Ensure restrict_reactions is not specified without reactions list
@@ -262,7 +294,7 @@ impl Message {
         let message_id = Ulid::new().to_string();
         let mut message = Message {
             id: message_id.clone(),
-            channel: channel.id(),
+            channel: channel.id().to_string(),
             masquerade: data.masquerade.map(|masquerade| masquerade.into()),
             interactions: data
                 .interactions
@@ -270,6 +302,7 @@ impl Message {
                 .unwrap_or_default(),
             author: author_id,
             webhook: webhook.map(|w| w.into()),
+            flags: data.flags.map(|v| v as i32),
             ..Default::default()
         };
 
@@ -288,9 +321,9 @@ impl Message {
         // Verify replies are valid.
         let mut replies = HashSet::new();
         if let Some(entries) = data.replies {
-            if entries.len() > config.features.limits.default.message_replies {
+            if entries.len() > config.features.limits.global.message_replies {
                 return Err(create_error!(TooManyReplies {
-                    max: config.features.limits.default.message_replies,
+                    max: config.features.limits.global.message_replies,
                 }));
             }
 
@@ -302,6 +335,50 @@ impl Message {
                 }
 
                 replies.insert(message.id);
+            }
+        }
+
+        // Validate the mentions go to users in the channel/server
+        if !mentions.is_empty() {
+            match channel {
+                Channel::DirectMessage { ref recipients, .. }
+                | Channel::Group { ref recipients, .. } => {
+                    let recipients_hash: HashSet<&String, RandomState> =
+                        HashSet::from_iter(recipients);
+                    mentions.retain(|m| recipients_hash.contains(m));
+                }
+                Channel::TextChannel { ref server, .. }
+                | Channel::VoiceChannel { ref server, .. } => {
+                    let mentions_vec = Vec::from_iter(mentions.iter().cloned());
+
+                    let valid_members = db.fetch_members(server.as_str(), &mentions_vec[..]).await;
+                    if let Ok(valid_members) = valid_members {
+                        let valid_mentions: HashSet<&String, RandomState> =
+                            HashSet::from_iter(valid_members.iter().map(|m| &m.id.user));
+
+                        mentions.retain(|m| valid_mentions.contains(m)); // quick pass, validate mentions are in the server
+
+                        if !mentions.is_empty() {
+                            // if there are still mentions, drill down to a channel-level
+                            let member_channel_view_perms =
+                                BulkDatabasePermissionQuery::from_server_id(db, server)
+                                    .await
+                                    .channel(&channel)
+                                    .members(&valid_members)
+                                    .members_can_see_channel()
+                                    .await;
+
+                            mentions
+                                .retain(|m| *member_channel_view_perms.get(m).unwrap_or(&false));
+                        }
+                    } else {
+                        revolt_config::capture_error(&valid_members.unwrap_err());
+                        return Err(create_error!(InternalError));
+                    }
+                }
+                Channel::SavedMessages { .. } => {
+                    mentions.clear();
+                }
             }
         }
 
@@ -320,28 +397,26 @@ impl Message {
         if data
             .attachments
             .as_ref()
-            .is_some_and(|v| v.len() > config.features.limits.default.message_attachments)
+            .is_some_and(|v| v.len() > limits.message_attachments)
         {
             return Err(create_error!(TooManyAttachments {
-                max: config.features.limits.default.message_attachments,
+                max: limits.message_attachments,
             }));
         }
 
         if data
             .embeds
             .as_ref()
-            .is_some_and(|v| v.len() > config.features.limits.default.message_embeds)
+            .is_some_and(|v| v.len() > config.features.limits.global.message_embeds)
         {
             return Err(create_error!(TooManyEmbeds {
-                max: config.features.limits.default.message_embeds,
+                max: config.features.limits.global.message_embeds,
             }));
         }
 
         for attachment_id in data.attachments.as_deref().unwrap_or_default() {
-            attachments.push(
-                db.find_and_use_attachment(attachment_id, "attachments", "message", &message_id)
-                    .await?,
-            );
+            attachments
+                .push(File::use_attachment(db, attachment_id, &message_id, author.id()).await?);
         }
 
         if !attachments.is_empty() {
@@ -360,7 +435,9 @@ impl Message {
         message.nonce = Some(idempotency.into_key());
 
         // Send the message
-        message.send(db, author, &channel, generate_embeds).await?;
+        message
+            .send(db, amqp, author, user, member, &channel, generate_embeds)
+            .await?;
 
         Ok(message)
     }
@@ -369,13 +446,18 @@ impl Message {
     pub async fn send_without_notifications(
         &mut self,
         db: &Database,
+        user: Option<v0::User>,
+        member: Option<v0::Member>,
         is_dm: bool,
         generate_embeds: bool,
+        // This determines if this function should queue the mentions task or if somewhere else will.
+        // If this is true, you MUST call tasks::ack::queue yourself.
+        mentions_elsewhere: bool,
     ) -> Result<()> {
         db.insert_message(self).await?;
 
         // Fan out events
-        EventV1::Message(self.clone().into())
+        EventV1::Message(self.clone().into_model(user, member))
             .p(self.channel.to_string())
             .await;
 
@@ -383,13 +465,12 @@ impl Message {
         tasks::last_message_id::queue(self.channel.to_string(), self.id.to_string(), is_dm).await;
 
         // Add mentions for affected users
-        if let Some(mentions) = &self.mentions {
-            for user in mentions {
-                tasks::ack::queue(
+        if !mentions_elsewhere {
+            if let Some(mentions) = &self.mentions {
+                tasks::ack::queue_message(
                     self.channel.to_string(),
-                    user.to_string(),
-                    AckEvent::AddMention {
-                        ids: vec![self.id.to_string()],
+                    AckEvent::ProcessMessage {
+                        messages: vec![(None, self.clone(), mentions.clone(), true)],
                     },
                 )
                 .await;
@@ -412,33 +493,56 @@ impl Message {
     }
 
     /// Send a message
+    #[allow(clippy::too_many_arguments)]
     pub async fn send(
         &mut self,
         db: &Database,
+        amqp: Option<&AMQP>, // this is optional mostly for tests.
         author: MessageAuthor<'_>,
+        user: Option<v0::User>,
+        member: Option<v0::Member>,
         channel: &Channel,
         generate_embeds: bool,
     ) -> Result<()> {
         self.send_without_notifications(
             db,
+            user.clone(),
+            member.clone(),
             matches!(channel, Channel::DirectMessage { .. }),
             generate_embeds,
+            true,
         )
         .await?;
 
-        // Push out Web Push notifications
-        crate::tasks::web_push::queue(
-            {
-                match channel {
-                    Channel::DirectMessage { recipients, .. }
-                    | Channel::Group { recipients, .. } => recipients.clone(),
-                    Channel::TextChannel { .. } => self.mentions.clone().unwrap_or_default(),
-                    _ => vec![],
-                }
-            },
-            PushNotification::from(self.clone().into(), Some(author), &channel.id()).await,
-        )
-        .await;
+        if !self.has_suppressed_notifications() {
+            // send Push notifications
+            tasks::ack::queue_message(
+                self.channel.to_string(),
+                AckEvent::ProcessMessage {
+                    messages: vec![(
+                        Some(
+                            PushNotification::from(
+                                self.clone().into_model(user, member),
+                                Some(author),
+                                channel.to_owned().into(),
+                            )
+                            .await,
+                        ),
+                        self.clone(),
+                        match channel {
+                            Channel::DirectMessage { recipients, .. }
+                            | Channel::Group { recipients, .. } => recipients.clone(),
+                            Channel::TextChannel { .. } => {
+                                self.mentions.clone().unwrap_or_default()
+                            }
+                            _ => vec![],
+                        },
+                        self.has_suppressed_notifications(),
+                    )],
+                },
+            )
+            .await;
+        }
 
         Ok(())
     }
@@ -452,10 +556,7 @@ impl Message {
         })?;
 
         let media = if let Some(id) = embed.media {
-            Some(
-                db.find_and_use_attachment(&id, "attachments", "message", &self.id)
-                    .await?,
-            )
+            Some(File::use_attachment(db, &id, &self.id, &self.author).await?)
         } else {
             None
         };
@@ -470,15 +571,37 @@ impl Message {
         }))
     }
 
+    /// Whether this message has suppressed notifications
+    pub fn has_suppressed_notifications(&self) -> bool {
+        if let Some(flags) = self.flags {
+            flags & MessageFlags::SuppressNotifications as i32
+                == MessageFlags::SuppressNotifications as i32
+        } else {
+            false
+        }
+    }
+
     /// Update message data
-    pub async fn update(&mut self, db: &Database, partial: PartialMessage) -> Result<()> {
+    pub async fn update(
+        &mut self,
+        db: &Database,
+        partial: PartialMessage,
+        remove: Vec<FieldsMessage>,
+    ) -> Result<()> {
         self.apply_options(partial.clone());
-        db.update_message(&self.id, &partial).await?;
+
+        for field in &remove {
+            self.remove_field(field);
+        }
+
+        db.update_message(&self.id, &partial, remove.clone())
+            .await?;
 
         EventV1::MessageUpdate {
             id: self.id.clone(),
             channel: self.channel.clone(),
             data: partial.into(),
+            clear: remove.into_iter().map(|field| field.into()).collect(),
         }
         .p(self.channel.clone())
         .await;
@@ -498,13 +621,47 @@ impl Message {
             .fetch_messages(query)
             .await?
             .into_iter()
-            .map(Into::into)
+            .map(|msg| msg.into_model(None, None))
             .collect();
 
         if let Some(true) = include_users {
             let user_ids = messages
                 .iter()
-                .map(|m| m.author.clone())
+                .flat_map(|m| {
+                    let mut users = vec![m.author.clone()];
+                    if let Some(system) = &m.system {
+                        match system {
+                            v0::SystemMessage::ChannelDescriptionChanged { by } => {
+                                users.push(by.clone())
+                            }
+                            v0::SystemMessage::ChannelIconChanged { by } => users.push(by.clone()),
+                            v0::SystemMessage::ChannelOwnershipChanged { from, to, .. } => {
+                                users.push(from.clone());
+                                users.push(to.clone())
+                            }
+                            v0::SystemMessage::ChannelRenamed { by, .. } => users.push(by.clone()),
+                            v0::SystemMessage::UserAdded { by, id, .. }
+                            | v0::SystemMessage::UserRemove { by, id, .. } => {
+                                users.push(by.clone());
+                                users.push(id.clone());
+                            }
+                            v0::SystemMessage::UserBanned { id, .. }
+                            | v0::SystemMessage::UserKicked { id, .. }
+                            | v0::SystemMessage::UserJoined { id, .. }
+                            | v0::SystemMessage::UserLeft { id, .. } => {
+                                users.push(id.clone());
+                            }
+                            v0::SystemMessage::Text { .. } => {}
+                            v0::SystemMessage::MessagePinned { by, .. } => {
+                                users.push(by.clone());
+                            }
+                            v0::SystemMessage::MessageUnpinned { by, .. } => {
+                                users.push(by.clone());
+                            }
+                        }
+                    }
+                    users
+                })
                 .collect::<HashSet<String>>()
                 .into_iter()
                 .collect::<Vec<String>>();
@@ -558,7 +715,7 @@ impl Message {
     ) -> Result<()> {
         let media: Option<v0::File> = if let Some(id) = embed.media {
             Some(
-                db.find_and_use_attachment(&id, "attachments", "message", &self.id)
+                File::use_attachment(db, &id, &self.id, &self.author)
                     .await?
                     .into(),
             )
@@ -588,7 +745,7 @@ impl Message {
     pub async fn add_reaction(&self, db: &Database, user: &User, emoji: &str) -> Result<()> {
         // Check how many reactions are already on the message
         let config = config().await;
-        if self.reactions.len() >= config.features.limits.default.message_reactions
+        if self.reactions.len() >= config.features.limits.global.message_reactions
             && !self.reactions.contains_key(emoji)
         {
             return Err(create_error!(InvalidOperation));
@@ -730,6 +887,12 @@ impl Message {
         // Write to database
         db.clear_reaction(&self.id, emoji).await
     }
+
+    pub fn remove_field(&mut self, field: &FieldsMessage) {
+        match field {
+            FieldsMessage::Pinned => self.pinned = None,
+        }
+    }
 }
 
 impl SystemMessage {
@@ -753,7 +916,7 @@ impl Interactions {
         if let Some(reactions) = &self.reactions {
             permissions.throw_if_lacking_channel_permission(ChannelPermission::React)?;
 
-            if reactions.len() > config.features.limits.default.message_reactions {
+            if reactions.len() > config.features.limits.global.message_reactions {
                 return Err(create_error!(InvalidOperation));
             }
 

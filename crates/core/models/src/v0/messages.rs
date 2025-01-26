@@ -13,7 +13,7 @@ use rocket::{FromForm, FromFormField};
 
 use iso8601_timestamp::Timestamp;
 
-use super::{Embed, File, Member, MessageWebhook, User, Webhook, RE_COLOUR};
+use super::{Channel, Embed, File, Member, MessageWebhook, User, Webhook, RE_COLOUR};
 
 pub static RE_MENTION: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"<@([0-9A-HJKMNP-TV-Z]{26})>").unwrap());
@@ -31,6 +31,12 @@ auto_derived_partial!(
         pub channel: String,
         /// Id of the user or webhook that sent this message
         pub author: String,
+        /// The user that sent this message
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub user: Option<User>,
+        /// The member that sent this message
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub member: Option<Member>,
         /// The webhook that sent this message
         #[serde(skip_serializing_if = "Option::is_none")]
         pub webhook: Option<MessageWebhook>,
@@ -64,6 +70,18 @@ auto_derived_partial!(
         /// Name and / or avatar overrides for this message
         #[serde(skip_serializing_if = "Option::is_none")]
         pub masquerade: Option<Masquerade>,
+        /// Whether or not the message in pinned
+        #[serde(skip_serializing_if = "crate::if_option_false")]
+        pub pinned: Option<bool>,
+
+        /// Bitfield of message flags
+        ///
+        /// https://docs.rs/revolt-models/latest/revolt_models/v0/enum.MessageFlags.html
+        #[cfg_attr(
+            feature = "serde",
+            serde(skip_serializing_if = "crate::if_zero_u32", default)
+        )]
+        pub flags: u32,
     },
     "PartialMessage"
 );
@@ -112,6 +130,10 @@ auto_derived!(
         ChannelIconChanged { by: String },
         #[serde(rename = "channel_ownership_changed")]
         ChannelOwnershipChanged { from: String, to: String },
+        #[serde(rename = "message_pinned")]
+        MessagePinned { id: String, by: String },
+        #[serde(rename = "message_unpinned")]
+        MessageUnpinned { id: String, by: String },
     }
 
     /// Name and / or avatar override information
@@ -185,6 +207,10 @@ auto_derived!(
         pub timestamp: u64,
         /// URL to open when clicking notification
         pub url: String,
+        /// The message object itself, to send to clients for processing
+        pub message: Message,
+        /// The channel object itself, for clients to process
+        pub channel: Channel,
     }
 
     /// Representation of a text embed before it is sent.
@@ -241,6 +267,11 @@ auto_derived!(
         pub masquerade: Option<Masquerade>,
         /// Information about how this message should be interacted with
         pub interactions: Option<Interactions>,
+
+        /// Bitfield of message flags
+        ///
+        /// https://docs.rs/revolt-models/latest/revolt_models/v0/enum.MessageFlags.html
+        pub flags: Option<u32>,
     }
 
     /// Options for querying messages
@@ -278,7 +309,9 @@ auto_derived!(
         ///
         /// See [MongoDB documentation](https://docs.mongodb.com/manual/text-search/#-text-operator) for more information.
         #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
-        pub query: String,
+        pub query: Option<String>,
+        /// Whether to only search for pinned messages, cannot be sent with `query`.
+        pub pinned: Option<bool>,
 
         /// Maximum number of messages to fetch
         #[cfg_attr(feature = "validator", validate(range(min = 1, max = 100)))]
@@ -327,6 +360,18 @@ auto_derived!(
         pub user_id: Option<String>,
         /// Remove all reactions
         pub remove_all: Option<bool>,
+    }
+
+    /// Message flag bitfield
+    #[repr(u32)]
+    pub enum MessageFlags {
+        /// Message will not send push / desktop notifications
+        SuppressNotifications = 1,
+    }
+
+    /// Optional fields on message
+    pub enum FieldsMessage {
+        Pinned,
     }
 );
 
@@ -391,13 +436,15 @@ impl From<SystemMessage> for String {
             SystemMessage::ChannelOwnershipChanged { .. } => {
                 "Channel ownership changed.".to_string()
             }
+            SystemMessage::MessagePinned { .. } => "Message pinned.".to_string(),
+            SystemMessage::MessageUnpinned { .. } => "Message unpinned.".to_string(),
         }
     }
 }
 
 impl PushNotification {
     /// Create a new notification from a given message, author and channel ID
-    pub async fn from(msg: Message, author: Option<MessageAuthor<'_>>, channel_id: &str) -> Self {
+    pub async fn from(msg: Message, author: Option<MessageAuthor<'_>>, channel: Channel) -> Self {
         let config = config().await;
 
         let icon = if let Some(author) = &author {
@@ -410,15 +457,30 @@ impl PushNotification {
             format!("{}/assets/logo.png", config.hosts.app)
         };
 
-        let image = msg.attachments.and_then(|attachments| {
+        let image = msg.attachments.as_ref().and_then(|attachments| {
             attachments
                 .first()
                 .map(|v| format!("{}/attachments/{}", config.hosts.autumn, v.id))
         });
 
-        let body = if let Some(sys) = msg.system {
-            sys.into()
-        } else if let Some(text) = msg.content {
+        let body = if let Some(ref sys) = msg.system {
+            sys.clone().into()
+        } else if let Some(ref text) = msg.content {
+            text.clone()
+        } else if let Some(text) = msg.embeds.as_ref().and_then(|embeds| match embeds.first() {
+            Some(Embed::Image(_)) => Some("Sent an image".to_string()),
+            Some(Embed::Video(_)) => Some("Sent a video".to_string()),
+            Some(Embed::Text(e)) => e
+                .description
+                .clone()
+                .or(e.title.clone().or(Some("Empty Embed".to_string()))),
+            Some(Embed::Website(e)) => e.title.clone().or(e
+                .description
+                .clone()
+                .or(e.site_name.clone().or(Some("Empty Embed".to_string())))),
+            Some(Embed::None) => Some("Empty Message".to_string()), // ???
+            None => Some("Empty Message".to_string()),              // ??
+        }) {
             text
         } else {
             "Empty Message".to_string()
@@ -436,9 +498,11 @@ impl PushNotification {
             icon,
             image,
             body,
-            tag: channel_id.to_string(),
+            tag: channel.id().to_string(),
             timestamp,
-            url: format!("{}/channel/{}/{}", config.hosts.app, channel_id, msg.id),
+            url: format!("{}/channel/{}/{}", config.hosts.app, channel.id(), msg.id),
+            message: msg,
+            channel,
         }
     }
 }

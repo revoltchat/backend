@@ -1,6 +1,6 @@
 use revolt_database::{
     util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Channel, Database, File, PartialChannel, SystemMessage, User,
+    Channel, Database, File, PartialChannel, SystemMessage, User, AMQP,
 };
 use revolt_models::v0;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
@@ -15,6 +15,7 @@ use validator::Validate;
 #[patch("/<target>", data = "<data>")]
 pub async fn edit(
     db: &State<Database>,
+    amqp: &State<AMQP>,
     user: User,
     target: Reference,
     data: Json<v0::DataEditChannel>,
@@ -73,7 +74,15 @@ pub async fn edit(
             return Err(create_error!(InvalidOperation));
         }
         .into_message(channel.id().to_string())
-        .send(db, user.as_author_for_system(), &channel, false)
+        .send(
+            db,
+            Some(amqp),
+            user.as_author_for_system(),
+            None,
+            None,
+            &channel,
+            false,
+        )
         .await
         .ok();
     }
@@ -124,7 +133,7 @@ pub async fn edit(
             }
 
             if let Some(icon_id) = data.icon {
-                partial.icon = Some(File::use_icon(db, &icon_id, id).await?);
+                partial.icon = Some(File::use_channel_icon(db, &icon_id, id, &user.id).await?);
                 *icon = partial.icon.clone();
             }
 
@@ -151,7 +160,15 @@ pub async fn edit(
                         by: user.id.clone(),
                     }
                     .into_message(channel.id().to_string())
-                    .send(db, user.as_author_for_system(), &channel, false)
+                    .send(
+                        db,
+                        Some(amqp),
+                        user.as_author_for_system(),
+                        None,
+                        None,
+                        &channel,
+                        false,
+                    )
                     .await
                     .ok();
                 }
@@ -161,7 +178,15 @@ pub async fn edit(
                         by: user.id.clone(),
                     }
                     .into_message(channel.id().to_string())
-                    .send(db, user.as_author_for_system(), &channel, false)
+                    .send(
+                        db,
+                        Some(amqp),
+                        user.as_author_for_system(),
+                        None,
+                        None,
+                        &channel,
+                        false,
+                    )
                     .await
                     .ok();
                 }
@@ -171,7 +196,15 @@ pub async fn edit(
                         by: user.id.clone(),
                     }
                     .into_message(channel.id().to_string())
-                    .send(db, user.as_author_for_system(), &channel, false)
+                    .send(
+                        db,
+                        Some(amqp),
+                        user.as_author_for_system(),
+                        None,
+                        None,
+                        &channel,
+                        false,
+                    )
                     .await
                     .ok();
                 }

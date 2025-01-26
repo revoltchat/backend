@@ -1,8 +1,9 @@
 use std::collections::HashSet;
 
 use revolt_database::{
-    events::client::EventV1, util::permissions::DatabasePermissionQuery, Channel, Database, Member,
-    MemberCompositeKey, Presence, RelationshipStatus,
+    events::client::{EventV1, ReadyPayloadFields},
+    util::permissions::DatabasePermissionQuery,
+    Channel, Database, Member, MemberCompositeKey, Presence, RelationshipStatus,
 };
 use revolt_models::v0;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
@@ -23,11 +24,11 @@ impl Cache {
                 let server = self.servers.get(server);
                 let mut query =
                     DatabasePermissionQuery::new(db, self.users.get(&self.user_id).unwrap())
-                        .channel(&channel);
+                        .channel(channel);
                 // let mut perms = perms(self.users.get(&self.user_id).unwrap()).channel(channel);
 
                 if let Some(member) = member {
-                    query = query.member(&member);
+                    query = query.member(member);
                 }
 
                 if let Some(server) = server {
@@ -92,8 +93,13 @@ impl Cache {
 /// State Manager
 impl State {
     /// Generate a Ready packet for the current user
-    pub async fn generate_ready_payload(&mut self, db: &Database) -> Result<EventV1> {
+    pub async fn generate_ready_payload(
+        &mut self,
+        db: &Database,
+        fields: Vec<ReadyPayloadFields>,
+    ) -> Result<EventV1> {
         let user = self.clone_user();
+        self.cache.is_bot = user.bot.is_some();
 
         // Find all relationships to the user.
         let mut user_ids: HashSet<String> = user
@@ -151,14 +157,36 @@ impl State {
             .await?;
 
         // Fetch customisations.
-        let emojis = db
-            .fetch_emoji_by_parent_ids(
-                &servers
-                    .iter()
-                    .map(|x| x.id.to_string())
-                    .collect::<Vec<String>>(),
+        let emojis = if fields.contains(&ReadyPayloadFields::Emoji) {
+            Some(
+                db.fetch_emoji_by_parent_ids(
+                    &servers
+                        .iter()
+                        .map(|x| x.id.to_string())
+                        .collect::<Vec<String>>(),
+                )
+                .await?,
             )
-            .await?;
+        } else {
+            None
+        };
+
+        // Fetch user settings
+        let user_settings = if let Some(ReadyPayloadFields::UserSettings(keys)) = fields
+            .iter()
+            .find(|e| matches!(e, ReadyPayloadFields::UserSettings(_)))
+        {
+            Some(db.fetch_user_settings(&user.id, &keys).await?)
+        } else {
+            None
+        };
+
+        // Fetch channel unreads
+        let channel_unreads = if fields.contains(&ReadyPayloadFields::ChannelUnreads) {
+            Some(db.fetch_unreads(&user.id).await?)
+        } else {
+            None
+        };
 
         // Copy data into local state cache.
         self.cache.users = users.iter().cloned().map(|x| (x.id.clone(), x)).collect();
@@ -181,40 +209,69 @@ impl State {
             .collect();
 
         // Make sure we see our own user correctly.
-        users.push(user.into_self().await);
+        users.push(user.into_self(true).await);
 
         // Set subscription state internally.
-        self.reset_state();
-        self.insert_subscription(self.private_topic.clone());
+        self.reset_state().await;
+        self.insert_subscription(self.private_topic.clone()).await;
 
         for user in &users {
-            self.insert_subscription(user.id.clone());
+            self.insert_subscription(user.id.clone()).await;
         }
 
         for server in &servers {
-            self.insert_subscription(server.id.clone());
-        }
+            self.insert_subscription(server.id.clone()).await;
 
-        for channel in &channels {
-            self.insert_subscription(channel.id().to_string());
-        }
-
-        // fetch voice states for all the channels we can see
-        let mut voice_states = Vec::new();
-
-        for channel in &channels {
-            if let Ok(Some(voice_state)) = self.fetch_voice_state(channel).await {
-                voice_states.push(voice_state)
+            if self.cache.is_bot {
+                self.insert_subscription(format!("{}u", server.id)).await;
             }
         }
 
+        for channel in &channels {
+            self.insert_subscription(channel.id().to_string()).await;
+        }
+
+        let voice_states = if fields.contains(&ReadyPayloadFields::VoiceStates) {
+            // fetch voice states for all the channels we can see
+            let mut voice_states = Vec::new();
+
+            for channel in &channels {
+                if let Ok(Some(voice_state)) = self.fetch_voice_state(channel).await {
+                    voice_states.push(voice_state)
+                }
+            }
+
+            Some(voice_states)
+        } else {
+            None
+        };
+
         Ok(EventV1::Ready {
-            users,
-            servers: servers.into_iter().map(Into::into).collect(),
-            channels: channels.into_iter().map(Into::into).collect(),
-            members: members.into_iter().map(Into::into).collect(),
-            emojis: emojis.into_iter().map(Into::into).collect(),
+            users: if fields.contains(&ReadyPayloadFields::Users) {
+                Some(users)
+            } else {
+                None
+            },
+            servers: if fields.contains(&ReadyPayloadFields::Servers) {
+                Some(servers.into_iter().map(Into::into).collect())
+            } else {
+                None
+            },
+            channels: if fields.contains(&ReadyPayloadFields::Channels) {
+                Some(channels.into_iter().map(Into::into).collect())
+            } else {
+                None
+            },
+            members: if fields.contains(&ReadyPayloadFields::Members) {
+                Some(members.into_iter().map(Into::into).collect())
+            } else {
+                None
+            },
+            emojis: emojis.map(|vec| vec.into_iter().map(Into::into).collect()),
             voice_states,
+
+            user_settings,
+            channel_unreads: channel_unreads.map(|vec| vec.into_iter().map(Into::into).collect()),
         })
     }
 
@@ -248,11 +305,11 @@ impl State {
             let mut bulk_events = vec![];
 
             for id in added_channels {
-                self.insert_subscription(id);
+                self.insert_subscription(id).await;
             }
 
             for id in removed_channels {
-                self.remove_subscription(&id);
+                self.remove_subscription(&id).await;
                 self.cache.channels.remove(&id);
 
                 bulk_events.push(EventV1::ChannelDelete { id });
@@ -275,7 +332,7 @@ impl State {
                             .channels
                             .insert(channel.id().to_string(), channel.clone());
 
-                        self.insert_subscription(channel.id().to_string());
+                        self.insert_subscription(channel.id().to_string()).await;
                         bulk_events.push(EventV1::ChannelCreate(channel.into()));
                     }
                 }
@@ -348,7 +405,7 @@ impl State {
         match event {
             EventV1::ChannelCreate(channel) => {
                 let id = channel.id().to_string();
-                self.insert_subscription(id.clone());
+                self.insert_subscription(id.clone()).await;
                 self.cache.channels.insert(id, channel.clone().into());
             }
             EventV1::ChannelUpdate {
@@ -388,17 +445,17 @@ impl State {
                 }
             }
             EventV1::ChannelDelete { id } => {
-                self.remove_subscription(id);
+                self.remove_subscription(id).await;
                 self.cache.channels.remove(id);
             }
             EventV1::ChannelGroupJoin { user, .. } => {
-                self.insert_subscription(user.clone());
+                self.insert_subscription(user.clone()).await;
             }
             EventV1::ChannelGroupLeave { id, user, .. } => {
                 if user == &self.cache.user_id {
-                    self.remove_subscription(id);
+                    self.remove_subscription(id).await;
                 } else if !self.cache.can_subscribe_to_user(user) {
-                    self.remove_subscription(user);
+                    self.remove_subscription(user).await;
                 }
             }
 
@@ -408,7 +465,12 @@ impl State {
                 channels,
                 emojis: _,
             } => {
-                self.insert_subscription(id.clone());
+                self.insert_subscription(id.clone()).await;
+
+                if self.cache.is_bot {
+                    self.insert_subscription(format!("{}u", id)).await;
+                }
+
                 self.cache.servers.insert(id.clone(), server.clone().into());
                 let member = Member {
                     id: MemberCompositeKey {
@@ -445,13 +507,13 @@ impl State {
             EventV1::ServerMemberJoin { .. } => {
                 // We will always receive ServerCreate when joining a new server.
             }
-            EventV1::ServerMemberLeave { id, user } => {
+            EventV1::ServerMemberLeave { id, user, .. } => {
                 if user == &self.cache.user_id {
-                    self.remove_subscription(id);
+                    self.remove_subscription(id).await;
 
                     if let Some(server) = self.cache.servers.remove(id) {
                         for channel in &server.channels {
-                            self.remove_subscription(channel);
+                            self.remove_subscription(channel).await;
                             self.cache.channels.remove(channel);
                         }
                     }
@@ -459,11 +521,11 @@ impl State {
                 }
             }
             EventV1::ServerDelete { id } => {
-                self.remove_subscription(id);
+                self.remove_subscription(id).await;
 
                 if let Some(server) = self.cache.servers.remove(id) {
                     for channel in &server.channels {
-                        self.remove_subscription(channel);
+                        self.remove_subscription(channel).await;
                         self.cache.channels.remove(channel);
                     }
                 }
@@ -536,9 +598,23 @@ impl State {
                 self.cache.users.insert(id.clone(), user.clone().into());
 
                 if self.cache.can_subscribe_to_user(id) {
-                    self.insert_subscription(id.clone());
+                    self.insert_subscription(id.clone()).await;
                 } else {
-                    self.remove_subscription(id);
+                    self.remove_subscription(id).await;
+                }
+            }
+
+            EventV1::Message(message) => {
+                // Since Message events are fanned out to many clients,
+                // we must reconstruct the relationship value at this end.
+                if let Some(user) = &mut message.user {
+                    user.relationship = self
+                        .cache
+                        .users
+                        .get(&self.cache.user_id)
+                        .expect("missing self?")
+                        .relationship_with(&message.author)
+                        .into();
                 }
             }
 
@@ -552,11 +628,11 @@ impl State {
 
         // Sub / unsub accordingly.
         if let Some(id) = queue_add {
-            self.insert_subscription(id);
+            self.insert_subscription(id).await;
         }
 
         if let Some(id) = queue_remove {
-            self.remove_subscription(&id);
+            self.remove_subscription(&id).await;
         }
 
         true
@@ -582,7 +658,7 @@ impl State {
             }
 
             Ok(Some(v0::ChannelVoiceState {
-                id: channel.id(),
+                id: channel.id().to_string(),
                 participants,
             }))
         } else {

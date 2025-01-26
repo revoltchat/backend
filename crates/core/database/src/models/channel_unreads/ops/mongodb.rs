@@ -1,4 +1,6 @@
 use bson::Document;
+use mongodb::options::FindOneAndUpdateOptions;
+use mongodb::options::ReturnDocument;
 use mongodb::options::UpdateOptions;
 use revolt_result::Result;
 use ulid::Ulid;
@@ -12,31 +14,35 @@ static COL: &str = "channel_unreads";
 
 #[async_trait]
 impl AbstractChannelUnreads for MongoDb {
-    /// Acknowledge a message.
+    /// Acknowledge a message, and returns updated channel unread.
     async fn acknowledge_message(
         &self,
         channel_id: &str,
         user_id: &str,
         message_id: &str,
-    ) -> Result<()> {
-        self.col::<Document>(COL)
-            .update_one(
+    ) -> Result<Option<ChannelUnread>> {
+        self.col::<ChannelUnread>(COL)
+            .find_one_and_update(
                 doc! {
                     "_id.channel": channel_id,
                     "_id.user": user_id,
                 },
                 doc! {
-                    "$unset": {
-                        "mentions": 1_i32
+                    "$pull": {
+                        "mentions": {
+                            "$lte": message_id
+                        }
                     },
                     "$set": {
                         "last_id": message_id
                     }
                 },
-                UpdateOptions::builder().upsert(true).build(),
+                FindOneAndUpdateOptions::builder()
+                    .upsert(true)
+                    .return_document(ReturnDocument::After)
+                    .build(),
             )
             .await
-            .map(|_| ())
             .map_err(|_| create_database_error!("update_one", COL))
     }
 
@@ -113,6 +119,31 @@ impl AbstractChannelUnreads for MongoDb {
             COL,
             doc! {
                 "_id.user": user_id
+            }
+        )
+    }
+
+    async fn fetch_unread_mentions(&self, user_id: &str) -> Result<Vec<ChannelUnread>> {
+        query! {
+            self,
+            find,
+            COL,
+            doc! {
+                "_id.user": user_id,
+                "mentions": {"$ne": null}
+            }
+        }
+    }
+
+    /// Fetch unread for a specific user in a channel.
+    async fn fetch_unread(&self, user_id: &str, channel_id: &str) -> Result<Option<ChannelUnread>> {
+        query!(
+            self,
+            find_one,
+            COL,
+            doc! {
+                "_id.user": user_id,
+                "_id.channel": channel_id
             }
         )
     }

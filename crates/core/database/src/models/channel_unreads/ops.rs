@@ -7,13 +7,13 @@ mod reference;
 
 #[async_trait]
 pub trait AbstractChannelUnreads: Sync + Send {
-    /// Acknowledge a message.
+    /// Acknowledge a message, and returns updated channel unread.
     async fn acknowledge_message(
         &self,
         channel_id: &str,
         user_id: &str,
         message_id: &str,
-    ) -> Result<()>;
+    ) -> Result<Option<ChannelUnread>>;
 
     /// Acknowledge many channels.
     async fn acknowledge_channels(&self, user_id: &str, channel_ids: &[String]) -> Result<()>;
@@ -26,6 +26,12 @@ pub trait AbstractChannelUnreads: Sync + Send {
         message_ids: &[String],
     ) -> Result<()>;
 
+    /// Fetch all unreads with mentions for a user.
+    async fn fetch_unread_mentions(&self, user_id: &str) -> Result<Vec<ChannelUnread>>;
+
     /// Fetch all channel unreads for a user.
     async fn fetch_unreads(&self, user_id: &str) -> Result<Vec<ChannelUnread>>;
+
+    /// Fetch unread for a specific user in a channel.
+    async fn fetch_unread(&self, user_id: &str, channel_id: &str) -> Result<Option<ChannelUnread>>;
 }

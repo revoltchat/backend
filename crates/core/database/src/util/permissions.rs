@@ -53,6 +53,12 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
         if let Some(other_user) = &self.user {
             if self.perspective.id == other_user.id {
                 return RelationshipStatus::User;
+            } else if let Some(bot) = &other_user.bot {
+                // For the purposes of permissions checks,
+                // assume owner is the same as bot
+                if self.perspective.id == bot.owner {
+                    return RelationshipStatus::User;
+                }
             }
 
             if let Some(relations) = &self.perspective.relations {
@@ -181,7 +187,7 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
 
     async fn do_we_have_publish_overwrites(&mut self) -> bool {
         if let Some(member) = &self.member {
-            member.can_publish.unwrap_or(true)
+            member.can_publish.unwrap_or(false)
         } else {
             false
         }
@@ -189,7 +195,7 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
 
     async fn do_we_have_receive_overwrites(&mut self) -> bool {
         if let Some(member) = &self.member {
-            member.can_receive.unwrap_or(true)
+            member.can_receive.unwrap_or(false)
         } else {
             false
         }

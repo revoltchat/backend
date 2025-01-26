@@ -9,5 +9,5 @@ use rocket::serde::json::Json;
 #[openapi(tag = "User Information")]
 #[get("/@me")]
 pub async fn fetch(user: User) -> Result<Json<v0::User>> {
-    Ok(Json(user.into_self().await))
+    Ok(Json(user.into_self(false).await))
 }

@@ -1,14 +1,17 @@
-use std::{collections::HashSet, time::Duration};
+use std::{collections::HashSet, str::FromStr, time::Duration};
 
-use crate::{events::client::EventV1, Database, File, RatelimitEvent};
+use crate::{events::client::EventV1, Database, File, RatelimitEvent, AMQP};
 
+use authifier::config::{EmailVerificationConfig, Template};
+use iso8601_timestamp::Timestamp;
 use once_cell::sync::Lazy;
 use rand::seq::SliceRandom;
 use redis_kiss::{get_connection, AsyncCommands};
-use revolt_config::config;
-use revolt_models::v0;
+use revolt_config::{config, FeaturesLimits};
+use revolt_models::v0::{self, UserFlags};
 use revolt_presence::filter_online;
 use revolt_result::{create_error, Result};
+use serde_json::json;
 use ulid::Ulid;
 
 auto_derived_partial!(
@@ -50,6 +53,10 @@ auto_derived_partial!(
         /// Bot information
         #[serde(skip_serializing_if = "Option::is_none")]
         pub bot: Option<BotInformation>,
+
+        /// Time until user is unsuspended
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub suspended_until: Option<Timestamp>,
     },
     "PartialUser"
 );
@@ -62,6 +69,11 @@ auto_derived!(
         StatusPresence,
         ProfileContent,
         ProfileBackground,
+        DisplayName,
+
+        // internal fields
+        Suspension,
+        None,
     }
 
     /// User's relationship with another user (or themselves)
@@ -165,6 +177,7 @@ impl Default for User {
             flags: Default::default(),
             privileged: Default::default(),
             bot: Default::default(),
+            suspended_until: Default::default(),
         }
     }
 }
@@ -196,6 +209,22 @@ impl User {
 
         db.insert_user(&user).await?;
         Ok(user)
+    }
+
+    /// Get limits for this user
+    pub async fn limits(&self) -> FeaturesLimits {
+        let config = config().await;
+        if ulid::Ulid::from_str(&self.id)
+            .expect("`ulid`")
+            .datetime()
+            .elapsed()
+            .expect("time went backwards")
+            <= Duration::from_secs(3600u64 * config.features.limits.global.new_user_hours as u64)
+        {
+            config.features.limits.new_user
+        } else {
+            config.features.limits.default
+        }
     }
 
     /// Get the relationship with another user
@@ -236,12 +265,11 @@ impl User {
 
     /// Check if this user can acquire another server
     pub async fn can_acquire_server(&self, db: &Database) -> Result<()> {
-        let config = config().await;
-        if db.fetch_server_count(&self.id).await? <= config.features.limits.default.servers {
+        if db.fetch_server_count(&self.id).await? <= self.limits().await.servers {
             Ok(())
         } else {
             Err(create_error!(TooManyServers {
-                max: config.features.limits.default.servers
+                max: self.limits().await.servers
             }))
         }
     }
@@ -277,23 +305,27 @@ impl User {
         Ok(username)
     }
 
-    /// Find a user from a given token and hint
+    /// Find a user and session ID from a given token and hint
     #[async_recursion]
-    pub async fn from_token(db: &Database, token: &str, hint: UserHint) -> Result<User> {
+    pub async fn from_token(db: &Database, token: &str, hint: UserHint) -> Result<(User, String)> {
         match hint {
-            UserHint::Bot => {
+            UserHint::Bot => Ok((
                 db.fetch_user(
                     &db.fetch_bot_by_token(token)
                         .await
                         .map_err(|_| create_error!(InvalidSession))?
                         .id,
                 )
-                .await
+                .await?,
+                String::new(),
+            )),
+            UserHint::User => {
+                let session = db.fetch_session_by_token(token).await?;
+                Ok((db.fetch_user(&session.user_id).await?, session.id))
             }
-            UserHint::User => db.fetch_user_by_token(token).await,
             UserHint::Any => {
-                if let Ok(user) = User::from_token(db, token, UserHint::User).await {
-                    Ok(user)
+                if let Ok(result) = User::from_token(db, token, UserHint::User).await {
+                    Ok(result)
                 } else {
                     User::from_token(db, token, UserHint::Bot).await
                 }
@@ -466,7 +498,12 @@ impl User {
     }
 
     /// Add another user as a friend
-    pub async fn add_friend(&mut self, db: &Database, target: &mut User) -> Result<()> {
+    pub async fn add_friend(
+        &mut self,
+        db: &Database,
+        amqp: &AMQP,
+        target: &mut User,
+    ) -> Result<()> {
         match self.relationship_with(&target.id) {
             RelationshipStatus::User => Err(create_error!(NoEffect)),
             RelationshipStatus::Friend => Err(create_error!(AlreadyFriends)),
@@ -474,6 +511,9 @@ impl User {
             RelationshipStatus::Blocked => Err(create_error!(Blocked)),
             RelationshipStatus::BlockedOther => Err(create_error!(BlockedByOther)),
             RelationshipStatus::Incoming => {
+                // Accept incoming friend request
+                _ = amqp.friend_request_accepted(self, target).await;
+
                 self.apply_relationship(
                     db,
                     target,
@@ -483,6 +523,28 @@ impl User {
                 .await
             }
             RelationshipStatus::None => {
+                // Get this user's current count of outgoing friend requests
+                let count = self
+                    .relations
+                    .as_ref()
+                    .map(|relations| {
+                        relations
+                            .iter()
+                            .filter(|r| matches!(r.status, RelationshipStatus::Outgoing))
+                            .count()
+                    })
+                    .unwrap_or_default();
+
+                // If we're over the limit, don't allow creating more requests
+                if count >= self.limits().await.outgoing_friend_requests {
+                    return Err(create_error!(TooManyPendingFriendRequests {
+                        max: self.limits().await.outgoing_friend_requests
+                    }));
+                }
+
+                _ = amqp.friend_request_received(target, self).await;
+
+                // Send the friend request
                 self.apply_relationship(
                     db,
                     target,
@@ -631,7 +693,105 @@ impl User {
                     x.background = None;
                 }
             }
+            FieldsUser::DisplayName => self.display_name = None,
+            FieldsUser::Suspension => self.suspended_until = None,
+            FieldsUser::None => {}
         }
+    }
+
+    /// Suspend the user
+    ///
+    /// - If a duration is specified, the user will be automatically unsuspended after the given time.
+    /// - If a reason is specified, an email will be sent.
+    pub async fn suspend(
+        &mut self,
+        db: &Database,
+        duration_days: Option<usize>,
+        reason: Option<Vec<String>>,
+    ) -> Result<()> {
+        let authifier = db.clone().to_authifier().await;
+        let mut account = authifier
+            .database
+            .find_account(&self.id)
+            .await
+            .map_err(|_| create_error!(InternalError))?;
+
+        account
+            .disable(&authifier)
+            .await
+            .map_err(|_| create_error!(InternalError))?;
+
+        account
+            .delete_all_sessions(&authifier, None)
+            .await
+            .map_err(|_| create_error!(InternalError))?;
+
+        self.update(
+            db,
+            PartialUser {
+                flags: Some(UserFlags::SuspendedUntil as i32),
+                suspended_until: duration_days.and_then(|dur| {
+                    Timestamp::now_utc().checked_add(iso8601_timestamp::Duration::days(dur as i64))
+                }),
+                ..Default::default()
+            },
+            vec![],
+        )
+        .await?;
+
+        if let Some(reason) = reason {
+            if let EmailVerificationConfig::Enabled { smtp, .. } =
+                authifier.config.email_verification
+            {
+                smtp.send_email(
+                    account.email.clone(),
+                    // maybe move this to common area?
+                    &Template {
+                        title: "Account Suspension".to_string(),
+                        html: Some(include_str!("../../../templates/suspension.html").to_owned()),
+                        text: include_str!("../../../templates/suspension.txt").to_owned(),
+                        url: Default::default(),
+                    },
+                    json!({
+                        "email": account.email,
+                        "list": reason.join(", "),
+                        "duration": duration_days,
+                        "duration_display": if duration_days.is_some() {
+                            "block"
+                        } else {
+                            "none"
+                        }
+                    }),
+                )
+                .map_err(|_| create_error!(InternalError))?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Unsuspend the user
+    pub async fn unsuspend(&mut self, db: &Database) -> Result<()> {
+        self.update(
+            db,
+            PartialUser {
+                flags: Some(0),
+                suspended_until: None,
+                ..Default::default()
+            },
+            vec![],
+        )
+        .await?;
+
+        unimplemented!()
+    }
+
+    /// Permanently ban the user
+    ///
+    /// - If a reason is specified, an email will be sent.
+    pub async fn ban(&mut self, _db: &Database, _reason: Option<String>) -> Result<()> {
+        // Send ban email (if reason provided)
+        unimplemented!()
     }
 
     /// Mark as deleted
@@ -649,6 +809,7 @@ impl User {
                 FieldsUser::StatusPresence,
                 FieldsUser::ProfileContent,
                 FieldsUser::ProfileBackground,
+                FieldsUser::Suspension,
             ],
         )
         .await

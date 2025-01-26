@@ -1,4 +1,5 @@
 use std::panic::Location;
+use std::fmt::Display;
 
 #[cfg(feature = "serde")]
 #[macro_use]
@@ -8,8 +9,15 @@ extern crate serde;
 #[macro_use]
 extern crate schemars;
 
+#[cfg(feature = "utoipa")]
+#[macro_use]
+extern crate utoipa;
+
 #[cfg(feature = "rocket")]
 pub mod rocket;
+
+#[cfg(feature = "axum")]
+pub mod axum;
 
 #[cfg(feature = "okapi")]
 pub mod okapi;
@@ -20,6 +28,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 /// Error information
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[derive(Debug, Clone)]
 pub struct Error {
     /// Type of error and additional information
@@ -30,10 +39,19 @@ pub struct Error {
     pub location: String,
 }
 
+impl Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?} occurred in {}", self.error_type, self.location)
+    }
+}
+
+impl std::error::Error for Error {}
+
 /// Possible error types
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[derive(Debug, Clone)]
 pub enum ErrorType {
     /// This error was not labeled :(
@@ -52,6 +70,9 @@ pub enum ErrorType {
     Blocked,
     BlockedByOther,
     NotFriends,
+    TooManyPendingFriendRequests {
+        max: usize,
+    },
 
     // ? Channel related errors
     UnknownChannel,
@@ -79,6 +100,8 @@ pub enum ErrorType {
     },
     AlreadyInGroup,
     NotInGroup,
+    AlreadyPinned,
+    NotPinned,
 
     // ? Server related errors
     UnknownServer,
@@ -125,6 +148,7 @@ pub enum ErrorType {
     InvalidCredentials,
     InvalidProperty,
     InvalidSession,
+    NotAuthenticated,
     DuplicateNonce,
     NotFound,
     NoEffect,
@@ -136,7 +160,19 @@ pub enum ErrorType {
     LiveKitUnavailable,
     AlreadyInVoiceChannel,
     NotAVoiceChannel,
-    AlreadyConnected
+    AlreadyConnected,
+    // ? Micro-service errors
+    ProxyError,
+    FileTooSmall,
+    FileTooLarge {
+        max: usize,
+    },
+    FileTypeNotAllowed,
+    ImageProcessingFailed,
+    NoEmbedData,
+
+    // ? Legacy errors
+    VosoUnavailable,
 }
 
 #[macro_export]

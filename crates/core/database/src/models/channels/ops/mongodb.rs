@@ -261,12 +261,12 @@ impl AbstractChannels for MongoDb {
 
         // Delete associated attachments
         self.delete_many_attachments(doc! {
-            "object_id": &id
+            "used_for.id": &id
         })
         .await?;
 
         // Delete the channel itself
-        query!(self, delete_one_by_id, COL, &channel.id()).map(|_| ())
+        query!(self, delete_one_by_id, COL, channel.id()).map(|_| ())
     }
 }
 

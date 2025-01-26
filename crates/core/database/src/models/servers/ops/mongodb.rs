@@ -214,14 +214,21 @@ impl MongoDb {
 
         // Delete all emoji.
         self.col::<Document>("emojis")
-            .delete_many(
+            .update_many(
                 doc! {
                     "parent.id": &server_id
+                },
+                doc! {
+                    "$set": {
+                        "parent": {
+                            "type": "Detached"
+                        }
+                    }
                 },
                 None,
             )
             .await
-            .map_err(|_| create_database_error!("delete_many", "emojis"))?;
+            .map_err(|_| create_database_error!("update_many", "emojis"))?;
 
         // Delete all channels.
         self.col::<Document>("channels")
@@ -253,7 +260,7 @@ impl MongoDb {
 
         // Update many attachments with parent id.
         self.delete_many_attachments(doc! {
-            "object_id": &server_id
+            "used_for.id": &server_id
         })
         .await?;
 

@@ -6,9 +6,60 @@ use futures_locks::RwLock;
 use once_cell::sync::Lazy;
 use serde::Deserialize;
 
-#[cfg(not(debug_assertions))]
-use std::env;
+pub use sentry::{capture_error, capture_message, Level};
 
+#[cfg(feature = "report-macros")]
+#[macro_export]
+macro_rules! report_error {
+    ( $expr: expr, $error: ident $( $tt:tt )? ) => {
+        $expr
+            .inspect_err(|err| {
+                $crate::capture_message(
+                    &format!("{err:?} ({}:{}:{})", file!(), line!(), column!()),
+                    $crate::Level::Error,
+                );
+            })
+            .map_err(|_| ::revolt_result::create_error!($error))
+    };
+}
+
+#[cfg(feature = "report-macros")]
+#[macro_export]
+macro_rules! capture_internal_error {
+    ( $expr: expr ) => {
+        $crate::capture_message(
+            &format!("{:?} ({}:{}:{})", $expr, file!(), line!(), column!()),
+            $crate::Level::Error,
+        );
+    };
+}
+
+#[cfg(feature = "report-macros")]
+#[macro_export]
+macro_rules! report_internal_error {
+    ( $expr: expr ) => {
+        $expr
+            .inspect_err(|err| {
+                $crate::capture_message(
+                    &format!("{err:?} ({}:{}:{})", file!(), line!(), column!()),
+                    $crate::Level::Error,
+                );
+            })
+            .map_err(|_| ::revolt_result::create_error!(InternalError))
+    };
+}
+
+/// Paths to search for configuration
+static CONFIG_SEARCH_PATHS: [&str; 3] = [
+    // current working directory
+    "Revolt.toml",
+    // current working directory - overrides file
+    "Revolt.overrides.toml",
+    // root directory, for Docker containers
+    "/Revolt.toml",
+];
+
+/// Configuration builder
 static CONFIG_BUILDER: Lazy<RwLock<Config>> = Lazy::new(|| {
     RwLock::new({
         let mut builder = Config::builder().add_source(File::from_str(
@@ -21,20 +72,30 @@ static CONFIG_BUILDER: Lazy<RwLock<Config>> = Lazy::new(|| {
                 include_str!("../Revolt.test.toml"),
                 FileFormat::Toml,
             ));
-        } else if std::path::Path::new("Revolt.toml").exists() {
-            builder = builder.add_source(File::new("Revolt.toml", FileFormat::Toml));
+        }
+
+        for path in CONFIG_SEARCH_PATHS {
+            if std::path::Path::new(path).exists() {
+                builder = builder.add_source(File::new(path, FileFormat::Toml));
+            }
         }
 
         builder.build().unwrap()
     })
 });
 
-// https://gifbox.me/view/gT5mqxYKCZv-twilight-meow
-
 #[derive(Deserialize, Debug, Clone)]
 pub struct Database {
     pub mongodb: String,
     pub redis: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct Rabbit {
+    pub host: String,
+    pub port: u16,
+    pub username: String,
+    pub password: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -64,14 +125,34 @@ pub struct ApiSmtp {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct ApiVapid {
+pub struct PushVapid {
+    pub queue: String,
     pub private_key: String,
     pub public_key: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct ApiFcm {
-    pub api_key: String,
+pub struct PushFcm {
+    pub queue: String,
+    pub key_type: String,
+    pub project_id: String,
+    pub private_key_id: String,
+    pub private_key: String,
+    pub client_email: String,
+    pub client_id: String,
+    pub auth_uri: String,
+    pub token_uri: String,
+    pub auth_provider_x509_cert_url: String,
+    pub client_x509_cert_url: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct PushApn {
+    pub queue: String,
+    pub sandbox: bool,
+    pub pkcs8: String,
+    pub key_id: String,
+    pub team_id: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -104,37 +185,118 @@ pub struct ApiLiveKit {
 pub struct Api {
     pub registration: ApiRegistration,
     pub smtp: ApiSmtp,
-    pub vapid: ApiVapid,
-    pub fcm: ApiFcm,
     pub security: ApiSecurity,
     pub workers: ApiWorkers,
     pub livekit: ApiLiveKit,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct FeaturesLimits {
+pub struct Pushd {
+    pub production: bool,
+    pub exchange: String,
+    pub message_queue: String,
+    pub fr_accepted_queue: String,
+    pub fr_received_queue: String,
+    pub generic_queue: String,
+    pub ack_queue: String,
+
+    pub vapid: PushVapid,
+    pub fcm: PushFcm,
+    pub apn: PushApn,
+}
+
+impl Pushd {
+    fn get_routing_key(&self, key: String) -> String {
+        match self.production {
+            true => key + "-prd",
+            false => key + "-tst",
+        }
+    }
+
+    pub fn get_ack_routing_key(&self) -> String {
+        self.get_routing_key(self.ack_queue.clone())
+    }
+
+    pub fn get_message_routing_key(&self) -> String {
+        self.get_routing_key(self.message_queue.clone())
+    }
+
+    pub fn get_fr_accepted_routing_key(&self) -> String {
+        self.get_routing_key(self.fr_accepted_queue.clone())
+    }
+
+    pub fn get_fr_received_routing_key(&self) -> String {
+        self.get_routing_key(self.fr_received_queue.clone())
+    }
+
+    pub fn get_generic_routing_key(&self) -> String {
+        self.get_routing_key(self.generic_queue.clone())
+    }
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct FilesLimit {
+    pub min_file_size: usize,
+    pub min_resolution: [usize; 2],
+    pub max_mega_pixels: usize,
+    pub max_pixel_side: usize,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct FilesS3 {
+    pub endpoint: String,
+    pub path_style_buckets: bool,
+    pub region: String,
+    pub access_key_id: String,
+    pub secret_access_key: String,
+    pub default_bucket: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct Files {
+    pub encryption_key: String,
+    pub webp_quality: f32,
+    pub blocked_mime_types: Vec<String>,
+    pub clamd_host: String,
+    pub scan_mime_types: Vec<String>,
+
+    pub limit: FilesLimit,
+    pub preview: HashMap<String, [usize; 2]>,
+    pub s3: FilesS3,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct GlobalLimits {
     pub group_size: usize,
-    pub bots: usize,
-    pub message_length: usize,
-    pub message_replies: usize,
-    pub message_attachments: usize,
     pub message_embeds: usize,
+    pub message_replies: usize,
     pub message_reactions: usize,
-    pub servers: usize,
     pub server_emoji: usize,
     pub server_roles: usize,
     pub server_channels: usize,
 
-    pub attachment_size: usize,
-    pub avatar_size: usize,
-    pub background_size: usize,
-    pub icon_size: usize,
-    pub banner_size: usize,
-    pub emoji_size: usize,
+    pub new_user_hours: usize,
+
+    pub body_limit_size: usize,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct FeaturesLimits {
+    pub outgoing_friend_requests: usize,
+
+    pub bots: usize,
+    pub message_length: usize,
+    pub message_attachments: usize,
+    pub servers: usize,
+
+    pub file_upload_size_limit: HashMap<String, usize>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct FeaturesLimitsCollection {
+    pub global: GlobalLimits,
+
+    pub new_user: FeaturesLimits,
     pub default: FeaturesLimits,
 
     #[serde(flatten)]
@@ -142,23 +304,44 @@ pub struct FeaturesLimitsCollection {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+pub struct FeaturesAdvanced {
+    #[serde(default)]
+    pub process_message_delay_limit: u16,
+}
+
+impl Default for FeaturesAdvanced {
+    fn default() -> Self {
+        Self {
+            process_message_delay_limit: 5,
+        }
+    }
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct Features {
     pub limits: FeaturesLimitsCollection,
     pub webhooks_enabled: bool,
+    #[serde(default)]
+    pub advanced: FeaturesAdvanced,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Sentry {
     pub api: String,
     pub events: String,
-    pub voice_ingress: String
+    pub voice_ingress: String,
+    pub files: String,
+    pub proxy: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Settings {
     pub database: Database,
+    pub rabbit: Rabbit,
     pub hosts: Hosts,
     pub api: Api,
+    pub pushd: Pushd,
+    pub files: Files,
     pub features: Features,
     pub sentry: Sentry,
 }
@@ -166,22 +349,10 @@ pub struct Settings {
 impl Settings {
     pub fn preflight_checks(&self) {
         if self.api.smtp.host.is_empty() {
-            #[cfg(not(debug_assertions))]
-            if !env::var("REVOLT_UNSAFE_NO_EMAIL").map_or(false, |v| v == *"1") {
-                panic!("Running in production without email is not recommended, set REVOLT_UNSAFE_NO_EMAIL=1 to override.");
-            }
-
-            #[cfg(debug_assertions)]
             log::warn!("No SMTP settings specified! Remember to configure email.");
         }
 
         if self.api.security.captcha.hcaptcha_key.is_empty() {
-            #[cfg(not(debug_assertions))]
-            if !env::var("REVOLT_UNSAFE_NO_CAPTCHA").map_or(false, |v| v == *"1") {
-                panic!("Running in production without CAPTCHA is not recommended, set REVOLT_UNSAFE_NO_CAPTCHA=1 to override.");
-            }
-
-            #[cfg(debug_assertions)]
             log::warn!("No Captcha key specified! Remember to add hCaptcha key.");
         }
     }
@@ -205,14 +376,18 @@ pub async fn config() -> Settings {
 
 /// Configure logging and common Rust variables
 pub async fn setup_logging(release: &'static str, dsn: String) -> Option<sentry::ClientInitGuard> {
-    dotenv::dotenv().ok();
-
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
     }
 
     if std::env::var("ROCKET_ADDRESS").is_err() {
         std::env::set_var("ROCKET_ADDRESS", "0.0.0.0");
+    }
+
+    if std::env::var("REDIS_URL").is_err() {
+        // Configure redis-kiss library
+        let config = config().await;
+        std::env::set_var("REDIS_URI", config.database.redis);
     }
 
     pretty_env_logger::init();

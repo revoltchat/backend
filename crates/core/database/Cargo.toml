@@ -1,6 +1,6 @@
 [package]
 name = "revolt-database"
-version = "0.7.1"
+version = "0.8.1"
 edition = "2021"
 license = "AGPL-3.0-or-later"
 authors = ["Paul Makles <me@insrt.uk>"]
@@ -16,6 +16,7 @@ mongodb = ["dep:mongodb", "bson"]
 tasks = ["isahc", "linkify", "url-escape"]
 async-std-runtime = ["async-std"]
 rocket-impl = ["rocket", "schemars", "revolt_okapi", "revolt_rocket_okapi"]
+axum-impl = ["axum"]
 redis-is-patched = ["revolt-presence/redis-is-patched"]
 
 # Default Features
@@ -23,13 +24,15 @@ default = ["mongodb", "async-std-runtime", "tasks"]
 
 [dependencies]
 # Core
-revolt-config = { version = "0.7.1", path = "../config" }
-revolt-result = { version = "0.7.1", path = "../result" }
-revolt-models = { version = "0.7.1", path = "../models", features = [
+revolt-config = { version = "0.8.1", path = "../config", features = [
+    "report-macros",
+] }
+revolt-result = { version = "0.8.1", path = "../result" }
+revolt-models = { version = "0.8.1", path = "../models", features = [
     "validator",
 ] }
-revolt-presence = { version = "0.7.1", path = "../presence" }
-revolt-permissions = { version = "0.7.1", path = "../permissions", features = [
+revolt-presence = { version = "0.8.1", path = "../presence" }
+revolt-permissions = { version = "0.8.1", path = "../permissions", features = [
     "serde",
     "bson",
 ] }
@@ -76,17 +79,24 @@ async-recursion = "1.0.4"
 # Async
 async-std = { version = "1.8.0", features = ["attributes"], optional = true }
 
+# Axum Impl
+axum = { version = "0.7.5", optional = true }
+
 # Rocket Impl
 schemars = { version = "0.8.8", optional = true }
-rocket = { version = "0.5.0-rc.2", default-features = false, features = [
+rocket = { version = "0.5.1", default-features = false, features = [
     "json",
 ], optional = true }
 revolt_okapi = { version = "0.9.1", optional = true }
-revolt_rocket_okapi = { version = "0.9.1", optional = true }
+revolt_rocket_okapi = { version = "0.10.0", optional = true }
 
 # Notifications
-fcm = "0.9.2"
+fcm_v1 = "0.3.0"
 web-push = "0.10.0"
+revolt_a2 = { version = "0.10", default-features = false, features = ["ring"] }
 
 # Authifier
-authifier = { version = "1.0.8" }
+authifier = { version = "1.0.9", features = ["rocket_impl"] }
+
+# RabbitMQ
+amqprs = { version = "1.7.0" }

@@ -7,15 +7,15 @@ edition = "2021"
 
 [dependencies]
 # voice
-livekit-api = "0.3.2"
-livekit-protocol = "0.3.2"
+livekit-api = "0.4.1"
+livekit-protocol = "0.3.6"
 
 # core
 revolt-result = { path = "../result" }
 revolt-models = { path = "../models" }
 revolt-config = { path = "../config" }
 revolt-database = { path = "../database" }
-revolt-permissions = { version = "0.7.1", path = "../permissions" }
+revolt-permissions = { path = "../permissions" }
 
 # async
 futures = "0.3.21"

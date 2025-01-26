@@ -10,19 +10,19 @@ pub mod util;
 
 use revolt_config::config;
 use revolt_database::events::client::EventV1;
-use revolt_database::{Database, MongoDb};
+use revolt_database::AMQP;
 use rocket::{Build, Rocket};
 use rocket_cors::{AllowedOrigins, CorsOptions};
 use rocket_prometheus::PrometheusMetrics;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 
-use async_std::channel::unbounded;
-use authifier::config::{
-    Captcha, Config as AuthifierConfig, EmailVerificationConfig, ResolveIp, SMTPSettings, Shield,
-    Template, Templates,
+use amqprs::{
+    channel::ExchangeDeclareArguments,
+    connection::{Connection, OpenConnectionArguments},
 };
-use authifier::{Authifier, AuthifierEvent};
+use async_std::channel::unbounded;
+use authifier::AuthifierEvent;
 use rocket::data::ToByteUnit;
 use livekit_api::services::room::RoomClient;
 
@@ -39,20 +39,10 @@ pub async fn web() -> Rocket<Build> {
     db.migrate_database().await.unwrap();
 
     // Setup Authifier event channel
-    let (sender, receiver) = unbounded();
+    let (_, receiver) = unbounded();
 
     // Setup Authifier
-    let authifier = Authifier {
-        database: match db.clone() {
-            Database::Reference(_) => Default::default(),
-            Database::MongoDb(MongoDb(client, _)) => authifier::Database::MongoDb(
-                authifier::database::MongoDb(client.database("revolt")),
-            ),
-        },
-        config: Default::default(),
-        // config: authifier_config().await,
-        event_channel: Some(sender),
-    };
+    let authifier = db.clone().to_authifier().await;
 
     // Launch a listener for Authifier events
     async_std::task::spawn(async move {
@@ -69,12 +59,6 @@ pub async fn web() -> Rocket<Build> {
             }
         }
     });
-
-    // Launch background task workers
-    async_std::task::spawn(revolt_database::tasks::start_workers(
-        db.clone(),
-        authifier.database.clone(),
-    ));
 
     // Configure CORS
     let cors = CorsOptions {
@@ -101,6 +85,30 @@ pub async fn web() -> Rocket<Build> {
 
     // Voice handler
     let voice_client = revolt_voice::VoiceClient::new(config.api.livekit.url.clone(), config.api.livekit.key.clone(), config.api.livekit.secret.clone());
+    // Configure Rabbit
+    let connection = Connection::open(&OpenConnectionArguments::new(
+        &config.rabbit.host,
+        config.rabbit.port,
+        &config.rabbit.username,
+        &config.rabbit.password,
+    ))
+    .await
+    .unwrap();
+    let channel = connection.open_channel(None).await.unwrap();
+
+    channel
+        .exchange_declare(
+            ExchangeDeclareArguments::new(&config.pushd.exchange, "direct")
+                .durable(true)
+                .finish(),
+        )
+        .await
+        .expect("Failed to declare exchange");
+
+    let amqp = AMQP::new(connection, channel);
+
+    // Launch background task workers
+    revolt_database::tasks::start_workers(db.clone(), amqp.clone());
 
     // Configure Rocket
     let rocket = rocket::build();
@@ -114,6 +122,7 @@ pub async fn web() -> Rocket<Build> {
         .mount("/swagger/", swagger)
         .manage(authifier)
         .manage(db)
+        .manage(amqp)
         .manage(cors.clone())
         .manage(voice_client)
         .attach(util::ratelimiter::RatelimitFairing)
@@ -121,80 +130,9 @@ pub async fn web() -> Rocket<Build> {
         .configure(rocket::Config {
             limits: rocket::data::Limits::default().limit("string", 5.megabytes()),
             address: Ipv4Addr::new(0, 0, 0, 0).into(),
+            port: 14702,
             ..Default::default()
         })
-}
-
-pub async fn authifier_config() -> AuthifierConfig {
-    let config = config().await;
-
-    let mut auth_config = AuthifierConfig {
-        email_verification: if !config.api.smtp.host.is_empty() {
-            EmailVerificationConfig::Enabled {
-                smtp: SMTPSettings {
-                    from: config.api.smtp.from_address,
-                    host: config.api.smtp.host,
-                    username: config.api.smtp.username,
-                    password: config.api.smtp.password,
-                    reply_to: Some(
-                        config
-                            .api
-                            .smtp
-                            .reply_to
-                            .unwrap_or("support@revolt.chat".into()),
-                    ),
-                    port: config.api.smtp.port,
-                    use_tls: config.api.smtp.use_tls,
-                },
-                expiry: Default::default(),
-                templates: Templates {
-                    verify: Template {
-                        title: "Verify your Revolt account.".into(),
-                        text: include_str!("templates/verify.txt").into(),
-                        url: format!("{}/login/verify/", config.hosts.app),
-                        html: Some(include_str!("templates/verify.html").into()),
-                    },
-                    reset: Template {
-                        title: "Reset your Revolt password.".into(),
-                        text: include_str!("templates/reset.txt").into(),
-                        url: format!("{}/login/reset/", config.hosts.app),
-                        html: Some(include_str!("templates/reset.html").into()),
-                    },
-                    deletion: Template {
-                        title: "Confirm account deletion.".into(),
-                        text: include_str!("templates/deletion.txt").into(),
-                        url: format!("{}/delete/", config.hosts.app),
-                        html: Some(include_str!("templates/deletion.html").into()),
-                    },
-                    welcome: None,
-                },
-            }
-        } else {
-            EmailVerificationConfig::Disabled
-        },
-        ..Default::default()
-    };
-
-    auth_config.invite_only = config.api.registration.invite_only;
-
-    if !config.api.security.captcha.hcaptcha_key.is_empty() {
-        auth_config.captcha = Captcha::HCaptcha {
-            secret: config.api.security.captcha.hcaptcha_key,
-        };
-    }
-
-    if !config.api.security.authifier_shield_key.is_empty() {
-        auth_config.shield = Shield::Enabled {
-            api_key: config.api.security.authifier_shield_key,
-            strict: false,
-        };
-    }
-
-    if config.api.security.trust_cloudflare {
-        auth_config.resolve_ip = ResolveIp::Cloudflare;
-    }
-
-    auth_config
 }
 
 #[launch]

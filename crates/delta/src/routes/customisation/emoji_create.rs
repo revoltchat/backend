@@ -45,9 +45,9 @@ pub async fn create_emoji(
 
             // Check that we haven't hit the emoji limit
             let emojis = db.fetch_emoji_by_parent_id(&server.id).await?;
-            if emojis.len() >= config.features.limits.default.server_emoji {
+            if emojis.len() >= config.features.limits.global.server_emoji {
                 return Err(create_error!(TooManyEmoji {
-                    max: config.features.limits.default.server_emoji,
+                    max: config.features.limits.global.server_emoji,
                 }));
             }
         }
@@ -55,7 +55,7 @@ pub async fn create_emoji(
     };
 
     // Find the relevant attachment
-    let attachment = File::use_emoji(db, &id, &id).await?;
+    let attachment = File::use_emoji(db, &id, &id, &user.id).await?;
 
     // Create the emoji object
     let emoji = Emoji {

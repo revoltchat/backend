@@ -16,6 +16,9 @@ auto_derived_partial!(
         #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub avatar: Option<File>,
 
+        /// User that created this webhook
+        pub creator_id: String,
+
         /// The channel this webhook belongs to
         pub channel_id: String,
 

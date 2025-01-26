@@ -69,7 +69,7 @@ mod test {
 
         let event = harness
             .wait_for_event(&format!("{}!", user.id), |event| match event {
-                EventV1::ChannelAck { id, .. } => id == &group.id(),
+                EventV1::ChannelAck { id, .. } => id == group.id(),
                 _ => false,
             })
             .await;

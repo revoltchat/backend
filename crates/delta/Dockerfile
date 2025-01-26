@@ -1,14 +1,13 @@
 # Build Stage
 FROM ghcr.io/revoltchat/base:latest AS builder
+FROM debian:12 AS debian
 
 # Bundle Stage
-FROM debian:bullseye-slim
-RUN apt-get update && \
-    apt-get install -y ca-certificates && \
-    apt-get clean
+FROM gcr.io/distroless/cc-debian12:nonroot
 COPY --from=builder /home/rust/src/target/release/revolt-delta ./
+COPY --from=debian /usr/bin/uname /usr/bin/uname
 
-EXPOSE 8000
-ENV ROCKET_ADDRESS 0.0.0.0
-ENV ROCKET_PORT 8000
+EXPOSE 14702
+ENV ROCKET_ADDRESS=0.0.0.0
+USER nonroot
 CMD ["./revolt-delta"]

@@ -2,7 +2,7 @@ use revolt_config::config;
 use revolt_result::Result;
 use ulid::Ulid;
 
-use crate::{BotInformation, Database, PartialUser, User};
+use crate::{events::client::EventV1, BotInformation, Database, PartialUser, User};
 
 auto_derived_partial!(
     /// Bot
@@ -72,7 +72,12 @@ impl Default for Bot {
 #[allow(clippy::disallowed_methods)]
 impl Bot {
     /// Create a new bot
-    pub async fn create<D>(db: &Database, username: String, owner: &User, data: D) -> Result<Bot>
+    pub async fn create<D>(
+        db: &Database,
+        username: String,
+        owner: &User,
+        data: D,
+    ) -> Result<(Bot, User)>
     where
         D: Into<Option<PartialBot>>,
     {
@@ -80,14 +85,13 @@ impl Bot {
             return Err(create_error!(IsBot));
         }
 
-        let config = config().await;
-        if db.get_number_of_bots_by_user(&owner.id).await? >= config.features.limits.default.bots {
+        if db.get_number_of_bots_by_user(&owner.id).await? >= owner.limits().await.bots {
             return Err(create_error!(ReachedMaximumBots));
         }
 
         let id = Ulid::new().to_string();
 
-        User::create(
+        let user = User::create(
             db,
             username,
             Some(id.to_string()),
@@ -112,7 +116,7 @@ impl Bot {
         }
 
         db.insert_bot(&bot).await?;
-        Ok(bot)
+        Ok((bot, user))
     }
 
     /// Remove a field from this object
@@ -142,6 +146,10 @@ impl Bot {
 
         db.update_bot(&self.id, &partial, remove).await?;
 
+        if partial.token.is_some() {
+            EventV1::Logout.private(self.id.clone()).await;
+        }
+
         self.apply_options(partial);
         Ok(())
     }
@@ -164,7 +172,7 @@ mod tests {
                 .await
                 .unwrap();
 
-            let bot = Bot::create(
+            let (bot, _) = Bot::create(
                 &db,
                 "Bot Name".to_string(),
                 &owner,

@@ -1,19 +1,27 @@
 // Queue Type: Debounced
-use crate::Database;
+use crate::{Database, Message, AMQP};
 
 use deadqueue::limited::Queue;
 use once_cell::sync::Lazy;
-use std::{collections::HashMap, time::Duration};
+use revolt_models::v0::PushNotification;
+use rocket::form::validate::Contains;
+use std::{
+    collections::{HashMap, HashSet},
+    time::Duration,
+};
+use validator::HasLen;
+
+use revolt_result::Result;
 
 use super::DelayedTask;
 
 /// Enumeration of possible events
 #[derive(Debug, Eq, PartialEq)]
 pub enum AckEvent {
-    /// Add mentions for a user in a channel
-    AddMention {
-        /// Message IDs
-        ids: Vec<String>,
+    /// Add mentions for a channel
+    ProcessMessage {
+        /// push notification, message, recipients, push silenced
+        messages: Vec<(Option<PushNotification>, Message, Vec<String>, bool)>,
     },
 
     /// Acknowledge message in a channel for a user
@@ -28,7 +36,7 @@ struct Data {
     /// Channel to ack
     channel: String,
     /// User to ack for
-    user: String,
+    user: Option<String>,
     /// Event
     event: AckEvent,
 }
@@ -41,21 +49,130 @@ struct Task {
 static Q: Lazy<Queue<Data>> = Lazy::new(|| Queue::new(10_000));
 
 /// Queue a new task for a worker
-pub async fn queue(channel: String, user: String, event: AckEvent) {
+pub async fn queue_ack(channel: String, user: String, event: AckEvent) {
     Q.try_push(Data {
         channel,
-        user,
+        user: Some(user),
         event,
     })
     .ok();
 
-    info!("Queue is using {} slots from {}.", Q.len(), Q.capacity());
+    info!(
+        "Queue is using {} slots from {}. Queued type: ACK",
+        Q.len(),
+        Q.capacity()
+    );
+}
+
+pub async fn queue_message(channel: String, event: AckEvent) {
+    Q.try_push(Data {
+        channel,
+        user: None,
+        event,
+    })
+    .ok();
+
+    info!(
+        "Queue is using {} slots from {}. Queued type: MENTION",
+        Q.len(),
+        Q.capacity()
+    );
+}
+
+pub async fn handle_ack_event(
+    event: &AckEvent,
+    db: &Database,
+    amqp: &AMQP,
+    user: &Option<String>,
+    channel: &str,
+) -> Result<()> {
+    match &event {
+        #[allow(clippy::disallowed_methods)] // event is sent by higher level function
+        AckEvent::AckMessage { id } => {
+            let user = user.as_ref().unwrap();
+            let user: &str = user.as_str();
+
+            let unread = db.fetch_unread(user, channel).await?;
+            let updated = db.acknowledge_message(channel, user, id).await?;
+
+            if let (Some(before), Some(after)) = (unread, updated) {
+                let before_mentions = before.mentions.unwrap_or_default().len();
+                let after_mentions = after.mentions.unwrap_or_default().len();
+
+                let mentions_acked = before_mentions - after_mentions;
+
+                if mentions_acked > 0 {
+                    if let Err(err) = amqp
+                        .ack_message(user.to_string(), channel.to_string(), id.to_owned())
+                        .await
+                    {
+                        revolt_config::capture_error(&err);
+                    }
+                };
+            }
+        }
+        AckEvent::ProcessMessage { messages } => {
+            let mut users: HashSet<&String> = HashSet::new();
+            debug!(
+                "Processing {} messages from channel {}",
+                messages.len(),
+                messages[0].1.channel
+            );
+
+            // find all the users we'll be notifying
+            messages
+                .iter()
+                .for_each(|(_, _, recipents, _)| users.extend(recipents.iter()));
+
+            debug!("Found {} users to notify.", users.len());
+
+            for user in users {
+                let message_ids: Vec<String> = messages
+                    .iter()
+                    .filter(|(_, _, recipients, _)| recipients.contains(user))
+                    .map(|(_, message, _, _)| message.id.clone())
+                    .collect();
+
+                if !message_ids.is_empty() {
+                    db.add_mention_to_unread(channel, user, &message_ids)
+                        .await?;
+                }
+                debug!("Added {} mentions for user {}", message_ids.len(), &user);
+            }
+
+            for (push, _, recipients, silenced) in messages {
+                if *silenced || recipients.is_empty() || push.is_none() {
+                    debug!(
+                        "Rejecting push: silenced: {}, recipient count: {}, push exists: {:?}",
+                        *silenced,
+                        recipients.length(),
+                        push
+                    );
+                    continue;
+                }
+
+                debug!(
+                    "Sending push event to AMQP; message {} for {} users",
+                    push.as_ref().unwrap().message.id,
+                    recipients.len()
+                );
+                if let Err(err) = amqp
+                    .message_sent(recipients.clone(), push.clone().unwrap())
+                    .await
+                {
+                    revolt_config::capture_error(&err);
+                }
+            }
+        }
+    };
+
+    Ok(())
 }
 
 /// Start a new worker
-pub async fn worker(db: Database) {
-    let mut tasks = HashMap::<(String, String), DelayedTask<Task>>::new();
-    let mut keys = vec![];
+pub async fn worker(db: Database, amqp: AMQP) {
+    let mut tasks = HashMap::<(Option<String>, String, u8), DelayedTask<Task>>::new();
+    let mut keys: Vec<(Option<String>, String, u8)> = vec![];
 
     loop {
         // Find due tasks.
@@ -69,18 +186,13 @@ pub async fn worker(db: Database) {
         for key in &keys {
             if let Some(task) = tasks.remove(key) {
                 let Task { event } = task.data;
-                let (user, channel) = key;
+                let (user, channel, _) = key;
 
-                if let Err(err) = match &event {
-                    #[allow(clippy::disallowed_methods)] // event is sent by higher level function
-                    AckEvent::AckMessage { id } => db.acknowledge_message(channel, user, id).await,
-                    AckEvent::AddMention { ids } => {
-                        db.add_mention_to_unread(channel, user, ids).await
-                    }
-                } {
-                    error!("{err:?} for {event:?}. ({user}, {channel})");
+                if let Err(err) = handle_ack_event(&event, &db, &amqp, user, channel).await {
+                    revolt_config::capture_error(&err);
+                    error!("{err:?} for {event:?}. ({user:?}, {channel})");
                 } else {
-                    info!("User {user} ack in {channel} with {event:?}");
+                    info!("User {user:?} ack in {channel} with {event:?}");
                 }
             }
         }
@@ -95,20 +207,41 @@ pub async fn worker(db: Database) {
             mut event,
         }) = Q.try_pop()
         {
-            let key = (user, channel);
+            let key: (Option<String>, String, u8) = (
+                user,
+                channel,
+                match &event {
+                    AckEvent::AckMessage { .. } => 0,
+                    AckEvent::ProcessMessage { .. } => 1,
+                },
+            );
             if let Some(task) = tasks.get_mut(&key) {
-                task.delay();
-
                 match &mut event {
-                    AckEvent::AddMention { ids } => {
-                        if let AckEvent::AddMention { ids: existing } = &mut task.data.event {
-                            existing.append(ids);
+                    AckEvent::ProcessMessage { messages: new_data } => {
+                        if let AckEvent::ProcessMessage { messages: existing } =
+                            &mut task.data.event
+                        {
+                            // add the new message to the list of messages to be processed.
+                            existing.append(new_data);
+
+                            // put a cap on the amount of messages that can be queued, for particularly active channels
+                            if (existing.length() as u16)
+                                < revolt_config::config()
+                                    .await
+                                    .features
+                                    .advanced
+                                    .process_message_delay_limit
+                            {
+                                task.delay();
+                            }
                         } else {
-                            task.data.event = event;
+                            panic!("Somehow got an ack message in the add mention arm");
                         }
                     }
                     AckEvent::AckMessage { .. } => {
+                        // replace the last acked message with the new acked message
                         task.data.event = event;
+                        task.delay();
                     }
                 }
             } else {

@@ -1,7 +1,10 @@
+use bson::to_document;
 use bson::Document;
+use revolt_config::report_internal_error;
 use revolt_result::Result;
 
 use crate::File;
+use crate::FileUsedFor;
 use crate::MongoDb;
 
 use super::AbstractAttachments;
@@ -15,15 +18,28 @@ impl AbstractAttachments for MongoDb {
         query!(self, insert_one, COL, &attachment).map(|_| ())
     }
 
+    /// Fetch an attachment by its id.
+    async fn fetch_attachment(&self, tag: &str, file_id: &str) -> Result<File> {
+        query!(
+            self,
+            find_one,
+            COL,
+            doc! {
+                "_id": file_id,
+                "tag": tag
+            }
+        )?
+        .ok_or_else(|| create_error!(NotFound))
+    }
+
     /// Find an attachment by its details and mark it as used by a given parent.
     async fn find_and_use_attachment(
         &self,
         id: &str,
         tag: &str,
-        parent_type: &str,
-        parent_id: &str,
+        used_for: FileUsedFor,
+        uploader_id: String,
     ) -> Result<File> {
-        let key = format!("{parent_type}_id");
         let file = query!(
             self,
             find_one,
@@ -31,7 +47,7 @@ impl AbstractAttachments for MongoDb {
             doc! {
                 "_id": id,
                 "tag": tag,
-                &key: {
+                "used_for": {
                     "$exists": false
                 }
             }
@@ -45,7 +61,8 @@ impl AbstractAttachments for MongoDb {
                 },
                 doc! {
                     "$set": {
-                        key: parent_id
+                        "used_for": report_internal_error!(to_document(&used_for))?,
+                        "uploader_id": uploader_id
                     }
                 },
                 None,

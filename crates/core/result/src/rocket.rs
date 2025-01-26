@@ -25,6 +25,7 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::Blocked => Status::Conflict,
             ErrorType::BlockedByOther => Status::Forbidden,
             ErrorType::NotFriends => Status::Forbidden,
+            ErrorType::TooManyPendingFriendRequests { .. } => Status::BadRequest,
 
             ErrorType::UnknownChannel => Status::NotFound,
             ErrorType::UnknownMessage => Status::NotFound,
@@ -39,6 +40,8 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::GroupTooLarge { .. } => Status::Forbidden,
             ErrorType::AlreadyInGroup => Status::Conflict,
             ErrorType::NotInGroup => Status::NotFound,
+            ErrorType::AlreadyPinned => Status::BadRequest,
+            ErrorType::NotPinned => Status::BadRequest,
 
             ErrorType::UnknownServer => Status::NotFound,
             ErrorType::InvalidRole => Status::NotFound,
@@ -70,15 +73,22 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::InvalidCredentials => Status::Unauthorized,
             ErrorType::InvalidProperty => Status::BadRequest,
             ErrorType::InvalidSession => Status::Unauthorized,
+            ErrorType::NotAuthenticated => Status::Unauthorized,
             ErrorType::DuplicateNonce => Status::Conflict,
             ErrorType::NotFound => Status::NotFound,
             ErrorType::NoEffect => Status::Ok,
             ErrorType::FailedValidation { .. } => Status::BadRequest,
-
             ErrorType::LiveKitUnavailable => Status::BadRequest,
             ErrorType::AlreadyInVoiceChannel => Status::BadRequest,
             ErrorType::NotAVoiceChannel => Status::BadRequest,
-            ErrorType::AlreadyConnected => Status::BadRequest
+            ErrorType::AlreadyConnected => Status::BadRequest,
+            ErrorType::ProxyError => Status::BadRequest,
+            ErrorType::FileTooSmall => Status::UnprocessableEntity,
+            ErrorType::FileTooLarge { .. } => Status::UnprocessableEntity,
+            ErrorType::FileTypeNotAllowed => Status::BadRequest,
+            ErrorType::ImageProcessingFailed => Status::InternalServerError,
+            ErrorType::NoEmbedData => Status::BadRequest,
+            ErrorType::VosoUnavailable => Status::BadRequest,
         };
 
         // Serialize the error data structure into JSON.

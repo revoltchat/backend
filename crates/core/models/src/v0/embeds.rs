@@ -14,9 +14,9 @@ auto_derived!(
         /// URL to the original image
         pub url: String,
         /// Width of the image
-        pub width: isize,
+        pub width: usize,
         /// Height of the image
-        pub height: isize,
+        pub height: usize,
         /// Positioning and size
         pub size: ImageSize,
     }
@@ -26,9 +26,9 @@ auto_derived!(
         /// URL to the original video
         pub url: String,
         /// Width of the video
-        pub width: isize,
+        pub width: usize,
         /// Height of the video
-        pub height: isize,
+        pub height: usize,
     }
 
     /// Type of remote Twitch content
@@ -84,6 +84,12 @@ auto_derived!(
             content_type: BandcampType,
             id: String,
         },
+        AppleMusic {
+            album_id: String,
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            track_id: Option<String>,
+        },
         /// Streamable Video
         Streamable { id: String },
     }
@@ -92,38 +98,36 @@ auto_derived!(
     pub struct WebsiteMetadata {
         /// Direct URL to web page
         #[serde(skip_serializing_if = "Option::is_none")]
-        url: Option<String>,
+        pub url: Option<String>,
         /// Original direct URL
         #[serde(skip_serializing_if = "Option::is_none")]
-        original_url: Option<String>,
+        pub original_url: Option<String>,
         /// Remote content
         #[serde(skip_serializing_if = "Option::is_none")]
-        special: Option<Special>,
+        pub special: Option<Special>,
 
         /// Title of website
         #[serde(skip_serializing_if = "Option::is_none")]
-        title: Option<String>,
+        pub title: Option<String>,
         /// Description of website
         #[serde(skip_serializing_if = "Option::is_none")]
-        description: Option<String>,
+        pub description: Option<String>,
         /// Embedded image
         #[serde(skip_serializing_if = "Option::is_none")]
-        image: Option<Image>,
+        pub image: Option<Image>,
         /// Embedded video
         #[serde(skip_serializing_if = "Option::is_none")]
-        video: Option<Video>,
+        pub video: Option<Video>,
 
-        // #[serde(skip_serializing_if = "Option::is_none")]
-        // opengraph_type: Option<String>,
         /// Site name
         #[serde(skip_serializing_if = "Option::is_none")]
-        site_name: Option<String>,
+        pub site_name: Option<String>,
         /// URL to site icon
         #[serde(skip_serializing_if = "Option::is_none")]
-        icon_url: Option<String>,
+        pub icon_url: Option<String>,
         /// CSS Colour
         #[serde(skip_serializing_if = "Option::is_none")]
-        colour: Option<String>,
+        pub colour: Option<String>,
     }
 
     /// Text Embed
@@ -150,11 +154,56 @@ auto_derived!(
 
     /// Embed
     #[serde(tag = "type")]
+    #[derive(Default)]
     pub enum Embed {
         Website(WebsiteMetadata),
         Image(Image),
         Video(Video),
         Text(Text),
+        #[default]
         None,
     }
 );
+
+impl WebsiteMetadata {
+    /// Truncate strings in metadata
+    pub fn truncate(&mut self) {
+        if let Some(s) = self.url.as_mut() {
+            s.truncate(256);
+        }
+
+        if let Some(s) = self.original_url.as_mut() {
+            s.truncate(256);
+        }
+
+        if let Some(s) = self.title.as_mut() {
+            s.truncate(100);
+        }
+
+        if let Some(s) = self.description.as_mut() {
+            s.truncate(1000);
+        }
+
+        if let Some(s) = self.site_name.as_mut() {
+            s.truncate(32);
+        }
+
+        if let Some(s) = self.icon_url.as_mut() {
+            s.truncate(256);
+        }
+
+        if let Some(s) = self.colour.as_mut() {
+            s.truncate(32);
+        }
+    }
+
+    /// Check if this is considered "empty"
+    pub fn is_empty(&self) -> bool {
+        (self.title.is_none() || self.title.as_ref().is_some_and(|f| f.is_empty()))
+            && (self.description.is_none()
+                || self.description.as_ref().is_some_and(|f| f.is_empty()))
+            && self.special.is_none()
+            && self.video.is_none()
+            && self.image.is_none()
+    }
+}

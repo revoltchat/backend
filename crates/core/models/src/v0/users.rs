@@ -42,6 +42,8 @@ auto_derived_partial!(
         pub relations: Vec<Relationship>,
 
         /// Bitfield of user badges
+        ///
+        /// https://docs.rs/revolt-models/latest/revolt_models/v0/enum.UserBadges.html
         #[cfg_attr(
             feature = "serde",
             serde(skip_serializing_if = "crate::if_zero_u32", default)
@@ -50,11 +52,10 @@ auto_derived_partial!(
         /// User's current status
         #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub status: Option<UserStatus>,
-        /// User's profile page
-        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-        pub profile: Option<UserProfile>,
 
         /// Enum of user flags
+        ///
+        /// https://docs.rs/revolt-models/latest/revolt_models/v0/enum.UserFlags.html
         #[cfg_attr(
             feature = "serde",
             serde(skip_serializing_if = "crate::if_zero_u32", default)
@@ -86,6 +87,10 @@ auto_derived!(
         StatusPresence,
         ProfileContent,
         ProfileBackground,
+        DisplayName,
+
+        /// Internal field, ignore this.
+        Internal,
     }
 
     /// User's relationship with another user (or themselves)
@@ -188,7 +193,7 @@ auto_derived!(
     #[repr(u32)]
     pub enum UserFlags {
         /// User has been suspended from the platform
-        Suspended = 1,
+        SuspendedUntil = 1,
         /// User has deleted their account
         Deleted = 2,
         /// User was banned off the platform
@@ -276,8 +281,8 @@ auto_derived_partial!(
     /// Voice State information for a user
     pub struct UserVoiceState {
         pub id: String,
-        pub can_receive: bool,
-        pub can_publish: bool,
+        pub is_receiving: bool,
+        pub is_publishing: bool,
         pub screensharing: bool,
         pub camera: bool,
     },

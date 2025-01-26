@@ -6,6 +6,10 @@ extern crate serde;
 #[macro_use]
 extern crate schemars;
 
+#[cfg(feature = "utoipa")]
+#[macro_use]
+extern crate utoipa;
+
 #[cfg(feature = "partials")]
 #[macro_use]
 extern crate revolt_optional_struct;
@@ -18,6 +22,7 @@ macro_rules! auto_derived {
         $(
             #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
             #[cfg_attr(feature = "schemas", derive(JsonSchema))]
+            #[cfg_attr(feature = "utoipa", derive(ToSchema))]
             #[derive(Debug, Clone, Eq, PartialEq)]
             $item
         )+
@@ -65,4 +70,9 @@ pub fn if_false(t: &bool) -> bool {
 /// Utility function to check if an u32 is zero
 pub fn if_zero_u32(t: &u32) -> bool {
     t == &0
+}
+
+/// Utility function to check if an option doesnt contain true
+pub fn if_option_false(t: &Option<bool>) -> bool {
+    t != &Some(true)
 }

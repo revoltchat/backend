@@ -30,11 +30,10 @@ pub async fn edit(
         })
     })?;
 
-    let config = config().await;
     Message::validate_sum(
         &edit.content,
         edit.embeds.as_deref().unwrap_or_default(),
-        config.features.limits.default.message_length,
+        user.limits().await.message_length,
     )?;
 
     // Ensure we have permissions to send a message
@@ -44,7 +43,7 @@ pub async fn edit(
 
     permissions.throw_if_lacking_channel_permission(ChannelPermission::SendMessage)?;
 
-    let mut message = msg.as_message_in_channel(db, &channel.id()).await?;
+    let mut message = msg.as_message_in_channel(db, channel.id()).await?;
     if message.author != user.id {
         return Err(create_error!(CannotEditMessage));
     }
@@ -84,7 +83,7 @@ pub async fn edit(
 
     partial.embeds = Some(new_embeds);
 
-    message.update(db, partial).await?;
+    message.update(db, partial, vec![]).await?;
 
     // Queue up a task for processing embeds if the we have sufficient permissions
     if permissions.has_channel_permission(ChannelPermission::SendEmbeds) {
@@ -98,5 +97,5 @@ pub async fn edit(
         }
     }
 
-    Ok(Json(message.into()))
+    Ok(Json(message.into_model(None, None)))
 }

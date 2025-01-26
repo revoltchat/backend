@@ -15,7 +15,7 @@ use rocket::{serde::json::Json, State};
 #[get("/<target>")]
 pub async fn fetch(db: &State<Database>, user: User, target: Reference) -> Result<Json<v0::User>> {
     if user.id == target.id {
-        return Ok(Json(user.into_self().await));
+        return Ok(Json(user.into_self(false).await));
     }
 
     let target = target.as_user(db).await?;

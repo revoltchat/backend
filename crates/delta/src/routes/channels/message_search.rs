@@ -30,6 +30,10 @@ pub async fn search(
         })
     })?;
 
+    if options.query.is_some() && options.pinned.is_some() {
+        return Err(create_error!(InvalidOperation))
+    }
+
     let channel = target.as_channel(db).await?;
 
     let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
@@ -39,6 +43,7 @@ pub async fn search(
 
     let v0::DataMessageSearch {
         query,
+        pinned,
         limit,
         before,
         after,
@@ -51,7 +56,8 @@ pub async fn search(
         MessageQuery {
             filter: MessageFilter {
                 channel: Some(channel.id().to_string()),
-                query: Some(query),
+                query,
+                pinned,
                 ..Default::default()
             },
             time_period: MessageTimePeriod::Absolute {

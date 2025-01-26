@@ -30,13 +30,16 @@ async fn main() {
     database::connect().await;
 
     // Clean up the current region information.
-    clear_region(None).await;
+    let no_clear_region = env::var("NO_CLEAR_PRESENCE").unwrap_or_else(|_| "0".into()) == "1";
+    if !no_clear_region {
+        clear_region(None).await;
+    }
 
     VOICE_CLIENT.set(Arc::new(VoiceClient::from_revolt_config().await)).unwrap();
 
     // Setup a TCP listener to accept WebSocket connections on.
-    // By default, we bind to port 9000 on all interfaces.
-    let bind = env::var("HOST").unwrap_or_else(|_| "0.0.0.0:9000".into());
+    // By default, we bind to port 14703 on all interfaces.
+    let bind = env::var("HOST").unwrap_or_else(|_| "0.0.0.0:14703".into());
     info!("Listening on host {bind}");
     let try_socket = TcpListener::bind(bind).await;
     let listener = try_socket.expect("Failed to bind");

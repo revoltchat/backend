@@ -16,12 +16,34 @@ extern crate revolt_optional_struct;
 #[macro_use]
 extern crate revolt_result;
 
+pub use iso8601_timestamp;
+
 #[cfg(feature = "mongodb")]
 pub use mongodb;
 
 #[cfg(feature = "mongodb")]
 #[macro_use]
 extern crate bson;
+
+#[macro_export]
+#[cfg(debug_assertions)]
+macro_rules! query {
+    ( $self: ident, $type: ident, $collection: expr, $($rest:expr),+ ) => {
+        Ok($self.$type($collection, $($rest),+).await.unwrap())
+    };
+}
+
+#[macro_export]
+#[cfg(not(debug_assertions))]
+macro_rules! query {
+    ( $self: ident, $type: ident, $collection: expr, $($rest:expr),+ ) => {
+        $self.$type($collection, $($rest),+).await
+            .map_err(|err| {
+                revolt_config::capture_internal_error!(err);
+                create_database_error!(stringify!($type), $collection)
+            })
+    };
+}
 
 macro_rules! database_derived {
     ( $( $item:item )+ ) => {
@@ -83,7 +105,15 @@ pub use models::*;
 pub mod events;
 pub mod tasks;
 
+mod amqp;
+pub use amqp::amqp::AMQP;
+
 /// Utility function to check if a boolean value is false
 pub fn if_false(t: &bool) -> bool {
     !t
+}
+
+/// Utility function to check if an option doesnt contain true
+pub fn if_option_false(t: &Option<bool>) -> bool {
+    t != &Some(true)
 }

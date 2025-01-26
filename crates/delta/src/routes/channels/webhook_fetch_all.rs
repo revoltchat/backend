@@ -25,7 +25,7 @@ pub async fn fetch_webhooks(
         .throw_if_lacking_channel_permission(ChannelPermission::ViewChannel)?;
 
     Ok(Json(
-        db.fetch_webhooks_for_channel(&channel.id())
+        db.fetch_webhooks_for_channel(channel.id())
             .await?
             .into_iter()
             .map(|v| v.into())

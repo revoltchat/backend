@@ -16,7 +16,7 @@ pub async fn edit_bot(
     user: User,
     target: Reference,
     data: Json<DataEditBot>,
-) -> Result<Json<v0::Bot>> {
+) -> Result<Json<v0::BotWithUserResponse>> {
     let data = data.into_inner();
     data.validate().map_err(|error| {
         create_error!(FailedValidation {
@@ -29,8 +29,8 @@ pub async fn edit_bot(
         return Err(create_error!(NotFound));
     }
 
+    let mut user = db.fetch_user(&bot.id).await?;
     if let Some(name) = data.name {
-        let mut user = db.fetch_user(&bot.id).await?;
         user.update_username(db, name).await?;
     }
 
@@ -39,7 +39,10 @@ pub async fn edit_bot(
         && data.interactions_url.is_none()
         && data.remove.is_none()
     {
-        return Ok(Json(bot.into()));
+        return Ok(Json(v0::BotWithUserResponse {
+            bot: bot.into(),
+            user: user.into_self(false).await,
+        }));
     }
 
     let DataEditBot {
@@ -68,7 +71,10 @@ pub async fn edit_bot(
     )
     .await?;
 
-    Ok(Json(bot.into()))
+    Ok(Json(v0::BotWithUserResponse {
+        bot: bot.into(),
+        user: user.into_self(false).await,
+    }))
 }
 
 #[cfg(test)]
@@ -83,7 +89,7 @@ mod test {
         let harness = TestHarness::new().await;
         let (_, session, user) = harness.new_user().await;
 
-        let bot = Bot::create(&harness.db, TestHarness::rand_string(), &user, None)
+        let (bot, _) = Bot::create(&harness.db, TestHarness::rand_string(), &user, None)
             .await
             .expect("`Bot`");
 

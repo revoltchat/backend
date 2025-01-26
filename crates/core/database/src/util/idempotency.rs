@@ -18,6 +18,10 @@ static TOKEN_CACHE: Lazy<Mutex<lru::LruCache<String, ()>>> =
     Lazy::new(|| Mutex::new(lru::LruCache::new(NonZeroUsize::new(1000).unwrap())));
 
 impl IdempotencyKey {
+    pub fn unchecked_from_string(key: String) -> Self {
+        Self { key }
+    }
+
     // Backwards compatibility.
     // Issue #109
     pub async fn consume_nonce(&mut self, v: Option<String>) -> Result<()> {
@@ -98,7 +102,7 @@ impl<'r> FromRequest<'r> for IdempotencyKey {
             .map(|k| k.to_string())
         {
             if key.len() > 64 {
-                return Outcome::Failure((
+                return Outcome::Error((
                     Status::BadRequest,
                     create_error!(FailedValidation {
                         error: "idempotency key too long".to_string(),
@@ -109,7 +113,7 @@ impl<'r> FromRequest<'r> for IdempotencyKey {
             let idempotency = IdempotencyKey { key };
             let mut cache = TOKEN_CACHE.lock().await;
             if cache.get(&idempotency.key).is_some() {
-                return Outcome::Failure((Status::Conflict, create_error!(DuplicateNonce)));
+                return Outcome::Error((Status::Conflict, create_error!(DuplicateNonce)));
             }
 
             cache.put(idempotency.key.clone(), ());

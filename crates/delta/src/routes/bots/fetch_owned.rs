@@ -24,7 +24,7 @@ pub async fn fetch_owned_bots(db: &State<Database>, user: User) -> Result<Json<O
     users.sort_by(|a, b| a.id.cmp(&b.id));
 
     Ok(Json(OwnedBotsResponse {
-        users: join_all(users.into_iter().map(|user| user.into_self())).await,
+        users: join_all(users.into_iter().map(|user| user.into_self(false))).await,
         bots: bots.into_iter().map(|bot| bot.into()).collect(),
     }))
 }
@@ -41,7 +41,7 @@ mod test {
         let harness = TestHarness::new().await;
         let (_, session, user) = harness.new_user().await;
 
-        let bot = Bot::create(&harness.db, TestHarness::rand_string(), &user, None)
+        let (bot, _) = Bot::create(&harness.db, TestHarness::rand_string(), &user, None)
             .await
             .expect("`Bot`");
 

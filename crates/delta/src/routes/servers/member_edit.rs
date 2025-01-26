@@ -5,7 +5,9 @@ use livekit_api::services::room::{RoomClient, UpdateParticipantOptions};
 use livekit_protocol::ParticipantPermission;
 use redis_kiss::{get_connection, redis::Pipeline, AsyncCommands};
 use revolt_database::{
-    events::client::EventV1, util::{permissions::DatabasePermissionQuery, reference::Reference}, Database, File, PartialMember, User
+    events::client::EventV1,
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Database, File, PartialMember, User,
 };
 use revolt_models::v0::{self, FieldsMember, PartialUserVoiceState};
 
@@ -35,13 +37,13 @@ pub async fn edit(
         })
     })?;
 
-    // Fetch server, target member and current permissions
+    // Fetch server and target member
     let mut server = server.as_server(db).await?;
     let mut member = target.as_member(db, &server.id).await?;
-    let target_user = target.as_user(db).await?;
-    let mut query = DatabasePermissionQuery::new(db, &user)
-        .server(&server)
-        .member(&member);
+    let target_user = target.as_user(&db).await?;
+
+    // Fetch our currrent permissions
+    let mut query = DatabasePermissionQuery::new(db, &user).server(&server);
     let permissions = calculate_server_permissions(&mut query).await;
 
     // Check permissions in server
@@ -157,7 +159,7 @@ pub async fn edit(
         remove,
         mut can_publish,
         mut can_receive,
-        voice_channel
+        voice_channel,
     } = data;
 
     let mut partial = PartialMember {
@@ -180,12 +182,13 @@ pub async fn edit(
 
     // 2. Apply new avatar
     if let Some(avatar) = avatar {
-        partial.avatar = Some(File::use_avatar(db, &avatar, &user.id).await?);
+        partial.avatar = Some(File::use_user_avatar(db, &avatar, &user.id, &user.id).await?);
     }
 
     let remove_contains_voice = remove
         .as_ref()
-        .map(|r| r.contains(FieldsMember::CanPublish) || r.contains(FieldsMember::CanReceive)).unwrap_or_default();
+        .map(|r| r.contains(FieldsMember::CanPublish) || r.contains(FieldsMember::CanReceive))
+        .unwrap_or_default();
 
     member
         .update(
@@ -197,10 +200,10 @@ pub async fn edit(
         )
         .await?;
 
-    if can_publish.is_some() ||
-       can_receive.is_some() ||
-       voice_channel.is_some() ||
-       remove_contains_voice
+    if can_publish.is_some()
+        || can_receive.is_some()
+        || voice_channel.is_some()
+        || remove_contains_voice
     {
         let mut conn = get_connection().await.to_internal_error()?;
 
@@ -228,32 +231,25 @@ pub async fn edit(
                 }
 
                 if !permissions.has_channel_permission(ChannelPermission::Listen) {
-                    can_receive = Some(false)
+                    can_publish = Some(false)
                 }
             }
 
             if let Some(can_publish) = can_publish {
-                pipeline.set(
-                    format!("can_publish-{}", unique_key),
-                    can_publish,
-                );
-
                 new_perms.can_publish = can_publish;
                 new_perms.can_publish_data = can_publish;
             };
 
             if let Some(can_receive) = can_receive {
-                pipeline.set(
-                    format!("can_receive-{}", unique_key),
-                    can_receive,
-                );
-
                 new_perms.can_subscribe = can_receive;
             };
 
             if let Some(new_channel) = voice_channel {
-                pipeline
-                    .smove(format!("vc-members-{channel}"), format!("vc-members-{new_channel}"), &member.id.user);
+                pipeline.smove(
+                    format!("vc-members-{channel}"),
+                    format!("vc-members-{new_channel}"),
+                    &member.id.user,
+                );
             };
 
             pipeline
@@ -261,19 +257,9 @@ pub async fn edit(
                 .await
                 .to_internal_error()?;
 
-            voice_client.update_permissions(&user, &channel, new_perms).await?;
-
-            EventV1::UserVoiceStateUpdate {
-                id: member.id.user.clone(),
-                channel_id: channel.clone(),
-                data: PartialUserVoiceState {
-                    can_publish,
-                    can_receive,
-                    ..Default::default()
-                }
-            }
-            .p(channel)
-            .await;
+            voice_client
+                .update_permissions(&user, &channel, new_perms)
+                .await?;
         };
     };
 

@@ -56,6 +56,10 @@ pub async fn create_database(db: &MongoDb) {
         .await
         .expect("Failed to create attachments collection.");
 
+    db.create_collection("attachment_hashes", None)
+        .await
+        .expect("Failed to create attachment_hashes collection.");
+
     db.create_collection("user_settings", None)
         .await
         .expect("Failed to create user_settings collection.");
@@ -146,7 +150,14 @@ pub async fn create_database(db: &MongoDb) {
                         "author": 1_i32
                     },
                     "name": "author"
-                }
+                },
+                {
+                    "key": {
+                        "channel": 1_i32,
+                        "pinned": 1_i32
+                    },
+                    "name": "channel_pinned_compound"
+                },
             ]
         },
         None,
@@ -201,6 +212,46 @@ pub async fn create_database(db: &MongoDb) {
     )
     .await
     .expect("Failed to create server_members index.");
+
+    db.run_command(
+        doc! {
+            "createIndexes": "attachments",
+            "indexes": [
+                {
+                    "key": {
+                        "hash": 1_i32
+                    },
+                    "name": "hash"
+                },
+                {
+                    "key": {
+                        "used_for.id": 1_i32
+                    },
+                    "name": "used_for_id"
+                }
+            ]
+        },
+        None,
+    )
+    .await
+    .expect("Failed to create attachments index.");
+
+    db.run_command(
+        doc! {
+            "createIndexes": "attachment_hashes",
+            "indexes": [
+                {
+                    "key": {
+                        "processed_hash": 1_i32
+                    },
+                    "name": "processed_hash"
+                }
+            ]
+        },
+        None,
+    )
+    .await
+    .expect("Failed to create attachment_hashes index.");
 
     db.collection("migrations")
         .insert_one(

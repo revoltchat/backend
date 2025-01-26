@@ -111,7 +111,7 @@ pub async fn root() -> Result<Json<RevoltConfig>> {
         },
         ws: config.hosts.events,
         app: config.hosts.app,
-        vapid: config.api.vapid.public_key,
+        vapid: config.pushd.vapid.public_key,
         build: BuildInformation {
             commit_sha: option_env!("VERGEN_GIT_SHA")
                 .unwrap_or_else(|| "<failed to generate>")

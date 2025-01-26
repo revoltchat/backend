@@ -1,20 +1,20 @@
 [package]
 name = "revolt-config"
-version = "0.7.1"
+version = "0.8.1"
 edition = "2021"
-license = "AGPL-3.0-or-later"
+license = "MIT"
 authors = ["Paul Makles <me@insrt.uk>"]
 description = "Revolt Backend: Configuration"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
+report-macros = ["revolt-result"]
 test = ["async-std"]
 default = ["test"]
 
 [dependencies]
 # Utility
-dotenv = "0.15.0"
 config = "0.13.3"
 cached = "0.44.0"
 once_cell = "1.18.0"
@@ -32,3 +32,6 @@ pretty_env_logger = "0.4.0"
 
 # Sentry
 sentry = "0.31.5"
+
+# Core
+revolt-result = { version = "0.8.1", path = "../result", optional = true }

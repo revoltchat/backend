@@ -1,6 +1,12 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+    time::Duration,
+};
 
+use async_std::sync::{Mutex, RwLock};
 use lru::LruCache;
+use lru_time_cache::{LruCache as LruTimeCache, TimedEntry};
 use revolt_database::{Channel, Member, Server, User};
 
 /// Enumeration representing some change in subscriptions
@@ -30,6 +36,7 @@ pub enum SubscriptionStateChange {
 #[derive(Debug)]
 pub struct Cache {
     pub user_id: String,
+    pub is_bot: bool,
 
     pub users: HashMap<String, User>,
     pub channels: HashMap<String, Channel>,
@@ -43,6 +50,7 @@ impl Default for Cache {
     fn default() -> Self {
         Cache {
             user_id: Default::default(),
+            is_bot: false,
 
             users: Default::default(),
             channels: Default::default(),
@@ -58,14 +66,17 @@ impl Default for Cache {
 pub struct State {
     pub cache: Cache,
 
+    pub session_id: String,
     pub private_topic: String,
-    subscribed: HashSet<String>,
-    state: SubscriptionStateChange,
+    pub state: SubscriptionStateChange,
+
+    pub subscribed: Arc<RwLock<HashSet<String>>>,
+    pub active_servers: Arc<Mutex<LruTimeCache<String, ()>>>,
 }
 
 impl State {
     /// Create state from User
-    pub fn from(user: User) -> State {
+    pub fn from(user: User, session_id: String) -> State {
         let mut subscribed = HashSet::new();
         let private_topic = format!("{}!", user.id);
         subscribed.insert(private_topic.clone());
@@ -80,22 +91,61 @@ impl State {
 
         State {
             cache,
-            subscribed,
+            subscribed: Arc::new(RwLock::new(subscribed)),
+            active_servers: Arc::new(Mutex::new(LruTimeCache::with_expiry_duration_and_capacity(
+                Duration::from_secs(900),
+                5,
+            ))),
+            session_id,
             private_topic,
             state: SubscriptionStateChange::Reset,
         }
     }
 
     /// Apply currently queued state
-    pub fn apply_state(&mut self) -> SubscriptionStateChange {
+    pub async fn apply_state(&mut self) -> SubscriptionStateChange {
+        // Check if we need to change subscriptions to member event topics
+        if !self.cache.is_bot {
+            enum Server {
+                Subscribe(String),
+                Unsubscribe(String),
+            }
+
+            let active_server_changes: Vec<Server> = {
+                let mut active_servers = self.active_servers.lock().await;
+                active_servers
+                    .notify_iter()
+                    .map(|e| match e {
+                        TimedEntry::Valid(k, _) => Server::Subscribe(format!("{}u", k)),
+                        TimedEntry::Expired(k, _) => Server::Unsubscribe(format!("{}u", k)),
+                    })
+                    .collect()
+                // It is bad practice to open more than one Mutex at once and could
+                // lead to a deadlock, so instead we choose to collect the changes.
+            };
+
+            for entry in active_server_changes {
+                match entry {
+                    Server::Subscribe(k) => {
+                        self.insert_subscription(k).await;
+                    }
+                    Server::Unsubscribe(k) => {
+                        self.remove_subscription(&k).await;
+                    }
+                }
+            }
+        }
+
+        // Flush changes to subscriptions
         let state = std::mem::replace(&mut self.state, SubscriptionStateChange::None);
+        let mut subscribed = self.subscribed.write().await;
         if let SubscriptionStateChange::Change { add, remove } = &state {
             for id in add {
-                self.subscribed.insert(id.clone());
+                subscribed.insert(id.clone());
             }
 
             for id in remove {
-                self.subscribed.remove(id);
+                subscribed.remove(id);
             }
         }
 
@@ -107,20 +157,16 @@ impl State {
         self.cache.users.get(&self.cache.user_id).unwrap().clone()
     }
 
-    /// Iterate through all subscriptions
-    pub fn iter_subscriptions(&self) -> std::collections::hash_set::Iter<'_, std::string::String> {
-        self.subscribed.iter()
-    }
-
     /// Reset the current state
-    pub fn reset_state(&mut self) {
+    pub async fn reset_state(&mut self) {
         self.state = SubscriptionStateChange::Reset;
-        self.subscribed.clear();
+        self.subscribed.write().await.clear();
     }
 
     /// Add a new subscription
-    pub fn insert_subscription(&mut self, subscription: String) {
-        if self.subscribed.contains(&subscription) {
+    pub async fn insert_subscription(&mut self, subscription: String) {
+        let mut subscribed = self.subscribed.write().await;
+        if subscribed.contains(&subscription) {
             return;
         }
 
@@ -137,12 +183,13 @@ impl State {
             SubscriptionStateChange::Reset => {}
         }
 
-        self.subscribed.insert(subscription);
+        subscribed.insert(subscription);
     }
 
     /// Remove existing subscription
-    pub fn remove_subscription(&mut self, subscription: &str) {
-        if !self.subscribed.contains(&subscription.to_string()) {
+    pub async fn remove_subscription(&mut self, subscription: &str) {
+        let mut subscribed = self.subscribed.write().await;
+        if !subscribed.contains(&subscription.to_string()) {
             return;
         }
 
@@ -159,6 +206,6 @@ impl State {
             SubscriptionStateChange::Reset => panic!("Should not remove during a reset!"),
         }
 
-        self.subscribed.remove(subscription);
+        subscribed.remove(subscription);
     }
 }

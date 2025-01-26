@@ -1,10 +1,11 @@
+use livekit_protocol::ParticipantPermission;
 use revolt_database::{
     util::{permissions::DatabasePermissionQuery, reference::Reference}, Channel, Database, PartialRole, User
 };
 use revolt_models::v0::{self, PartialUserVoiceState};
 use revolt_permissions::{calculate_channel_permissions, calculate_server_permissions, ChannelPermission, PermissionQuery};
 use revolt_result::{create_error, Result};
-use revolt_voice::{get_allowed_sources, get_voice_channel_members, get_voice_state, update_voice_state_tracks, VoiceClient};
+use revolt_voice::{get_allowed_sources, get_voice_channel_members, get_voice_state, update_voice_state, update_voice_state_tracks, VoiceClient};
 use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -21,6 +22,7 @@ pub async fn edit(
     target: Reference,
     role_id: String,
     data: Json<v0::DataEditRole>,
+    voice_client: &State<VoiceClient>
 ) -> Result<Json<v0::Role>> {
     let data = data.into_inner();
     data.validate().map_err(|error| {
@@ -95,16 +97,27 @@ pub async fn edit(
 
                         let permissions = calculate_channel_permissions(&mut query).await;
 
-                        let sources = get_allowed_sources(permissions);
-
                         let mut update_event = PartialUserVoiceState {
                             id: Some(user.id.clone()),
                             ..Default::default()
                         };
 
-                        if voice_state.camera && !sources.contains(&"CAMERA".to_string()) {
-                            update_event.camera = Some(false);
-                        }
+                        let can_video = permissions.has_channel_permission(ChannelPermission::Video);
+                        let can_speak = permissions.has_channel_permission(ChannelPermission::Speak);
+                        let can_listen = permissions.has_channel_permission(ChannelPermission::Listen);
+
+                        update_event.camera = voice_state.camera.then_some(can_video);
+                        update_event.screensharing = voice_state.screensharing.then_some(can_video);
+                        update_event.is_publishing = voice_state.is_publishing.then_some(can_speak);
+
+                        update_voice_state(channel_id, Some(&server.id), &user.id, &update_event).await?;
+
+                        voice_client.update_permissions(&user, channel_id, ParticipantPermission {
+                            can_subscribe: can_listen,
+                            can_publish: can_speak,
+                            can_publish_data: can_speak,
+                            ..Default::default()
+                        }).await?;
                     }
                 }
             }
