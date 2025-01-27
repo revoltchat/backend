@@ -3,7 +3,7 @@ use std::{env, sync::Arc};
 use async_std::net::TcpListener;
 use revolt_presence::clear_region;
 use once_cell::sync::OnceCell;
-use revolt_voice::VoiceClient;
+use revolt_database::voice::VoiceClient;
 
 #[macro_use]
 extern crate log;

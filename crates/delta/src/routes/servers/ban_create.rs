@@ -1,5 +1,6 @@
 use revolt_database::{
     util::{permissions::DatabasePermissionQuery, reference::Reference},
+    voice::{delete_voice_state, get_user_voice_channel_in_server, VoiceClient},
     Database, RemovalIntention, ServerBan, User,
 };
 use revolt_models::v0;
@@ -8,7 +9,6 @@ use revolt_permissions::{
     calculate_server_permissions, ChannelPermission,
 };
 use revolt_result::{create_error, Result};
-use revolt_voice::{delete_voice_state, get_user_voice_channel_in_server, VoiceClient};
 use rocket::{serde::json::Json, State};
 use validator::Validate;
 

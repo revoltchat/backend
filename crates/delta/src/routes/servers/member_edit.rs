@@ -7,13 +7,13 @@ use redis_kiss::{get_connection, redis::Pipeline, AsyncCommands};
 use revolt_database::{
     events::client::EventV1,
     util::{permissions::DatabasePermissionQuery, reference::Reference},
+    voice::VoiceClient,
     Database, File, PartialMember, User,
 };
 use revolt_models::v0::{self, FieldsMember, PartialUserVoiceState};
 
 use revolt_permissions::{calculate_server_permissions, ChannelPermission};
 use revolt_result::{create_error, Result, ToRevoltError};
-use revolt_voice::VoiceClient;
 use rocket::{form::validate::Contains, serde::json::Json, State};
 use validator::Validate;
 

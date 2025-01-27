@@ -80,7 +80,6 @@ revolt-models = { path = "../core/models", features = [
 revolt-presence = { path = "../core/presence" }
 revolt-result = { path = "../core/result", features = ["rocket", "okapi"] }
 revolt-permissions = { path = "../core/permissions", features = ["schemas"] }
-revolt-voice = { path = "../core/voice" }
 
 # voice
 livekit-api = "0.4.1"

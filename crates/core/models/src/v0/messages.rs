@@ -134,6 +134,8 @@ auto_derived!(
         MessagePinned { id: String, by: String },
         #[serde(rename = "message_unpinned")]
         MessageUnpinned { id: String, by: String },
+        #[serde(rename = "call_started")]
+        CallStarted { by: String },
     }
 
     /// Name and / or avatar override information
@@ -438,6 +440,7 @@ impl From<SystemMessage> for String {
             }
             SystemMessage::MessagePinned { .. } => "Message pinned.".to_string(),
             SystemMessage::MessageUnpinned { .. } => "Message unpinned.".to_string(),
+            SystemMessage::CallStarted { .. } => "Call started.".to_string(),
         }
     }
 }

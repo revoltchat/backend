@@ -43,7 +43,6 @@ revolt-config = { path = "../core/config" }
 revolt-database = { path = "../core/database" }
 revolt-permissions = { version = "0.8.1", path = "../core/permissions" }
 revolt-presence = { path = "../core/presence", features = ["redis-is-patched"] }
-revolt-voice = { path = "../core/voice" }
 
 # redis
 fred = { version = "8.0.1", features = ["subscriber-client"] }

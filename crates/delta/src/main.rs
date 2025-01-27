@@ -24,7 +24,7 @@ use amqprs::{
 use async_std::channel::unbounded;
 use authifier::AuthifierEvent;
 use rocket::data::ToByteUnit;
-use livekit_api::services::room::RoomClient;
+use revolt_database::voice::VoiceClient;
 
 pub async fn web() -> Rocket<Build> {
     // Get settings
@@ -84,7 +84,7 @@ pub async fn web() -> Rocket<Build> {
     .into();
 
     // Voice handler
-    let voice_client = revolt_voice::VoiceClient::new(config.api.livekit.url.clone(), config.api.livekit.key.clone(), config.api.livekit.secret.clone());
+    let voice_client = VoiceClient::new(config.api.livekit.url.clone(), config.api.livekit.key.clone(), config.api.livekit.secret.clone());
     // Configure Rabbit
     let connection = Connection::open(&OpenConnectionArguments::new(
         &config.rabbit.host,

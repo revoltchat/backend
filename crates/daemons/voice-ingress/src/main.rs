@@ -4,8 +4,8 @@ use std::env;
 use livekit_protocol::WebhookEvent;
 use revolt_database::{
     events::client::EventV1, util::reference::Reference, Database, DatabaseInfo,
+    voice::{create_voice_state, delete_voice_state, update_voice_state_tracks, VoiceClient}
 };
-use revolt_voice::{create_voice_state, delete_voice_state, update_voice_state_tracks, VoiceClient};
 use rocket::{build, post, routes, serde::json::Json, Config, State};
 use rocket_empty::EmptyResponse;
 

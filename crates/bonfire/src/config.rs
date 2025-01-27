@@ -93,6 +93,7 @@ impl ProtocolConfiguration {
             ReadyPayloadFields::Channels,
             ReadyPayloadFields::Members,
             ReadyPayloadFields::Emoji,
+            ReadyPayloadFields::VoiceStates,
         ]
     }
 }

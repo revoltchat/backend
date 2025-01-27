@@ -1,11 +1,12 @@
 use livekit_protocol::ParticipantPermission;
 use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference}, Channel, Database, User
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    voice::{get_allowed_sources, get_voice_channel_members, get_voice_state, update_voice_state, VoiceClient},
+    Channel, Database, User
 };
 use revolt_models::v0::PartialUserVoiceState;
 use revolt_permissions::{calculate_channel_permissions, calculate_server_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
-use revolt_voice::{get_allowed_sources, get_voice_channel_members, get_voice_state, update_voice_state, VoiceClient};
 use rocket::State;
 use rocket_empty::EmptyResponse;
 

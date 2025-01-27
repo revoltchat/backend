@@ -120,6 +120,7 @@ pub enum EventV1 {
         server: Server,
         channels: Vec<Channel>,
         emojis: Vec<Emoji>,
+        voice_states: Vec<ChannelVoiceState>
     },
 
     /// Update existing server

@@ -100,3 +100,8 @@ authifier = { version = "1.0.9", features = ["rocket_impl"] }
 
 # RabbitMQ
 amqprs = { version = "1.7.0" }
+
+# Voice
+livekit-api = "0.4.1"
+livekit-protocol = "0.3.6"
+livekit-runtime = { version = "0.3.1", features = ["tokio"] }

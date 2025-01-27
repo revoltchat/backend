@@ -37,7 +37,6 @@ revolt-models = { path = "../../core/models" }
 revolt-config = { path = "../../core/config" }
 revolt-database = { path = "../../core/database" }
 revolt-permissions = { path = "../../core/permissions" }
-revolt-voice = { path = "../../core/voice" }
 
 # voice
 livekit-api = "0.4.1"
