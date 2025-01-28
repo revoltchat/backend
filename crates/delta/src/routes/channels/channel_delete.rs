@@ -1,6 +1,5 @@
 use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Channel, Database, PartialChannel, User, AMQP,
+    util::{permissions::DatabasePermissionQuery, reference::Reference}, voice::{delete_voice_state, get_voice_channel_members, VoiceClient}, Channel, Database, PartialChannel, User, AMQP
 };
 use revolt_models::v0;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
@@ -15,6 +14,7 @@ use rocket_empty::EmptyResponse;
 #[delete("/<target>?<options..>")]
 pub async fn delete(
     db: &State<Database>,
+    voice_client: &State<VoiceClient>,
     amqp: &State<AMQP>,
     user: User,
     target: Reference,
@@ -27,7 +27,7 @@ pub async fn delete(
     permissions.throw_if_lacking_channel_permission(ChannelPermission::ViewChannel)?;
 
     match &channel {
-        Channel::SavedMessages { .. } => Err(create_error!(NoEffect)),
+        Channel::SavedMessages { .. } => Err(create_error!(NoEffect))?,
         Channel::DirectMessage { .. } => channel
             .update(
                 db,
@@ -37,8 +37,7 @@ pub async fn delete(
                 },
                 vec![],
             )
-            .await
-            .map(|_| EmptyResponse),
+            .await?,
         Channel::Group { .. } => channel
             .remove_user_from_group(
                 db,
@@ -47,13 +46,21 @@ pub async fn delete(
                 None,
                 options.leave_silently.unwrap_or_default(),
             )
-            .await
-            .map(|_| EmptyResponse),
+            .await?,
         Channel::TextChannel { .. } | Channel::VoiceChannel { .. } => {
             permissions.throw_if_lacking_channel_permission(ChannelPermission::ManageChannel)?;
-            channel.delete(db).await.map(|_| EmptyResponse)
+            channel.delete(db).await?
         }
-    }
+    };
+
+    for user_id in get_voice_channel_members(channel.id()).await? {
+        let user = Reference::from_unchecked(user_id).as_user(db).await?;
+
+        voice_client.remove_user(&user, channel.id()).await?;
+        delete_voice_state(channel.id(), channel.server().as_deref(), &user.id).await?;
+    };
+
+    Ok(EmptyResponse)
 }
 
 #[cfg(test)]

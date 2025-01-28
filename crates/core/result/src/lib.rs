@@ -220,25 +220,24 @@ pub trait ToRevoltError<T> {
 impl<T, E: std::fmt::Debug> ToRevoltError<T> for Result<T, E> {
     #[track_caller]
     fn to_internal_error(self) -> Result<T, Error> {
-        self
-        .inspect_err(|e| log::error!("{e:?}"))
-        .map_err(|_| {
-            let loc = Location::caller();
+        let loc = Location::caller();
 
-            Error {
-                error_type: ErrorType::InternalError,
-                location: format!("{}:{}:{}", loc.file(), loc.line(), loc.column())
-            }
-        })
+        self
+            .map_err(|_| {
+                Error {
+                    error_type: ErrorType::InternalError,
+                    location: format!("{}:{}:{}", loc.file(), loc.line(), loc.column())
+                }
+            })
     }
 }
 
 impl<T> ToRevoltError<T> for Option<T> {
     #[track_caller]
     fn to_internal_error(self) -> Result<T, Error> {
-        self.ok_or_else(|| {
-            let loc = Location::caller();
+        let loc = Location::caller();
 
+        self.ok_or_else(|| {
             Error {
                 error_type: ErrorType::InternalError,
                 location: format!("{}:{}:{}", loc.file(), loc.line(), loc.column())

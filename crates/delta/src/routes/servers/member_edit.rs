@@ -7,7 +7,7 @@ use redis_kiss::{get_connection, redis::Pipeline, AsyncCommands};
 use revolt_database::{
     events::client::EventV1,
     util::{permissions::DatabasePermissionQuery, reference::Reference},
-    voice::VoiceClient,
+    voice::{get_user_voice_channel_in_server, move_user, sync_user_voice_permissions, VoiceClient},
     Database, File, PartialMember, User,
 };
 use revolt_models::v0::{self, FieldsMember, PartialUserVoiceState};
@@ -23,8 +23,8 @@ use validator::Validate;
 #[openapi(tag = "Server Members")]
 #[patch("/<server>/members/<target>", data = "<data>")]
 pub async fn edit(
-    voice_client: &State<VoiceClient>,
     db: &State<Database>,
+    voice_client: &State<VoiceClient>,
     user: User,
     server: Reference,
     target: Reference,
@@ -190,6 +190,18 @@ pub async fn edit(
         .map(|r| r.contains(FieldsMember::CanPublish) || r.contains(FieldsMember::CanReceive))
         .unwrap_or_default();
 
+    if can_publish.is_some()
+        || can_receive.is_some()
+        || voice_channel.is_some()
+        || remove_contains_voice
+    {
+        if let Some(channel) = get_user_voice_channel_in_server(&target_user.id, &server.id).await? {
+            let channel = Reference::from_unchecked(channel).as_channel(db).await?;
+
+            sync_user_voice_permissions(db, voice_client, &user, &channel, Some(&server), None).await?;
+        };
+    };
+
     member
         .update(
             db,
@@ -199,69 +211,6 @@ pub async fn edit(
                 .unwrap_or_default(),
         )
         .await?;
-
-    if can_publish.is_some()
-        || can_receive.is_some()
-        || voice_channel.is_some()
-        || remove_contains_voice
-    {
-        let mut conn = get_connection().await.to_internal_error()?;
-
-        let unique_key = format!("{}-{}", &member.id.user, &member.id.server);
-
-        // if we edit the member while they are in a voice channel we need to also update the perms
-        // otherwise it wont take place until they leave and rejoin
-        if let Some(channel) = conn
-            .get::<_, Option<String>>(format!("vc-{}", &unique_key))
-            .await
-            .to_internal_error()?
-        {
-            let mut pipeline = Pipeline::new();
-            let mut new_perms = ParticipantPermission::default();
-
-            if remove_contains_voice {
-                let mut query = DatabasePermissionQuery::new(db, &target_user)
-                    .server(&server)
-                    .member(&member);
-
-                let permissions = calculate_server_permissions(&mut query).await;
-
-                if !permissions.has_channel_permission(ChannelPermission::Speak) {
-                    can_publish = Some(false)
-                }
-
-                if !permissions.has_channel_permission(ChannelPermission::Listen) {
-                    can_publish = Some(false)
-                }
-            }
-
-            if let Some(can_publish) = can_publish {
-                new_perms.can_publish = can_publish;
-                new_perms.can_publish_data = can_publish;
-            };
-
-            if let Some(can_receive) = can_receive {
-                new_perms.can_subscribe = can_receive;
-            };
-
-            if let Some(new_channel) = voice_channel {
-                pipeline.smove(
-                    format!("vc-members-{channel}"),
-                    format!("vc-members-{new_channel}"),
-                    &member.id.user,
-                );
-            };
-
-            pipeline
-                .query_async(&mut conn.into_inner())
-                .await
-                .to_internal_error()?;
-
-            voice_client
-                .update_permissions(&user, &channel, new_perms)
-                .await?;
-        };
-    };
 
     Ok(Json(member.into()))
 }

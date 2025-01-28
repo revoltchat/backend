@@ -254,6 +254,11 @@ pub enum EventV1 {
         id: String,
         user: String,
     },
+    VoiceChannelMove {
+        user: String,
+        from: String,
+        to: String,
+    },
     UserVoiceStateUpdate {
         id: String,
         channel_id: String,

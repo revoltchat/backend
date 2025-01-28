@@ -19,7 +19,7 @@ use validator::Validate;
 #[put("/<server>/bans/<target>", data = "<data>")]
 pub async fn ban(
     db: &State<Database>,
-    voice: &State<VoiceClient>,
+    voice_client: &State<VoiceClient>,
     user: User,
     server: Reference,
     target: Reference,
@@ -61,6 +61,7 @@ pub async fn ban(
 
         // If the member is in a voice channel while banned kick them from the voice channel
         if let Some(channel_id) = get_user_voice_channel_in_server(&user.id, &server.id).await? {
+            voice_client.remove_user(&user, &channel_id).await?;
             delete_voice_state(&channel_id, Some(&server.id), &user.id).await?
         }
     }

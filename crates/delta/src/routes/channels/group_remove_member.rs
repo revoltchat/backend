@@ -1,4 +1,4 @@
-use revolt_database::{util::reference::Reference, Channel, Database, User, AMQP};
+use revolt_database::{util::reference::Reference, voice::{delete_voice_state, is_in_voice_channel, raise_if_in_voice, VoiceClient}, Channel, Database, User, AMQP};
 use revolt_permissions::ChannelPermission;
 use revolt_result::{create_error, Result};
 
@@ -12,6 +12,7 @@ use rocket_empty::EmptyResponse;
 #[delete("/<target>/recipients/<member>")]
 pub async fn remove_member(
     db: &State<Database>,
+    voice_client: &State<VoiceClient>,
     amqp: &State<AMQP>,
     user: User,
     target: Reference,
@@ -23,32 +24,35 @@ pub async fn remove_member(
 
     let channel = target.as_channel(db).await?;
 
-    match &channel {
-        Channel::Group {
-            owner, recipients, ..
-        } => {
-            if &user.id != owner {
-                return Err(create_error!(MissingPermission {
-                    permission: ChannelPermission::ManageChannel.to_string()
-                }));
-            }
-
-            let member = member.as_user(db).await?;
-            if user.id == member.id {
-                return Err(create_error!(CannotRemoveYourself));
-            }
-
-            if !recipients.iter().any(|x| *x == member.id) {
-                return Err(create_error!(NotInGroup));
-            }
-
-            channel
-                .remove_user_from_group(db, amqp, &member, Some(&user.id), false)
-                .await
-                .map(|_| EmptyResponse)
+    if let Channel::Group { owner, recipients, .. } = &channel {
+        if &user.id != owner {
+            return Err(create_error!(MissingPermission {
+                permission: ChannelPermission::ManageChannel.to_string()
+            }));
         }
-        _ => Err(create_error!(InvalidOperation)),
-    }
+
+        let member = member.as_user(db).await?;
+        if user.id == member.id {
+            return Err(create_error!(CannotRemoveYourself));
+        }
+
+        if !recipients.iter().any(|x| *x == member.id) {
+            return Err(create_error!(NotInGroup));
+        }
+
+        channel
+            .remove_user_from_group(db, amqp, &member, Some(&user.id), false)
+            .await?;
+    } else {
+        return Err(create_error!(InvalidOperation))
+    };
+
+    if is_in_voice_channel(&user.id, channel.id()).await? {
+        voice_client.remove_user(&user, channel.id()).await?;
+        delete_voice_state(channel.id(), None, &user.id).await?;
+    };
+
+    Ok(EmptyResponse)
 }
 
 #[cfg(test)]

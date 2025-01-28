@@ -1,6 +1,5 @@
 use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Database, User,
+    util::{permissions::DatabasePermissionQuery, reference::Reference}, voice::{sync_voice_permissions, VoiceClient}, Database, User
 };
 use revolt_models::v0;
 use revolt_permissions::{calculate_server_permissions, ChannelPermission, Override};
@@ -14,6 +13,7 @@ use rocket::{serde::json::Json, State};
 #[put("/<target>/permissions/<role_id>", data = "<data>", rank = 2)]
 pub async fn set_role_permission(
     db: &State<Database>,
+    voice_client: &State<VoiceClient>,
     user: User,
     target: Reference,
     role_id: String,
@@ -39,6 +39,12 @@ pub async fn set_role_permission(
         permissions
             .throw_permission_override(current_value, &data.permissions)
             .await?;
+
+        for channel_id in &server.channels {
+            let channel = Reference::from_unchecked(channel_id.clone()).as_channel(db).await?;
+
+            sync_voice_permissions(db, voice_client, &channel, Some(&server), Some(&role_id)).await?;
+        };
 
         server
             .set_role_permission(db, &role_id, data.permissions.into())
