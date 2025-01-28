@@ -53,9 +53,3 @@ access_key_id = "minioautumn"
 secret_access_key = "minioautumn"
 # Bucket to upload to by default
 default_bucket = "revolt-uploads"
-
-[rabbit]
-host = "rabbit.backend.orb.local"
-port = 5672
-username = "rabbituser"
-password = "rabbitpass"

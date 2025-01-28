@@ -65,11 +65,11 @@ max_concurrent_connections = 50
 
 [api.livekit]
 # Livekit server url
-url = "ws://livekit:7880"
+url = "ws://local.revolt.chat/livekit"
 # Livekit security key name
-key = "dev"
+key = ""
 # Livekit security secret value
-secret = "qweasdzxcqweasdzxcqweasdzxcqweasdzxcqweasdzxcqweasdzxc"
+secret = ""
 
 
 [pushd]
