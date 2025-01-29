@@ -123,7 +123,7 @@ auto_derived!(
         #[serde(skip_serializing_if = "Option::is_none")]
         pub x_account: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
-        pub tik_tok: Option<String>,
+        pub linkedin: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub facebook: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]

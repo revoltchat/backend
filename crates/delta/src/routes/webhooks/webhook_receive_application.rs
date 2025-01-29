@@ -29,7 +29,7 @@ pub struct DataApplication {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub instagram: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub tik_tok: Option<String>,
+    pub linkedin: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub relationship_status: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -120,8 +120,8 @@ pub async fn webhook_receive_application(
     if let Some(facebook) = profile.facebook {
         new_profile.facebook = Some(facebook);
     }
-    if let Some(tik_tok) = profile.tik_tok {
-        new_profile.tik_tok = Some(tik_tok);
+    if let Some(linkedin) = profile.linkedin {
+        new_profile.linkedin = Some(linkedin);
     }
     if let Some(gender) = profile.gender {
         new_profile.gender = Some(gender);
