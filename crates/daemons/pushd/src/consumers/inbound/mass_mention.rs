@@ -178,6 +178,8 @@ impl AsyncConsumer for MassMessageConsumer {
                         let userids: Vec<String> =
                             chunk.iter().map(|member| member.id.user.clone()).collect();
 
+                        debug!("Userids in chunk: {:?}", userids);
+
                         if let Err(err) = self
                             .db
                             .add_mention_to_many_unreads(push.channel.id(), &userids, &ack_chnl)
@@ -196,6 +198,11 @@ impl AsyncConsumer for MassMessageConsumer {
                             .cloned()
                             .collect();
 
+                        debug!(
+                            "Userids after filter: {:?} (online: {:?}",
+                            target_users, online_users
+                        );
+
                         self.fire_notification_for_users(&push, &target_users).await;
 
                         if exhausted {
@@ -206,7 +213,7 @@ impl AsyncConsumer for MassMessageConsumer {
                     // role mentions
                     let _role_members = self
                         .db
-                        .fetch_all_members_with_roles(&payload.server_id, roles)
+                        .fetch_all_members_with_roles_chunked(&payload.server_id, roles)
                         .await;
 
                     debug!("role members: {:?}", _role_members);
@@ -216,37 +223,51 @@ impl AsyncConsumer for MassMessageConsumer {
                         return;
                     }
 
-                    let role_members = _role_members.unwrap();
+                    let mut role_members = _role_members.unwrap();
+                    let mut chunk = vec![];
+                    let mut exhausted = false;
 
-                    // TODO: this should probably be chunked in the future
-                    let mut q = query.clone().members(&role_members);
-                    let viewing_members: Vec<String> = q
-                        .members_can_see_channel()
-                        .await
-                        .iter()
-                        .filter_map(|(uid, viewable)| {
-                            if *viewable && !existing_mentions.contains(uid) {
-                                Some(uid.clone())
+                    while !exhausted {
+                        chunk.clear();
+
+                        for _ in 0..config.pushd.mass_mention_chunk_size {
+                            if let Some(member) = role_members.next().await {
+                                chunk.push(member);
                             } else {
-                                None
+                                exhausted = true;
+                                break;
                             }
-                        })
-                        .collect();
+                        }
 
-                    debug!("viewing members: {:?}", viewing_members);
+                        let mut q = query.clone().members(&chunk);
+                        let viewing_members: Vec<String> = q
+                            .members_can_see_channel()
+                            .await
+                            .iter()
+                            .filter_map(|(uid, viewable)| {
+                                if *viewable && !existing_mentions.contains(uid) {
+                                    Some(uid.clone())
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
 
-                    let online = revolt_presence::filter_online(&viewing_members).await;
-                    debug!("online: {:?}", online);
+                        debug!("viewing members: {:?}", viewing_members);
 
-                    let targets: Vec<String> = viewing_members
-                        .iter()
-                        .filter(|m| !online.contains(*m))
-                        .cloned()
-                        .collect();
+                        let online = revolt_presence::filter_online(&viewing_members).await;
+                        debug!("online: {:?}", online);
 
-                    debug!("targets: {:?}", targets);
+                        let targets: Vec<String> = viewing_members
+                            .iter()
+                            .filter(|m| !online.contains(*m))
+                            .cloned()
+                            .collect();
 
-                    self.fire_notification_for_users(&push, &targets).await;
+                        debug!("targets: {:?}", targets);
+
+                        self.fire_notification_for_users(&push, &targets).await;
+                    }
                 }
             }
         }

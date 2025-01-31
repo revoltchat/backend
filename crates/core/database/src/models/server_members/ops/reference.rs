@@ -61,7 +61,7 @@ impl AbstractServerMembers for ReferenceDb {
     async fn fetch_all_members_with_roles(
         &self,
         server_id: &str,
-        roles: &Vec<String>,
+        roles: &[String],
     ) -> Result<Vec<Member>> {
         let server_members = self.server_members.lock().await;
 
@@ -78,6 +78,30 @@ impl AbstractServerMembers for ReferenceDb {
                         .is_empty()
             })
             .collect())
+    }
+
+    async fn fetch_all_members_with_roles_chunked(
+        &self,
+        server_id: &str,
+        roles: &[String],
+    ) -> Result<ChunkedServerMembersGenerator> {
+        let server_members = self.server_members.lock().await;
+
+        let resp = server_members
+            .clone()
+            .into_values()
+            .filter(|member| {
+                member.id.server == server_id
+                    && !member
+                        .roles
+                        .iter()
+                        .filter(|p| roles.contains(*p))
+                        .collect::<Vec<&String>>()
+                        .is_empty()
+            })
+            .collect();
+
+        return Ok(ChunkedServerMembersGenerator::new_reference(resp));
     }
 
     /// Fetch all memberships for a user

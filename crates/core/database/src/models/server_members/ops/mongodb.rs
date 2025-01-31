@@ -85,7 +85,7 @@ impl AbstractServerMembers for MongoDb {
     async fn fetch_all_members_with_roles(
         &self,
         server_id: &str,
-        roles: &Vec<String>,
+        roles: &[String],
     ) -> Result<Vec<Member>> {
         Ok(self
             .col::<Member>(COL)
@@ -104,6 +104,38 @@ impl AbstractServerMembers for MongoDb {
             })
             .collect()
             .await)
+    }
+
+    async fn fetch_all_members_with_roles_chunked(
+        &self,
+        server_id: &str,
+        roles: &[String],
+    ) -> Result<ChunkedServerMembersGenerator> {
+        let config = revolt_config::config().await;
+
+        let mut session = self
+            .start_session()
+            .await
+            .map_err(|_| create_database_error!("start_session", COL))?;
+
+        session
+            .start_transaction()
+            .read_concern(ReadConcern::snapshot())
+            .await
+            .map_err(|_| create_database_error!("start_transaction", COL))?;
+
+        let cursor = self
+            .col::<Member>(COL)
+            .find(doc! {
+                "_id.server": server_id,
+                "roles": {"$in": roles}
+            })
+            .session(&mut session)
+            .batch_size(config.pushd.mass_mention_chunk_size as u32)
+            .await
+            .map_err(|_| create_database_error!("find", COL))?;
+
+        return Ok(ChunkedServerMembersGenerator::new_mongo(session, cursor));
     }
 
     /// Fetch all memberships for a user

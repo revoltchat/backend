@@ -6,6 +6,7 @@ use crate::{FieldsMember, Member, MemberCompositeKey, PartialMember};
 mod mongodb;
 mod reference;
 
+#[derive(Debug)]
 pub enum ChunkedServerMembersGenerator {
     #[cfg(feature = "mongodb")]
     MongoDb {
@@ -85,8 +86,14 @@ pub trait AbstractServerMembers: Sync + Send {
     async fn fetch_all_members_with_roles(
         &self,
         server_id: &str,
-        roles: &Vec<String>,
+        roles: &[String],
     ) -> Result<Vec<Member>>;
+
+    async fn fetch_all_members_with_roles_chunked(
+        &self,
+        server_id: &str,
+        roles: &[String],
+    ) -> Result<ChunkedServerMembersGenerator>;
 
     /// Fetch all memberships for a user
     async fn fetch_all_memberships<'a>(&self, user_id: &str) -> Result<Vec<Member>>;
