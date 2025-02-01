@@ -104,6 +104,7 @@ impl From<crate::Channel> for Channel {
                 last_message_id,
                 permissions,
                 nsfw,
+                hide_title,
             } => Channel::Group {
                 id,
                 name,
@@ -114,6 +115,7 @@ impl From<crate::Channel> for Channel {
                 last_message_id,
                 permissions,
                 nsfw,
+                hide_title,
             },
             crate::Channel::TextChannel {
                 id,
@@ -125,6 +127,7 @@ impl From<crate::Channel> for Channel {
                 default_permissions,
                 role_permissions,
                 nsfw,
+                hide_title,
                 banner,
             } => Channel::TextChannel {
                 id,
@@ -136,6 +139,7 @@ impl From<crate::Channel> for Channel {
                 default_permissions,
                 role_permissions,
                 nsfw,
+                hide_title,
                 banner: banner.map(|vec| vec.into_iter().map(|banner| banner.into()).collect()),
             },
             crate::Channel::VoiceChannel {
@@ -147,6 +151,7 @@ impl From<crate::Channel> for Channel {
                 default_permissions,
                 role_permissions,
                 nsfw,
+                hide_title,
             } => Channel::VoiceChannel {
                 id,
                 server,
@@ -156,6 +161,7 @@ impl From<crate::Channel> for Channel {
                 default_permissions,
                 role_permissions,
                 nsfw,
+                hide_title,
             },
         }
     }
@@ -169,6 +175,7 @@ impl From<crate::PartialChannel> for PartialChannel {
             description: value.description,
             icon: value.icon.map(|file| file.into()),
             nsfw: value.nsfw,
+            hide_title: value.hide_title,
             active: value.active,
             permissions: value.permissions,
             role_permissions: value.role_permissions,

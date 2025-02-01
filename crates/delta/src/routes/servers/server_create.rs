@@ -23,6 +23,8 @@ pub struct DataCreateServer {
     /// Whether this server is age-restricted
     #[serde(skip_serializing_if = "Option::is_none")]
     nsfw: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    hide_title: Option<bool>,
 }
 
 /// # Create Server Response
@@ -62,6 +64,7 @@ pub async fn req(
         name,
         description,
         nsfw,
+        hide_title,
     } = info;
 
     let channel_id = Ulid::new().to_string();
@@ -82,6 +85,7 @@ pub async fn req(
         role_permissions: HashMap::new(),
 
         nsfw: nsfw.unwrap_or(false),
+        hide_title: hide_title.unwrap_or(false),
         password: None,
     };
 

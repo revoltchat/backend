@@ -61,6 +61,10 @@ auto_derived!(
             /// Whether this group is marked as not safe for work
             #[serde(skip_serializing_if = "crate::if_false", default)]
             nsfw: bool,
+
+            /// Whether to hide title channel
+            #[serde(skip_serializing_if = "crate::if_false", default)]
+            hide_title: bool,
         },
         /// Text channel belonging to a server
         TextChannel {
@@ -101,6 +105,10 @@ auto_derived!(
             /// Whether this channel is marked as not safe for work
             #[serde(skip_serializing_if = "crate::if_false", default)]
             nsfw: bool,
+
+            /// Whether to hide title channel
+            #[serde(skip_serializing_if = "crate::if_false", default)]
+            hide_title: bool,
         },
         /// Voice channel belonging to a server
         VoiceChannel {
@@ -132,6 +140,10 @@ auto_derived!(
             /// Whether this channel is marked as not safe for work
             #[serde(skip_serializing_if = "crate::if_false", default)]
             nsfw: bool,
+
+            /// Whether to hide title channel
+            #[serde(skip_serializing_if = "crate::if_false", default)]
+            hide_title: bool,
         },
     }
 );
@@ -151,6 +163,8 @@ auto_derived!(
         pub banner: Option<Vec<ChannelBanner>>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub nsfw: Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub hide_title: Option<bool>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub active: Option<bool>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -380,6 +394,7 @@ impl Channel {
                 description,
                 icon,
                 nsfw,
+                hide_title,
                 permissions,
                 ..
             } => {
@@ -403,6 +418,10 @@ impl Channel {
                     *nsfw = v;
                 }
 
+                if let Some(v) = partial.hide_title {
+                    *hide_title = v;
+                }
+
                 if let Some(v) = partial.permissions {
                     permissions.replace(v);
                 }
@@ -412,6 +431,7 @@ impl Channel {
                 description,
                 icon,
                 nsfw,
+                hide_title,
                 default_permissions,
                 role_permissions,
                 ..
@@ -421,6 +441,7 @@ impl Channel {
                 description,
                 icon,
                 nsfw,
+                hide_title,
                 default_permissions,
                 role_permissions,
                 ..
@@ -439,6 +460,9 @@ impl Channel {
 
                 if let Some(v) = partial.nsfw {
                     *nsfw = v;
+                }
+                if let Some(v) = partial.hide_title {
+                    *hide_title = v;
                 }
 
                 if let Some(v) = partial.role_permissions {

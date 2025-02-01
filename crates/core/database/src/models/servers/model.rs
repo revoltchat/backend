@@ -54,6 +54,10 @@ auto_derived_partial!(
         /// Whether this server is flagged as not safe for work
         #[serde(skip_serializing_if = "crate::if_false", default)]
         pub nsfw: bool,
+
+        #[serde(skip_serializing_if = "crate::if_false", default)]
+        pub hide_title: bool,
+
         /// Whether to enable analytics
         #[serde(skip_serializing_if = "crate::if_false", default)]
         pub analytics: bool,

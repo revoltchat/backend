@@ -23,6 +23,7 @@ impl AbstractChannel for DummyDb {
             permissions: None,
 
             nsfw: false,
+            hide_title: false,
             password: None,
         })
     }

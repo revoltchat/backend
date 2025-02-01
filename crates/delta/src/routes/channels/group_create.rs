@@ -29,6 +29,8 @@ pub struct DataCreateGroup {
     /// Whether this group is age-restricted
     #[serde(skip_serializing_if = "Option::is_none")]
     nsfw: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    hide_title: Option<bool>,
 }
 
 /// # Create Group
@@ -78,6 +80,7 @@ pub async fn req(db: &Db, user: User, info: Json<DataCreateGroup>) -> Result<Jso
         password: None,
 
         nsfw: info.nsfw.unwrap_or(false),
+        hide_title: info.hide_title.unwrap_or(false),
     };
 
     group.create(db).await?;

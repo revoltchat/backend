@@ -66,6 +66,8 @@ pub enum Channel {
         /// Whether this group is marked as not safe for work
         #[serde(skip_serializing_if = "if_false", default)]
         nsfw: bool,
+        #[serde(skip_serializing_if = "if_false", default)]
+        hide_title: bool,
         #[serde(skip_serializing_if = "Option::is_none")]
         password: Option<String>,
     },
@@ -105,6 +107,8 @@ pub enum Channel {
         /// Whether this channel is marked as not safe for work
         #[serde(skip_serializing_if = "if_false", default)]
         nsfw: bool,
+        #[serde(skip_serializing_if = "if_false", default)]
+        hide_title: bool,
         #[serde(skip_serializing_if = "Option::is_none")]
         password: Option<String>,
     },
@@ -138,6 +142,8 @@ pub enum Channel {
         /// Whether this channel is marked as not safe for work
         #[serde(skip_serializing_if = "if_false", default)]
         nsfw: bool,
+        #[serde(skip_serializing_if = "if_false", default)]
+        hide_title: bool,
         #[serde(skip_serializing_if = "Option::is_none")]
         password: Option<String>,
     },
@@ -158,6 +164,8 @@ pub struct PartialChannel {
     pub banner: Option<Vec<ChannelBanner>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nsfw: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hide_title: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub active: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]

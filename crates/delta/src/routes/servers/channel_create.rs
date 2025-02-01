@@ -37,6 +37,8 @@ pub struct DataCreateChannel {
     /// Whether this channel is age restricted
     #[serde(skip_serializing_if = "Option::is_none")]
     nsfw: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    hide_title: Option<bool>,
 }
 
 /// # Create Channel
@@ -75,6 +77,7 @@ pub async fn req(
         description,
         nsfw,
         channel_type,
+        hide_title,
     } = info;
     let channel = match channel_type {
         ChannelType::Text => Channel::TextChannel {
@@ -94,6 +97,7 @@ pub async fn req(
             password: None,
 
             nsfw: nsfw.unwrap_or(false),
+            hide_title: hide_title.unwrap_or(false),
         },
         ChannelType::Voice => Channel::VoiceChannel {
             id,
@@ -107,6 +111,7 @@ pub async fn req(
             role_permissions: HashMap::new(),
 
             nsfw: nsfw.unwrap_or(false),
+            hide_title: hide_title.unwrap_or(false),
             password: None,
         },
     };

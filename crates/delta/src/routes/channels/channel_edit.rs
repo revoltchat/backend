@@ -40,6 +40,8 @@ pub struct DataEditChannel {
     #[validate(length(min = 1))]
     remove: Option<Vec<FieldsChannel>>,
     password: Option<String>,
+    /// Whether this channels titles should show in listing
+    hide_title: Option<bool>,
 }
 
 /// # Edit Channel
@@ -68,6 +70,7 @@ pub async fn req(
         && data.icon.is_none()
         && data.banner.is_none()
         && data.nsfw.is_none()
+        && data.hide_title.is_none()
         && data.owner.is_none()
         && data.remove.is_none()
         && data.password.is_none()
@@ -118,6 +121,7 @@ pub async fn req(
             description,
             icon,
             nsfw,
+            hide_title,
             password,
             ..
         }
@@ -127,6 +131,7 @@ pub async fn req(
             description,
             icon,
             nsfw,
+            hide_title,
             password,
             ..
         }
@@ -136,6 +141,7 @@ pub async fn req(
             description,
             icon,
             nsfw,
+            hide_title,
             password,
             ..
         } => {
@@ -193,6 +199,11 @@ pub async fn req(
             if let Some(new_nsfw) = data.nsfw {
                 *nsfw = new_nsfw;
                 partial.nsfw = Some(new_nsfw);
+            }
+
+            if let Some(new_hide_title) = data.hide_title {
+                *hide_title = new_hide_title;
+                partial.hide_title = Some(new_hide_title);
             }
 
             if let Some(new_password) = data.password {
