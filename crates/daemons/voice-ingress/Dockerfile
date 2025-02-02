@@ -1,11 +1,11 @@
 # Build Stage
 FROM ghcr.io/revoltchat/base:latest AS builder
+FROM debian:12 AS debian
 
 # Bundle Stage
-FROM debian:bullseye-slim
-RUN apt-get update && \
-    apt-get install -y ca-certificates && \
-    apt-get clean
+FROM gcr.io/distroless/cc-debian12:nonroot
 COPY --from=builder /home/rust/src/target/release/revolt-voice-ingress ./
-EXPOSE 9000
+COPY --from=debian /usr/bin/uname /usr/bin/uname
+
+USER nonroot
 CMD ["./revolt-voice-ingress"]

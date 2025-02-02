@@ -1,7 +1,7 @@
 use std::env;
 
 
-use livekit_protocol::WebhookEvent;
+use livekit_protocol::{TrackType, WebhookEvent};
 use revolt_database::{
     events::client::EventV1, util::reference::Reference, Database, DatabaseInfo,
     voice::{create_voice_state, delete_voice_state, update_voice_state_tracks, VoiceClient}
@@ -84,6 +84,17 @@ async fn ingress(db: &State<Database>, voice_client: &State<VoiceClient>, body: 
             let channel = Reference::from_unchecked(channel_id.clone())
                 .as_channel(db)
                 .await?;
+
+            // remove the user if they try publish a video larger than 1080x720 or they publish data
+            if body.event == "track_published"
+                && (
+                    (track.r#type == TrackType::Video as i32 && (track.width > 1080 || track.height > 720))
+                    | (track.r#type == TrackType::Data as i32)
+                )
+            {
+                voice_client.remove_user(user_id, channel_id).await?;
+                delete_voice_state(channel_id, channel.server().as_deref(), user_id).await?;
+            }
 
             let partial = update_voice_state_tracks(
                 channel_id,

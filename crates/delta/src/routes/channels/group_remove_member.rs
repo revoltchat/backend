@@ -48,7 +48,7 @@ pub async fn remove_member(
     };
 
     if is_in_voice_channel(&user.id, channel.id()).await? {
-        voice_client.remove_user(&user, channel.id()).await?;
+        voice_client.remove_user(&user.id, channel.id()).await?;
         delete_voice_state(channel.id(), None, &user.id).await?;
     };
 

@@ -106,8 +106,8 @@ impl VoiceClient {
             .to_internal_error()
     }
 
-    pub async fn remove_user(&self, user: &User, channel_id: &str) -> Result<()> {
-        self.rooms.remove_participant(channel_id, &user.id)
+    pub async fn remove_user(&self, user_id: &str, channel_id: &str) -> Result<()> {
+        self.rooms.remove_participant(channel_id, user_id)
             .await
             .to_internal_error()
     }

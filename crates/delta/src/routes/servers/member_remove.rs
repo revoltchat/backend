@@ -43,7 +43,7 @@ pub async fn kick(
     }
 
     if let Some(channel_id) = get_user_voice_channel_in_server(&user.id, &server.id).await? {
-        voice_client.remove_user(&user, &channel_id).await?;
+        voice_client.remove_user(&user.id, &channel_id).await?;
         delete_voice_state(&channel_id, Some(&server.id), &user.id).await?;
     }
 
