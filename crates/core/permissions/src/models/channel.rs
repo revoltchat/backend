@@ -92,9 +92,9 @@ pub enum ChannelPermission {
 
     // * Channel permissions two electric boogaloo
     /// Mention everyone and online members
-    MentionEveryone = 1 << 36,
+    MentionEveryone = 1 << 37,
     /// Mention roles
-    MentionRoles = 1 << 37,
+    MentionRoles = 1 << 38,
 
     // * Misc. permissions
     // % Bits 38 to 52: free area
