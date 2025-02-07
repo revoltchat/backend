@@ -54,7 +54,7 @@ impl VoiceClient {
             .with_grants(VideoGrants {
                 room_join: true,
                 can_publish: true,
-                can_publish_sources: vec![], // allowed_sources.into_iter().map(ToString::to_string).collect(),
+                can_publish_sources: allowed_sources.into_iter().map(ToString::to_string).collect(),
                 can_subscribe: permissions.has_channel_permission(ChannelPermission::Listen),
                 room: channel.id().to_string(),
                 ..Default::default()

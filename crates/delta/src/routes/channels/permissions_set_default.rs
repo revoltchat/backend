@@ -76,7 +76,7 @@ pub async fn set_default_permissions(
     }
 
     let server = match channel.server() {
-        Some(server_id) => Some(Reference::from_unchecked(server_id).as_server(db).await?),
+        Some(server_id) => Some(Reference::from_unchecked(server_id.to_string()).as_server(db).await?),
         None => None
     };
 

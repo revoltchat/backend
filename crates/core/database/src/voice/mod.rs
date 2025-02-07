@@ -1,7 +1,7 @@
 
 use livekit_protocol::ParticipantPermission;
 use redis_kiss::{get_connection as _get_connection, Conn, redis::Pipeline, AsyncCommands};
-use crate::{events::client::EventV1, models::{Channel, User}, util::{permissions::DatabasePermissionQuery, reference::Reference}, Database, Role, Server};
+use crate::{events::client::EventV1, models::{Channel, User}, util::{permissions::DatabasePermissionQuery, reference::Reference}, Database, Server};
 use revolt_models::v0::{self, PartialUserVoiceState, UserVoiceState};
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission, PermissionValue};
 use revolt_result::{create_error, Result, ToRevoltError};

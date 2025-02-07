@@ -157,8 +157,8 @@ pub async fn edit(
         roles,
         timeout,
         remove,
-        mut can_publish,
-        mut can_receive,
+        can_publish,
+        can_receive,
         voice_channel,
     } = data;
 

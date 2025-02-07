@@ -50,7 +50,7 @@ async fn ingress(db: &State<Database>, voice_client: &State<VoiceClient>, body: 
                 .as_channel(db)
                 .await?;
 
-            let voice_state = create_voice_state(channel_id, channel.server().as_deref(), user_id).await?;
+            let voice_state = create_voice_state(channel_id, channel.server(), user_id).await?;
 
             EventV1::VoiceChannelJoin {
                 id: channel_id.clone(),
@@ -67,7 +67,7 @@ async fn ingress(db: &State<Database>, voice_client: &State<VoiceClient>, body: 
                 .as_channel(db)
                 .await?;
 
-            delete_voice_state(channel_id, channel.server().as_deref(), user_id).await?;
+            delete_voice_state(channel_id, channel.server(), user_id).await?;
 
             EventV1::VoiceChannelLeave {
                 id: channel_id.clone(),
@@ -93,12 +93,12 @@ async fn ingress(db: &State<Database>, voice_client: &State<VoiceClient>, body: 
                 )
             {
                 voice_client.remove_user(user_id, channel_id).await?;
-                delete_voice_state(channel_id, channel.server().as_deref(), user_id).await?;
+                delete_voice_state(channel_id, channel.server(), user_id).await?;
             }
 
             let partial = update_voice_state_tracks(
                 channel_id,
-                channel.server().as_deref(),
+                channel.server(),
                 user_id,
                 body.event == "track_published",  // to avoid duplicating this entire case twice
                 track.source

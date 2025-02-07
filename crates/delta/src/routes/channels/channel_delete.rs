@@ -55,7 +55,7 @@ pub async fn delete(
 
     for user_id in get_voice_channel_members(channel.id()).await? {
         voice_client.remove_user(&user_id, channel.id()).await?;
-        delete_voice_state(channel.id(), channel.server().as_deref(), &user.id).await?;
+        delete_voice_state(channel.id(), channel.server(), &user.id).await?;
     };
 
     Ok(EmptyResponse)

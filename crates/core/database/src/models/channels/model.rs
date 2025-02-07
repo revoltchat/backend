@@ -435,9 +435,9 @@ impl Channel {
     }
 
     /// Clone this channel's server id
-    pub fn server(&self) -> Option<String> {
+    pub fn server(&self) -> Option<&str> {
         match self {
-            Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => Some(server.clone()),
+            Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => Some(server),
             _ => None
         }
     }
