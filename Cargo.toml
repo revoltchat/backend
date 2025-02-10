@@ -18,5 +18,9 @@ redis23 = { package = "redis", version = "0.23.1", git = "https://github.com/rev
 # rocket_authifier = { package = "rocket_authifier", version = "1.0.8", path = "../authifier/crates/rocket_authifier" }
 # rocket = { git = "https://github.com/rwf2/Rocket/", rev = "4dcd928" }
 
-[profile.release]
-lto = true
+# I'm 99% sure this is overloading the GitHub worker
+# hence builds have been failing since, let's just
+# disable it for now. In the future, we could use this
+# if we were rolling our own CI.
+# [profile.release]
+# lto = true
