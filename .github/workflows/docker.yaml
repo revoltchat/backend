@@ -110,6 +110,10 @@ jobs:
               "pushd": {
                 "path": "crates/daemons/pushd",
                 "tag": "${{ github.repository_owner }}/pushd"
+              },
+              "crond": {
+                "path": "crates/daemons/crond",
+                "tag": "${{ github.repository_owner }}/crond"
               }
             }
           export_to: output
