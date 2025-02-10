@@ -6309,14 +6309,14 @@ dependencies = [
 
 [[package]]
 name = "revolt-crond"
-version = "0.7.19"
+version = "0.8.2"
 dependencies = [
  "log",
  "revolt-config",
  "revolt-database",
  "revolt-files",
  "revolt-result",
- "tokio 1.35.1",
+ "tokio 1.40.0",
 ]
 
 [[package]]
