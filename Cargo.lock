@@ -6210,7 +6210,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-autumn"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "axum",
  "axum-macros",
@@ -6247,7 +6247,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-bonfire"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "async-channel 2.3.1",
  "async-std",
@@ -6277,7 +6277,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-config"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "async-std",
  "cached",
@@ -6293,7 +6293,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-database"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "amqprs",
  "async-lock 2.8.0",
@@ -6345,7 +6345,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-delta"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "amqprs",
  "async-channel 1.9.0",
@@ -6394,7 +6394,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-files"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "aes-gcm",
  "aws-config",
@@ -6417,7 +6417,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-january"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "async-recursion",
  "axum",
@@ -6445,7 +6445,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-models"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "indexmap 1.9.3",
  "iso8601-timestamp 0.2.17",
@@ -6463,7 +6463,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-nodejs-bindings"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "async-std",
  "neon",
@@ -6476,7 +6476,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-permissions"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "async-std",
  "async-trait",
@@ -6491,7 +6491,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-presence"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "async-std",
  "log",
@@ -6502,7 +6502,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-pushd"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "amqprs",
  "async-trait",
@@ -6526,7 +6526,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-result"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "axum",
  "log",
