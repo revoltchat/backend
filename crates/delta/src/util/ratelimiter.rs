@@ -94,14 +94,28 @@ pub struct Ratelimiter {
 ///
 /// Optionally, include a resource id to hash against.
 fn resolve_bucket<'r>(request: &'r rocket::Request<'_>) -> (&'r str, Option<&'r str>) {
-    if let Some(segment) = request.routed_segment(0) {
-        let resource = request.routed_segment(1);
+    let (segment, resource, extra) = if matches!(request.routed_segment(0), Some("0.8")) {
+        (
+            request.routed_segment(1),
+            request.routed_segment(2),
+            request.routed_segment(3),
+        )
+    } else {
+        (
+            request.routed_segment(0),
+            request.routed_segment(1),
+            request.routed_segment(2),
+        )
+    };
+
+    if let Some(segment) = segment {
+        let resource = resource;
 
         let method = request.method();
         match (segment, resource, method) {
             ("users", target, Method::Patch) => ("user_edit", target),
             ("users", _, _) => {
-                if let Some("default_avatar") = request.routed_segment(2) {
+                if let Some("default_avatar") = extra {
                     return ("default_avatar", None);
                 }
 
@@ -110,7 +124,7 @@ fn resolve_bucket<'r>(request: &'r rocket::Request<'_>) -> (&'r str, Option<&'r 
             ("bots", _, _) => ("bots", None),
             ("channels", Some(id), _) => {
                 if request.method() == Method::Post {
-                    if let Some("messages") = request.routed_segment(2) {
+                    if let Some("messages") = extra {
                         return ("messaging", Some(id));
                     }
                 }
