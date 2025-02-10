@@ -1,5 +1,6 @@
 Rocket.toml
 Revolt.*.toml
+compose.override.yml
 
 target
 .data
