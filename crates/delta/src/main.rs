@@ -93,8 +93,12 @@ pub async fn web() -> Rocket<Build> {
         &config.rabbit.password,
     ))
     .await
-    .unwrap();
-    let channel = connection.open_channel(None).await.unwrap();
+    .expect("Failed to connect to RabbitMQ");
+
+    let channel = connection
+        .open_channel(None)
+        .await
+        .expect("Failed to open RabbitMQ channel");
 
     channel
         .exchange_declare(
