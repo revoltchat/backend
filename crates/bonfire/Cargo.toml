@@ -1,6 +1,6 @@
 [package]
 name = "revolt-bonfire"
-version = "0.7.19"
+version = "0.8.2"
 license = "AGPL-3.0-or-later"
 edition = "2021"
 
@@ -36,12 +36,12 @@ async-std = { version = "1.8.0", features = [
 ] }
 
 # core
-authifier = { version = "1.0.8" }
+authifier = { version = "1.0.9" }
 revolt-result = { path = "../core/result" }
 revolt-models = { path = "../core/models" }
 revolt-config = { path = "../core/config" }
 revolt-database = { path = "../core/database" }
-revolt-permissions = { version = "0.7.19", path = "../core/permissions" }
+revolt-permissions = { version = "0.8.2", path = "../core/permissions" }
 revolt-presence = { path = "../core/presence", features = ["redis-is-patched"] }
 
 # redis

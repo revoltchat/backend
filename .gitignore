@@ -1,5 +1,6 @@
 Rocket.toml
 Revolt.*.toml
+compose.override.yml
 
 target
 .data
@@ -7,3 +8,5 @@ target
 
 .vercel
 .DS_Store
+
+.idea

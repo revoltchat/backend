@@ -4,10 +4,13 @@
 [database]
 # MongoDB connection URL
 # Defaults to the container name specified in self-hosted
-mongodb = "mongodb://127.0.0.1:14017"
+mongodb = "mongodb://127.0.0.1:27017"
 # Redis connection URL
 # Defaults to the container name specified in self-hosted
-redis = "redis://127.0.0.1:14079/"
+redis = "redis://127.0.0.1:6379/"
+
+[rabbit]
+host = "127.0.0.1"
 
 [hosts]
 # Web locations of various services

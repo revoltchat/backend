@@ -1,6 +1,6 @@
 [package]
 name = "revolt-presence"
-version = "0.7.19"
+version = "0.8.2"
 edition = "2021"
 license = "AGPL-3.0-or-later"
 authors = ["Paul Makles <me@insrt.uk>"]

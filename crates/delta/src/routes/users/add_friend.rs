@@ -1,5 +1,5 @@
 use revolt_database::util::reference::Reference;
-use revolt_database::{Database, User};
+use revolt_database::{Database, User, AMQP};
 use revolt_models::v0;
 use revolt_result::{create_error, Result};
 use rocket::serde::json::Json;
@@ -12,6 +12,7 @@ use rocket::State;
 #[put("/<target>/friend")]
 pub async fn add(
     db: &State<Database>,
+    amqp: &State<AMQP>,
     mut user: User,
     target: Reference,
 ) -> Result<Json<v0::User>> {
@@ -21,6 +22,6 @@ pub async fn add(
         return Err(create_error!(IsBot));
     }
 
-    user.add_friend(db, &mut target).await?;
+    user.add_friend(db, amqp, &mut target).await?;
     Ok(Json(target.into(db, &user).await))
 }

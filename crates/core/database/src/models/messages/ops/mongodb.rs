@@ -95,7 +95,7 @@ impl AbstractMessages for MongoDb {
                         COL,
                         older_message_filter,
                         FindOptions::builder()
-                            .limit(limit / 2)
+                            .limit(limit / 2 + 1)
                             .sort(doc! {
                                 "_id": -1_i32
                             })
@@ -171,7 +171,7 @@ impl AbstractMessages for MongoDb {
         self.find_with_options(
             COL,
             doc! {
-                "ids": {
+                "_id": {
                     "$in": ids
                 }
             },

@@ -150,7 +150,7 @@ impl Member {
                 id: user.id.clone(),
             }
             .into_message(id.to_string())
-            .send_without_notifications(db, None, None, false, false)
+            .send_without_notifications(db, None, None, false, false, false)
             .await
             .ok();
         }
@@ -251,7 +251,7 @@ impl Member {
                 }
                 .into_message(id.to_string())
                 // TODO: support notifications here in the future?
-                .send_without_notifications(db, None, None, false, false)
+                .send_without_notifications(db, None, None, false, false, false)
                 .await
                 .ok();
             }

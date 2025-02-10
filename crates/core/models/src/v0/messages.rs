@@ -13,7 +13,7 @@ use rocket::{FromForm, FromFormField};
 
 use iso8601_timestamp::Timestamp;
 
-use super::{Embed, File, Member, MessageWebhook, User, Webhook, RE_COLOUR};
+use super::{Channel, Embed, File, Member, MessageWebhook, User, Webhook, RE_COLOUR};
 
 pub static RE_MENTION: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"<@([0-9A-HJKMNP-TV-Z]{26})>").unwrap());
@@ -209,6 +209,8 @@ auto_derived!(
         pub url: String,
         /// The message object itself, to send to clients for processing
         pub message: Message,
+        /// The channel object itself, for clients to process
+        pub channel: Channel,
     }
 
     /// Representation of a text embed before it is sent.
@@ -278,7 +280,7 @@ auto_derived!(
     pub struct OptionsQueryMessages {
         /// Maximum number of messages to fetch
         ///
-        /// For fetching nearby messages, this is \`(limit + 1)\`.
+        /// For fetching nearby messages, this is \`(limit + 2)\`.
         #[cfg_attr(feature = "validator", validate(range(min = 1, max = 100)))]
         pub limit: Option<i64>,
         /// Message id before which messages should be fetched
@@ -369,7 +371,7 @@ auto_derived!(
 
     /// Optional fields on message
     pub enum FieldsMessage {
-        Pinned
+        Pinned,
     }
 );
 
@@ -442,7 +444,7 @@ impl From<SystemMessage> for String {
 
 impl PushNotification {
     /// Create a new notification from a given message, author and channel ID
-    pub async fn from(msg: Message, author: Option<MessageAuthor<'_>>, channel_id: &str) -> Self {
+    pub async fn from(msg: Message, author: Option<MessageAuthor<'_>>, channel: Channel) -> Self {
         let config = config().await;
 
         let icon = if let Some(author) = &author {
@@ -496,10 +498,11 @@ impl PushNotification {
             icon,
             image,
             body,
-            tag: channel_id.to_string(),
+            tag: channel.id().to_string(),
             timestamp,
-            url: format!("{}/channel/{}/{}", config.hosts.app, channel_id, msg.id),
+            url: format!("{}/channel/{}/{}", config.hosts.app, channel.id(), msg.id),
             message: msg,
+            channel,
         }
     }
 }

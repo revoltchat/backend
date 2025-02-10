@@ -1,3 +1,9 @@
 [database]
 mongodb = "mongodb://localhost"
 redis = "redis://localhost/"
+
+[rabbit]
+host = "127.0.0.1"
+port = 5672
+username = "rabbituser"
+password = "rabbitpass"

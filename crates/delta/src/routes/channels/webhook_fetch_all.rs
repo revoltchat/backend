@@ -22,7 +22,7 @@ pub async fn fetch_webhooks(
     let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
     calculate_channel_permissions(&mut query)
         .await
-        .throw_if_lacking_channel_permission(ChannelPermission::ViewChannel)?;
+        .throw_if_lacking_channel_permission(ChannelPermission::ManageWebhooks)?;
 
     Ok(Json(
         db.fetch_webhooks_for_channel(channel.id())

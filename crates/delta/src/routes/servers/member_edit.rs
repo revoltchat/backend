@@ -15,12 +15,12 @@ use validator::Validate;
 ///
 /// Edit a member by their id.
 #[openapi(tag = "Server Members")]
-#[patch("/<server>/members/<target>", data = "<data>")]
+#[patch("/<server>/members/<member>", data = "<data>")]
 pub async fn edit(
     db: &State<Database>,
     user: User,
     server: Reference,
-    target: Reference,
+    member: Reference,
     data: Json<v0::DataMemberEdit>,
 ) -> Result<Json<v0::Member>> {
     let data = data.into_inner();
@@ -30,9 +30,9 @@ pub async fn edit(
         })
     })?;
 
-    // Fetch server and target member
+    // Fetch server and member
     let mut server = server.as_server(db).await?;
-    let mut member = target.as_member(db, &server.id).await?;
+    let mut member = member.as_member(db, &server.id).await?;
 
     // Fetch our currrent permissions
     let mut query = DatabasePermissionQuery::new(db, &user).server(&server);
@@ -84,6 +84,10 @@ pub async fn edit(
             .map(|x| x.contains(&v0::FieldsMember::Timeout))
             .unwrap_or_default()
     {
+        if data.timeout.is_some() && member.id.user == user.id {
+            return Err(create_error!(CannotTimeoutYourself));
+        }
+
         permissions.throw_if_lacking_channel_permission(ChannelPermission::TimeoutMembers)?;
     }
 

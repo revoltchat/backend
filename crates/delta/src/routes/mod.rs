@@ -61,6 +61,47 @@ pub fn mount(config: Settings, mut rocket: Rocket<Build>) -> Rocket<Build> {
         };
     }
 
+    if config.features.webhooks_enabled {
+        mount_endpoints_and_merged_docs! {
+            rocket, "/0.8".to_owned(), settings,
+            "/" => (vec![], custom_openapi_spec()),
+            "" => openapi_get_routes_spec![root::root],
+            "/users" => users::routes(),
+            "/bots" => bots::routes(),
+            "/channels" => channels::routes(),
+            "/servers" => servers::routes(),
+            "/invites" => invites::routes(),
+            "/custom" => customisation::routes(),
+            "/safety" => safety::routes(),
+            "/auth/account" => rocket_authifier::routes::account::routes(),
+            "/auth/session" => rocket_authifier::routes::session::routes(),
+            "/auth/mfa" => rocket_authifier::routes::mfa::routes(),
+            "/onboard" => onboard::routes(),
+            "/push" => push::routes(),
+            "/sync" => sync::routes(),
+            "/webhooks" => webhooks::routes()
+        };
+    } else {
+        mount_endpoints_and_merged_docs! {
+            rocket, "/0.8".to_owned(), settings,
+            "/" => (vec![], custom_openapi_spec()),
+            "" => openapi_get_routes_spec![root::root],
+            "/users" => users::routes(),
+            "/bots" => bots::routes(),
+            "/channels" => channels::routes(),
+            "/servers" => servers::routes(),
+            "/invites" => invites::routes(),
+            "/custom" => customisation::routes(),
+            "/safety" => safety::routes(),
+            "/auth/account" => rocket_authifier::routes::account::routes(),
+            "/auth/session" => rocket_authifier::routes::session::routes(),
+            "/auth/mfa" => rocket_authifier::routes::mfa::routes(),
+            "/onboard" => onboard::routes(),
+            "/push" => push::routes(),
+            "/sync" => sync::routes()
+        };
+    }
+
     rocket
 }
 
@@ -190,8 +231,13 @@ fn custom_openapi_spec() -> OpenApi {
                 ..Default::default()
             },
             Server {
-                url: "http://local.revolt.chat:8000".to_owned(),
+                url: "http://local.revolt.chat:14702".to_owned(),
                 description: Some("Local Revolt Environment".to_owned()),
+                ..Default::default()
+            },
+            Server {
+                url: "http://local.revolt.chat:14702/0.8".to_owned(),
+                description: Some("Local Revolt Environment (v0.8)".to_owned()),
                 ..Default::default()
             },
         ],

@@ -1,6 +1,6 @@
 [package]
 name = "revolt-database"
-version = "0.7.19"
+version = "0.8.2"
 edition = "2021"
 license = "AGPL-3.0-or-later"
 authors = ["Paul Makles <me@insrt.uk>"]
@@ -24,15 +24,15 @@ default = ["mongodb", "async-std-runtime", "tasks"]
 
 [dependencies]
 # Core
-revolt-config = { version = "0.7.19", path = "../config", features = [
+revolt-config = { version = "0.8.2", path = "../config", features = [
     "report-macros",
 ] }
-revolt-result = { version = "0.7.19", path = "../result" }
-revolt-models = { version = "0.7.19", path = "../models", features = [
+revolt-result = { version = "0.8.2", path = "../result" }
+revolt-models = { version = "0.8.2", path = "../models", features = [
     "validator",
 ] }
-revolt-presence = { version = "0.7.19", path = "../presence" }
-revolt-permissions = { version = "0.7.19", path = "../permissions", features = [
+revolt-presence = { version = "0.8.2", path = "../presence" }
+revolt-permissions = { version = "0.8.2", path = "../permissions", features = [
     "serde",
     "bson",
 ] }
@@ -84,11 +84,11 @@ axum = { version = "0.7.5", optional = true }
 
 # Rocket Impl
 schemars = { version = "0.8.8", optional = true }
-rocket = { version = "0.5.0-rc.2", default-features = false, features = [
+rocket = { version = "0.5.1", default-features = false, features = [
     "json",
 ], optional = true }
 revolt_okapi = { version = "0.9.1", optional = true }
-revolt_rocket_okapi = { version = "0.9.1", optional = true }
+revolt_rocket_okapi = { version = "0.10.0", optional = true }
 
 # Notifications
 fcm_v1 = "0.3.0"
@@ -96,4 +96,7 @@ web-push = "0.10.0"
 revolt_a2 = { version = "0.10", default-features = false, features = ["ring"] }
 
 # Authifier
-authifier = { version = "1.0.8" }
+authifier = { version = "1.0.9", features = ["rocket_impl"] }
+
+# RabbitMQ
+amqprs = { version = "1.7.0" }

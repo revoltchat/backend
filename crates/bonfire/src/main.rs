@@ -19,7 +19,10 @@ async fn main() {
     database::connect().await;
 
     // Clean up the current region information.
-    clear_region(None).await;
+    let no_clear_region = env::var("NO_CLEAR_PRESENCE").unwrap_or_else(|_| "0".into()) == "1";
+    if !no_clear_region {
+        clear_region(None).await;
+    }
 
     // Setup a TCP listener to accept WebSocket connections on.
     // By default, we bind to port 14703 on all interfaces.

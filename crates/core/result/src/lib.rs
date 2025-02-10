@@ -116,6 +116,7 @@ pub enum ErrorType {
         max: usize,
     },
     AlreadyInServer,
+    CannotTimeoutYourself,
 
     // ? Bot related errors
     ReachedMaximumBots,
@@ -186,23 +187,6 @@ macro_rules! create_database_error {
             operation: $operation.to_string(),
             collection: $collection.to_string()
         })
-    };
-}
-
-#[macro_export]
-#[cfg(debug_assertions)]
-macro_rules! query {
-    ( $self: ident, $type: ident, $collection: expr, $($rest:expr),+ ) => {
-        Ok($self.$type($collection, $($rest),+).await.unwrap())
-    };
-}
-
-#[macro_export]
-#[cfg(not(debug_assertions))]
-macro_rules! query {
-    ( $self: ident, $type: ident, $collection: expr, $($rest:expr),+ ) => {
-        $self.$type($collection, $($rest),+).await
-            .map_err(|_| create_database_error!(stringify!($type), $collection))
     };
 }
 

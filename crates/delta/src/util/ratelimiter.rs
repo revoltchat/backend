@@ -94,14 +94,28 @@ pub struct Ratelimiter {
 ///
 /// Optionally, include a resource id to hash against.
 fn resolve_bucket<'r>(request: &'r rocket::Request<'_>) -> (&'r str, Option<&'r str>) {
-    if let Some(segment) = request.routed_segment(0) {
-        let resource = request.routed_segment(1);
+    let (segment, resource, extra) = if matches!(request.routed_segment(0), Some("0.8")) {
+        (
+            request.routed_segment(1),
+            request.routed_segment(2),
+            request.routed_segment(3),
+        )
+    } else {
+        (
+            request.routed_segment(0),
+            request.routed_segment(1),
+            request.routed_segment(2),
+        )
+    };
+
+    if let Some(segment) = segment {
+        let resource = resource;
 
         let method = request.method();
         match (segment, resource, method) {
             ("users", target, Method::Patch) => ("user_edit", target),
             ("users", _, _) => {
-                if let Some("default_avatar") = request.routed_segment(2) {
+                if let Some("default_avatar") = extra {
                     return ("default_avatar", None);
                 }
 
@@ -110,7 +124,7 @@ fn resolve_bucket<'r>(request: &'r rocket::Request<'_>) -> (&'r str, Option<&'r 
             ("bots", _, _) => ("bots", None),
             ("channels", Some(id), _) => {
                 if request.method() == Method::Post {
-                    if let Some("messages") = request.routed_segment(2) {
+                    if let Some("messages") = extra {
                         return ("messaging", Some(id));
                     }
                 }
@@ -235,7 +249,7 @@ impl<'r> FromRequest<'r> for Ratelimiter {
 
         match ratelimiter {
             Ok(ratelimiter) => Outcome::Success(*ratelimiter),
-            Err(ratelimiter) => Outcome::Failure((Status::TooManyRequests, *ratelimiter)),
+            Err(ratelimiter) => Outcome::Error((Status::TooManyRequests, *ratelimiter)),
         }
     }
 }
@@ -264,7 +278,7 @@ impl Fairing for RatelimitFairing {
 
     async fn on_request(&self, request: &mut Request<'_>, _: &mut Data<'_>) {
         use rocket::outcome::Outcome;
-        if let Outcome::Failure(_) = request.guard::<Ratelimiter>().await {
+        if let Outcome::Error(_) = request.guard::<Ratelimiter>().await {
             info!(
                 "User rate-limited on route {}! (IP = {:?})",
                 request.uri(),
@@ -278,7 +292,7 @@ impl Fairing for RatelimitFairing {
 
     async fn on_response<'r>(&self, request: &'r Request<'_>, response: &mut Response<'r>) {
         let guard = request.guard::<Ratelimiter>().await;
-        let (Outcome::Success(ratelimiter) | Outcome::Failure((_, ratelimiter))) = guard else {
+        let (Outcome::Success(ratelimiter) | Outcome::Error((_, ratelimiter))) = guard else {
             unreachable!()
         };
         let Ratelimiter {
@@ -293,7 +307,7 @@ impl Fairing for RatelimitFairing {
         response.set_raw_header("X-RateLimit-Remaining", remaining.to_string());
         response.set_raw_header("X-RateLimit-Reset-After", reset.to_string());
 
-        if guard.is_failure() {
+        if guard.is_error() {
             response.set_status(Status::TooManyRequests);
         }
     }
@@ -313,7 +327,7 @@ impl<'r> FromRequest<'r> for RatelimitInformation {
     async fn from_request(request: &'r rocket::Request<'_>) -> Outcome<Self, Self::Error> {
         let info = match request.guard::<Ratelimiter>().await {
             Outcome::Success(ratelimiter) => RatelimitInformation::Success(ratelimiter),
-            Outcome::Failure((_, ratelimiter)) => RatelimitInformation::Failure {
+            Outcome::Error((_, ratelimiter)) => RatelimitInformation::Failure {
                 retry_after: ratelimiter.reset,
             },
             _ => unreachable!(),

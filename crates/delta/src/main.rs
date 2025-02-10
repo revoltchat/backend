@@ -10,12 +10,17 @@ pub mod util;
 
 use revolt_config::config;
 use revolt_database::events::client::EventV1;
+use revolt_database::AMQP;
 use rocket::{Build, Rocket};
 use rocket_cors::{AllowedOrigins, CorsOptions};
 use rocket_prometheus::PrometheusMetrics;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 
+use amqprs::{
+    channel::ExchangeDeclareArguments,
+    connection::{Connection, OpenConnectionArguments},
+};
 use async_std::channel::unbounded;
 use authifier::AuthifierEvent;
 use rocket::data::ToByteUnit;
@@ -32,7 +37,7 @@ pub async fn web() -> Rocket<Build> {
     db.migrate_database().await.unwrap();
 
     // Setup Authifier event channel
-    let (sender, receiver) = unbounded();
+    let (_, receiver) = unbounded();
 
     // Setup Authifier
     let authifier = db.clone().to_authifier().await;
@@ -53,9 +58,6 @@ pub async fn web() -> Rocket<Build> {
         }
     });
 
-    // Launch background task workers
-    revolt_database::tasks::start_workers(db.clone(), authifier.database.clone());
-
     // Configure CORS
     let cors = CorsOptions {
         allowed_origins: AllowedOrigins::All,
@@ -73,11 +75,48 @@ pub async fn web() -> Rocket<Build> {
     // Configure Swagger
     let swagger = revolt_rocket_okapi::swagger_ui::make_swagger_ui(
         &revolt_rocket_okapi::swagger_ui::SwaggerUIConfig {
-            url: "../openapi.json".to_owned(),
+            url: "/openapi.json".to_owned(),
             ..Default::default()
         },
     )
     .into();
+
+    let swagger_0_8 = revolt_rocket_okapi::swagger_ui::make_swagger_ui(
+        &revolt_rocket_okapi::swagger_ui::SwaggerUIConfig {
+            url: "/0.8/openapi.json".to_owned(),
+            ..Default::default()
+        },
+    )
+    .into();
+
+    // Configure Rabbit
+    let connection = Connection::open(&OpenConnectionArguments::new(
+        &config.rabbit.host,
+        config.rabbit.port,
+        &config.rabbit.username,
+        &config.rabbit.password,
+    ))
+    .await
+    .expect("Failed to connect to RabbitMQ");
+
+    let channel = connection
+        .open_channel(None)
+        .await
+        .expect("Failed to open RabbitMQ channel");
+
+    channel
+        .exchange_declare(
+            ExchangeDeclareArguments::new(&config.pushd.exchange, "direct")
+                .durable(true)
+                .finish(),
+        )
+        .await
+        .expect("Failed to declare exchange");
+
+    let amqp = AMQP::new(connection, channel);
+
+    // Launch background task workers
+    revolt_database::tasks::start_workers(db.clone(), amqp.clone());
 
     // Configure Rocket
     let rocket = rocket::build();
@@ -89,8 +128,10 @@ pub async fn web() -> Rocket<Build> {
         .mount("/", rocket_cors::catch_all_options_routes())
         .mount("/", util::ratelimiter::routes())
         .mount("/swagger/", swagger)
+        .mount("/0.8/swagger/", swagger_0_8)
         .manage(authifier)
         .manage(db)
+        .manage(amqp)
         .manage(cors.clone())
         .attach(util::ratelimiter::RatelimitFairing)
         .attach(cors)
