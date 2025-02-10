@@ -42,6 +42,7 @@ impl IntoResponse for Error {
             ErrorType::InvalidRole => StatusCode::NOT_FOUND,
             ErrorType::Banned => StatusCode::FORBIDDEN,
             ErrorType::AlreadyInServer => StatusCode::CONFLICT,
+            ErrorType::CannotTimeoutYourself => StatusCode::BAD_REQUEST,
 
             ErrorType::TooManyServers { .. } => StatusCode::BAD_REQUEST,
             ErrorType::TooManyEmbeds { .. } => StatusCode::BAD_REQUEST,
