@@ -32,6 +32,51 @@ impl AbstractAttachments for MongoDb {
         .ok_or_else(|| create_error!(NotFound))
     }
 
+    /// Fetch all deleted attachments.
+    async fn fetch_deleted_attachments(&self) -> Result<Vec<File>> {
+        query!(
+            self,
+            find,
+            COL,
+            doc! {
+                "deleted": true,
+                "reported": {
+                    "$ne": true
+                }
+            }
+        )
+    }
+
+    /// Fetch all dangling attachments.
+    async fn fetch_dangling_files(&self) -> Result<Vec<File>> {
+        query!(
+            self,
+            find,
+            COL,
+            doc! {
+                "used_for.type": {
+                    "$exists": 0
+                },
+                "deleted": {
+                    "$ne": true
+                }
+            }
+        )
+    }
+
+    /// Count references to a given hash.
+    async fn count_file_hash_references(&self, hash: &str) -> Result<usize> {
+        query!(
+            self,
+            count_documents,
+            COL,
+            doc! {
+                "hash": hash
+            }
+        )
+        .map(|count| count as usize)
+    }
+
     /// Find an attachment by its details and mark it as used by a given parent.
     async fn find_and_use_attachment(
         &self,
@@ -114,7 +159,7 @@ impl AbstractAttachments for MongoDb {
     /// Mark multiple attachments as having been deleted.
     async fn mark_attachments_as_deleted(&self, ids: &[String]) -> Result<()> {
         self.col::<Document>(COL)
-            .update_one(
+            .update_many(
                 doc! {
                     "_id": {
                         "$in": ids
@@ -129,7 +174,12 @@ impl AbstractAttachments for MongoDb {
             )
             .await
             .map(|_| ())
-            .map_err(|_| create_database_error!("update_one", COL))
+            .map_err(|_| create_database_error!("update_many", COL))
+    }
+
+    /// Delete the attachment entry.
+    async fn delete_attachment(&self, id: &str) -> Result<()> {
+        query!(self, delete_one_by_id, COL, id).map(|_| ())
     }
 }
 

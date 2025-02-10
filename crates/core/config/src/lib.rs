@@ -324,6 +324,7 @@ pub struct Sentry {
     pub events: String,
     pub files: String,
     pub proxy: String,
+    pub crond: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
