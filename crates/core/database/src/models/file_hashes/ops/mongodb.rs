@@ -47,4 +47,9 @@ impl AbstractAttachmentHashes for MongoDb {
             .map(|_| ())
             .map_err(|_| create_database_error!("update_one", COL))
     }
+
+    /// Delete attachment hash by id.
+    async fn delete_attachment_hash(&self, id: &str) -> Result<()> {
+        query!(self, delete_one_by_id, COL, id).map(|_| ())
+    }
 }

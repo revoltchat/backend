@@ -7,11 +7,15 @@ members = [
     "crates/core/*",
     "crates/services/*",
     "crates/bindings/*",
-    "crates/daemons/pushd",
+    "crates/daemons/*",
 ]
 
 [patch.crates-io]
 redis23 = { package = "redis", version = "0.23.3", git = "https://github.com/revoltchat/redis-rs", rev = "523b2937367e17bd0073722bf6e23d06042cb4e4" }
 
-[profile.release]
-lto = true
+# I'm 99% sure this is overloading the GitHub worker
+# hence builds have been failing since, let's just
+# disable it for now. In the future, we could use this
+# if we were rolling our own CI.
+# [profile.release]
+# lto = true

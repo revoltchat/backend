@@ -33,6 +33,41 @@ impl AbstractAttachments for ReferenceDb {
         }
     }
 
+    /// Fetch all deleted attachments.
+    async fn fetch_deleted_attachments(&self) -> Result<Vec<File>> {
+        let files = self.files.lock().await;
+        Ok(files
+            .values()
+            .filter(|file| {
+                // file has been marked as deleted
+                file.deleted.is_some_and(|v| v)
+                    // and it has not been reported
+                    && !file.reported.is_some_and(|v| v)
+            })
+            .cloned()
+            .collect())
+    }
+
+    /// Fetch all dangling attachments.
+    async fn fetch_dangling_files(&self) -> Result<Vec<File>> {
+        let files = self.files.lock().await;
+        Ok(files
+            .values()
+            .filter(|file| file.used_for.is_none() && !file.deleted.is_some_and(|v| v))
+            .cloned()
+            .collect())
+    }
+
+    /// Count references to a given hash.
+    async fn count_file_hash_references(&self, hash: &str) -> Result<usize> {
+        let files = self.files.lock().await;
+        Ok(files
+            .values()
+            .filter(|file| file.hash.as_ref().is_some_and(|h| h == hash))
+            .cloned()
+            .count())
+    }
+
     /// Find an attachment by its details and mark it as used by a given parent.
     async fn find_and_use_attachment(
         &self,
@@ -95,5 +130,15 @@ impl AbstractAttachments for ReferenceDb {
         }
 
         Ok(())
+    }
+
+    /// Delete the attachment entry.
+    async fn delete_attachment(&self, id: &str) -> Result<()> {
+        let mut files = self.files.lock().await;
+        if files.remove(id).is_some() {
+            Ok(())
+        } else {
+            Err(create_error!(NotFound))
+        }
     }
 }

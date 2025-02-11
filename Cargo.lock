@@ -2463,9 +2463,15 @@ dependencies = [
 
 [[package]]
 name = "futures"
+<<<<<<< HEAD
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "65bc07b1a8bc7c85c5f2e110c476c7389b4554ba72af57d8445ea63a576b0876"
+=======
+version = "0.3.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "645c6916888f6cb6350d2550b80fb63e734897a8498abe35cfb732b6487804b0"
+>>>>>>> origin/main
 dependencies = [
  "futures-channel",
  "futures-core",
@@ -2494,9 +2500,15 @@ checksum = "05f29059c0c2090612e8d742178b0580d2dc940c837851ad723096f87af6663e"
 
 [[package]]
 name = "futures-executor"
+<<<<<<< HEAD
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e28d1d997f585e54aebc3f97d39e72338912123a67330d723fdbb564d646c9f"
+=======
+version = "0.3.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a576fc72ae164fca6b9db127eaa9a9dda0d61316034f33a0a0d4eda41f02b01d"
+>>>>>>> origin/main
 dependencies = [
  "futures-core",
  "futures-task",
@@ -5943,7 +5955,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-autumn"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "axum",
  "axum-macros",
@@ -5980,7 +5992,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-bonfire"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "async-channel 2.3.1",
  "async-std",
@@ -6010,7 +6022,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-config"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "async-std",
  "cached",
@@ -6025,8 +6037,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "revolt-crond"
+version = "0.8.2"
+dependencies = [
+ "log",
+ "revolt-config",
+ "revolt-database",
+ "revolt-files",
+ "revolt-result",
+ "tokio 1.40.0",
+]
+
+[[package]]
 name = "revolt-database"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "amqprs",
  "async-lock 2.8.0",
@@ -6075,7 +6099,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-delta"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "amqprs",
  "async-channel 1.9.0",
@@ -6122,7 +6146,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-files"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "aes-gcm",
  "aws-config",
@@ -6145,7 +6169,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-january"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "async-recursion",
  "axum",
@@ -6173,7 +6197,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-models"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "indexmap 1.9.3",
  "iso8601-timestamp 0.2.17",
@@ -6192,7 +6216,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-nodejs-bindings"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "async-std",
  "neon",
@@ -6205,7 +6229,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-permissions"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "async-std",
  "async-trait",
@@ -6220,7 +6244,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-presence"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "async-std",
  "log",
@@ -6231,7 +6255,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-pushd"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "amqprs",
  "async-trait",
@@ -6257,7 +6281,7 @@ dependencies = [
 
 [[package]]
 name = "revolt-result"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "axum",
  "revolt_okapi",

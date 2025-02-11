@@ -26,6 +26,7 @@ The services and libraries that power the Revolt service.<br/>
 | `services/january` | [crates/services/january](crates/services/january) | Proxy server                             | ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)                                                                                                                                                                                                                                |
 | `services/autumn`  | [crates/services/autumn](crates/services/autumn)   | File server                              | ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)                                                                                                                                                                                                                                |
 | `bindings/node`    | [crates/bindings/node](crates/bindings/node)       | Node.js bindings for the Revolt software | ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)                                                                                                                                                                                                                                |
+| `daemons/crond`    | [crates/daemons/crond](crates/daemons/crond)       | Timed data clean up daemon server        | ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)                                                                                                                                                                                                                                |
 | `daemons/pushd`    | [crates/daemons/pushd](crates/daemons/pushd)       | Push notification daemon server          | ![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)                                                                                                                                                                                                                                |
 
 </div>
@@ -61,7 +62,7 @@ As a heads-up, the development environment uses the following ports:
 | MinIO                     |     14009      |
 | Maildev                   | 14025<br>14080 |
 | Revolt Web App            |     14701      |
-| RabbitMQ                  |  5672<br>15672 |
+| RabbitMQ                  | 5672<br>15672  |
 | `crates/delta`            |     14702      |
 | `crates/bonfire`          |     14703      |
 | `crates/services/autumn`  |     14704      |
@@ -89,6 +90,38 @@ If you'd like to change anything, create a `Revolt.overrides.toml` file and spec
 > events = "https://abc@your.sentry/1"
 > files = "https://abc@your.sentry/1"
 > proxy = "https://abc@your.sentry/1"
+> ```
+
+> [!TIP]
+> If you have port conflicts on common services, you can try the following:
+>
+> ```yaml
+> # compose.override.yml
+> services:
+>   redis:
+>     ports: !override
+>       - "14079:6379"
+>
+>   database:
+>     ports: !override
+>       - "14017:27017"
+>
+>   rabbit:
+>     ports: !override
+>       - "14072:5672"
+>       - "14672:15672"
+> ```
+>
+> And corresponding Revolt configuration:
+>
+> ```toml
+> # Revolt.overrides.toml
+> [database]
+> mongodb = "mongodb://127.0.0.1:14017"
+> redis = "redis://127.0.0.1:14079/"
+>
+> [rabbit]
+> port = 14072
 > ```
 
 Then continue:

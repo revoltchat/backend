@@ -25,6 +25,8 @@ docker build -t ghcr.io/revoltchat/server:$TAG - < crates/delta/Dockerfile
 docker build -t ghcr.io/revoltchat/bonfire:$TAG - < crates/bonfire/Dockerfile
 docker build -t ghcr.io/revoltchat/autumn:$TAG - < crates/services/autumn/Dockerfile
 docker build -t ghcr.io/revoltchat/january:$TAG - < crates/services/january/Dockerfile
+docker build -t ghcr.io/revoltchat/crond:$TAG - < crates/daemons/crond/Dockerfile
+docker build -t ghcr.io/revoltchat/pushd:$TAG - < crates/daemons/pushd/Dockerfile
 
 if [ "$DEBUG" = "true" ]; then
   git restore Cargo.toml
@@ -34,3 +36,5 @@ docker push ghcr.io/revoltchat/server:$TAG
 docker push ghcr.io/revoltchat/bonfire:$TAG
 docker push ghcr.io/revoltchat/autumn:$TAG
 docker push ghcr.io/revoltchat/january:$TAG
+docker push ghcr.io/revoltchat/crond:$TAG
+docker push ghcr.io/revoltchat/pushd:$TAG

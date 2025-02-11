@@ -285,7 +285,7 @@ auto_derived!(
     pub struct OptionsQueryMessages {
         /// Maximum number of messages to fetch
         ///
-        /// For fetching nearby messages, this is \`(limit + 1)\`.
+        /// For fetching nearby messages, this is \`(limit + 2)\`.
         #[cfg_attr(feature = "validator", validate(range(min = 1, max = 100)))]
         pub limit: Option<i64>,
         /// Message id before which messages should be fetched

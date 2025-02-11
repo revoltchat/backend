@@ -113,6 +113,23 @@ pub async fn upload_to_s3(bucket_id: &str, path: &str, buf: &[u8]) -> Result<Str
     Ok(BASE64_STANDARD.encode(nonce))
 }
 
+/// Delete a file from S3 by path
+pub async fn delete_from_s3(bucket_id: &str, path: &str) -> Result<()> {
+    let config = config().await;
+    let client = create_client(config.files.s3);
+
+    report_internal_error!(
+        client
+            .delete_object()
+            .bucket(bucket_id)
+            .key(path)
+            .send()
+            .await
+    )?;
+
+    Ok(())
+}
+
 /// Determine size of image at temp file
 pub fn image_size(f: &NamedTempFile) -> Option<(usize, usize)> {
     if let Ok(size) = imagesize::size(f.path())

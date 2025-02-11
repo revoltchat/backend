@@ -34,12 +34,14 @@ deps() {
     crates/core/result/src \
     crates/services/autumn/src \
     crates/services/january/src \
+    crates/daemons/crond/src \
     crates/daemons/pushd/src
   echo 'fn main() { panic!("stub"); }' |
     tee crates/bonfire/src/main.rs |
     tee crates/delta/src/main.rs |
     tee crates/services/autumn/src/main.rs |
     tee crates/services/january/src/main.rs |
+    tee crates/daemons/crond/src/main.rs |
     tee crates/daemons/pushd/src/main.rs
   echo '' |
     tee crates/bindings/node/src/lib.rs |
@@ -62,6 +64,7 @@ apps() {
   touch -am \
     crates/bonfire/src/main.rs \
     crates/delta/src/main.rs \
+    crates/daemons/crond/src/main.rs \
     crates/daemons/pushd/src/main.rs \
     crates/core/config/src/lib.rs \
     crates/core/database/src/lib.rs \

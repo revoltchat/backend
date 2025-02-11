@@ -116,6 +116,7 @@ pub enum ErrorType {
         max: usize,
     },
     AlreadyInServer,
+    CannotTimeoutYourself,
 
     // ? Bot related errors
     ReachedMaximumBots,
