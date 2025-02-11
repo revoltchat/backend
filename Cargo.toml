@@ -12,8 +12,6 @@ members = [
 
 [patch.crates-io]
 redis23 = { package = "redis", version = "0.23.3", git = "https://github.com/revoltchat/redis-rs", rev = "523b2937367e17bd0073722bf6e23d06042cb4e4" }
-authifier = { package = "authifier", version = "1.0.10", path = "../authifier/crates/authifier" }
-rocket_authifier = { package = "rocket_authifier", version = "1.0.10", path = "../authifier/crates/rocket_authifier" }
 
 [profile.release]
 lto = true
