@@ -17,6 +17,7 @@ mod servers;
 mod sync;
 mod users;
 mod webhooks;
+mod trips;
 
 pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
     let settings = OpenApiSettings::default();
@@ -40,7 +41,8 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
             "/onboard" => onboard::routes(),
             "/push" => push::routes(),
             "/sync" => sync::routes(),
-            "/webhooks" => webhooks::routes()
+            "/webhooks" => webhooks::routes(),
+            "/trips" => trips::routes()
         };
     } else {
         mount_endpoints_and_merged_docs! {
@@ -62,7 +64,8 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
             "/onboard" => onboard::routes(),
             "/push" => push::routes(),
             "/sync" => sync::routes(),
-            "/webhooks" => webhooks::routes()
+            "/webhooks" => webhooks::routes(),
+            "/trips" => trips::routes()
         };
     }
 

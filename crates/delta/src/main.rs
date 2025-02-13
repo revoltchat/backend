@@ -16,6 +16,7 @@ use revolt_quark::authifier::{Authifier, AuthifierEvent};
 use revolt_quark::events::client::EventV1;
 use revolt_quark::DatabaseInfo;
 use rocket::data::ToByteUnit;
+use revolt_database::{Database, MongoDb};
 
 #[launch]
 async fn rocket() -> _ {
@@ -25,9 +26,12 @@ async fn rocket() -> _ {
     // Ensure environment variables are present
     revolt_quark::variables::delta::preflight_checks();
 
-    // Setup database
-    let db = revolt_database::DatabaseInfo::Auto.connect().await.unwrap();
-    db.migrate_database().await.unwrap();
+    // --- Setup MongoDb using the public re-export ---
+    // Note the change: we use `revolt_database::MongoDb::init(...)` instead of referencing the private drivers module.
+    let mongodb = MongoDb::init("mongodb://localhost:27017").await;
+    mongodb.migrate_database().await.unwrap();
+    
+    let database = Database::MongoDb(mongodb);
 
     // Legacy database setup from quark
     let legacy_db = DatabaseInfo::Auto.connect().await.unwrap();
@@ -75,7 +79,7 @@ async fn rocket() -> _ {
         .mount("/", revolt_quark::web::ratelimiter::routes())
         .mount("/swagger/", revolt_quark::web::swagger::routes())
         .manage(authifier)
-        .manage(db)
+        .manage(database)    // Register the MongoDb instance
         .manage(legacy_db)
         .manage(cors.clone())
         .attach(revolt_quark::web::ratelimiter::RatelimitFairing)

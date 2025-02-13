@@ -1,4 +1,4 @@
-mod mongodb;
+pub mod mongodb;
 mod reference;
 
 pub use self::mongodb::*;

@@ -65,3 +65,6 @@ rocket = { version = "0.5.0-rc.2", default-features = false, features = ["json"]
 
 # Authifier
 authifier = { version = "1.0" }
+
+chrono = { version = "0.4", features = ["serde"] }
+
