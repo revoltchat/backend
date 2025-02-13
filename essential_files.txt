@@ -1,0 +1,669 @@
+
+================================================================================
+FILE: crates/bonfire/src/main.rs
+================================================================================
+
+use std::env;
+
+use async_std::net::TcpListener;
+use revolt_presence::clear_region;
+
+#[macro_use]
+extern crate log;
+
+pub mod config;
+
+mod database;
+mod websocket;
+
+#[async_std::main]
+async fn main() {
+    // Configure requirements for Bonfire.
+    revolt_quark::configure!();
+    database::connect().await;
+
+    // Clean up the current region information.
+    clear_region(None).await;
+
+    // Setup a TCP listener to accept WebSocket connections on.
+    // By default, we bind to port 9000 on all interfaces.
+    let bind = env::var("HOST").unwrap_or_else(|_| "0.0.0.0:9000".into());
+    info!("Listening on host {bind}");
+    let try_socket = TcpListener::bind(bind).await;
+    let listener = try_socket.expect("Failed to bind");
+
+    // Start accepting new connections and spawn a client for each connection.
+    while let Ok((stream, addr)) = listener.accept().await {
+        websocket::spawn_client(database::get_db(), stream, addr);
+    }
+}
+
+
+
+================================================================================
+FILE: crates/bonfire/src/config.rs
+================================================================================
+
+use async_tungstenite::tungstenite::{handshake, Message};
+use futures::channel::oneshot::Sender;
+use revolt_quark::{Error, Result};
+use serde::{Deserialize, Serialize};
+
+/// Enumeration of supported protocol formats
+#[derive(Debug)]
+pub enum ProtocolFormat {
+    Json,
+    Msgpack,
+}
+
+/// User-provided protocol configuration
+#[derive(Debug)]
+pub struct ProtocolConfiguration {
+    protocol_version: i32,
+    format: ProtocolFormat,
+    session_token: Option<String>,
+}
+
+impl ProtocolConfiguration {
+    /// Create a new protocol configuration object from provided data
+    pub fn from(
+        protocol_version: i32,
+        format: ProtocolFormat,
+        session_token: Option<String>,
+    ) -> Self {
+        Self {
+            protocol_version,
+            format,
+            session_token,
+        }
+    }
+
+    /// Decode some WebSocket message into a T: Deserialize using the client's specified protocol format
+    pub fn decode<'a, T: Deserialize<'a>>(&self, msg: &'a Message) -> Result<T> {
+        match self.format {
+            ProtocolFormat::Json => {
+                if let Message::Text(text) = msg {
+                    serde_json::from_str(text).map_err(|_| Error::InternalError)
+                } else {
+                    Err(Error::InternalError)
+                }
+            }
+            ProtocolFormat::Msgpack => {
+                if let Message::Binary(buf) = msg {
+                    rmp_serde::from_slice(buf).map_err(|_| Error::InternalError)
+                } else {
+                    Err(Error::InternalError)
+                }
+            }
+        }
+    }
+
+    /// Encode T: Serialize into a WebSocket message using the client's specified protocol format
+    pub fn encode<T: Serialize>(&self, data: &T) -> Message {
+        match self.format {
+            ProtocolFormat::Json => {
+                Message::Text(serde_json::to_string(data).expect("Failed to serialise (as json)."))
+            }
+            ProtocolFormat::Msgpack => Message::Binary(
+                rmp_serde::to_vec_named(data).expect("Failed to serialise (as msgpack)."),
+            ),
+        }
+    }
+
+    /// Set the current session token
+    pub fn set_session_token(&mut self, token: String) {
+        self.session_token.replace(token);
+    }
+
+    /// Get the current session token
+    pub fn get_session_token(&self) -> &Option<String> {
+        &self.session_token
+    }
+
+    /// Get the protocol version specified
+    pub fn get_protocol_version(&self) -> i32 {
+        self.protocol_version
+    }
+
+    /// Get the protocol format specified
+    pub fn get_protocol_format(&self) -> &ProtocolFormat {
+        &self.format
+    }
+}
+
+/// Object holding one side of a channel for receiving the parsed information
+pub struct WebsocketHandshakeCallback {
+    sender: Sender<ProtocolConfiguration>,
+}
+
+impl WebsocketHandshakeCallback {
+    /// Create a callback using a given sender
+    pub fn from(sender: Sender<ProtocolConfiguration>) -> Self {
+        Self { sender }
+    }
+}
+
+impl handshake::server::Callback for WebsocketHandshakeCallback {
+    /// Handle request to create a new WebSocket connection
+    fn on_request(
+        self,
+        request: &handshake::server::Request,
+        response: handshake::server::Response,
+    ) -> Result<handshake::server::Response, handshake::server::ErrorResponse> {
+        // Take and parse query parameters from the URI.
+        let query = request.uri().query().unwrap_or_default();
+        let params = querystring::querify(query);
+
+        // Set default values for the protocol.
+        let mut protocol_version = 1;
+        let mut format = ProtocolFormat::Json;
+        let mut session_token = None;
+
+        // Parse and map parameters from key-value to known variables.
+        for (key, value) in params {
+            match key {
+                "version" => {
+                    if let Ok(version) = value.parse() {
+                        protocol_version = version;
+                    }
+                }
+                "format" => match value {
+                    "json" => format = ProtocolFormat::Json,
+                    "msgpack" => format = ProtocolFormat::Msgpack,
+                    _ => {}
+                },
+                "token" => session_token = Some(value.into()),
+                _ => {}
+            }
+        }
+
+        // Send configuration information back from this callback.
+        // We have to use a channel as this function does not borrow mutably.
+        if self
+            .sender
+            .send(ProtocolConfiguration {
+                protocol_version,
+                format,
+                session_token,
+            })
+            .is_ok()
+        {
+            Ok(response)
+        } else {
+            Err(handshake::server::ErrorResponse::new(None))
+        }
+    }
+}
+
+
+
+================================================================================
+FILE: crates/bonfire/src/database.rs
+================================================================================
+
+use once_cell::sync::OnceCell;
+use revolt_quark::{Database, DatabaseInfo};
+
+static DBCONN: OnceCell<Database> = OnceCell::new();
+
+/// Connect Bonfire to the database.
+pub async fn connect() {
+    let database = DatabaseInfo::Auto
+        .connect()
+        .await
+        .expect("Failed to connect to the database.");
+
+    DBCONN.set(database).expect("Setting `Database`");
+}
+
+/// Get a reference to the current database.
+pub fn get_db() -> &'static Database {
+    DBCONN.get().expect("Valid `Database`")
+}
+
+
+
+================================================================================
+FILE: crates\delta\src\util\mod.rs
+================================================================================
+
+pub mod regex;
+
+
+
+================================================================================
+FILE: crates\delta\src\util\regex.rs
+================================================================================
+
+use once_cell::sync::Lazy;
+use regex::Regex;
+
+/// Regex for valid display names
+///
+/// Block zero width space
+/// Block newline and carriage return
+pub static RE_DISPLAY_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[^\u200B\n\r]+$").unwrap());
+
+/// Regex for valid usernames
+///
+/// Block zero width space
+/// Block lookalike characters
+pub static RE_USERNAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\p{L}|[\d_.-])+$").unwrap());
+
+/// Regex for valid emoji names
+///
+/// Alphanumeric and underscores
+pub static RE_EMOJI: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[a-z0-9_]+$").unwrap());
+
+
+
+================================================================================
+FILE: .env
+================================================================================
+
+# MongoDB URI
+MONGODB=mongodb://localhost
+
+# URL to where the Revolt app is publicly accessible
+REVOLT_APP_URL=http://local.revolt.chat:5000
+
+# URL to where the API is publicly accessible
+REVOLT_PUBLIC_URL=http://local.revolt.chat:8000
+VITE_API_URL=http://local.revolt.chat:8000
+
+# URL to where the WebSocket server is publicly accessible
+REVOLT_EXTERNAL_WS_URL=ws://local.revolt.chat:9000
+
+# URL to where Autumn is publicly available
+AUTUMN_PUBLIC_URL=http://local.revolt.chat:3000
+
+# URL to where January is publicly available
+JANUARY_PUBLIC_URL=http://local.revolt.chat:7000
+
+# URL to where Vortex is publicly available
+# VOSO_PUBLIC_URL=https://voso.revolt.chat
+
+
+##
+## hCaptcha Settings
+##
+
+# If you are sure that you don't want to use hCaptcha, set to 1.
+REVOLT_UNSAFE_NO_CAPTCHA=1
+
+# hCaptcha API key
+# REVOLT_HCAPTCHA_KEY=0x0000000000000000000000000000000000000000
+
+# hCaptcha site key
+# REVOLT_HCAPTCHA_SITEKEY=10000000-ffff-ffff-ffff-000000000001
+
+
+##
+## Email Settings
+##
+
+# If you are sure that you don't want to use email verification, set to 1.
+REVOLT_UNSAFE_NO_EMAIL=1
+
+# SMTP host
+# REVOLT_SMTP_HOST=smtp.example.com
+
+# SMTP username
+# REVOLT_SMTP_USERNAME=noreply@example.com
+
+# SMTP password
+# REVOLT_SMTP_PASSWORD=CHANGEME
+
+# SMTP From header
+# REVOLT_SMTP_FROM=Revolt <noreply@example.com>
+
+
+##
+## Application Settings
+##
+
+# Whether to enable staging only features
+REVOLT_IS_STAGING=1
+
+# Whether to only allow users to sign up if they have an invite code
+REVOLT_INVITE_ONLY=0
+
+# Maximum number of people that can be in a group chat
+REVOLT_MAX_GROUP_SIZE=150
+
+# VAPID keys for push notifications
+# Generate using this guide: https://gitlab.insrt.uk/revolt/delta/-/wikis/vapid
+# --> Please replace these keys before going into production! <--
+REVOLT_VAPID_PRIVATE_KEY=LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUJSUWpyTWxLRnBiVWhsUHpUbERvcEliYk1yeVNrNXpKYzVYVzIxSjJDS3hvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFWnkrQkg2TGJQZ2hEa3pEempXOG0rUXVPM3pCajRXT1phdkR6ZU00c0pqbmFwd1psTFE0WAp1ZDh2TzVodU94QWhMQlU3WWRldVovWHlBdFpWZmNyQi9BPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=
+REVOLT_VAPID_PUBLIC_KEY=BGcvgR-i2z4IQ5Mw841vJvkLjt8wY-FjmWrw83jOLCY52qcGZS0OF7nfLzuYbjsQISwVO2HXrmf18gLWVX3Kwfw=
+
+
+##
+## Vortex configuration
+##
+
+# VOSO_MANAGE_TOKEN=CHANGEME
+
+MINIO_ROOT_USER=minioadmin
+MINIO_ROOT_PASSWORD=minioadmin123
+
+
+
+================================================================================
+FILE: .env.example
+================================================================================
+
+# MongoDB URI
+MONGODB=mongodb://localhost
+
+# URL to where the Revolt app is publicly accessible
+REVOLT_APP_URL=http://local.revolt.chat:5000
+
+# URL to where the API is publicly accessible
+REVOLT_PUBLIC_URL=http://local.revolt.chat:8000
+VITE_API_URL=http://local.revolt.chat:8000
+
+# URL to where the WebSocket server is publicly accessible
+REVOLT_EXTERNAL_WS_URL=ws://local.revolt.chat:9000
+
+# URL to where Autumn is publicly available
+AUTUMN_PUBLIC_URL=http://local.revolt.chat:3000
+
+# URL to where January is publicly available
+JANUARY_PUBLIC_URL=http://local.revolt.chat:7000
+
+# URL to where Vortex is publicly available
+# VOSO_PUBLIC_URL=https://voso.revolt.chat
+
+
+##
+## hCaptcha Settings
+##
+
+# If you are sure that you don't want to use hCaptcha, set to 1.
+REVOLT_UNSAFE_NO_CAPTCHA=1
+
+# hCaptcha API key
+# REVOLT_HCAPTCHA_KEY=0x0000000000000000000000000000000000000000
+
+# hCaptcha site key
+# REVOLT_HCAPTCHA_SITEKEY=10000000-ffff-ffff-ffff-000000000001
+
+
+##
+## Email Settings
+##
+
+# If you are sure that you don't want to use email verification, set to 1.
+REVOLT_UNSAFE_NO_EMAIL=1
+
+# SMTP host
+# REVOLT_SMTP_HOST=smtp.example.com
+
+# SMTP username
+# REVOLT_SMTP_USERNAME=noreply@example.com
+
+# SMTP password
+# REVOLT_SMTP_PASSWORD=CHANGEME
+
+# SMTP From header
+# REVOLT_SMTP_FROM=Revolt <noreply@example.com>
+
+
+##
+## Application Settings
+##
+
+# Whether to enable staging only features
+REVOLT_IS_STAGING=1
+
+# Whether to only allow users to sign up if they have an invite code
+REVOLT_INVITE_ONLY=0
+
+# Maximum number of people that can be in a group chat
+REVOLT_MAX_GROUP_SIZE=150
+
+# VAPID keys for push notifications
+# Generate using this guide: https://gitlab.insrt.uk/revolt/delta/-/wikis/vapid
+# --> Please replace these keys before going into production! <--
+REVOLT_VAPID_PRIVATE_KEY=LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUJSUWpyTWxLRnBiVWhsUHpUbERvcEliYk1yeVNrNXpKYzVYVzIxSjJDS3hvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFWnkrQkg2TGJQZ2hEa3pEempXOG0rUXVPM3pCajRXT1phdkR6ZU00c0pqbmFwd1psTFE0WAp1ZDh2TzVodU94QWhMQlU3WWRldVovWHlBdFpWZmNyQi9BPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=
+REVOLT_VAPID_PUBLIC_KEY=BGcvgR-i2z4IQ5Mw841vJvkLjt8wY-FjmWrw83jOLCY52qcGZS0OF7nfLzuYbjsQISwVO2HXrmf18gLWVX3Kwfw=
+
+
+##
+## Vortex configuration
+##
+
+# VOSO_MANAGE_TOKEN=CHANGEME
+
+
+
+================================================================================
+FILE: Cargo.toml
+================================================================================
+
+[workspace]
+members = ["crates/delta", "crates/bonfire", "crates/quark", "crates/core/*"]
+
+[patch.crates-io]
+# mobc-redis = { git = "https://github.com/insertish/mobc", rev = "8b880bb59f2ba80b4c7bc40c649c113d8857a186" }
+redis = { git = "https://github.com/insertish/redis-rs", rev = "1a41faf356fd21aebba71cea7eb7eb2653e5f0ef" }
+
+
+
+================================================================================
+FILE: crates/bonfire/Cargo.toml
+================================================================================
+
+[package]
+name = "revolt-bonfire"
+version = "0.6.5"
+license = "AGPL-3.0-or-later"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# util
+log = "*"
+once_cell = "1.9.0"
+
+# parsing
+querystring = "1.1.0"
+
+# quark
+revolt-quark = { path = "../quark" }
+
+# serde
+serde_json = "1.0.79"
+rmp-serde = "1.0.0"
+serde = "1.0.136"
+
+# async
+futures = "0.3.21"
+async-tungstenite = { version = "0.17.0", features = ["async-std-runtime"] }
+async-std = { version = "1.8.0", features = ["tokio1", "tokio02", "attributes"] }
+
+# core
+revolt-presence = { path = "../core/presence", features = [ "redis-is-patched" ] }
+
+
+
+================================================================================
+FILE: crates/delta/Cargo.toml
+================================================================================
+
+[package]
+name = "revolt-delta"
+version = "0.6.5"
+license = "AGPL-3.0-or-later"
+authors = ["Paul Makles <paulmakles@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# Utility
+lru = "0.7.0"
+url = "2.2.2"
+log = "0.4.11"
+dotenv = "0.15.0"
+dashmap = "5.2.0"
+linkify = "0.6.0"
+once_cell = "1.17.1"
+env_logger = "0.7.1"
+rand = "0.8.4"
+
+# Lang. Utilities
+regex = "1"
+num_enum = "0.5.1"
+impl_ops = "0.1.1"
+bitfield = "0.13.2"
+
+# ID / key generation
+ulid = "0.4.1"
+nanoid = "0.4.0"
+
+# serde
+serde_json = "1.0.57"
+serde = { version = "1.0.115", features = ["derive"] }
+validator = { version = "0.16", features = ["derive"] }
+
+# async
+futures = "0.3.8"
+chrono = "0.4.15"
+async-channel = "1.6.1"
+reqwest = { version = "0.11.4", features = ["json"] }
+async-std = { version = "1.8.0", features = ["tokio1", "tokio02", "attributes"] }
+
+# internal util
+lettre = "0.10.0-alpha.4"
+
+# web
+rocket = { version = "0.5.0-rc.2", default-features = false, features = ["json"] }
+rocket_empty = { version = "0.1.1", features = ["schema"] }
+rocket_authifier = { version = "1.0.7" }
+rocket_prometheus = "0.10.0-rc.3"
+
+# spec generation
+schemars = "0.8.8"
+revolt_rocket_okapi = { version = "0.9.1", features = [ "swagger" ] }
+
+# quark
+revolt-quark = { path = "../quark" }
+
+# core
+revolt-database = { path = "../core/database", features = [ "rocket-impl", "redis-is-patched" ] }
+revolt-models = { path = "../core/models", features = [ "schemas", "validator" ] }
+revolt-result = { path = "../core/result", features = [ "rocket", "okapi" ] }
+revolt-permissions = { path = "../core/permissions", features = [ "schemas" ] }
+
+[build-dependencies]
+vergen = "7.5.0"
+
+
+
+================================================================================
+FILE: crates/quark/Cargo.toml
+================================================================================
+
+[package]
+name = "revolt-quark"
+version = "0.6.5"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+mongo = [ "mongodb" ]
+rocket_impl = [
+    "rocket",
+    "rocket_empty",
+    "rocket_cors",
+
+    "lru",
+    "dashmap",
+
+    "authifier/database-mongodb",
+    "authifier/rocket_impl",
+    "authifier/okapi_impl"
+]
+
+test = [ "async-std", "mongo", "mongodb/async-std-runtime", "rocket_impl" ]
+default = [ "test" ]
+
+[dependencies]
+# Serialisation
+revolt_optional_struct = "0.2.0"
+serde = { version = "1", features = ["derive"] }
+validator = { version = "0.16", features = ["derive"] }
+iso8601-timestamp = { version = "0.1.8", features = ["schema", "bson"] }
+
+# Formats
+bincode = "1.3.3"
+serde_json = "1.0.78"
+bson = { version = "2.1.0", features = ["chrono-0_4"] }
+
+# Spec Generation
+schemars = "0.8.8"
+revolt_okapi = "0.9.1"
+revolt_rocket_okapi = { version = "0.9.1", features = [ "swagger" ] }
+
+# Databases
+redis-kiss = { version = "0.1.4" }
+mongodb = { optional = true, version = "2.1.0", default-features = false }
+
+# Async
+futures = "0.3.19"
+deadqueue = "0.2.1"
+async-trait = "0.1.51"
+async-recursion = "1.0.0"
+async-std = { version = "1.8.0", features = ["attributes"], optional = true }
+
+# Logging
+log = "0.4.14"
+pretty_env_logger = "0.4.0"
+
+# Util
+rand = "0.8.5"
+ulid = "0.5.0"
+regex = "1.5.5"
+nanoid = "0.4.0"
+linkify = "0.8.1"
+dotenv = "0.15.0"
+indexmap = "1.9.1"
+decancer = "1.6.2"
+impl_ops = "0.1.1"
+num_enum = "0.5.6"
+reqwest = "0.11.10"
+bitfield = "0.13.2"
+once_cell = "1.17.1"
+async-lock = "2.6.0"
+
+lru = { version = "0.7.6", optional = true }
+dashmap = { version = "5.2.0", optional = true }
+
+# Web Push
+base64 = "0.13.0"
+web-push = "0.7.2"
+
+# Implementations
+rocket_http = { optional = true, version = "0.5.0-rc.2" }
+rocket = { optional = true, version = "0.5.0-rc.2", default-features = false, features = ["json"] }
+rocket_empty = { version = "0.1.1", optional = true, features = [ "schema" ] }
+rocket_cors = { optional = true, git = "https://github.com/lawliet89/rocket_cors", rev = "c17e8145baa4790319fdb6a473e465b960f55e7c" }
+
+# Authifier
+authifier = { version = "1.0.7", features = [ "async-std-runtime" ] }
+
+# Sentry
+sentry = "0.25.0"
+
+# Core
+revolt-result = { path = "../core/result", features = [ "serde", "schemas" ] }
+revolt-presence = { path = "../core/presence", features = [ "redis-is-patched" ] }
+revolt-database = { path = "../core/database" }
+revolt-models = { path = "../core/models" }
+
+
