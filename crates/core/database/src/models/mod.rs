@@ -10,6 +10,8 @@ mod servers;
 mod user_settings;
 mod user_white_list;
 mod users;
+pub mod trips;
+
 
 pub use admin_migrations::*;
 pub use bots::*;

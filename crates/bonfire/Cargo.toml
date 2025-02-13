@@ -16,6 +16,7 @@ querystring = "1.1.0"
 
 # quark
 revolt-quark = { path = "../quark" }
+schemars = "0.8.8"
 
 # serde
 serde_json = "1.0.79"
