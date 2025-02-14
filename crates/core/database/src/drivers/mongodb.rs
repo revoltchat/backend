@@ -230,7 +230,7 @@ impl MongoDb {
 
     pub async fn init(uri: &str) -> Self {
         // Use "revolt_db" as the default database name. Adjust if needed.
-        Self::new(uri, "revolt_db").await
+        Self::new(uri, "revolt").await
     }
 
     /// Perform any necessary database migrations.
