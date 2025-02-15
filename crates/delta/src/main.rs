@@ -17,6 +17,7 @@ use revolt_quark::events::client::EventV1;
 use revolt_quark::DatabaseInfo;
 use rocket::data::ToByteUnit;
 use revolt_database::{Database, MongoDb};
+use std::env;
 
 #[launch]
 async fn rocket() -> _ {
@@ -28,7 +29,8 @@ async fn rocket() -> _ {
 
     // --- Setup MongoDb using the public re-export ---
     // Note the change: we use `revolt_database::MongoDb::init(...)` instead of referencing the private drivers module.
-    let mongodb = MongoDb::init("mongodb://localhost:27017").await;
+    let mongodb_uri = env::var("MONGODB").unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
+    let mongodb = MongoDb::init(&mongodb_uri).await;
     mongodb.migrate_database().await.unwrap();
     
     let database = Database::MongoDb(mongodb);
