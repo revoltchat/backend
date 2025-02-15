@@ -8,6 +8,7 @@ mod admin;
 mod bots;
 mod channels;
 mod customisation;
+mod events;
 mod invites;
 mod onboard;
 mod push;
@@ -15,9 +16,9 @@ mod root;
 mod safety;
 mod servers;
 mod sync;
+mod trips;
 mod users;
 mod webhooks;
-mod trips;
 
 pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
     let settings = OpenApiSettings::default();
@@ -42,7 +43,8 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
             "/push" => push::routes(),
             "/sync" => sync::routes(),
             "/webhooks" => webhooks::routes(),
-            "/trips" => trips::routes()
+            "/trips" => trips::routes(),
+            "/events" => events::routes(),
         };
     } else {
         mount_endpoints_and_merged_docs! {
@@ -65,7 +67,8 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
             "/push" => push::routes(),
             "/sync" => sync::routes(),
             "/webhooks" => webhooks::routes(),
-            "/trips" => trips::routes()
+            "/trips" => trips::routes(),
+            "/events" => events::routes(),
         };
     }
 

@@ -33,6 +33,9 @@ pub mod safety {
     pub mod report;
     pub mod snapshot;
 }
+pub mod events {
+    pub mod event;
+}
 
 #[derive(Debug, Clone)]
 pub struct DummyDb;

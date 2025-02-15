@@ -32,6 +32,10 @@ mod safety {
     pub mod snapshot;
 }
 
+mod events {
+    pub mod event;
+}
+
 pub use admin::stats::AbstractStats;
 
 pub use media::attachment::AbstractAttachment;
@@ -54,6 +58,7 @@ pub use users::user_white_list::AbstractUserWhiteList;
 pub use safety::report::AbstractReport;
 pub use safety::snapshot::AbstractSnapshot;
 
+pub use events::event::AbstractEvents;
 pub trait AbstractDatabase:
     Sync
     + Send
@@ -73,5 +78,6 @@ pub trait AbstractDatabase:
     + AbstractReport
     + AbstractSnapshot
     + AbstractUserWhiteList
+    + AbstractEvents
 {
 }

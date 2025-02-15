@@ -2,21 +2,22 @@ mod admin_migrations;
 mod bots;
 mod channel_webhooks;
 mod channels;
+mod events;
 mod files;
 mod ratelimit_events;
 mod safety_strikes;
 mod server_members;
 mod servers;
+pub mod trips;
 mod user_settings;
 mod user_white_list;
 mod users;
-pub mod trips;
-
 
 pub use admin_migrations::*;
 pub use bots::*;
 pub use channel_webhooks::*;
 pub use channels::*;
+pub use events::*;
 pub use files::*;
 pub use ratelimit_events::*;
 pub use safety_strikes::*;
