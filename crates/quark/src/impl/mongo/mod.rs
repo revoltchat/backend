@@ -45,6 +45,10 @@ pub mod safety {
     pub mod snapshot;
 }
 
+pub mod events {
+    pub mod event;
+}
+
 #[derive(Debug, Clone)]
 pub struct MongoDb(pub mongodb::Client);
 

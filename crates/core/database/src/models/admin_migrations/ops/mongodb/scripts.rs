@@ -994,6 +994,35 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             .expect("Failed to create ratelimit_events index.");
     }
 
+    if revision <= 26 {
+        info!("Running migration [revision 26 / 15-06-2023]: Add collection `events` and index.");
+
+        db.db()
+            .create_collection("events", None)
+            .await
+            .expect("Failed to create events collection.");
+
+        db.db()
+            .run_command(
+                doc! {
+                    "createIndexes": "events",
+                    "indexes": [
+                        {
+                            "key": {
+                                "start_date": 1,
+                                "end_date": 1,
+                                "event_type": 1
+                            },
+                            "name": "event_dates"
+                        }
+                    ]
+                },
+                None,
+            )
+            .await
+            .expect("Failed to create events index.");
+    }
+
     // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.
 
     // Reminder to update LATEST_REVISION when adding new migrations.

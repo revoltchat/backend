@@ -4,6 +4,9 @@ mod reference;
 pub use self::mongodb::*;
 pub use self::reference::*;
 
+use async_trait::async_trait;
+use revolt_result::Result;
+
 /// Database information to use to create a client
 pub enum DatabaseInfo {
     /// Auto-detect the database in use

@@ -32,8 +32,13 @@ mod safety {
     pub mod snapshot;
 }
 
+mod events {
+    pub mod event;
+}
+
 pub use admin::*;
 pub use channels::*;
+pub use events::*;
 pub use media::*;
 pub use safety::*;
 pub use servers::*;

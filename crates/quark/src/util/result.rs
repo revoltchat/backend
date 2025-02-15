@@ -11,7 +11,6 @@ use std::io::Cursor;
 use validator::ValidationErrors;
 
 use crate::{Permission, UserPermission};
-
 /// Possible API Errors
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
 #[serde(tag = "type")]
@@ -118,6 +117,10 @@ pub enum Error {
         #[serde(skip_serializing, skip_deserializing)]
         error: ValidationErrors,
     },
+    InvalidRequest {
+        code: String,
+        errors: Vec<String>,
+    },
 }
 
 impl Error {
@@ -222,6 +225,7 @@ impl<'r> Responder<'r, 'static> for Error {
             Error::NotFound => Status::NotFound,
             Error::NoEffect => Status::Ok,
             Error::FailedValidation { .. } => Status::BadRequest,
+            Error::InvalidRequest { .. } => Status::BadRequest,
         };
 
         // Serialize the error data structure into JSON.

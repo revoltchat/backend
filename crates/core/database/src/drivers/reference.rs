@@ -3,8 +3,8 @@ use std::{collections::HashMap, sync::Arc};
 use futures::lock::Mutex;
 
 use crate::{
-    AccountStrike, Bot, Channel, File, Member, MemberCompositeKey, Server, User, UserSettings,
-    UserWhiteList, Webhook,
+    AccountStrike, Bot, Channel, Event, File, Member, MemberCompositeKey, Server, User,
+    UserSettings, UserWhiteList, Webhook,
 };
 
 database_derived!(
@@ -28,5 +28,6 @@ database_derived!(
         pub channels: Arc<Mutex<HashMap<String, Channel>>>,
         pub channel_invites: Arc<Mutex<HashMap<String, ()>>>,
         pub channel_unreads: Arc<Mutex<HashMap<String, ()>>>,
+        pub events: Arc<Mutex<HashMap<String, Event>>>,
     }
 );

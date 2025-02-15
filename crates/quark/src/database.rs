@@ -3,6 +3,7 @@ use std::ops::Deref;
 
 use crate::r#impl::{DummyDb, MongoDb};
 use crate::AbstractDatabase;
+use revolt_database::{Event, EventQuery, FieldsEvent, PartialEvent};
 
 /// Database information to use to create a client
 pub enum DatabaseInfo {
