@@ -1,3 +1,4 @@
+use revolt_config::config;
 use revolt_models::v0;
 use revolt_database::{util::{permissions::perms, reference::Reference}, voice::{raise_if_in_voice, VoiceClient}, Channel, Database, SystemMessage, User, AMQP};
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
@@ -11,9 +12,10 @@ use rocket::{serde::json::Json, State};
 #[openapi(tag = "Voice")]
 #[post("/<target>/join_call", data="<data>")]
 pub async fn call(db: &State<Database>, amqp: &State<AMQP>, voice: &State<VoiceClient>, user: User, target: Reference, data: Json<v0::DataJoinCall>) -> Result<Json<v0::CreateVoiceUserResponse>> {
-    if !voice.rooms.contains_key(&data.node) {
-        return Err(create_error!(UnknownNode))
-    }
+    let config = config().await;
+
+    let node_host = config.hosts.livekit.get(&data.node)
+        .ok_or_else(|| create_error!(UnknownNode))?;
 
     let channel = target.as_channel(db).await?;
 
@@ -50,5 +52,5 @@ pub async fn call(db: &State<Database>, amqp: &State<AMQP>, voice: &State<VoiceC
         _ => {}
     };
 
-    Ok(Json(v0::CreateVoiceUserResponse { token }))
+    Ok(Json(v0::CreateVoiceUserResponse { token, url: node_host.clone() }))
 }

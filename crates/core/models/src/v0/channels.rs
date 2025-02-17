@@ -309,6 +309,8 @@ auto_derived!(
     pub struct CreateVoiceUserResponse {
         /// Token for authenticating with the voice server
         pub token: String,
+        /// Url of the livekit server to connect to
+        pub url: String
     }
 
     /// Voice state for a channel
