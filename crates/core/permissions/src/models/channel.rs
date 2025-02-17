@@ -128,6 +128,7 @@ pub static DEFAULT_PERMISSION: Lazy<u64> = Lazy::new(|| {
             + ChannelPermission::Connect
             + ChannelPermission::Speak
             + ChannelPermission::Listen
+            + ChannelPermission::Video
     )
 });
 

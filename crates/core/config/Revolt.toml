@@ -17,9 +17,10 @@ api = "http://local.revolt.chat/api"
 events = "ws://local.revolt.chat/ws"
 autumn = "http://local.revolt.chat/autumn"
 january = "http://local.revolt.chat/january"
-livekit = "ws://local.revolt.chat/livekit"
 voso_legacy = ""
 voso_legacy_ws = ""
+
+[hosts.livekit]
 
 [rabbit]
 host = "rabbit"
@@ -64,13 +65,8 @@ hcaptcha_sitekey = ""
 max_concurrent_connections = 50
 
 [api.livekit]
-# Livekit server url
-url = "ws://local.revolt.chat/livekit"
-# Livekit security key name
-key = ""
-# Livekit security secret value
-secret = ""
 
+[api.livekit.nodes]
 
 [pushd]
 # this changes the names of the queues to not overlap 

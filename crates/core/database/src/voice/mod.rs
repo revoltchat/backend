@@ -35,6 +35,24 @@ pub async fn raise_if_in_voice(user: &User, target: &str) -> Result<()> {
     }
 }
 
+pub async fn set_channel_node(channel: &str, node: &str) -> Result<()> {
+    get_connection()
+        .await?
+        .set(format!("node:{channel}"), node)
+        .await
+        .to_internal_error()?;
+
+    Ok(())
+}
+
+pub async fn get_channel_node(channel: &str) -> Result<String> {
+    get_connection()
+        .await?
+        .get(format!("node:{channel}"))
+        .await
+        .to_internal_error()
+}
+
 pub async fn get_user_voice_channels(user_id: &str) -> Result<Vec<String>> {
     get_connection()
         .await?
@@ -207,10 +225,10 @@ pub async fn update_voice_state(
     Ok(())
 }
 
-pub async fn get_voice_channel_members(channel_id: &str) -> Result<Vec<String>> {
+pub async fn get_voice_channel_members(channel_id: &str) -> Result<Option<Vec<String>>> {
     get_connection()
         .await?
-        .smembers::<_, Vec<String>>(format!("vc_members:{}", channel_id))
+        .smembers(format!("vc_members:{}", channel_id))
         .await
         .to_internal_error()
 }
@@ -255,8 +273,9 @@ pub async fn get_channel_voice_state(channel: &Channel) -> Result<Option<v0::Cha
         _ => None
     };
 
-    if !members.is_empty() {
+    if let Some(members) = members {
         let mut participants = Vec::with_capacity(members.len());
+        let node = get_channel_node(channel.id()).await?;
 
         for user_id in members {
             if let Some(voice_state) = get_voice_state(channel.id(), server, &user_id).await? {
@@ -271,6 +290,7 @@ pub async fn get_channel_voice_state(channel: &Channel) -> Result<Option<v0::Cha
         Ok(Some(v0::ChannelVoiceState {
             id: channel.id().to_string(),
             participants,
+            node
         }))
     } else {
         Ok(None)
@@ -292,17 +312,18 @@ pub async fn move_user(user: &str, from: &str, to: &str) -> Result<()> {
 }
 
 pub async fn sync_voice_permissions(db: &Database, voice_client: &VoiceClient, channel: &Channel, server: Option<&Server>, role_id: Option<&str>) -> Result<()> {
+    let node = get_channel_node(channel.id()).await?;
 
-    for user_id in get_voice_channel_members(channel.id()).await? {
+    for user_id in get_voice_channel_members(channel.id()).await?.iter().flatten() {
         let user = Reference::from_unchecked(user_id.clone()).as_user(db).await?;
 
-        sync_user_voice_permissions(db, voice_client, &user, channel, server, role_id).await?;
+        sync_user_voice_permissions(db, voice_client, &node, &user, channel, server, role_id).await?;
     };
 
     Ok(())
 }
 
-pub async fn sync_user_voice_permissions(db: &Database, voice_client: &VoiceClient, user: &User, channel: &Channel, server: Option<&Server>, role_id: Option<&str>) -> Result<()> {
+pub async fn sync_user_voice_permissions(db: &Database, voice_client: &VoiceClient, node: &str, user: &User, channel: &Channel, server: Option<&Server>, role_id: Option<&str>) -> Result<()> {
     let channel_id = channel.id();
     let server_id: Option<&str> = server.as_ref().map(|s| s.id.as_str());
 
@@ -315,7 +336,8 @@ pub async fn sync_user_voice_permissions(db: &Database, voice_client: &VoiceClie
         let voice_state = get_voice_state(channel_id, server_id, &user.id).await?.unwrap();
 
         let mut query = DatabasePermissionQuery::new(db, user)
-            .channel(channel);
+            .channel(channel)
+            .user(user);
 
         if let (Some(server), Some(member)) = (server, member.as_ref()) {
                 query = query.member(member).server(server)
@@ -340,7 +362,7 @@ pub async fn sync_user_voice_permissions(db: &Database, voice_client: &VoiceClie
 
         update_voice_state(channel_id, server_id, &user.id, &update_event).await?;
 
-        voice_client.update_permissions(user, channel_id, ParticipantPermission {
+        voice_client.update_permissions(node, user, channel_id, ParticipantPermission {
             can_subscribe: can_listen,
             can_publish: can_speak,
             can_publish_data: can_speak,

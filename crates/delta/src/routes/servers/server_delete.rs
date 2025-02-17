@@ -1,6 +1,6 @@
 use revolt_database::{
     util::reference::Reference,
-    voice::{delete_voice_state, get_user_voice_channel_in_server, VoiceClient},
+    voice::{delete_voice_state, get_channel_node, get_user_voice_channel_in_server, get_voice_channel_members, VoiceClient},
     Database, RemovalIntention, User,
 };
 use revolt_models::v0;
@@ -26,15 +26,22 @@ pub async fn delete(
 
     if server.owner == user.id {
         for channel_id in &server.channels {
-            voice_client.remove_user(&user.id, channel_id).await?;
-            delete_voice_state(channel_id, Some(&server.id), &user.id).await?;
+            if let Some(users) = get_voice_channel_members(channel_id).await? {
+                let node = get_channel_node(channel_id).await?;
+
+                for user in users {
+                    voice_client.remove_user(&node, &user, channel_id).await?;
+                    delete_voice_state(channel_id, Some(&server.id), &user).await?;
+                }
+            }
         }
 
         server.delete(db).await
     } else {
         if let Some(channel_id) = get_user_voice_channel_in_server(&user.id, &server.id).await? {
             if server.channels.iter().any(|c| c == &channel_id) {
-                voice_client.remove_user(&user.id, &channel_id).await?;
+                let node = get_channel_node(&channel_id).await?;
+                voice_client.remove_user(&node, &user.id, &channel_id).await?;
                 delete_voice_state(&channel_id, Some(&server.id), &user.id).await?;
             }
         };

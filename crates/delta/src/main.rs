@@ -84,7 +84,7 @@ pub async fn web() -> Rocket<Build> {
     .into();
 
     // Voice handler
-    let voice_client = VoiceClient::new(config.api.livekit.url.clone(), config.api.livekit.key.clone(), config.api.livekit.secret.clone());
+    let voice_client = VoiceClient::new(config.api.livekit.nodes.clone());
     // Configure Rabbit
     let connection = Connection::open(&OpenConnectionArguments::new(
         &config.rabbit.host,

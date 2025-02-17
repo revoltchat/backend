@@ -105,7 +105,7 @@ pub struct Hosts {
     pub events: String,
     pub autumn: String,
     pub january: String,
-    pub livekit: String
+    pub livekit: HashMap<String, String>
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -176,7 +176,14 @@ pub struct ApiWorkers {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct ApiLiveKit {
+    pub nodes: HashMap<String, LiveKitNode>
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct LiveKitNode {
     pub url: String,
+    pub lat: f64,
+    pub lon: f64,
     pub key: String,
     pub secret: String
 }

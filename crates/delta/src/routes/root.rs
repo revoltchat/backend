@@ -25,9 +25,7 @@ pub struct Feature {
 #[derive(Serialize, JsonSchema, Debug)]
 pub struct VoiceFeature {
     /// Whether voice is enabled
-    pub enabled: bool,
-    /// URL pointing to the voice API
-    pub url: String
+    pub enabled: bool
 }
 
 /// # Feature Configuration
@@ -105,8 +103,7 @@ pub async fn root() -> Result<Json<RevoltConfig>> {
                 url: config.hosts.january,
             },
             livekit: VoiceFeature {
-                enabled: !config.hosts.livekit.is_empty(),
-                url: config.hosts.livekit.to_string(),
+                enabled: !config.hosts.livekit.is_empty()
             },
         },
         ws: config.hosts.events,

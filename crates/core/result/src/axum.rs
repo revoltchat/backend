@@ -78,6 +78,7 @@ impl IntoResponse for Error {
             ErrorType::AlreadyInVoiceChannel => StatusCode::BAD_REQUEST,
             ErrorType::NotAVoiceChannel => StatusCode::BAD_REQUEST,
             ErrorType::AlreadyConnected => StatusCode::BAD_REQUEST,
+            ErrorType::UnknownNode => StatusCode::BAD_REQUEST,
             ErrorType::ProxyError => StatusCode::BAD_REQUEST,
             ErrorType::FileTooSmall => StatusCode::UNPROCESSABLE_ENTITY,
             ErrorType::FileTooLarge { .. } => StatusCode::UNPROCESSABLE_ENTITY,

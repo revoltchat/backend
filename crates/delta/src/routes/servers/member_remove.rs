@@ -1,6 +1,6 @@
 use revolt_database::{
     util::{permissions::DatabasePermissionQuery, reference::Reference},
-    voice::{delete_voice_state, get_user_voice_channel_in_server, VoiceClient},
+    voice::{delete_voice_state, get_channel_node, get_user_voice_channel_in_server, VoiceClient},
     Database, RemovalIntention, User,
 };
 use revolt_permissions::{calculate_server_permissions, ChannelPermission};
@@ -43,7 +43,9 @@ pub async fn kick(
     }
 
     if let Some(channel_id) = get_user_voice_channel_in_server(&user.id, &server.id).await? {
-        voice_client.remove_user(&user.id, &channel_id).await?;
+        let node = get_channel_node(&channel_id).await?;
+
+        voice_client.remove_user(&node, &user.id, &channel_id).await?;
         delete_voice_state(&channel_id, Some(&server.id), &user.id).await?;
     }
 

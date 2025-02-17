@@ -315,7 +315,14 @@ auto_derived!(
     pub struct ChannelVoiceState {
         pub id: String,
         /// The states of the users who are connected to the channel
-        pub participants: Vec<UserVoiceState>
+        pub participants: Vec<UserVoiceState>,
+        /// The node's node which the channel is currently using
+        pub node: String
+    }
+
+    /// Join a voice channel
+    pub struct DataJoinCall {
+        pub node: String
     }
 
 );

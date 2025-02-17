@@ -82,6 +82,7 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::AlreadyInVoiceChannel => Status::BadRequest,
             ErrorType::NotAVoiceChannel => Status::BadRequest,
             ErrorType::AlreadyConnected => Status::BadRequest,
+            ErrorType::UnknownNode => Status::BadRequest,
             ErrorType::ProxyError => Status::BadRequest,
             ErrorType::FileTooSmall => Status::UnprocessableEntity,
             ErrorType::FileTooLarge { .. } => Status::UnprocessableEntity,

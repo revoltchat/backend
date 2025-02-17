@@ -7,7 +7,7 @@ use redis_kiss::{get_connection, redis::Pipeline, AsyncCommands};
 use revolt_database::{
     events::client::EventV1,
     util::{permissions::DatabasePermissionQuery, reference::Reference},
-    voice::{get_user_voice_channel_in_server, move_user, sync_user_voice_permissions, VoiceClient},
+    voice::{get_channel_node, get_user_voice_channel_in_server, move_user, sync_user_voice_permissions, VoiceClient},
     Database, File, PartialMember, User,
 };
 use revolt_models::v0::{self, FieldsMember, PartialUserVoiceState};
@@ -185,6 +185,8 @@ pub async fn edit(
         partial.avatar = Some(File::use_user_avatar(db, &avatar, &user.id, &user.id).await?);
     }
 
+    // TODO: impelement moving users
+
     let remove_contains_voice = remove
         .as_ref()
         .map(|r| r.contains(FieldsMember::CanPublish) || r.contains(FieldsMember::CanReceive))
@@ -196,9 +198,11 @@ pub async fn edit(
         || remove_contains_voice
     {
         if let Some(channel) = get_user_voice_channel_in_server(&target_user.id, &server.id).await? {
+            let node = get_channel_node(&channel).await?;
             let channel = Reference::from_unchecked(channel).as_channel(db).await?;
 
-            sync_user_voice_permissions(db, voice_client, &user, &channel, Some(&server), None).await?;
+
+            sync_user_voice_permissions(db, voice_client, &node, &user, &channel, Some(&server), None).await?;
         };
     };
 

@@ -161,6 +161,7 @@ pub enum ErrorType {
     AlreadyInVoiceChannel,
     NotAVoiceChannel,
     AlreadyConnected,
+    UnknownNode,
     // ? Micro-service errors
     ProxyError,
     FileTooSmall,

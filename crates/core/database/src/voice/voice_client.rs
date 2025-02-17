@@ -1,9 +1,9 @@
 use livekit_api::{
     access_token::{AccessToken, VideoGrants},
-    services::room::{CreateRoomOptions, RoomClient, UpdateParticipantOptions},
+    services::room::{CreateRoomOptions, RoomClient as InnerRoomClient, UpdateParticipantOptions},
 };
 use livekit_protocol::{ParticipantInfo, ParticipantPermission, Room};
-use revolt_config::config;
+use revolt_config::{config, LiveKitNode};
 use crate::models::{Channel, User};
 use revolt_models::v0;
 use revolt_permissions::{ChannelPermission, PermissionValue};
@@ -12,41 +12,59 @@ use std::{borrow::Cow, collections::HashMap, time::Duration};
 
 use super::get_allowed_sources;
 
+
+#[derive(Debug)]
+pub struct RoomClient {
+    pub client: InnerRoomClient,
+    pub node: LiveKitNode
+}
+
 #[derive(Debug)]
 pub struct VoiceClient {
-    rooms: RoomClient,
-    api_key: String,
-    api_secret: String,
+    pub rooms: HashMap<String, RoomClient>
 }
 
 impl VoiceClient {
-    pub fn new(url: String, api_key: String, api_secret: String) -> Self {
+    pub fn new(nodes: HashMap<String, LiveKitNode>) -> Self {
         Self {
-            rooms: RoomClient::with_api_key(&url, &api_key, &api_secret),
-            api_key,
-            api_secret,
+            rooms: nodes
+                .into_iter()
+                .map(|(name, node)|
+                    (
+                        name,
+                        RoomClient {
+                            client: InnerRoomClient::with_api_key(&node.url, &node.key, &node.secret),
+                            node
+                        }
+                    )
+                )
+                .collect()
         }
     }
 
     pub async fn from_revolt_config() -> Self {
         let config = config().await;
 
-        Self::new(
-            config.hosts.livekit,
-            config.api.livekit.key,
-            config.api.livekit.secret,
-        )
+        Self::new(config.api.livekit.nodes.clone())
+    }
+
+    pub fn get_node(&self, name: &str) -> Result<&RoomClient> {
+        self.rooms.get(name)
+            .ok_or_else(|| create_error!(UnknownNode))
     }
 
     pub fn create_token(
         &self,
+        node: &str,
         user: &User,
         permissions: PermissionValue,
         channel: &Channel,
     ) -> Result<String> {
+        let room = self.get_node(node)?;
+
         let allowed_sources = get_allowed_sources(permissions);
 
-        AccessToken::with_api_key(&self.api_key, &self.api_secret)
+        AccessToken::with_api_key(&room.node.key, &room.node.secret)
             .with_name(&format!("{}#{}", user.username, user.discriminator))
             .with_identity(&user.id)
             .with_metadata(&serde_json::to_string(&user).to_internal_error()?)
@@ -63,7 +81,9 @@ impl VoiceClient {
             .to_internal_error()
     }
 
-    pub async fn create_room(&self, channel: &Channel) -> Result<Room> {
+    pub async fn create_room(&self, node: &str, channel: &Channel) -> Result<Room> {
+        let room = self.get_node(node)?;
+
         let voice = match channel {
             Channel::DirectMessage { .. } | Channel::VoiceChannel { .. } => Some(Cow::Owned(v0::VoiceInformation::default())),
             Channel::TextChannel { voice: Some(voice), .. } => Some(Cow::Borrowed(voice)),
@@ -72,7 +92,7 @@ impl VoiceClient {
 
             .ok_or_else(|| create_error!(NotAVoiceChannel))?;
 
-        self.rooms
+        room.client
             .create_room(
                 channel.id(),
                 CreateRoomOptions {
@@ -87,11 +107,14 @@ impl VoiceClient {
 
     pub async fn update_permissions(
         &self,
+        node: &str,
         user: &User,
         channel_id: &str,
         new_permissions: ParticipantPermission,
     ) -> Result<ParticipantInfo> {
-        self.rooms
+        let room = self.get_node(node)?;
+
+        room.client
             .update_participant(
                 channel_id,
                 &user.id,
@@ -106,8 +129,10 @@ impl VoiceClient {
             .to_internal_error()
     }
 
-    pub async fn remove_user(&self, user_id: &str, channel_id: &str) -> Result<()> {
-        self.rooms.remove_participant(channel_id, user_id)
+    pub async fn remove_user(&self, node: &str, user_id: &str, channel_id: &str) -> Result<()> {
+        let room = self.get_node(node)?;
+
+        room.client.remove_participant(channel_id, user_id)
             .await
             .to_internal_error()
     }

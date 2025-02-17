@@ -1,5 +1,5 @@
 use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference}, voice::{delete_voice_state, get_voice_channel_members, VoiceClient}, Channel, Database, PartialChannel, User, AMQP
+    util::{permissions::DatabasePermissionQuery, reference::Reference}, voice::{delete_voice_state, get_channel_node, get_voice_channel_members, VoiceClient}, Channel, Database, PartialChannel, User, AMQP
 };
 use revolt_models::v0;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
@@ -53,9 +53,13 @@ pub async fn delete(
         }
     };
 
-    for user_id in get_voice_channel_members(channel.id()).await? {
-        voice_client.remove_user(&user_id, channel.id()).await?;
-        delete_voice_state(channel.id(), channel.server(), &user.id).await?;
+    if let Some(users) = get_voice_channel_members(channel.id()).await? {
+        let node = get_channel_node(channel.id()).await?;
+
+        for user in users {
+            voice_client.remove_user(&node, &user, channel.id()).await?;
+            delete_voice_state(channel.id(), channel.server(), &user).await?;
+        }
     };
 
     Ok(EmptyResponse)
