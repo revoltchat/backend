@@ -21,11 +21,22 @@ pub struct Feature {
     pub url: String,
 }
 
+/// # Information about a livekit node
+#[derive(Serialize, JsonSchema, Debug)]
+pub struct VoiceNode {
+    pub name: String,
+    pub lat: f64,
+    pub lon: f64,
+    pub public_url: String
+}
+
 /// # Voice Server Configuration
 #[derive(Serialize, JsonSchema, Debug)]
 pub struct VoiceFeature {
     /// Whether voice is enabled
-    pub enabled: bool
+    pub enabled: bool,
+    /// All livekit nodes
+    pub nodes: Vec<VoiceNode>,
 }
 
 /// # Feature Configuration
@@ -90,20 +101,29 @@ pub async fn root() -> Result<Json<RevoltConfig>> {
         features: RevoltFeatures {
             captcha: CaptchaFeature {
                 enabled: !config.api.security.captcha.hcaptcha_key.is_empty(),
-                key: config.api.security.captcha.hcaptcha_sitekey,
+                key: config.api.security.captcha.hcaptcha_sitekey.clone(),
             },
             email: !config.api.smtp.host.is_empty(),
             invite_only: config.api.registration.invite_only,
             autumn: Feature {
                 enabled: !config.hosts.autumn.is_empty(),
-                url: config.hosts.autumn,
+                url: config.hosts.autumn.clone(),
             },
             january: Feature {
                 enabled: !config.hosts.january.is_empty(),
-                url: config.hosts.january,
+                url: config.hosts.january.clone(),
             },
             livekit: VoiceFeature {
-                enabled: !config.hosts.livekit.is_empty()
+                enabled: !config.hosts.livekit.is_empty(),
+                nodes: config.api.livekit.nodes.iter().map(|(name, value)| {
+                    VoiceNode {
+                        name: name.clone(),
+                        lat: value.lat,
+                        lon: value.lon,
+                        public_url: config.hosts.livekit.get(name).expect("Missing corresponding host for voice node").clone()
+                    }
+                })
+                .collect()
             },
         },
         ws: config.hosts.events,
