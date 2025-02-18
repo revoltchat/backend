@@ -2,6 +2,7 @@
 name = "revolt-pushd"
 version = "0.8.2"
 edition = "2021"
+license = "AGPL-3.0-or-later"
 
 [dependencies]
 revolt-config = { version = "0.8.2", path = "../../core/config" }
