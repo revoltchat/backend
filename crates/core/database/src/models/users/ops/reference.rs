@@ -1,4 +1,5 @@
 use authifier::models::Session;
+use iso8601_timestamp::Timestamp;
 use revolt_result::Result;
 
 use crate::{FieldsUser, PartialUser, RelationshipStatus, User};
@@ -166,6 +167,10 @@ impl AbstractUsers for ReferenceDb {
 
     /// Remove push subscription for a session by session id (TODO: remove)
     async fn remove_push_subscription_by_session_id(&self, _session_id: &str) -> Result<()> {
+        todo!()
+    }
+
+    async fn update_session_last_seen(&self, _session_id: &str, _when: Timestamp) -> Result<()> {
         todo!()
     }
 }
