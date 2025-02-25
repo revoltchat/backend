@@ -1,3 +1,5 @@
+production = false
+
 [database]
 # MongoDB connection URL
 # Defaults to the container name specified in self-hosted
