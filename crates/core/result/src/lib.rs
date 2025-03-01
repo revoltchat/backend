@@ -158,9 +158,9 @@ pub enum ErrorType {
 
     // ? Voice errors
     LiveKitUnavailable,
-    AlreadyInVoiceChannel,
     NotAVoiceChannel,
     AlreadyConnected,
+    NotConnected,
     UnknownNode,
     // ? Micro-service errors
     ProxyError,

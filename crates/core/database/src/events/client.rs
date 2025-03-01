@@ -258,11 +258,16 @@ pub enum EventV1 {
         user: String,
         from: String,
         to: String,
+        state: UserVoiceState
     },
     UserVoiceStateUpdate {
         id: String,
         channel_id: String,
         data: PartialUserVoiceState,
+    },
+    UserMoveVoiceChannel {
+        node: String,
+        token: String
     }
 }
 

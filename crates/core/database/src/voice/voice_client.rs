@@ -97,7 +97,7 @@ impl VoiceClient {
                 channel.id(),
                 CreateRoomOptions {
                     max_participants: voice.max_users.unwrap_or(u32::MAX),
-                    empty_timeout: 5 * 60, // 5 minutes
+                    empty_timeout: 5 * 60, // 5 minutes,
                     ..Default::default()
                 },
             )

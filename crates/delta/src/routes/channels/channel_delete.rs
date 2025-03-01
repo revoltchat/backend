@@ -54,7 +54,7 @@ pub async fn delete(
     };
 
     if let Some(users) = get_voice_channel_members(channel.id()).await? {
-        let node = get_channel_node(channel.id()).await?;
+        let node = get_channel_node(channel.id()).await?.unwrap();
 
         for user in users {
             voice_client.remove_user(&node, &user, channel.id()).await?;

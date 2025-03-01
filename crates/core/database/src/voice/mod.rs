@@ -29,7 +29,7 @@ pub async fn raise_if_in_voice(user: &User, target: &str) -> Result<()> {
         .to_internal_error()?
         > 0
     {
-        Err(create_error!(AlreadyInVoiceChannel))
+        Err(create_error!(NotConnected))
     } else {
         Ok(())
     }
@@ -45,7 +45,7 @@ pub async fn set_channel_node(channel: &str, node: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn get_channel_node(channel: &str) -> Result<String> {
+pub async fn get_channel_node(channel: &str) -> Result<Option<String>> {
     get_connection()
         .await?
         .get(format!("node:{channel}"))
@@ -57,6 +57,22 @@ pub async fn get_user_voice_channels(user_id: &str) -> Result<Vec<String>> {
     get_connection()
         .await?
         .smembers(format!("vc:{user_id}"))
+        .await
+        .to_internal_error()
+}
+
+pub async fn set_user_moved_from_voice(old_channel: &str, new_channel: &str, user_id: &str) -> Result<()> {
+    get_connection()
+        .await?
+        .set_ex(format!("moved_to:{user_id}:{new_channel}"), old_channel, 10)
+        .await
+        .to_internal_error()
+}
+
+pub async fn get_user_moved_from_voice(channel_id: &str, user_id: &str) -> Result<Option<String>> {
+    get_connection()
+        .await?
+        .get(format!("moved_to:{user_id}:{channel_id}"))
         .await
         .to_internal_error()
 }
@@ -275,7 +291,7 @@ pub async fn get_channel_voice_state(channel: &Channel) -> Result<Option<v0::Cha
 
     if let Some(members) = members {
         let mut participants = Vec::with_capacity(members.len());
-        let node = get_channel_node(channel.id()).await?;
+        let node = get_channel_node(channel.id()).await?.unwrap();
 
         for user_id in members {
             if let Some(voice_state) = get_voice_state(channel.id(), server, &user_id).await? {
@@ -312,7 +328,7 @@ pub async fn move_user(user: &str, from: &str, to: &str) -> Result<()> {
 }
 
 pub async fn sync_voice_permissions(db: &Database, voice_client: &VoiceClient, channel: &Channel, server: Option<&Server>, role_id: Option<&str>) -> Result<()> {
-    let node = get_channel_node(channel.id()).await?;
+    let node = get_channel_node(channel.id()).await?.unwrap();
 
     for user_id in get_voice_channel_members(channel.id()).await?.iter().flatten() {
         let user = Reference::from_unchecked(user_id.clone()).as_user(db).await?;

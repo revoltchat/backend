@@ -4,8 +4,7 @@ use std::env;
 use livekit_protocol::TrackType;
 use livekit_api::{access_token::TokenVerifier, webhooks::WebhookReceiver};
 use revolt_database::{
-    events::client::EventV1, util::reference::Reference, Database, DatabaseInfo,
-    voice::{create_voice_state, delete_voice_state, update_voice_state_tracks, VoiceClient}
+    events::client::EventV1, util::reference::Reference, voice::{create_voice_state, delete_voice_state, get_user_moved_from_voice, update_voice_state_tracks, VoiceClient}, Database, DatabaseInfo
 };
 use rocket::{build, http::Status, post, request::{FromRequest, Outcome}, routes, Config, Request, State};
 use rocket_empty::EmptyResponse;
@@ -83,12 +82,23 @@ async fn ingress(db: &State<Database>, node: &str, voice_client: &State<VoiceCli
 
             let voice_state = create_voice_state(channel_id, channel.server(), user_id).await?;
 
-            EventV1::VoiceChannelJoin {
-                id: channel_id.clone(),
-                state: voice_state,
-            }
-            .p(channel_id.clone())
-            .await
+            if let Some(moved_from) = get_user_moved_from_voice(channel_id, user_id).await? {
+                EventV1::VoiceChannelMove {
+                    user: user_id.clone(),
+                    from: moved_from,
+                    to: channel_id.clone(),
+                    state: voice_state
+                }
+                .p(channel_id.clone())
+                .await;
+            } else {
+                EventV1::VoiceChannelJoin {
+                    id: channel_id.clone(),
+                    state: voice_state,
+                }
+                .p(channel_id.clone())
+                .await;
+            };
         }
         "participant_left" => {
             let channel_id = channel_id.to_internal_error()?;

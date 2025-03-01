@@ -75,7 +75,7 @@ impl IntoResponse for Error {
             ErrorType::NoEffect => StatusCode::OK,
             ErrorType::FailedValidation { .. } => StatusCode::BAD_REQUEST,
             ErrorType::LiveKitUnavailable => StatusCode::BAD_REQUEST,
-            ErrorType::AlreadyInVoiceChannel => StatusCode::BAD_REQUEST,
+            ErrorType::NotConnected => StatusCode::BAD_REQUEST,
             ErrorType::NotAVoiceChannel => StatusCode::BAD_REQUEST,
             ErrorType::AlreadyConnected => StatusCode::BAD_REQUEST,
             ErrorType::UnknownNode => StatusCode::BAD_REQUEST,

@@ -6,13 +6,13 @@ use livekit_protocol::ParticipantPermission;
 use redis_kiss::{get_connection, redis::Pipeline, AsyncCommands};
 use revolt_database::{
     events::client::EventV1,
-    util::{permissions::DatabasePermissionQuery, reference::Reference},
-    voice::{get_channel_node, get_user_voice_channel_in_server, move_user, sync_user_voice_permissions, VoiceClient},
+    util::{permissions::{perms, DatabasePermissionQuery}, reference::Reference},
+    voice::{get_channel_node, get_user_voice_channel_in_server, move_user, set_channel_node, set_user_moved_from_voice, sync_user_voice_permissions, VoiceClient},
     Database, File, PartialMember, User,
 };
 use revolt_models::v0::{self, FieldsMember, PartialUserVoiceState};
 
-use revolt_permissions::{calculate_server_permissions, ChannelPermission};
+use revolt_permissions::{calculate_channel_permissions, calculate_server_permissions, ChannelPermission};
 use revolt_result::{create_error, Result, ToRevoltError};
 use rocket::{form::validate::Contains, serde::json::Json, State};
 use validator::Validate;
@@ -103,7 +103,7 @@ pub async fn edit(
         permissions.throw_if_lacking_channel_permission(ChannelPermission::DeafenMembers)?;
     }
 
-    if let Some(new_channel) = &data.voice_channel {
+    let new_voice_channel = if let Some(new_channel) = &data.voice_channel {
         permissions.throw_if_lacking_channel_permission(ChannelPermission::MoveMembers)?;
 
         // ensure the channel we are moving them to is in the server and is a voice channel
@@ -113,14 +113,18 @@ pub async fn edit(
             .await
             .map_err(|_| create_error!(UnknownChannel))?;
 
-        if !channel.server().is_some_and(|v| v == member.id.server) {
+        if channel.server().is_none_or(|v| v != member.id.server) {
             Err(create_error!(UnknownChannel))?
         }
 
-        if channel.voice().is_none() {
-            Err(create_error!(NotAVoiceChannel))?
-        }
-    }
+        if get_user_voice_channel_in_server(&target_user.id, &server.id).await?.is_none() {
+            Err(create_error!(NotConnected))?
+        };
+
+        Some(channel)
+    } else {
+        None
+    };
 
     // Resolve our ranking
     let our_ranking = query.get_member_rank().unwrap_or(i64::MIN);
@@ -159,7 +163,7 @@ pub async fn edit(
         remove,
         can_publish,
         can_receive,
-        voice_channel,
+        voice_channel: _,
     } = data;
 
     let mut partial = PartialMember {
@@ -185,26 +189,10 @@ pub async fn edit(
         partial.avatar = Some(File::use_user_avatar(db, &avatar, &user.id, &user.id).await?);
     }
 
-    // TODO: impelement moving users
-
     let remove_contains_voice = remove
         .as_ref()
         .map(|r| r.contains(FieldsMember::CanPublish) || r.contains(FieldsMember::CanReceive))
         .unwrap_or_default();
-
-    if can_publish.is_some()
-        || can_receive.is_some()
-        || voice_channel.is_some()
-        || remove_contains_voice
-    {
-        if let Some(channel) = get_user_voice_channel_in_server(&target_user.id, &server.id).await? {
-            let node = get_channel_node(&channel).await?;
-            let channel = Reference::from_unchecked(channel).as_channel(db).await?;
-
-
-            sync_user_voice_permissions(db, voice_client, &node, &user, &channel, Some(&server), None).await?;
-        };
-    };
 
     member
         .update(
@@ -215,6 +203,44 @@ pub async fn edit(
                 .unwrap_or_default(),
         )
         .await?;
+
+    if let Some(new_voice_channel) = new_voice_channel {
+        if let Some(channel) = get_user_voice_channel_in_server(&target_user.id, &server.id).await? {
+            let old_node = get_channel_node(&channel).await?.unwrap();
+
+            let new_node = match get_channel_node(new_voice_channel.id()).await? {
+                Some(node) => node,
+                None => {
+                    set_channel_node(new_voice_channel.id(), &old_node).await?;
+                    old_node.clone()
+                }
+            };
+
+            set_user_moved_from_voice(&channel, new_voice_channel.id(), &target_user.id).await?;
+
+            let mut query = perms(db, &target_user).channel(&new_voice_channel);
+            let permissions = calculate_channel_permissions(&mut query).await;
+
+            voice_client.create_room(&new_node, &new_voice_channel).await?;
+            let token = voice_client.create_token(&new_node, &target_user, permissions, &new_voice_channel)?;
+
+            voice_client.remove_user(&old_node, &target_user.id, &channel).await?;
+
+            EventV1::UserMoveVoiceChannel {
+                node: new_node,
+                token
+            }
+            .p_user(target_user.id.clone(), db)
+            .await;
+        };
+    } else if can_publish.is_some() || can_receive.is_some() || remove_contains_voice {
+        if let Some(channel) = get_user_voice_channel_in_server(&target_user.id, &server.id).await? {
+            let node = get_channel_node(&channel).await?.unwrap();
+            let channel = Reference::from_unchecked(channel).as_channel(db).await?;
+
+            sync_user_voice_permissions(db, voice_client, &node, &user, &channel, Some(&server), None).await?;
+        };
+    };
 
     Ok(Json(member.into()))
 }

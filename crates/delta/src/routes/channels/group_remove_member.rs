@@ -48,8 +48,8 @@ pub async fn remove_member(
     };
 
     if is_in_voice_channel(&user.id, channel.id()).await? {
-        let node = get_channel_node(channel.id()).await?;
-        
+        let node = get_channel_node(channel.id()).await?.unwrap();
+
         voice_client.remove_user(&node, &user.id, channel.id()).await?;
         delete_voice_state(channel.id(), None, &user.id).await?;
     };
