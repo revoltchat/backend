@@ -43,6 +43,7 @@ pub async fn edit(
         && data.flags.is_none()
         && data.analytics.is_none()
         && data.discoverable.is_none()
+        && data.owner.is_none()
         && data.remove.is_none()
     {
         return Ok(Json(server.into()));
@@ -55,6 +56,11 @@ pub async fn edit(
         || data.remove.is_some()
     {
         permissions.throw_if_lacking_channel_permission(ChannelPermission::ManageServer)?;
+    }
+
+    // Check we are the server owner if changing sensitive fields
+    if data.owner.is_some() && user.id != server.owner {
+        return Err(create_error!(NotOwner));
     }
 
     // Check we are privileged if changing sensitive fields
@@ -80,6 +86,7 @@ pub async fn edit(
         // nsfw,
         discoverable,
         analytics,
+        owner,
         remove,
     } = data;
 
@@ -92,6 +99,7 @@ pub async fn edit(
         // nsfw,
         discoverable,
         analytics,
+        owner: owner.clone(),
         ..Default::default()
     };
 
@@ -146,6 +154,21 @@ pub async fn edit(
     if let Some(banner) = banner {
         partial.banner = Some(File::use_server_banner(db, &banner, &server.id, &user.id).await?);
         server.banner = partial.banner.clone();
+    }
+
+    // 5. Transfer ownership
+    if let Some(owner) = owner {
+        let owner_reference = Reference { id: owner.clone() };
+        // Check if member exists
+        owner_reference.as_member(db, &server.id).await?;
+        let owner_user = owner_reference.as_user(db).await?;
+
+        if owner_user.bot.is_some() {
+            return Err(create_error!(InvalidOperation));
+        }
+
+        server.owner = owner;
+        partial.owner = Some(server.owner.clone());
     }
 
     server

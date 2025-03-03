@@ -246,6 +246,10 @@ auto_derived!(
         /// Must be enabled in order to show up on [Revolt Discover](https://rvlt.gg).
         pub analytics: Option<bool>,
 
+        /// User id of the new owner
+        // #[cfg_attr(feature = "validator", serde(skip_serializing_if = "Option::is_none"))]
+        pub owner: Option<String>,
+
         /// Fields to remove from server object
         #[cfg_attr(feature = "validator", validate(length(min = 1)))]
         pub remove: Option<Vec<FieldsServer>>,
