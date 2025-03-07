@@ -58,8 +58,8 @@ pub async fn edit(
         permissions.throw_if_lacking_channel_permission(ChannelPermission::ManageServer)?;
     }
 
-    // Check we are the server owner if changing sensitive fields
-    if data.owner.is_some() && user.id != server.owner {
+    // Check we are the server owner or privileged if changing sensitive fields
+    if data.owner.is_some() && (user.id != server.owner && !user.privileged) {
         return Err(create_error!(NotOwner));
     }
 

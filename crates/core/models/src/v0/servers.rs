@@ -247,7 +247,6 @@ auto_derived!(
         pub analytics: Option<bool>,
 
         /// User id of the new owner
-        // #[cfg_attr(feature = "validator", serde(skip_serializing_if = "Option::is_none"))]
         pub owner: Option<String>,
 
         /// Fields to remove from server object
