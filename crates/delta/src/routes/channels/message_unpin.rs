@@ -19,7 +19,7 @@ pub async fn message_unpin(
 ) -> Result<EmptyResponse> {
     let channel = target.as_channel(db).await?;
 
-    if !matches!(channel, Channel::DirectMessage { .. } | Channel::Group { .. } | Channel::SavedMessages { .. }) {
+    if !matches!(channel, Channel::DirectMessage { .. }) {
         let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);
         calculate_channel_permissions(&mut query)
             .await
