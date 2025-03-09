@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use authifier::models::{totp::Totp, Account, ValidatedTicket};
 use revolt_database::{
     util::{permissions::DatabasePermissionQuery, reference::Reference},
     Database, File, PartialServer, User,
@@ -7,7 +8,7 @@ use revolt_database::{
 use revolt_models::v0;
 use revolt_permissions::{calculate_server_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
+use rocket::{serde::json::Json, Request, State};
 use validator::Validate;
 
 /// # Edit Server
@@ -17,9 +18,11 @@ use validator::Validate;
 #[patch("/<target>", data = "<data>")]
 pub async fn edit(
     db: &State<Database>,
+    account: Account,
     user: User,
     target: Reference,
     data: Json<v0::DataEditServer>,
+    validated_ticket: Option<ValidatedTicket>,
 ) -> Result<Json<v0::Server>> {
     let data = data.into_inner();
     data.validate().map_err(|error| {
@@ -59,8 +62,16 @@ pub async fn edit(
     }
 
     // Check we are the server owner or privileged if changing sensitive fields
-    if data.owner.is_some() && (user.id != server.owner && !user.privileged) {
-        return Err(create_error!(NotOwner));
+    if data.owner.is_some() {
+        if user.id != server.owner && !user.privileged {
+            return Err(create_error!(NotOwner));
+        }
+
+        if let Totp::Enabled { .. } = account.mfa.totp_token {
+            if validated_ticket.is_none() {
+                return Err(create_error!(InvalidCredentials));
+            };
+        }
     }
 
     // Check we are privileged if changing sensitive fields
