@@ -67,10 +67,8 @@ pub async fn edit(
             return Err(create_error!(NotOwner));
         }
 
-        if let Totp::Enabled { .. } = account.mfa.totp_token {
-            if validated_ticket.is_none() {
-                return Err(create_error!(InvalidCredentials));
-            };
+        if validated_ticket.is_none() {
+            return Err(create_error!(InvalidCredentials));
         }
     }
 
