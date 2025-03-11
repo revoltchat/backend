@@ -145,6 +145,10 @@ impl AbstractServers for MongoDb {
             .await
             .map_err(|_| create_database_error!("update_one", "channels"))?;
 
+        self.delete_many_attachments(doc! {
+            "used_for.id": &role_id
+        }).await?;
+
         self.col::<Document>("servers")
             .update_one(
                 doc! {
@@ -179,6 +183,7 @@ impl IntoDocumentPath for FieldsRole {
     fn as_path(&self) -> Option<&'static str> {
         Some(match self {
             FieldsRole::Colour => "colour",
+            FieldsRole::Icon => "icon",
         })
     }
 }

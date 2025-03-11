@@ -53,6 +53,7 @@ pub async fn create(
 
     let role = Role {
         name: data.name,
+        icon: None,
         rank,
         colour: None,
         hoist: false,

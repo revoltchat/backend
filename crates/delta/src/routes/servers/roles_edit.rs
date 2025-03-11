@@ -1,7 +1,4 @@
-use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Database, PartialRole, User,
-};
+use revolt_database::{util::{permissions::DatabasePermissionQuery, reference::Reference}, Database, File, PartialRole, User};
 use revolt_models::v0;
 use revolt_permissions::{calculate_server_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
@@ -44,6 +41,7 @@ pub async fn edit(
 
         let v0::DataEditRole {
             name,
+            icon,
             colour,
             hoist,
             rank,
@@ -57,13 +55,28 @@ pub async fn edit(
             }
         }
 
-        let partial = PartialRole {
+        let mut partial = PartialRole {
             name,
             colour,
             hoist,
             rank,
             ..Default::default()
         };
+
+        // 1. Remove fields from object
+        if let Some(field) = &remove {
+            if field.contains(&v0::FieldsRole::Icon) {
+                if let Some(icon) = &role.icon {
+                    db.mark_attachment_as_deleted(&icon.id).await?;
+                }
+            }
+        }
+
+        // 2. Apply new icon
+        if let Some(icon) = icon {
+            partial.icon = Some(File::use_role_icon(db, &icon, &role_id, &user.id).await?);
+            role.icon = partial.icon.clone();
+        }
 
         role.update(
             db,

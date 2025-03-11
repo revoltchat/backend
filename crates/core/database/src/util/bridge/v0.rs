@@ -1,7 +1,7 @@
 use revolt_models::v0::*;
 use revolt_permissions::{calculate_user_permissions, UserPermission};
 
-use crate::{util::permissions::DatabasePermissionQuery, Database, FileUsedFor};
+use crate::{util::permissions::DatabasePermissionQuery, Database};
 
 impl crate::Bot {
     pub fn into_public_bot(self, user: crate::User) -> PublicBot {
@@ -897,6 +897,7 @@ impl From<crate::Role> for Role {
     fn from(value: crate::Role) -> Self {
         Role {
             name: value.name,
+            icon: value.icon.map(|f| f.into()),
             permissions: value.permissions,
             colour: value.colour,
             hoist: value.hoist,
@@ -909,6 +910,7 @@ impl From<Role> for crate::Role {
     fn from(value: Role) -> crate::Role {
         crate::Role {
             name: value.name,
+            icon: value.icon.map(|f| f.into()),
             permissions: value.permissions,
             colour: value.colour,
             hoist: value.hoist,
@@ -921,6 +923,7 @@ impl From<crate::PartialRole> for PartialRole {
     fn from(value: crate::PartialRole) -> Self {
         PartialRole {
             name: value.name,
+            icon: value.icon.map(|f| f.into()),
             permissions: value.permissions,
             colour: value.colour,
             hoist: value.hoist,
@@ -933,6 +936,7 @@ impl From<PartialRole> for crate::PartialRole {
     fn from(value: PartialRole) -> crate::PartialRole {
         crate::PartialRole {
             name: value.name,
+            icon: value.icon.map(|f| f.into()),
             permissions: value.permissions,
             colour: value.colour,
             hoist: value.hoist,
@@ -945,6 +949,7 @@ impl From<crate::FieldsRole> for FieldsRole {
     fn from(value: crate::FieldsRole) -> Self {
         match value {
             crate::FieldsRole::Colour => FieldsRole::Colour,
+            crate::FieldsRole::Icon => FieldsRole::Icon,
         }
     }
 }
@@ -953,6 +958,7 @@ impl From<FieldsRole> for crate::FieldsRole {
     fn from(value: FieldsRole) -> Self {
         match value {
             FieldsRole::Colour => crate::FieldsRole::Colour,
+            FieldsRole::Icon => crate::FieldsRole::Icon,
         }
     }
 }
