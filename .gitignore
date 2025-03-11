@@ -5,6 +5,8 @@ compose.override.yml
 target
 .data
 .env
+.venv/
+venv/
 
 .vercel
 .DS_Store
