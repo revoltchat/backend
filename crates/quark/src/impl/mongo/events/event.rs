@@ -2,7 +2,7 @@ use mongodb::options::{Collation, CollationStrength, FindOneOptions};
 use once_cell::sync::Lazy;
 
 use crate::models::event::{Event, PartialEvent};
-use crate::{AbstractEvents, Error, Result};
+use crate::{AbstractEvents, Result};
 
 use super::super::MongoDb;
 

@@ -19,12 +19,14 @@ impl From<DataEditEvent> for PartialEvent {
             description: data.description,
             hide_address: data.hide_address,
             allow_plus_one: data.allow_plus_one,
+            allow_plus_one_amount: data.allow_plus_one_amount,
             requires_plus_one_info: data.requires_plus_one_info,
             requires_rsvp_approval: data.requires_rsvp_approval,
             show_to_non_members: data.show_to_non_members,
             managers: data.managers,
             sponsors: data.sponsors,
             ticket_config: data.ticket_config,
+            currency: data.currency,
             attachments: data.attachments,
             gallery: data.gallery,
         }
@@ -42,6 +44,7 @@ pub struct DataEditEvent {
     pub description: Option<String>,
     pub hide_address: Option<bool>,
     pub allow_plus_one: Option<bool>,
+    pub allow_plus_one_amount: Option<i32>,
     pub requires_plus_one_info: Option<bool>,
     pub requires_rsvp_approval: Option<bool>,
     pub show_to_non_members: Option<bool>,
@@ -52,6 +55,7 @@ pub struct DataEditEvent {
     pub attachments: Option<Vec<String>>,
     /// Gallery image URLs
     pub gallery: Option<Vec<String>>,
+    pub currency: Option<String>,
 }
 
 /// Update event

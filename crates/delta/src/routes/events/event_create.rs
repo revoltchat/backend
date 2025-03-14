@@ -32,6 +32,9 @@ pub struct DataCreateEvent {
     /// Allow +1 guests
     #[serde(default)]
     pub allow_plus_one: bool,
+    /// Maximum number of +1 guests allowed
+    #[serde(default)]
+    pub allow_plus_one_amount: Option<i32>,
     /// Require full information for +1 guests
     #[serde(default)]
     pub requires_plus_one_info: bool,
@@ -46,6 +49,9 @@ pub struct DataCreateEvent {
     /// Event sponsors (user IDs)
     #[serde(default)]
     pub sponsors: Vec<String>,
+    /// Currency type
+    #[serde(default)]
+    pub currency: Option<String>,
     /// Ticket configuration
     pub ticket_config: TicketConfig,
     /// Attachment URLs
@@ -98,11 +104,13 @@ pub async fn create_event(
         description: data.description.clone(),
         hide_address: data.hide_address,
         allow_plus_one: data.allow_plus_one,
+        allow_plus_one_amount: data.allow_plus_one_amount,
         requires_plus_one_info: data.requires_plus_one_info,
         requires_rsvp_approval: data.requires_rsvp_approval,
         show_to_non_members: data.show_to_non_members,
         managers: data.managers.clone(),
         sponsors: data.sponsors.clone(),
+        currency: data.currency.clone(),
         ticket_config: data.ticket_config.clone(),
         attachments: data.attachments.clone(),
         gallery: data.gallery.clone(),

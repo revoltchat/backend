@@ -49,6 +49,10 @@ pub struct Event {
     #[serde(skip_serializing_if = "if_false", default)]
     pub allow_plus_one: bool,
 
+    /// Maximum number of +1 guests allowed
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allow_plus_one_amount: Option<i32>,
+
     /// Require full information for +1 guests
     #[serde(skip_serializing_if = "if_false", default)]
     pub requires_plus_one_info: bool,
@@ -70,6 +74,10 @@ pub struct Event {
 
     /// Ticket configuration
     pub ticket_config: TicketConfig,
+
+    /// Currency type (e.g. "USD", "EUR")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub currency: Option<String>,
 
     /// Attachment URLs
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
