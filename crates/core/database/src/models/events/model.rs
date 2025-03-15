@@ -147,6 +147,10 @@ auto_derived_partial!(
         #[serde(skip_serializing_if = "Option::is_none")]
         pub currency: Option<String>,
 
+        /// Payment type (e.g. "Cash", "Card", "Both")
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub payment_type: Option<String>,
+
         /// Attachment URLs
         #[serde(skip_serializing_if = "Vec::is_empty", default)]
         pub attachments: Vec<String>,

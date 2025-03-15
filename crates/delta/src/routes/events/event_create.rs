@@ -52,6 +52,9 @@ pub struct DataCreateEvent {
     /// Currency type
     #[serde(default)]
     pub currency: Option<String>,
+    /// Payment type
+    #[serde(default)]
+    pub payment_type: Option<String>,
     /// Ticket configuration
     pub ticket_config: TicketConfig,
     /// Attachment URLs
@@ -111,6 +114,7 @@ pub async fn create_event(
         managers: data.managers.clone(),
         sponsors: data.sponsors.clone(),
         currency: data.currency.clone(),
+        payment_type: data.payment_type.clone(),
         ticket_config: data.ticket_config.clone(),
         attachments: data.attachments.clone(),
         gallery: data.gallery.clone(),

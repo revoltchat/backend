@@ -27,6 +27,7 @@ impl From<DataEditEvent> for PartialEvent {
             sponsors: data.sponsors,
             ticket_config: data.ticket_config,
             currency: data.currency,
+            payment_type: data.payment_type,
             attachments: data.attachments,
             gallery: data.gallery,
         }
@@ -56,6 +57,7 @@ pub struct DataEditEvent {
     /// Gallery image URLs
     pub gallery: Option<Vec<String>>,
     pub currency: Option<String>,
+    pub payment_type: Option<String>,
 }
 
 /// Update event
