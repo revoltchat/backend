@@ -99,5 +99,26 @@ mod test {
     // TEST: member leaves group (no delete)
     // TEST: no effect with saved messages
     // TEST: DM set to inactive
-    // TEST: server channel deleted
+
+    #[rocket::async_test]
+    async fn success_delete_channel() {
+        let mut harness = TestHarness::new().await;
+        let (_, session, user) = harness.new_user().await;
+        let (_, channels) = harness.new_server(&user).await;
+        let response = TestHarness::with_session(
+            session,
+            harness
+                .client
+                .delete(format!("/channels/{}", channels[0].id())),
+        )
+        .await;
+        assert_eq!(response.status(), Status::NoContent);
+        drop(response);
+        harness
+            .wait_for_event(channels[0].id(), |event| match event {
+                EventV1::ChannelDelete { id, .. } => id == channels[0].id(),
+                _ => false,
+            })
+            .await;
+    }
 }
