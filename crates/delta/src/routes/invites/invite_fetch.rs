@@ -82,10 +82,9 @@ mod test {
     use crate::{rocket, util::test::TestHarness};
     use revolt_database::{Channel, Server};
     use revolt_models::v0::{
-        DataCreateGroup, DataCreateServer, DataCreateServerChannel, Invite, InviteResponse,
-        LegacyServerChannelType,
+        DataCreateGroup, DataCreateServerChannel, Invite, InviteResponse, LegacyServerChannelType,
     };
-    use rocket::http::{Header, Status};
+    use rocket::http::Status;
 
     #[rocket::async_test]
     async fn success_fetch_group_invite() {
@@ -101,12 +100,13 @@ mod test {
         )
         .await
         .expect("`Channel`");
-        let create_response = harness
-            .client
-            .post(format!("/channels/{}/invites", group.id()))
-            .header(Header::new("x-session-token", session.token.to_string()))
-            .dispatch()
-            .await;
+        let create_response = TestHarness::with_session(
+            session,
+            harness
+                .client
+                .post(format!("/channels/{}/invites", group.id())),
+        )
+        .await;
         assert_eq!(create_response.status(), Status::Ok);
         let invite_from_create: Invite = create_response.into_json().await.expect("`Invite`");
         let invite_code = match invite_from_create {
@@ -150,25 +150,15 @@ mod test {
     async fn success_fetch_text_channel_invite() {
         let harness = TestHarness::new().await;
         let (_, session, user) = harness.new_user().await;
-        let (_, channels) = Server::create(
-            &harness.db,
-            DataCreateServer {
-                name: "Test Server".to_string(),
-                ..Default::default()
-            },
-            &user,
-            true,
-        )
-        .await
-        .expect("Failed to create test server");
-
+        let (_, channels) = harness.new_server(&user).await;
         let channel = channels.first().expect("Server Channel");
-        let create_response = harness
-            .client
-            .post(format!("/channels/{}/invites", channel.id()))
-            .header(Header::new("x-session-token", session.token.to_string()))
-            .dispatch()
-            .await;
+        let create_response = TestHarness::with_session(
+            session,
+            harness
+                .client
+                .post(format!("/channels/{}/invites", channel.id())),
+        )
+        .await;
         assert_eq!(create_response.status(), Status::Ok);
         let invite_from_create: Invite = create_response.into_json().await.expect("`Invite`");
         let invite_code = match invite_from_create {
@@ -201,17 +191,7 @@ mod test {
     async fn success_fetch_voice_channel_invite() {
         let harness = TestHarness::new().await;
         let (_, session, user) = harness.new_user().await;
-        let (server, _) = Server::create(
-            &harness.db,
-            DataCreateServer {
-                name: "Test Server".to_string(),
-                ..Default::default()
-            },
-            &user,
-            true,
-        )
-        .await
-        .expect("Failed to create test server");
+        let (server, _) = harness.new_server(&user).await;
         let server_mut: &mut Server = &mut server.clone();
 
         let channel = Channel::create_server_channel(
@@ -227,12 +207,13 @@ mod test {
         )
         .await
         .expect("Failed to make new channel");
-        let create_response = harness
-            .client
-            .post(format!("/channels/{}/invites", channel.id()))
-            .header(Header::new("x-session-token", session.token.to_string()))
-            .dispatch()
-            .await;
+        let create_response = TestHarness::with_session(
+            session,
+            harness
+                .client
+                .post(format!("/channels/{}/invites", channel.id())),
+        )
+        .await;
         assert_eq!(create_response.status(), Status::Ok);
         let invite_from_create: Invite = create_response.into_json().await.expect("`Invite`");
         let invite_code = match invite_from_create {
