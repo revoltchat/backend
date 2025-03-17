@@ -15,6 +15,9 @@ pub struct Event {
     #[serde(rename = "_id")]
     pub id: String,
 
+    /// User who created the event
+    pub created_by: String,
+
     /// Event title
     pub title: String,
 

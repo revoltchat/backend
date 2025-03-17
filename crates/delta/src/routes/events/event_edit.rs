@@ -8,6 +8,7 @@ impl From<DataEditEvent> for PartialEvent {
     fn from(data: DataEditEvent) -> Self {
         Self {
             id: None,
+            created_by: None,
             created_at: None,
             title: data.title,
             event_type: data.event_type,

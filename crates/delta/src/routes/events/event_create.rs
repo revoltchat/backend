@@ -1,5 +1,6 @@
 use chrono::Utc;
 use revolt_quark::models::event::{Event, EventType, TicketConfig};
+use revolt_quark::models::user::User;
 use revolt_quark::{Database, Error, Result};
 use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
@@ -70,6 +71,7 @@ pub struct DataCreateEvent {
 #[post("/create", data = "<data>")]
 pub async fn create_event(
     db: &State<Database>,
+    user: User,
     data: Json<DataCreateEvent>,
 ) -> Result<Json<Event>> {
     let data = data.into_inner();
@@ -97,6 +99,7 @@ pub async fn create_event(
     let date = Utc::now().to_rfc3339();
     let event = Event {
         id: Ulid::new().to_string(),
+        created_by: user.id,
         title: data.title,
         event_type: Some(data.event_type),
         start_date: data.start_date,
