@@ -23,6 +23,7 @@ pub use ratelimit_events::*;
 pub use safety_strikes::*;
 pub use server_members::*;
 pub use servers::*;
+pub use trips::model::{Trip, TripComment};
 pub use user_settings::*;
 pub use user_white_list::*;
 pub use users::*;
