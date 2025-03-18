@@ -99,7 +99,7 @@ pub async fn create_event(
     let date = Utc::now().to_rfc3339();
     let event = Event {
         id: Ulid::new().to_string(),
-        created_by: user.id,
+        created_by: Some(user.id),
         title: data.title,
         event_type: Some(data.event_type),
         start_date: data.start_date,
@@ -122,6 +122,7 @@ pub async fn create_event(
         attachments: data.attachments.clone(),
         gallery: data.gallery.clone(),
         created_at: date,
+        is_saved: None,
     };
 
     db.insert_event(&event).await?;

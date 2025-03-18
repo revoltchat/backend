@@ -16,7 +16,8 @@ pub struct Event {
     pub id: String,
 
     /// User who created the event
-    pub created_by: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_by: Option<String>,
 
     /// Event title
     pub title: String,
@@ -93,6 +94,10 @@ pub struct Event {
     /// Gallery image URLs
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub gallery: Vec<String>,
+
+    /// Whether the event is saved by current user
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_saved: Option<bool>,
 
     /// Creation timestamp
     pub created_at: String,

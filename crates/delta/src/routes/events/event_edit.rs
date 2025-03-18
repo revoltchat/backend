@@ -1,4 +1,5 @@
 use revolt_quark::models::event::{Event, EventType, PartialEvent, TicketConfig};
+use revolt_quark::models::user::User;
 use revolt_quark::{Database, Result};
 use rocket::{serde::json::Json, State};
 use serde::Deserialize;
@@ -31,6 +32,7 @@ impl From<DataEditEvent> for PartialEvent {
             payment_type: data.payment_type,
             attachments: data.attachments,
             gallery: data.gallery,
+            is_saved: None,
         }
     }
 }
@@ -66,10 +68,13 @@ pub struct DataEditEvent {
 #[patch("/<id>", data = "<data>")]
 pub async fn update_event(
     db: &State<Database>,
+    user: Option<User>,
     id: String,
     data: Json<DataEditEvent>,
 ) -> Result<Json<Event>> {
     db.update_event(&id, &data.into_inner().into()).await?;
-    let mut event = db.fetch_event(&id).await?;
+    let mut event = db
+        .fetch_event(user.as_ref().map(|u| u.id.as_str()), &id)
+        .await?;
     Ok(Json(event))
 }

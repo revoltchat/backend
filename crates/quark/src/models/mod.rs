@@ -26,7 +26,6 @@ mod users {
     pub mod user_settings;
     pub mod user_white_list;
 }
-
 mod safety {
     pub mod report;
     pub mod snapshot;
@@ -34,6 +33,7 @@ mod safety {
 
 mod events {
     pub mod event;
+    pub mod saved_event;
 }
 
 pub use admin::*;
