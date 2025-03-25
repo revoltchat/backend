@@ -104,6 +104,10 @@ pub async fn edit(
     }
 
     let new_voice_channel = if let Some(new_channel) = &data.voice_channel {
+        if !voice_client.is_enabled() {
+            return Err(create_error!(LiveKitUnavailable))
+        };
+
         permissions.throw_if_lacking_channel_permission(ChannelPermission::MoveMembers)?;
 
         // ensure the channel we are moving them to is in the server and is a voice channel

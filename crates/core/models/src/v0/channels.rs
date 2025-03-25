@@ -324,7 +324,7 @@ auto_derived!(
 
     /// Join a voice channel
     pub struct DataJoinCall {
-        pub node: String
+        pub node: Option<String>
     }
 
 );

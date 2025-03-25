@@ -1,6 +1,6 @@
 use revolt_config::config;
 use revolt_models::v0;
-use revolt_database::{util::{permissions::perms, reference::Reference}, voice::{raise_if_in_voice, VoiceClient}, Channel, Database, SystemMessage, User, AMQP};
+use revolt_database::{util::{permissions::perms, reference::Reference}, voice::{get_channel_node, raise_if_in_voice, VoiceClient}, Channel, Database, SystemMessage, User, AMQP};
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
 
@@ -12,10 +12,11 @@ use rocket::{serde::json::Json, State};
 #[openapi(tag = "Voice")]
 #[post("/<target>/join_call", data="<data>")]
 pub async fn call(db: &State<Database>, amqp: &State<AMQP>, voice: &State<VoiceClient>, user: User, target: Reference, data: Json<v0::DataJoinCall>) -> Result<Json<v0::CreateVoiceUserResponse>> {
-    let config = config().await;
+    if !voice.is_enabled() {
+        return Err(create_error!(LiveKitUnavailable))
+    }
 
-    let node_host = config.hosts.livekit.get(&data.node)
-        .ok_or_else(|| create_error!(UnknownNode))?;
+    let config = config().await;
 
     let channel = target.as_channel(db).await?;
 
@@ -26,8 +27,17 @@ pub async fn call(db: &State<Database>, amqp: &State<AMQP>, voice: &State<VoiceC
     let current_permissions = calculate_channel_permissions(&mut permissions).await;
     current_permissions.throw_if_lacking_channel_permission(ChannelPermission::Connect)?;
 
-    let token = voice.create_token(&data.node, &user, current_permissions, &channel)?;
-    let room = voice.create_room(&data.node, &channel).await?;
+    let existing_node = get_channel_node(channel.id()).await?;
+
+    let node = existing_node.or(data.into_inner().node)
+        .ok_or_else(|| create_error!(UnknownNode))?;
+
+    let node_host = config.hosts.livekit.get(&node)
+        .ok_or_else(|| create_error!(UnknownNode))?
+        .clone();
+
+    let token = voice.create_token(&node, &user, current_permissions, &channel)?;
+    let room = voice.create_room(&node, &channel).await?;
 
     log::debug!("Created room {}", room.name);
 

@@ -42,6 +42,10 @@ impl VoiceClient {
         }
     }
 
+    pub fn is_enabled(&self) -> bool {
+        !self.rooms.is_empty()
+    }
+
     pub async fn from_revolt_config() -> Self {
         let config = config().await;
 
@@ -89,8 +93,7 @@ impl VoiceClient {
             Channel::TextChannel { voice: Some(voice), .. } => Some(Cow::Borrowed(voice)),
             _ => None
         }
-
-            .ok_or_else(|| create_error!(NotAVoiceChannel))?;
+        .ok_or_else(|| create_error!(NotAVoiceChannel))?;
 
         room.client
             .create_room(
