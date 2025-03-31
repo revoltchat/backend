@@ -122,6 +122,22 @@ impl TestHarness {
         .expect("Failed to create test server")
     }
 
+    pub async fn new_channel(&self, server: &Server) -> Channel {
+        Channel::create_server_channel(
+            &self.db,
+            &mut server.clone(),
+            v0::DataCreateServerChannel {
+                channel_type: v0::LegacyServerChannelType::Text,
+                name: "Test Channel".to_string(),
+                description: None,
+                nsfw: Some(false),
+            },
+            true,
+        )
+        .await
+        .expect("Failed to make test channel")
+    }
+
     pub async fn new_message(
         &self,
         user: &User,
