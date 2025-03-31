@@ -8,7 +8,7 @@ use revolt_models::v0::{
     MessageWebhook, PushNotification, ReplyIntent, SendableEmbed, Text, RE_MENTION,
 };
 use revolt_permissions::{ChannelPermission, PermissionValue};
-use revolt_result::Result;
+use revolt_result::{ErrorType, Result};
 use ulid::Ulid;
 use validator::Validate;
 
@@ -329,14 +329,31 @@ impl Message {
                 }));
             }
 
-            for ReplyIntent { id, mention } in entries {
-                let message = db.fetch_message(&id).await?;
+            for ReplyIntent {
+                id,
+                mention,
+                fail_if_not_exists,
+            } in entries
+            {
+                match db.fetch_message(&id).await {
+                    // Referenced message exists
+                    Ok(message) => {
+                        if mention && allow_mentions {
+                            mentions.insert(message.author.to_owned());
+                        }
 
-                if mention && allow_mentions {
-                    mentions.insert(message.author.to_owned());
+                        replies.insert(message.id);
+                    }
+                    // If the referenced message doesn't exist and fail_if_not_exists
+                    // is set to false, send the message without the reply.
+                    Err(e) => {
+                        if !matches!(e.error_type, ErrorType::NotFound)
+                            || fail_if_not_exists.unwrap_or(true)
+                        {
+                            return Err(e);
+                        }
+                    }
                 }
-
-                replies.insert(message.id);
             }
         }
 

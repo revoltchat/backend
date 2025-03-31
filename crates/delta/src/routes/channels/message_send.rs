@@ -327,4 +327,163 @@ mod test {
             "Mention was scrubbed when the user can see the channel"
         );
     }
+
+    #[rocket::async_test]
+    async fn message_reply() {
+        let harness = TestHarness::new().await;
+        let (_, _, user) = harness.new_user().await;
+        let (server, channels) = harness.new_server(&user).await;
+        let channel = harness.new_channel(&server).await;
+        let (_, member, message) = harness.new_message(&user, &server, channels).await;
+
+        // Send a message with a reply
+        // Should succeed
+        let message_with_reply = Message::create_from_api(
+            &harness.db,
+            Some(&harness.amqp),
+            channel.clone(),
+            v0::DataMessageSend {
+                content: Some("Message with reply".to_string()),
+                nonce: None,
+                attachments: None,
+                replies: Some(vec![v0::ReplyIntent {
+                    id: message.id.clone(),
+                    mention: false,
+                    fail_if_not_exists: Some(true),
+                }]),
+                embeds: None,
+                masquerade: None,
+                interactions: None,
+                flags: None,
+            },
+            v0::MessageAuthor::User(&user.clone().into(&harness.db, Some(&user)).await),
+            Some(user.clone().into(&harness.db, Some(&user)).await),
+            Some(member.clone().into()),
+            user.limits().await,
+            IdempotencyKey::unchecked_from_string("1".to_string()),
+            false,
+            false,
+        )
+        .await
+        .expect("Failed to create message with reply");
+
+        assert!(
+            message_with_reply.replies.is_some(),
+            "Message replies is None",
+        );
+
+        let replies = message_with_reply.replies.unwrap();
+
+        assert!(!replies.is_empty(), "Message replies is empty",);
+
+        assert_eq!(replies[0], message.id, "Message reply ID does not match",);
+
+        // Delete the message
+        message
+            .clone()
+            .delete(&harness.db)
+            .await
+            .expect("Failed to delete message");
+
+        // Attempt to create messages with a reply to a deleted message
+
+        // fail_if_not_exists is set to false
+        // Should send the message without a reply
+        let message_with_missing_reply = Message::create_from_api(
+            &harness.db,
+            Some(&harness.amqp),
+            channel.clone(),
+            v0::DataMessageSend {
+                content: Some("Message with missing reply".to_string()),
+                nonce: None,
+                attachments: None,
+                replies: Some(vec![v0::ReplyIntent {
+                    id: message.id.clone(),
+                    mention: false,
+                    fail_if_not_exists: Some(false),
+                }]),
+                embeds: None,
+                masquerade: None,
+                interactions: None,
+                flags: None,
+            },
+            v0::MessageAuthor::User(&user.clone().into(&harness.db, Some(&user)).await),
+            Some(user.clone().into(&harness.db, Some(&user)).await),
+            Some(member.clone().into()),
+            user.limits().await,
+            IdempotencyKey::unchecked_from_string("3".to_string()),
+            false,
+            false,
+        )
+        .await
+        .expect("Failed to create message with missing reply");
+
+        assert!(
+            message_with_missing_reply.replies.is_none()
+                || message_with_missing_reply.replies.unwrap().is_empty(),
+            "Message replies exist when they shouldn't",
+        );
+
+        // fail_if_not_exists is set to true
+        // Should fail to send the message
+        Message::create_from_api(
+            &harness.db,
+            Some(&harness.amqp),
+            channel.clone(),
+            v0::DataMessageSend {
+                content: Some("Message with missing reply".to_string()),
+                nonce: None,
+                attachments: None,
+                replies: Some(vec![v0::ReplyIntent {
+                    id: message.id.clone(),
+                    mention: false,
+                    fail_if_not_exists: Some(true),
+                }]),
+                embeds: None,
+                masquerade: None,
+                interactions: None,
+                flags: None,
+            },
+            v0::MessageAuthor::User(&user.clone().into(&harness.db, Some(&user)).await),
+            Some(user.clone().into(&harness.db, Some(&user)).await),
+            Some(member.clone().into()),
+            user.limits().await,
+            IdempotencyKey::unchecked_from_string("4".to_string()),
+            false,
+            false,
+        )
+        .await
+        .expect_err("Created message with missing reply and true fail");
+
+        // fail_if_not_exists is not set
+        // Should fail to send the message
+        Message::create_from_api(
+            &harness.db,
+            Some(&harness.amqp),
+            channel.clone(),
+            v0::DataMessageSend {
+                content: Some("Message with missing reply".to_string()),
+                nonce: None,
+                attachments: None,
+                replies: Some(vec![v0::ReplyIntent {
+                    id: message.id.clone(),
+                    mention: false,
+                    fail_if_not_exists: None,
+                }]),
+                embeds: None,
+                masquerade: None,
+                interactions: None,
+                flags: None,
+            },
+            v0::MessageAuthor::User(&user.clone().into(&harness.db, Some(&user)).await),
+            Some(user.clone().into(&harness.db, Some(&user)).await),
+            Some(member.clone().into()),
+            user.limits().await,
+            IdempotencyKey::unchecked_from_string("4".to_string()),
+            false,
+            false,
+        )
+        .await
+        .expect_err("Created message with missing reply and none fail");
+    }
 }
