@@ -18,10 +18,6 @@ pub async fn delete_emoji(
     user: User,
     emoji_id: Reference,
 ) -> Result<EmptyResponse> {
-    // Bots cannot manage emoji
-    if user.bot.is_some() {
-        return Err(create_error!(IsBot));
-    }
 
     // Fetch the emoji
     let emoji = emoji_id.as_emoji(db).await?;
