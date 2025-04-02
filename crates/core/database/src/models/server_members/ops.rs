@@ -42,7 +42,7 @@ impl ChunkedServerMembersGenerator {
             ChunkedServerMembersGenerator::MongoDb { session, cursor } => {
                 if let Some(cursor) = cursor {
                     let value = cursor.next(session).await;
-                    value.map(|val| val.expect("Faild to fetch the next member"))
+                    value.map(|val| val.expect("Failed to fetch the next member"))
                 } else {
                     warn!("Attempted to access a (MongoDb) server member generator without first setting a cursor");
                     None

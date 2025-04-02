@@ -5,7 +5,7 @@ use iso8601_timestamp::Timestamp;
 use revolt_config::{config, FeaturesLimits};
 use revolt_models::v0::{
     self, BulkMessageResponse, DataMessageSend, Embed, MessageAuthor, MessageFlags, MessageSort,
-    MessageWebhook, PushNotification, ReplyIntent, SendableEmbed, Text, RE_MENTION,
+    MessageWebhook, PushNotification, ReplyIntent, SendableEmbed, Text, RE_BLOCKS, RE_MENTION,
     RE_ROLE_MENTION,
 };
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission, PermissionValue};
@@ -58,6 +58,7 @@ auto_derived_partial!(
         #[serde(skip_serializing_if = "Option::is_none")]
         pub mentions: Option<Vec<String>>,
         /// Array of role ids mentioned in this message
+        #[serde(skip_serializing_if = "Option::is_none")]
         pub role_mentions: Option<Vec<String>>,
         /// Array of message ids this message is replying to
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -293,6 +294,8 @@ impl Message {
             return Err(create_error!(EmptyMessage));
         }
 
+        let allow_mass_mentions = allow_mentions && config.features.mass_mentions_enabled;
+
         let mut mentions_everyone = false;
         let mut mentions_online = false;
         let mut suppress_notifications = false;
@@ -306,8 +309,8 @@ impl Message {
             // First step of mass mention resolution
             let flags = MessageFlagsValue(*raw_flags);
             suppress_notifications = flags.has(MessageFlags::SuppressNotifications);
-            mentions_everyone = flags.has(MessageFlags::MentionsEveryone);
-            mentions_online = flags.has(MessageFlags::MentionsOnline);
+            mentions_everyone = allow_mentions && flags.has(MessageFlags::MentionsEveryone);
+            mentions_online = allow_mentions && flags.has(MessageFlags::MentionsOnline);
 
             // Not a bot, and attempting to set mention flags
             if user.as_ref().is_some_and(|u| u.bot.as_ref().is_none())
@@ -370,16 +373,18 @@ impl Message {
         let mut role_mentions = HashSet::new();
         let mut role_model_mentions = vec![];
 
-        if allow_mentions && server_id.is_some() {
-            if let Some(content) = &data.content {
-                for capture in RE_MENTION.captures_iter(content) {
-                    if let Some(mention) = capture.get(1) {
-                        mentions.insert(mention.as_str().to_string());
-                    }
-                }
+        if let Some(raw_content) = &data.content {
+            // remove all codeblocks before running the mention regex
+            let modified_content = RE_BLOCKS.replace_all(raw_content, "");
 
+            for capture in RE_MENTION.captures_iter(&modified_content).flatten() {
+                if let Some(mention) = capture.get(1) {
+                    mentions.insert(mention.as_str().to_string());
+                }
+            }
+            if allow_mass_mentions && server_id.is_some() {
                 // Second step of mass mention resolution.
-                for capture in RE_ROLE_MENTION.captures_iter(content) {
+                for capture in RE_ROLE_MENTION.captures_iter(&modified_content).flatten() {
                     let raw = capture.get(0).expect("No capture?").as_str();
                     if raw == "@everyone" {
                         mentions_everyone = true;
@@ -416,9 +421,9 @@ impl Message {
         if !config.features.mass_mentions_enabled
             && (mentions_everyone || mentions_online || !role_mentions.is_empty())
         {
-            return Err(create_error!(FeatureDisabled {
-                feature: "features.mass_mentions_enabled".to_string()
-            }));
+            mentions_everyone = false;
+            mentions_online = false;
+            role_mentions.clear();
         } else if mentions_everyone || mentions_online || !role_mentions.is_empty() {
             debug!(
                 "Mentioned everyone: {}, mentioned online: {}, mentioned roles: {:?}",

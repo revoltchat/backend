@@ -26,7 +26,7 @@ pub const LATEST_REVISION: i32 = 31;
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
     let data = migrations
-        .find_one(Document::new())
+        .find_one(doc! {})
         .await
         .expect("Failed to fetch migration data.");
 
