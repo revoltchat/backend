@@ -70,6 +70,10 @@ auto_derived_partial!(
     pub struct Role {
         /// Role name
         pub name: String,
+        /// Icon attachment
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub icon: Option<File>,
+        ///
         /// Permissions available to this role
         pub permissions: OverrideField,
         /// Colour used for this role
@@ -123,9 +127,10 @@ auto_derived!(
         Banner,
     }
 
-    /// Optional fields on server object
+    /// Optional fields on role object
     pub enum FieldsRole {
         Colour,
+        Icon,
     }
 );
 
@@ -260,6 +265,7 @@ impl Role {
     pub fn into_optional(self) -> PartialRole {
         PartialRole {
             name: Some(self.name),
+            icon: self.icon,
             permissions: Some(self.permissions),
             colour: self.colour,
             hoist: Some(self.hoist),
@@ -318,6 +324,7 @@ impl Role {
     pub fn remove_field(&mut self, field: &FieldsRole) {
         match field {
             FieldsRole::Colour => self.colour = None,
+            FieldsRole::Icon => self.icon = None,
         }
     }
 
