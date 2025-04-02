@@ -173,7 +173,6 @@ default_bucket = "revolt-uploads"
 
 
 [features]
-# Bucket to upload to by default
 # Feature gate options
 webhooks_enabled = false
 

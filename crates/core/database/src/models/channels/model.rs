@@ -269,16 +269,24 @@ impl Channel {
             }));
         }
 
+        let id = ulid::Ulid::new().to_string();
+
+        let icon = if let Some(icon_id) = data.icon {
+            Some(File::use_channel_icon(db, &icon_id, &id, &owner_id).await?)
+        } else {
+            None
+        };
+
         let recipients = data.users.into_iter().collect::<Vec<String>>();
         let channel = Channel::Group {
-            id: ulid::Ulid::new().to_string(),
+            id,
 
             name: data.name,
             owner: owner_id,
             description: data.description,
             recipients: recipients.clone(),
 
-            icon: None,
+            icon,
             last_message_id: None,
 
             permissions: None,

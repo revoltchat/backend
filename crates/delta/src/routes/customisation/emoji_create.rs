@@ -27,11 +27,6 @@ pub async fn create_emoji(
         })
     })?;
 
-    // Bots cannot manage emojis
-    if user.bot.is_some() {
-        return Err(create_error!(IsBot));
-    }
-
     // Validate we have permission to write into parent
     match &data.parent {
         v0::EmojiParent::Server { id } => {
