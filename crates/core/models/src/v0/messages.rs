@@ -247,6 +247,10 @@ auto_derived!(
         pub id: String,
         /// Whether this reply should mention the message's author
         pub mention: bool,
+        /// Whether to error if the referenced message doesn't exist.
+        /// Otherwise, send a message without this reply.
+        /// Default is true.
+        pub fail_if_not_exists: Option<bool>,
     }
 
     /// Message to send

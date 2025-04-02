@@ -1,6 +1,6 @@
 [package]
 name = "revolt-config"
-version = "0.8.2"
+version = "0.8.4"
 edition = "2021"
 license = "MIT"
 authors = ["Paul Makles <me@insrt.uk>"]
@@ -34,4 +34,4 @@ pretty_env_logger = "0.4.0"
 sentry = "0.31.5"
 
 # Core
-revolt-result = { version = "0.8.2", path = "../result", optional = true }
+revolt-result = { version = "0.8.4", path = "../result", optional = true }

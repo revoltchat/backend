@@ -348,6 +348,7 @@ pub struct Settings {
     pub files: Files,
     pub features: Features,
     pub sentry: Sentry,
+    pub production: bool,
 }
 
 impl Settings {
@@ -375,7 +376,14 @@ pub async fn read() -> Config {
 
 #[cached(time = 30)]
 pub async fn config() -> Settings {
-    read().await.try_deserialize::<Settings>().unwrap()
+    let mut config = read().await.try_deserialize::<Settings>().unwrap();
+
+    // auto-detect production nodes
+    if config.hosts.api.contains("https") && config.hosts.api.contains("revolt.chat") {
+        config.production = true;
+    }
+
+    config
 }
 
 /// Configure logging and common Rust variables

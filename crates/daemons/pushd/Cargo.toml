@@ -1,12 +1,13 @@
 [package]
 name = "revolt-pushd"
-version = "0.8.2"
+version = "0.8.4"
 edition = "2021"
+license = "AGPL-3.0-or-later"
 
 [dependencies]
-revolt-config = { version = "0.8.2", path = "../../core/config" }
-revolt-database = { version = "0.8.2", path = "../../core/database" }
-revolt-models = { version = "0.8.2", path = "../../core/models", features = [
+revolt-config = { version = "0.8.4", path = "../../core/config" }
+revolt-database = { version = "0.8.4", path = "../../core/database" }
+revolt-models = { version = "0.8.4", path = "../../core/models", features = [
     "validator",
 ] }
 revolt-presence = { version = "0.8.1", path = "../../core/presence", features = [
