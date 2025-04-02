@@ -121,7 +121,7 @@ auto_derived!(
         Banner,
     }
 
-    /// Optional fields on server object
+    /// Optional fields on role object
     pub enum FieldsRole {
         Colour,
         Icon,
