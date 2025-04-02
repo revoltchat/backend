@@ -53,8 +53,8 @@ pub async fn create(
 
     let role = Role {
         name: data.name,
-        icon: None,
         rank,
+        icon: None,
         colour: None,
         hoist: false,
         permissions: Default::default(),
