@@ -5,9 +5,13 @@ use authifier::{
 use futures::StreamExt;
 use rand::Rng;
 use redis_kiss::redis::aio::PubSub;
-use revolt_database::{events::client::EventV1, Database, User, AMQP};
+use revolt_database::util::idempotency::IdempotencyKey;
+use revolt_database::{
+    events::client::EventV1, Channel, Database, Member, Message, Server, User, AMQP,
+};
 use revolt_models::v0;
-use rocket::local::asynchronous::Client;
+use rocket::http::Header;
+use rocket::local::asynchronous::{Client, LocalRequest, LocalResponse};
 
 pub struct TestHarness {
     pub client: Client,
@@ -102,6 +106,83 @@ impl TestHarness {
         .expect("`User`");
 
         (account, session, user)
+    }
+
+    pub async fn new_server(&self, user: &User) -> (Server, Vec<Channel>) {
+        Server::create(
+            &self.db,
+            v0::DataCreateServer {
+                name: "Test Server".to_string(),
+                ..Default::default()
+            },
+            user,
+            true,
+        )
+        .await
+        .expect("Failed to create test server")
+    }
+
+    pub async fn new_channel(&self, server: &Server) -> Channel {
+        Channel::create_server_channel(
+            &self.db,
+            &mut server.clone(),
+            v0::DataCreateServerChannel {
+                channel_type: v0::LegacyServerChannelType::Text,
+                name: "Test Channel".to_string(),
+                description: None,
+                nsfw: Some(false),
+            },
+            true,
+        )
+        .await
+        .expect("Failed to make test channel")
+    }
+
+    pub async fn new_message(
+        &self,
+        user: &User,
+        server: &Server,
+        channels: Vec<Channel>,
+    ) -> (Channel, Member, Message) {
+        let (member, channels) = Member::create(&self.db, server, user, Some(channels))
+            .await
+            .expect("Failed to create member");
+        let channel = &channels[0];
+        let message = Message::create_from_api(
+            &self.db,
+            None,
+            channel.clone(),
+            v0::DataMessageSend {
+                content: Some("Test message".to_string()),
+                nonce: None,
+                attachments: None,
+                replies: None,
+                embeds: None,
+                masquerade: None,
+                interactions: None,
+                flags: None,
+            },
+            v0::MessageAuthor::User(&user.clone().into(&self.db, Some(user)).await),
+            Some(user.clone().into(&self.db, Some(user)).await),
+            Some(member.clone().into()),
+            user.limits().await,
+            IdempotencyKey::unchecked_from_string("0".to_string()),
+            false,
+            false,
+        )
+        .await
+        .expect("Failed to create message");
+        (channel.clone(), member, message)
+    }
+
+    pub async fn with_session<'c>(
+        session: Session,
+        request: LocalRequest<'c>,
+    ) -> LocalResponse<'c> {
+        request
+            .header(Header::new("x-session-token", session.token.to_string()))
+            .dispatch()
+            .await
     }
 
     pub async fn wait_for_event<F>(&mut self, topic: &str, predicate: F) -> EventV1
