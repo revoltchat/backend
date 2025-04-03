@@ -682,7 +682,6 @@ impl Message {
         user: Option<v0::User>,
         member: Option<v0::Member>,
         channel: &Channel,
-
         generate_embeds: bool,
     ) -> Result<()> {
         self.send_without_notifications(
