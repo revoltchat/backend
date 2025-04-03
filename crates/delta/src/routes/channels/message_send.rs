@@ -497,8 +497,8 @@ mod test {
                 &server,
                 1,
                 Some(OverrideField {
-                    a: (1 << ChannelPermission::MentionEveryone as i64)
-                        & (1 << ChannelPermission::MentionRoles as i64),
+                    a: (ChannelPermission::MentionEveryone as i64)
+                        & (ChannelPermission::MentionRoles as i64),
                     d: 0,
                 }),
             )
