@@ -5,11 +5,12 @@ use authifier::{
 use futures::StreamExt;
 use rand::Rng;
 use redis_kiss::redis::aio::PubSub;
-use revolt_database::util::idempotency::IdempotencyKey;
 use revolt_database::{
     events::client::EventV1, Channel, Database, Member, Message, Server, User, AMQP,
 };
+use revolt_database::{util::idempotency::IdempotencyKey, Role};
 use revolt_models::v0;
+use revolt_permissions::OverrideField;
 use rocket::http::Header;
 use rocket::local::asynchronous::{Client, LocalRequest, LocalResponse};
 
@@ -120,6 +121,28 @@ impl TestHarness {
         )
         .await
         .expect("Failed to create test server")
+    }
+
+    pub async fn new_role(
+        &self,
+        server: &Server,
+        rank: i64,
+        overrides: Option<OverrideField>,
+    ) -> (String, Role) {
+        let role = Role {
+            name: TestHarness::rand_string(),
+            permissions: overrides.unwrap_or(OverrideField { a: 0, d: 0 }),
+            rank,
+            colour: None,
+            hoist: false,
+        };
+
+        let id = role
+            .create(&self.db, &server.id)
+            .await
+            .expect("Failed to create test role");
+
+        (id, role)
     }
 
     pub async fn new_channel(&self, server: &Server) -> Channel {
