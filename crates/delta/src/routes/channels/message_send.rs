@@ -117,10 +117,11 @@ mod test {
     use crate::{rocket, util::test::TestHarness};
     use revolt_database::{
         util::{idempotency::IdempotencyKey, reference::Reference},
-        Channel, Member, Message, PartialChannel, PartialMember, Role, Server,
+        Channel, Member, Message, MessageFlagsValue, PartialChannel, PartialMember, Role, Server,
     };
-    use revolt_models::v0::{self, DataCreateServerChannel};
+    use revolt_models::v0::{self, DataCreateServerChannel, MessageFlags};
     use revolt_permissions::{ChannelPermission, OverrideField};
+    use revolt_result::ErrorType;
 
     #[rocket::async_test]
     async fn message_mention_constraints() {
@@ -485,5 +486,194 @@ mod test {
         )
         .await
         .expect_err("Created message with missing reply and none fail");
+    }
+
+    #[rocket::async_test]
+    async fn mass_mentions_test() {
+        let harness = TestHarness::new().await;
+        let (_, _, user) = harness.new_user().await;
+        let (_, _, other_user) = harness.new_user().await;
+        let (server, _) = harness.new_server(&user).await;
+        let channel = harness.new_channel(&server).await;
+        let (role_id, mut role) = harness
+            .new_role(
+                &server,
+                1,
+                Some(OverrideField {
+                    a: (ChannelPermission::MentionEveryone as i64)
+                        | (ChannelPermission::MentionRoles as i64),
+                    d: 0,
+                }),
+            )
+            .await;
+        let (mut other_member, _) = Member::create(&harness.db, &server, &other_user, None)
+            .await
+            .expect("Failed to add test member");
+
+        // Send a message with an everyone and role mention.
+        // Should fail
+        let bad_message_with_mentions = Message::create_from_api(
+            &harness.db,
+            Some(&harness.amqp),
+            channel.clone(),
+            v0::DataMessageSend {
+                content: Some(format!("Mentioning @everyone and role <%{}>", &role_id)),
+                nonce: None,
+                attachments: None,
+                replies: None,
+                embeds: None,
+                masquerade: None,
+                interactions: None,
+                flags: None,
+            },
+            v0::MessageAuthor::User(
+                &other_user
+                    .clone()
+                    .into(&harness.db, Some(&other_user))
+                    .await,
+            ),
+            Some(
+                other_user
+                    .clone()
+                    .into(&harness.db, Some(&other_user))
+                    .await,
+            ),
+            Some(other_member.clone().into()),
+            other_user.limits().await,
+            IdempotencyKey::unchecked_from_string("1".to_string()),
+            false,
+            true,
+        )
+        .await
+        .expect_err("Should not have created message with everyone and role pings");
+
+        assert!(
+            matches!(
+                bad_message_with_mentions.error_type,
+                ErrorType::MissingPermission { .. }
+            ),
+            "Intentional permissions error did not return MissingPermission"
+        );
+
+        // Send a mass mention inside a codeblock.
+        // Should be undetected and therefor pass
+        let message_with_codeblock = Message::create_from_api(
+            &harness.db,
+            Some(&harness.amqp),
+            channel.clone(),
+            v0::DataMessageSend {
+                content: Some(format!("Mentioning `@everyone` and role `<%{}>`", &role_id)),
+                nonce: None,
+                attachments: None,
+                replies: None,
+                embeds: None,
+                masquerade: None,
+                interactions: None,
+                flags: None,
+            },
+            v0::MessageAuthor::User(
+                &other_user
+                    .clone()
+                    .into(&harness.db, Some(&other_user))
+                    .await,
+            ),
+            Some(
+                other_user
+                    .clone()
+                    .into(&harness.db, Some(&other_user))
+                    .await,
+            ),
+            Some(other_member.clone().into()),
+            other_user.limits().await,
+            IdempotencyKey::unchecked_from_string("1".to_string()),
+            false,
+            true,
+        )
+        .await
+        .expect("Failed to create message with everyone and role pings in codeblocks");
+
+        assert!(
+            message_with_codeblock.flags.is_none()
+                || !MessageFlagsValue(message_with_codeblock.flags.unwrap())
+                    .has(MessageFlags::MentionsEveryone),
+            "Message flags mentions everyone when inside codeblock",
+        );
+
+        assert!(
+            message_with_codeblock.role_mentions.is_none(),
+            "Role mentions detected when inside codeblock"
+        );
+
+        other_member.roles.push(role_id.clone());
+        harness
+            .db
+            .update_member(
+                &other_member.id,
+                &PartialMember {
+                    avatar: None,
+                    id: None,
+                    joined_at: None,
+                    nickname: None,
+                    roles: Some(vec![role_id.clone()]),
+                    timeout: None,
+                },
+                vec![],
+            )
+            .await
+            .expect("Failed to add role to user");
+
+        // Send a message with an everyone and role mention.
+        // Should succeed
+        let message_with_mentions = Message::create_from_api(
+            &harness.db,
+            Some(&harness.amqp),
+            channel.clone(),
+            v0::DataMessageSend {
+                content: Some(format!("Mentioning @everyone and role <%{}>", &role_id)),
+                nonce: None,
+                attachments: None,
+                replies: None,
+                embeds: None,
+                masquerade: None,
+                interactions: None,
+                flags: None,
+            },
+            v0::MessageAuthor::User(
+                &other_user
+                    .clone()
+                    .into(&harness.db, Some(&other_user))
+                    .await,
+            ),
+            Some(
+                other_user
+                    .clone()
+                    .into(&harness.db, Some(&other_user))
+                    .await,
+            ),
+            Some(other_member.clone().into()),
+            other_user.limits().await,
+            IdempotencyKey::unchecked_from_string("1".to_string()),
+            false,
+            true,
+        )
+        .await
+        .expect("Failed to create message with everyone and role pings");
+
+        assert!(
+            message_with_mentions.flags.is_some(),
+            "Message flags is None",
+        );
+
+        assert!(
+            MessageFlagsValue(message_with_mentions.flags.unwrap())
+                .has(MessageFlags::MentionsEveryone),
+            "Message flags does not mention everyone. Flag value is {}",
+            message_with_mentions.flags.unwrap()
+        );
+
+        assert!(
+            message_with_mentions.role_mentions.is_some(),
+            "Message has no role mentions"
+        );
     }
 }

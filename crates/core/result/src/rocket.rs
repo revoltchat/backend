@@ -42,6 +42,7 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::NotInGroup => Status::NotFound,
             ErrorType::AlreadyPinned => Status::BadRequest,
             ErrorType::NotPinned => Status::BadRequest,
+            ErrorType::InvalidFlagValue => Status::BadRequest,
 
             ErrorType::UnknownServer => Status::NotFound,
             ErrorType::InvalidRole => Status::NotFound,
@@ -57,6 +58,7 @@ impl<'r> Responder<'r, 'static> for Error {
 
             ErrorType::ReachedMaximumBots => Status::BadRequest,
             ErrorType::IsBot => Status::BadRequest,
+            ErrorType::IsNotBot => Status::BadRequest,
             ErrorType::BotIsPrivate => Status::Forbidden,
 
             ErrorType::CannotReportYourself => Status::BadRequest,
@@ -84,6 +86,8 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::AlreadyConnected => Status::BadRequest,
             ErrorType::NotConnected => Status::BadRequest,
             ErrorType::UnknownNode => Status::BadRequest,
+            ErrorType::FeatureDisabled { .. } => Status::BadRequest,
+
             ErrorType::ProxyError => Status::BadRequest,
             ErrorType::FileTooSmall => Status::UnprocessableEntity,
             ErrorType::FileTooLarge { .. } => Status::UnprocessableEntity,
