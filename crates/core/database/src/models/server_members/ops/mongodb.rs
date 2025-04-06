@@ -1,3 +1,4 @@
+use bson::Document;
 use futures::StreamExt;
 use mongodb::options::ReadConcern;
 use revolt_result::Result;
@@ -13,7 +14,30 @@ static COL: &str = "server_members";
 impl AbstractServerMembers for MongoDb {
     /// Insert a new server member into the database
     async fn insert_member(&self, member: &Member) -> Result<()> {
-        query!(self, insert_one, COL, &member).map(|_| ())
+        let existing: Result<Option<Document>> = query!(
+            self,
+            find_one,
+            COL,
+            doc! {
+                "_id.server": member.id.server,
+                "_id.user": member.id.user,
+                "pending_deletion_at": {"$exists": true}
+            }
+        );
+        // Update the existing record if it exist, otherwise make a new record
+        if existing.is_ok_and(|x| x.is_some()) {
+            let partial = PartialMember {
+                id: None,
+                joined_at: Some(member.joined_at),
+                nickname: member.nickname,
+                avatar: member.avatar,
+                roles: Some(member.roles),
+                timeout: None,
+            };
+            self.update_member(&member.id, &partial, vec![]).await
+        } else {
+            query!(self, insert_one, COL, &member).map(|_| ())
+        }
     }
 
     /// Fetch a server member by their id
@@ -24,7 +48,8 @@ impl AbstractServerMembers for MongoDb {
             COL,
             doc! {
                 "_id.server": server_id,
-                "_id.user": user_id
+                "_id.user": user_id,
+                "pending_deletion_at": {"$exists": false}
             }
         )?
         .ok_or_else(|| create_error!(NotFound))
@@ -36,6 +61,10 @@ impl AbstractServerMembers for MongoDb {
             .col::<Member>(COL)
             .find(doc! {
                 "_id.server": server_id
+            })
+            .find(doc! {
+                "_id.server": server_id,
+                "pending_deletion_at": {"$exists": false}
             })
             .await
             .map_err(|_| create_database_error!("find", COL))?
@@ -143,7 +172,8 @@ impl AbstractServerMembers for MongoDb {
         Ok(self
             .col::<Member>(COL)
             .find(doc! {
-                "_id.user": user_id
+                "_id.user": user_id,
+                "pending_deletion_at": {"$exists": false}
             })
             .await
             .map_err(|_| create_database_error!("find", COL))?
@@ -168,6 +198,13 @@ impl AbstractServerMembers for MongoDb {
                     "$in": ids
                 }
             })
+            .find(doc! {
+                "_id.server": server_id,
+                "pending_deletion_at": {"$exists": false},
+                "_id.user": {
+                    "$in": ids
+                }
+            })
             .await
             .map_err(|_| create_database_error!("find", COL))?
             .filter_map(|s| async {
@@ -185,7 +222,8 @@ impl AbstractServerMembers for MongoDb {
     async fn fetch_member_count(&self, server_id: &str) -> Result<usize> {
         self.col::<Member>(COL)
             .count_documents(doc! {
-                "_id.server": server_id
+                "_id.server": server_id,
+                "pending_deletion_at": {"$exists": false}
             })
             .await
             .map(|c| c as usize)
@@ -197,6 +235,10 @@ impl AbstractServerMembers for MongoDb {
         self.col::<Member>(COL)
             .count_documents(doc! {
                 "_id.user": user_id
+            })
+            .count_documents(doc! {
+                "_id.user": user_id,
+                "pending_deletion_at": {"$exists": false}
             })
             .await
             .map(|c| c as usize)
@@ -225,8 +267,40 @@ impl AbstractServerMembers for MongoDb {
         .map(|_| ())
     }
 
+    /// Marks a member for deletion.
+    /// This will remove the record if the user has no pending actions (eg. timeout),
+    /// otherwise will slate the record for deletion by revolt_crond once the actions expire.
+    async fn soft_delete_member(&self, id: &MemberCompositeKey) -> Result<()> {
+        let member = self.fetch_member(&id.server, &id.user).await;
+        if let Ok(member) = member {
+            if member.in_timeout() {
+                query!(
+                    self,
+                    update_one,
+                    COL,
+                    doc! {
+                        "_id.server": &id.server,
+                        "_id.user": &id.user,
+                    },
+                    doc! {
+                        "pending_deletion_at": {
+                            "$copy": "timeout"
+                        }
+                    },
+                    vec!["joined_at", "nickname", "avatar", "roles"],
+                    None
+                )
+                .map(|_| ())
+            } else {
+                self.force_delete_member(&id).await
+            }
+        } else {
+            Err(())
+        }
+    }
+
     /// Delete a server member by their id
-    async fn delete_member(&self, id: &MemberCompositeKey) -> Result<()> {
+    async fn force_delete_member(&self, id: &MemberCompositeKey) -> Result<()> {
         query!(
             self,
             delete_one,
