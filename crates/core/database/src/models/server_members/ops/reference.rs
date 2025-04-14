@@ -169,13 +169,35 @@ impl AbstractServerMembers for ReferenceDb {
         }
     }
 
+    /// Soft delete a member
+    async fn soft_delete_member(&self, id: &MemberCompositeKey) -> Result<()> {
+        let mut server_members = self.server_members.lock().await;
+
+        let member = server_members.get_mut(id);
+        if let Some(member) = member {
+            if member.in_timeout() {
+                panic!("Soft deletion is not implemented.")
+            } else if server_members.remove(id).is_some() {
+                Ok(())
+            } else {
+                Err(create_error!(NotFound))
+            }
+        } else {
+            Err(create_error!(NotFound))
+        }
+    }
+
     /// Delete a server member by their id
-    async fn delete_member(&self, id: &MemberCompositeKey) -> Result<()> {
+    async fn force_delete_member(&self, id: &MemberCompositeKey) -> Result<()> {
         let mut server_members = self.server_members.lock().await;
         if server_members.remove(id).is_some() {
             Ok(())
         } else {
             Err(create_error!(NotFound))
         }
+    }
+
+    async fn remove_dangling_members(&self) -> Result<()> {
+        todo!()
     }
 }

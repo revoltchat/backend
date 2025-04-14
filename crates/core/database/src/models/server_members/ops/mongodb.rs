@@ -1,5 +1,6 @@
 use bson::Document;
 use futures::StreamExt;
+use iso8601_timestamp::Timestamp;
 use mongodb::options::ReadConcern;
 use revolt_result::Result;
 
@@ -19,22 +20,31 @@ impl AbstractServerMembers for MongoDb {
             find_one,
             COL,
             doc! {
-                "_id.server": member.id.server,
-                "_id.user": member.id.user,
+                "_id.server": &member.id.server,
+                "_id.user": &member.id.user,
                 "pending_deletion_at": {"$exists": true}
             }
         );
         // Update the existing record if it exist, otherwise make a new record
         if existing.is_ok_and(|x| x.is_some()) {
-            let partial = PartialMember {
-                id: None,
-                joined_at: Some(member.joined_at),
-                nickname: member.nickname,
-                avatar: member.avatar,
-                roles: Some(member.roles),
-                timeout: None,
-            };
-            self.update_member(&member.id, &partial, vec![]).await
+            self.col::<Document>(COL)
+                .update_one(
+                    doc! {
+                        "_id.server": &member.id.server,
+                        "_id.user": &member.id.user,
+                    },
+                    doc! {
+                        "$set": {
+                            "joined_at": member.joined_at.duration_since(Timestamp::UNIX_EPOCH).whole_seconds(),
+                        },
+                        "$unset": {
+                            "pending_deletion_at": ""
+                        }
+                    },
+                )
+                .await
+                .map(|_| ())
+                .map_err(|_| create_database_error!("update_one", COL))
         } else {
             query!(self, insert_one, COL, &member).map(|_| ())
         }
@@ -59,9 +69,6 @@ impl AbstractServerMembers for MongoDb {
     async fn fetch_all_members<'a>(&self, server_id: &str) -> Result<Vec<Member>> {
         Ok(self
             .col::<Member>(COL)
-            .find(doc! {
-                "_id.server": server_id
-            })
             .find(doc! {
                 "_id.server": server_id,
                 "pending_deletion_at": {"$exists": false}
@@ -194,12 +201,6 @@ impl AbstractServerMembers for MongoDb {
             .col::<Member>(COL)
             .find(doc! {
                 "_id.server": server_id,
-                "_id.user": {
-                    "$in": ids
-                }
-            })
-            .find(doc! {
-                "_id.server": server_id,
                 "pending_deletion_at": {"$exists": false},
                 "_id.user": {
                     "$in": ids
@@ -233,9 +234,6 @@ impl AbstractServerMembers for MongoDb {
     /// Fetch server count of a user
     async fn fetch_server_count(&self, user_id: &str) -> Result<usize> {
         self.col::<Member>(COL)
-            .count_documents(doc! {
-                "_id.user": user_id
-            })
             .count_documents(doc! {
                 "_id.user": user_id,
                 "pending_deletion_at": {"$exists": false}
@@ -274,28 +272,30 @@ impl AbstractServerMembers for MongoDb {
         let member = self.fetch_member(&id.server, &id.user).await;
         if let Ok(member) = member {
             if member.in_timeout() {
-                query!(
-                    self,
-                    update_one,
-                    COL,
-                    doc! {
-                        "_id.server": &id.server,
-                        "_id.user": &id.user,
-                    },
-                    doc! {
-                        "pending_deletion_at": {
-                            "$copy": "timeout"
-                        }
-                    },
-                    vec!["joined_at", "nickname", "avatar", "roles"],
-                    None
-                )
-                .map(|_| ())
+                self.col::<Document>(COL)
+                    .update_many(
+                        doc! {
+                            "_id.server": &id.server,
+                            "_id.user": &id.user,
+                        },
+                        doc! {
+                            "$set": {"pending_deletion_at": format!("{}", member.timeout.unwrap().format())},
+                            "$unset": {
+                                "joined_at": "",
+                                "avatar": "",
+                                "nickname": "",
+                                "roles": ""
+                            }
+                        },
+                    )
+                    .await
+                    .map(|_| ())
+                    .map_err(|_| create_database_error!("update_many", COL))
             } else {
-                self.force_delete_member(&id).await
+                self.force_delete_member(id).await
             }
         } else {
-            Err(())
+            Err(create_database_error!("fetch_member", COL))
         }
     }
 
@@ -312,11 +312,25 @@ impl AbstractServerMembers for MongoDb {
         )
         .map(|_| ())
     }
+
+    async fn remove_dangling_members(&self) -> Result<()> {
+        let now = Timestamp::now_utc();
+        let date = format!("{}", now.format_short()); // I hate this library
+
+        self.col::<Document>(COL)
+            .delete_many(doc! {
+                "pending_deletion_at": {"$lt": date}
+            })
+            .await
+            .map(|_| ())
+            .map_err(|_| create_database_error!("count_documents", COL))
+    }
 }
 
 impl IntoDocumentPath for FieldsMember {
     fn as_path(&self) -> Option<&'static str> {
         Some(match self {
+            FieldsMember::JoinedAt => "joined_at",
             FieldsMember::Avatar => "avatar",
             FieldsMember::Nickname => "nickname",
             FieldsMember::Roles => "roles",

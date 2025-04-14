@@ -115,6 +115,14 @@ pub trait AbstractServerMembers: Sync + Send {
         remove: Vec<FieldsMember>,
     ) -> Result<()>;
 
-    /// Delete a server member by their id
-    async fn delete_member(&self, id: &MemberCompositeKey) -> Result<()>;
+    /// Marks a user as no longer a member of a server, while retaining the database value.
+    /// This is used to keep information such as timeouts in place, but will remove information such as join date and applied roles.
+    async fn soft_delete_member(&self, id: &MemberCompositeKey) -> Result<()>;
+
+    /// Forcibly delete a server member by their id.
+    /// This will cancel any pending timeouts or other longer term actions, and they will not be reapplied on rejoin.
+    async fn force_delete_member(&self, id: &MemberCompositeKey) -> Result<()>;
+
+    /// Fetch all members who have been marked for deletion.
+    async fn remove_dangling_members(&self) -> Result<()>;
 }
