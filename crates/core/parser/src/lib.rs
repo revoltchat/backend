@@ -3,9 +3,12 @@ use std::collections::{HashSet, VecDeque};
 use logos::Logos;
 
 #[derive(Debug, Clone, Logos, PartialEq)]
+#[logos(skip "\n")]
 pub enum MessageToken {
-    #[regex("(```\n)|`")]
-    CodeblockMarker,
+    #[token("\\")]
+    Escape,
+    #[regex("(```[^`\n]*)|(``)|`", |lex| lex.slice().to_owned().chars().filter(|&c| c == '`').count())]
+    CodeblockMarker(usize),
     #[regex("<@[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}>", |lex| lex.slice()[2..lex.slice().len() - 1].to_owned())]
     UserMention(String),
     #[regex("<%[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}>", |lex| lex.slice()[2..lex.slice().len() - 1].to_owned())]
@@ -38,26 +41,26 @@ impl<I: Iterator<Item = MessageToken>> Iterator for MessageParserIterator<I> {
         } else {
             let token = self.inner.next();
 
-            if let Some(token) = token {
-                if token == MessageToken::CodeblockMarker {
-                    loop {
-                        let next_token = self.inner.next();
+            if token == Some(MessageToken::Escape) {
+                self.inner.next();
 
-                        if next_token == Some(MessageToken::CodeblockMarker) {
-                            self.temp.clear();
-                            return next_token
-                        } else if next_token.is_none()  {
-                            return Some(MessageToken::CodeblockMarker)
-                        } else if let Some(token) = next_token {
-                            self.temp.push_back(token);
-                        }
+                token
+            } else if let Some(MessageToken::CodeblockMarker(ty)) = token {
+                loop {
+                    let next_token = self.inner.next();
+
+                    if next_token == Some(MessageToken::CodeblockMarker(ty)) {
+                        self.temp.clear();
+                        self.temp.push_back(MessageToken::CodeblockMarker(ty));
+                        break next_token
+                    } else if let Some(token) = next_token {
+                        self.temp.push_back(token);
+                    } else {
+                        break Some(MessageToken::CodeblockMarker(ty))
                     }
-
-                } else {
-                    Some(token)
                 }
             } else {
-                None
+                token
             }
         }
     }
@@ -75,7 +78,8 @@ pub fn parse_message(text: &str) -> MessageResults {
 
     for token in parse_message_iter(text) {
         match token {
-            MessageToken::CodeblockMarker => {},
+            MessageToken::Escape => {}
+            MessageToken::CodeblockMarker(_) => {},
             MessageToken::UserMention(id) => { results.user_mentions.insert(id); },
             MessageToken::RoleMention(id) => { results.role_mentions.insert(id); },
             MessageToken::MentionEveryone => results.mentions_everyone = true,
@@ -156,8 +160,8 @@ mod tests {
         let output = parse_message_iter("```\n<@01FD58YK5W7QRV5H3D64KTQYX3><%01FD58YK5W7QRV5H3D64KTQYX3>@everyone@online\n```").collect::<Vec<_>>();
 
         assert_eq!(output.len(), 2);
-        assert_eq!(output[0], MessageToken::CodeblockMarker);
-        assert_eq!(output[1], MessageToken::CodeblockMarker);
+        assert_eq!(output[0], MessageToken::CodeblockMarker(3));
+        assert_eq!(output[1], MessageToken::CodeblockMarker(3));
     }
 
     #[test]
@@ -165,7 +169,7 @@ mod tests {
         let output = parse_message_iter("```\n<@01FD58YK5W7QRV5H3D64KTQYX3><%01FD58YK5W7QRV5H3D64KTQYX3>@everyone@online").collect::<Vec<_>>();
 
         assert_eq!(output.len(), 5);
-        assert_eq!(output[0], MessageToken::CodeblockMarker);
+        assert_eq!(output[0], MessageToken::CodeblockMarker(3));
         assert_eq!(output[1], MessageToken::UserMention("01FD58YK5W7QRV5H3D64KTQYX3".to_string()));
         assert_eq!(output[2], MessageToken::RoleMention("01FD58YK5W7QRV5H3D64KTQYX3".to_string()));
         assert_eq!(output[3], MessageToken::MentionEveryone);
@@ -177,19 +181,65 @@ mod tests {
 
         let output = parse_message_iter("`<@01FD58YK5W7QRV5H3D64KTQYX3><%01FD58YK5W7QRV5H3D64KTQYX3>@everyone@online`").collect::<Vec<_>>();
 
-        assert_eq!(output.len(), 1);
-        assert_eq!(output[0], MessageToken::CodeblockMarker);
+        assert_eq!(output.len(), 2);
+        assert_eq!(output[0], MessageToken::CodeblockMarker(1));
+        assert_eq!(output[0], MessageToken::CodeblockMarker(1));
     }
 
     #[test]
     fn test_uncontained_inline_codeblock_should_mention() {
-        let output = parse_message_iter("`text`<@01FD58YK5W7QRV5H3D64KTQYX3><%01FD58YK5W7QRV5H3D64KTQYX3>@everyone@online").collect::<Vec<_>>();
+        let output = parse_message_iter("`<@01FD58YK5W7QRV5H3D64KTQYX3><%01FD58YK5W7QRV5H3D64KTQYX3>@everyone@online").collect::<Vec<_>>();
 
         assert_eq!(output.len(), 5);
-        assert_eq!(output[0], MessageToken::CodeblockMarker);
+        assert_eq!(output[0], MessageToken::CodeblockMarker(1));
         assert_eq!(output[1], MessageToken::UserMention("01FD58YK5W7QRV5H3D64KTQYX3".to_string()));
         assert_eq!(output[2], MessageToken::RoleMention("01FD58YK5W7QRV5H3D64KTQYX3".to_string()));
         assert_eq!(output[3], MessageToken::MentionEveryone);
         assert_eq!(output[4], MessageToken::MentionOnline);
+    }
+
+    #[test]
+    fn test_double_inline_codeblock() {
+        let output = parse_message_iter("``this should not ping @everyone``").collect::<Vec<_>>();
+
+        assert_eq!(output.len(), 2);
+        assert_eq!(output[0], MessageToken::CodeblockMarker(2));
+        assert_eq!(output[1], MessageToken::CodeblockMarker(2));
+    }
+
+    #[test]
+    fn test_double_inline_codeblock_with_backticks_inside() {
+        let output = parse_message_iter("``this `should` not `ping` @everyone``").collect::<Vec<_>>();
+
+        assert_eq!(output.len(), 2);
+        assert_eq!(output[0], MessageToken::CodeblockMarker(2));
+        assert_eq!(output[1], MessageToken::CodeblockMarker(2));
+    }
+
+    #[test]
+    fn test_in_middle() {
+        let output = parse_message_iter("i am not pinging `@everyone`.").collect::<Vec<_>>();
+
+        assert_eq!(output.len(), 2);
+        assert_eq!(output[0], MessageToken::CodeblockMarker(1));
+        assert_eq!(output[1], MessageToken::CodeblockMarker(1));
+    }
+
+    #[test]
+    fn test_escaped_codeblock() {
+        let output = parse_message_iter("i am ~~not~~ pinging \\`@everyone` ok.").collect::<Vec<_>>();
+
+        assert_eq!(output.len(), 3);
+        assert_eq!(output[0], MessageToken::Escape);
+        assert_eq!(output[1], MessageToken::MentionEveryone);
+        assert_eq!(output[2], MessageToken::CodeblockMarker(1));
+    }
+
+    #[test]
+    fn test_escape_mention() {
+        let output = parse_message_iter("i wont ping \\@everyone").collect::<Vec<_>>();
+
+        assert_eq!(output.len(), 1);
+        assert_eq!(output[0], MessageToken::Escape);
     }
 }
