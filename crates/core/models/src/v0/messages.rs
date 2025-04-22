@@ -54,6 +54,7 @@ auto_derived_partial!(
         #[serde(skip_serializing_if = "Option::is_none")]
         pub mentions: Option<Vec<String>>,
         /// Array of role ids mentioned in this message
+        #[serde(skip_serializing_if = "Option::is_none")]
         pub role_mentions: Option<Vec<String>>,
         /// Array of message ids this message is replying to
         #[serde(skip_serializing_if = "Option::is_none")]
