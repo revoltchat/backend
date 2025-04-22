@@ -375,25 +375,13 @@ impl Message {
             revolt_parser::MessageResults::default()
         };
 
-        let mut role_model_mentions = vec![];
-
-        if allow_mass_mentions && server_id.is_some() && !message_mentions.role_mentions.is_empty(){
+        if allow_mass_mentions && server_id.is_some() && !message_mentions.role_mentions.is_empty() {
             let server_data = db
                 .fetch_server(server_id.unwrap().as_str())
                 .await
                 .expect("Failed to fetch server");
 
-            let role_mentions = message_mentions.role_mentions
-                .iter()
-                .filter(|role_id| server_data.roles.contains_key(*role_id))
-                .cloned()
-                .collect::<Vec<_>>();
-
-            role_model_mentions.extend(
-                role_mentions
-                    .iter()
-                    .map(|role_id| server_data.roles.get(role_id).to_owned()),
-            );
+            message_mentions.role_mentions.retain(|role_id| server_data.roles.contains_key(role_id));
         }
 
         // Validate the user can perform a mass mention
@@ -481,7 +469,7 @@ impl Message {
             match channel {
                 Channel::DirectMessage { ref recipients, .. }
                 | Channel::Group { ref recipients, .. } => {
-                    let recipients_hash: HashSet<&String, RandomState> = HashSet::from_iter(recipients);
+                    let recipients_hash = HashSet::<&String, RandomState>::from_iter(recipients);
                     message_mentions.user_mentions.retain(|m| recipients_hash.contains(m));
                     message_mentions.role_mentions.clear();
                 }
@@ -491,8 +479,7 @@ impl Message {
 
                     let valid_members = db.fetch_members(server.as_str(), &mentions_vec[..]).await;
                     if let Ok(valid_members) = valid_members {
-                        let valid_mentions: HashSet<&String, RandomState> =
-                            HashSet::from_iter(valid_members.iter().map(|m| &m.id.user));
+                        let valid_mentions = HashSet::<&String, RandomState>::from_iter(valid_members.iter().map(|m| &m.id.user));
 
                         message_mentions.user_mentions.retain(|m| valid_mentions.contains(m)); // quick pass, validate mentions are in the server
 
