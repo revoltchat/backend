@@ -1044,7 +1044,7 @@ impl crate::User {
                     })
                 ),
             status: if can_see_profile {
-                self.status.map(|status| status.into())
+                self.status.and_then(|status| status.into(true))
             } else {
                 None
             },
@@ -1106,7 +1106,7 @@ impl crate::User {
                     })
                 ),
             status: if can_see_profile {
-                self.status.map(|status| status.into())
+                self.status.and_then(|status| status.into(true))
             } else {
                 None
             },
@@ -1119,7 +1119,7 @@ impl crate::User {
     }
 
     /// Convert user object into user model without presence information
-    pub fn into_known_static<'a>(self, is_online: bool) -> User {
+    pub fn into_known_static(self, is_online: bool) -> User {
         User {
             username: self.username,
             discriminator: self.discriminator,
@@ -1135,7 +1135,7 @@ impl crate::User {
                         ..
                     })
                 ),
-            status: self.status.map(|status| status.into()),
+            status: self.status.and_then(|status| status.into(true)),
             flags: self.flags.unwrap_or_default() as u32,
             privileged: self.privileged,
             bot: self.bot.map(|bot| bot.into()),
@@ -1168,7 +1168,7 @@ impl crate::User {
                         ..
                     })
                 ),
-            status: self.status.map(|status| status.into()),
+            status: self.status.and_then(|status| status.into(true)),
             flags: self.flags.unwrap_or_default() as u32,
             privileged: self.privileged,
             bot: self.bot.map(|bot| bot.into()),
@@ -1219,7 +1219,7 @@ impl From<crate::PartialUser> for PartialUser {
                     .collect()
             }),
             badges: value.badges.map(|badges| badges as u32),
-            status: value.status.map(|status| status.into()),
+            status: value.status.and_then(|status| status.into(false)),
             flags: value.flags.map(|flags| flags as u32),
             privileged: value.privileged,
             bot: value.bot.map(|bot| bot.into()),
@@ -1308,11 +1308,23 @@ impl From<Presence> for crate::Presence {
     }
 }
 
-impl From<crate::UserStatus> for UserStatus {
-    fn from(value: crate::UserStatus) -> Self {
-        UserStatus {
-            text: value.text,
-            presence: value.presence.map(|presence| presence.into()),
+impl crate::UserStatus {
+    fn into(self, discard_invisible: bool) -> Option<UserStatus> {
+        let status = UserStatus {
+            text: self.text,
+            presence: self.presence.and_then(|presence| {
+                if discard_invisible && presence == crate::Presence::Invisible {
+                    None
+                } else {
+                    Some(presence.into())
+                }
+            }),
+        };
+
+        if status.text.is_none() && status.presence.is_none() {
+            None
+        } else {
+            Some(status)
         }
     }
 }
