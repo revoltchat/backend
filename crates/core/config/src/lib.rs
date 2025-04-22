@@ -188,6 +188,10 @@ pub struct LiveKitNode {
     pub secret: String
 }
 
+pub struct ApiUsers {
+    pub early_adopter_cutoff: Option<u64>
+}
+
 #[derive(Deserialize, Debug, Clone)]
 pub struct Api {
     pub registration: ApiRegistration,
@@ -195,6 +199,7 @@ pub struct Api {
     pub security: ApiSecurity,
     pub workers: ApiWorkers,
     pub livekit: ApiLiveKit,
+    pub users: ApiUsers,
 }
 
 #[derive(Deserialize, Debug, Clone)]
