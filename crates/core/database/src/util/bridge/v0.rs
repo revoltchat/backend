@@ -994,6 +994,8 @@ impl crate::User {
             (RelationshipStatus::None, false)
         };
 
+        let badges = self.get_badges().await;
+
         User {
             username: self.username,
             discriminator: self.discriminator,
@@ -1012,7 +1014,7 @@ impl crate::User {
             } else {
                 vec![]
             },
-            badges: self.badges.unwrap_or_default() as u32,
+            badges,
             online: can_see_profile
                 && revolt_presence::is_online(&self.id).await
                 && !matches!(
@@ -1038,7 +1040,7 @@ impl crate::User {
     /// Convert user object into user model assuming mutual connection
     ///
     /// Relations will never be included, i.e. when we process ourselves
-    pub fn into_known<'a, P>(self, perspective: P, is_online: bool) -> User
+    pub async fn into_known<'a, P>(self, perspective: P, is_online: bool) -> User
     where
         P: Into<Option<&'a crate::User>>,
     {
@@ -1068,13 +1070,15 @@ impl crate::User {
             (RelationshipStatus::None, false)
         };
 
+        let badges = self.get_badges().await;
+
         User {
             username: self.username,
             discriminator: self.discriminator,
             display_name: self.display_name,
             avatar: self.avatar.map(|file| file.into()),
             relations: vec![],
-            badges: self.badges.unwrap_or_default() as u32,
+            badges,
             online: can_see_profile
                 && is_online
                 && !matches!(
@@ -1098,14 +1102,16 @@ impl crate::User {
     }
 
     /// Convert user object into user model without presence information
-    pub fn into_known_static(self, is_online: bool) -> User {
+    pub async fn into_known_static<'a>(self, is_online: bool) -> User {
+        let badges = self.get_badges().await;
+
         User {
             username: self.username,
             discriminator: self.discriminator,
             display_name: self.display_name,
             avatar: self.avatar.map(|file| file.into()),
             relations: vec![],
-            badges: self.badges.unwrap_or_default() as u32,
+            badges,
             online: is_online
                 && !matches!(
                     self.status,
@@ -1124,6 +1130,8 @@ impl crate::User {
     }
 
     pub async fn into_self(self, force_online: bool) -> User {
+        let badges = self.get_badges().await;
+
         User {
             username: self.username,
             discriminator: self.discriminator,
@@ -1138,7 +1146,7 @@ impl crate::User {
                         .collect()
                 })
                 .unwrap_or_default(),
-            badges: self.badges.unwrap_or_default() as u32,
+            badges,
             online: (force_online || revolt_presence::is_online(&self.id).await)
                 && !matches!(
                     self.status,
