@@ -375,26 +375,36 @@ impl Message {
             revolt_parser::MessageResults::default()
         };
 
-        if allow_mass_mentions && server_id.is_some() && !message_mentions.role_mentions.is_empty() {
+        message_mentions.mentions_everyone |= mentions_everyone;
+        message_mentions.mentions_online |= mentions_online;
+
+        let revolt_parser::MessageResults {
+            mut user_mentions,
+            mut role_mentions,
+            mut mentions_everyone,
+            mut mentions_online
+        } = message_mentions;
+
+        if allow_mass_mentions && server_id.is_some() && !role_mentions.is_empty() {
             let server_data = db
                 .fetch_server(server_id.unwrap().as_str())
                 .await
                 .expect("Failed to fetch server");
 
-            message_mentions.role_mentions.retain(|role_id| server_data.roles.contains_key(role_id));
+            role_mentions.retain(|role_id| server_data.roles.contains_key(role_id));
         }
 
         // Validate the user can perform a mass mention
         if !config.features.mass_mentions_enabled
-            && (mentions_everyone || mentions_online || !message_mentions.role_mentions.is_empty())
+            && (mentions_everyone || mentions_online || !role_mentions.is_empty())
         {
             mentions_everyone = false;
             mentions_online = false;
-            message_mentions.role_mentions.clear();
-        } else if mentions_everyone || mentions_online || !message_mentions.role_mentions.is_empty() {
+            role_mentions.clear();
+        } else if mentions_everyone || mentions_online || !role_mentions.is_empty() {
             debug!(
                 "Mentioned everyone: {}, mentioned online: {}, mentioned roles: {:?}",
-                mentions_everyone, mentions_online, &message_mentions.role_mentions
+                mentions_everyone, mentions_online, &role_mentions
             );
             if let Some(user) = match author {
                 MessageAuthor::User(user) => Some(Ok(user)),
@@ -417,7 +427,7 @@ impl Message {
                     }));
                 }
 
-                if !message_mentions.role_mentions.is_empty()
+                if !role_mentions.is_empty()
                     && !perms.has_channel_permission(ChannelPermission::MentionRoles)
                 {
                     return Err(create_error!(MissingPermission {
@@ -446,7 +456,7 @@ impl Message {
                     // Referenced message exists
                     Ok(message) => {
                         if mention && allow_mentions {
-                            message_mentions.user_mentions.insert(message.author.to_owned());
+                            user_mentions.insert(message.author.to_owned());
                         }
 
                         replies.insert(message.id);
@@ -465,25 +475,25 @@ impl Message {
         }
 
         // Validate the mentions go to users in the channel/server
-        if !message_mentions.user_mentions.is_empty() {
+        if !user_mentions.is_empty() {
             match channel {
                 Channel::DirectMessage { ref recipients, .. }
                 | Channel::Group { ref recipients, .. } => {
                     let recipients_hash = HashSet::<&String, RandomState>::from_iter(recipients);
-                    message_mentions.user_mentions.retain(|m| recipients_hash.contains(m));
-                    message_mentions.role_mentions.clear();
+                    user_mentions.retain(|m| recipients_hash.contains(m));
+                    role_mentions.clear();
                 }
                 Channel::TextChannel { ref server, .. }
                 | Channel::VoiceChannel { ref server, .. } => {
-                    let mentions_vec = Vec::from_iter(message_mentions.user_mentions.iter().cloned());
+                    let mentions_vec = Vec::from_iter(user_mentions.iter().cloned());
 
                     let valid_members = db.fetch_members(server.as_str(), &mentions_vec[..]).await;
                     if let Ok(valid_members) = valid_members {
                         let valid_mentions = HashSet::<&String, RandomState>::from_iter(valid_members.iter().map(|m| &m.id.user));
 
-                        message_mentions.user_mentions.retain(|m| valid_mentions.contains(m)); // quick pass, validate mentions are in the server
+                        user_mentions.retain(|m| valid_mentions.contains(m)); // quick pass, validate mentions are in the server
 
-                        if !message_mentions.user_mentions.is_empty() {
+                        if !user_mentions.is_empty() {
                             // if there are still mentions, drill down to a channel-level
                             let member_channel_view_perms =
                                 BulkDatabasePermissionQuery::from_server_id(db, server)
@@ -493,7 +503,7 @@ impl Message {
                                     .members_can_see_channel()
                                     .await;
 
-                            message_mentions.user_mentions.retain(|m| *member_channel_view_perms.get(m).unwrap_or(&false));
+                            user_mentions.retain(|m| *member_channel_view_perms.get(m).unwrap_or(&false));
                         }
                     } else {
                         revolt_config::capture_error(&valid_members.unwrap_err());
@@ -501,19 +511,19 @@ impl Message {
                     }
                 }
                 Channel::SavedMessages { .. } => {
-                    message_mentions.user_mentions.clear();
+                    user_mentions.clear();
                 }
             }
         }
 
-        if !message_mentions.user_mentions.is_empty() {
-            message.mentions.replace(message_mentions.user_mentions.into_iter().collect());
+        if !user_mentions.is_empty() {
+            message.mentions.replace(user_mentions.into_iter().collect());
         }
 
-        if !message_mentions.role_mentions.is_empty() {
+        if !role_mentions.is_empty() {
             message
                 .role_mentions
-                .replace(message_mentions.role_mentions.into_iter().collect());
+                .replace(role_mentions.into_iter().collect());
         }
 
         if !replies.is_empty() {
