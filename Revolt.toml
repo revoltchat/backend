@@ -1,5 +1,5 @@
 # ⚠️ This configuration is intended for development environment.
-# If you'd like to override anything, create a Revolt.override.toml
+# If you'd like to override anything, create a Revolt.overrides.toml
 
 [database]
 # MongoDB connection URL
