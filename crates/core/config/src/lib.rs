@@ -176,11 +176,17 @@ pub struct ApiWorkers {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+pub struct ApiUsers {
+    pub early_adopter_cutoff: Option<u64>
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct Api {
     pub registration: ApiRegistration,
     pub smtp: ApiSmtp,
     pub security: ApiSecurity,
     pub workers: ApiWorkers,
+    pub users: ApiUsers,
 }
 
 #[derive(Deserialize, Debug, Clone)]

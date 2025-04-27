@@ -84,7 +84,7 @@ pub async fn message_send(
     // Create model user / members
     let model_user = user
         .clone()
-        .into_known_static(revolt_presence::is_online(&user.id).await);
+        .into_known_static(revolt_presence::is_online(&user.id).await).await;
 
     let model_member: Option<v0::Member> = query
         .member_ref()
