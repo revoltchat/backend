@@ -434,68 +434,6 @@ impl Message {
                         permission: ChannelPermission::MentionRoles.to_string()
                     }));
                 }
-
-                if !role_mentions.is_empty() {
-                    let server_data = db
-                        .fetch_server(server_id.unwrap().as_str())
-                        .await
-                        .expect("Failed to fetch server");
-
-                    role_mentions = role_mentions
-                        .iter()
-                        .filter(|role_id| server_data.roles.contains_key(*role_id))
-                        .cloned()
-                        .collect();
-
-                    role_model_mentions.extend(
-                        role_mentions
-                            .iter()
-                            .map(|role_id| server_data.roles.get(role_id).to_owned()),
-                    );
-                }
-            }
-        }
-
-        // Validate the user can perform a mass mention
-        if !config.features.mass_mentions_enabled
-            && (mentions_everyone || mentions_online || !role_mentions.is_empty())
-        {
-            mentions_everyone = false;
-            mentions_online = false;
-            role_mentions.clear();
-        } else if mentions_everyone || mentions_online || !role_mentions.is_empty() {
-            debug!(
-                "Mentioned everyone: {}, mentioned online: {}, mentioned roles: {:?}",
-                mentions_everyone, mentions_online, &role_mentions
-            );
-            if let Some(user) = match author {
-                MessageAuthor::User(user) => Some(Ok(user)),
-                MessageAuthor::System { .. } => Some(Err(())), // DISALLOWED
-                MessageAuthor::Webhook(..) => None,            // Bypass check
-            } {
-                if user.is_err() {
-                    return Err(create_error!(InvalidProperty));
-                }
-                let owned_user: User = user.unwrap().to_owned().into();
-
-                let mut query = DatabasePermissionQuery::new(db, &owned_user).channel(&channel);
-                let perms = calculate_channel_permissions(&mut query).await;
-
-                if (mentions_everyone || mentions_online)
-                    && !perms.has_channel_permission(ChannelPermission::MentionEveryone)
-                {
-                    return Err(create_error!(MissingPermission {
-                        permission: ChannelPermission::MentionEveryone.to_string()
-                    }));
-                }
-
-                if !role_mentions.is_empty()
-                    && !perms.has_channel_permission(ChannelPermission::MentionRoles)
-                {
-                    return Err(create_error!(MissingPermission {
-                        permission: ChannelPermission::MentionRoles.to_string()
-                    }));
-                }
             }
         }
 
@@ -580,12 +518,6 @@ impl Message {
 
         if !user_mentions.is_empty() {
             message.mentions.replace(user_mentions.into_iter().collect());
-        }
-
-        if !role_mentions.is_empty() {
-            message
-                .role_mentions
-                .replace(role_mentions.into_iter().collect());
         }
 
         if !role_mentions.is_empty() {
