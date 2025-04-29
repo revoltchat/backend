@@ -188,6 +188,7 @@ pub struct LiveKitNode {
     pub secret: String
 }
 
+#[derive(Deserialize, Debug, Clone)]
 pub struct ApiUsers {
     pub early_adopter_cutoff: Option<u64>
 }

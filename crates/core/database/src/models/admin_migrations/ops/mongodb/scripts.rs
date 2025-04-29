@@ -1141,8 +1141,7 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
                         "is_publishing": true,
                         "is_receiving": true
                     }
-                },
-                None,
+                }
             )
             .await
             .expect("Failed to update members");
@@ -1159,8 +1158,7 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
                         "channel_type": "TextChannel",
                         "voice": {}
                     }
-                },
-                None
+                }
             )
             .await
             .expect("Failed to update voice channels");

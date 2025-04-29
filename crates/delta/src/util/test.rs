@@ -154,6 +154,7 @@ impl TestHarness {
                 name: "Test Channel".to_string(),
                 description: None,
                 nsfw: Some(false),
+                voice: None
             },
             true,
         )
@@ -220,7 +221,7 @@ impl TestHarness {
         }
 
         let mut stream = self.sub.on_message();
-        while let Some(Ok(item)) = stream.next().await {
+        while let Some(item) = stream.next().await {
             let msg_topic = item.get_channel_name();
             let payload: EventV1 = redis_kiss::decode_payload(&item).unwrap();
 
