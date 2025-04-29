@@ -95,22 +95,6 @@ pub async fn edit(
             icon,
             nsfw,
             ..
-        }
-        | Channel::TextChannel {
-            id,
-            name,
-            description,
-            icon,
-            nsfw,
-            ..
-        }
-        | Channel::VoiceChannel {
-            id,
-            name,
-            description,
-            icon,
-            nsfw,
-            ..
         } => {
             if let Some(fields) = &data.remove {
                 if fields.contains(&v0::FieldsChannel::Icon) {
@@ -153,77 +137,129 @@ pub async fn edit(
             }
 
             // Send out mutation system messages.
-            if let Channel::Group { .. } = &channel {
-                if let Some(name) = &partial.name {
-                    SystemMessage::ChannelRenamed {
-                        name: name.to_string(),
-                        by: user.id.clone(),
+            if let Some(name) = &partial.name {
+                SystemMessage::ChannelRenamed {
+                    name: name.to_string(),
+                    by: user.id.clone(),
+                }
+                .into_message(channel.id().to_string())
+                .send(
+                    db,
+                    Some(amqp),
+                    user.as_author_for_system(),
+                    None,
+                    None,
+                    &channel,
+                    false,
+                )
+                .await
+                .ok();
+            }
+
+            if partial.description.is_some() {
+                SystemMessage::ChannelDescriptionChanged {
+                    by: user.id.clone(),
+                }
+                .into_message(channel.id().to_string())
+                .send(
+                    db,
+                    Some(amqp),
+                    user.as_author_for_system(),
+                    None,
+                    None,
+                    &channel,
+                    false,
+                )
+                .await
+                .ok();
+            }
+
+            if partial.icon.is_some() {
+                SystemMessage::ChannelIconChanged {
+                    by: user.id.clone(),
+                }
+                .into_message(channel.id().to_string())
+                .send(
+                    db,
+                    Some(amqp),
+                    user.as_author_for_system(),
+                    None,
+                    None,
+                    &channel,
+                    false,
+                )
+                .await
+                .ok();
+            }
+        }
+        Channel::TextChannel {
+            id,
+            name,
+            description,
+            icon,
+            nsfw,
+            voice,
+            ..
+        } => {
+            if let Some(fields) = &data.remove {
+                if fields.contains(&v0::FieldsChannel::Icon) {
+                    if let Some(icon) = &icon {
+                        db.mark_attachment_as_deleted(&icon.id).await?;
                     }
-                    .into_message(channel.id().to_string())
-                    .send(
-                        db,
-                        Some(amqp),
-                        user.as_author_for_system(),
-                        None,
-                        None,
-                        &channel,
-                        false,
-                    )
-                    .await
-                    .ok();
                 }
 
-                if partial.description.is_some() {
-                    SystemMessage::ChannelDescriptionChanged {
-                        by: user.id.clone(),
+                for field in fields {
+                    match field {
+                        v0::FieldsChannel::Description => {
+                            description.take();
+                        }
+                        v0::FieldsChannel::Icon => {
+                            icon.take();
+                        }
+                        _ => {}
                     }
-                    .into_message(channel.id().to_string())
-                    .send(
-                        db,
-                        Some(amqp),
-                        user.as_author_for_system(),
-                        None,
-                        None,
-                        &channel,
-                        false,
-                    )
-                    .await
-                    .ok();
-                }
-
-                if partial.icon.is_some() {
-                    SystemMessage::ChannelIconChanged {
-                        by: user.id.clone(),
-                    }
-                    .into_message(channel.id().to_string())
-                    .send(
-                        db,
-                        Some(amqp),
-                        user.as_author_for_system(),
-                        None,
-                        None,
-                        &channel,
-                        false,
-                    )
-                    .await
-                    .ok();
                 }
             }
 
-            channel
-                .update(
-                    db,
-                    partial,
-                    data.remove
-                        .unwrap_or_default()
-                        .into_iter()
-                        .map(|f| f.into())
-                        .collect(),
-                )
-                .await?;
+            if let Some(icon_id) = data.icon {
+                partial.icon = Some(File::use_channel_icon(db, &icon_id, id, &user.id).await?);
+                *icon = partial.icon.clone();
+            }
+
+            if let Some(new_name) = data.name {
+                *name = new_name.clone();
+                partial.name = Some(new_name);
+            }
+
+            if let Some(new_description) = data.description {
+                partial.description = Some(new_description);
+                *description = partial.description.clone();
+            }
+
+            if let Some(new_nsfw) = data.nsfw {
+                *nsfw = new_nsfw;
+                partial.nsfw = Some(new_nsfw);
+            }
+
+            if let Some(new_voice) = data.voice {
+                *voice = Some(new_voice.clone());
+                partial.voice = Some(new_voice);
+            }
         }
         _ => return Err(create_error!(InvalidOperation)),
     };
+
+    channel
+        .update(
+            db,
+            partial,
+            data.remove
+                .unwrap_or_default()
+                .into_iter()
+                .map(|f| f.into())
+                .collect(),
+        )
+        .await?;
 
     Ok(Json(channel.into()))
 }

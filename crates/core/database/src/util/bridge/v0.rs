@@ -143,6 +143,7 @@ impl From<crate::FieldsWebhook> for FieldsWebhook {
 }
 
 impl From<crate::Channel> for Channel {
+    #[allow(deprecated)]
     fn from(value: crate::Channel) -> Self {
         match value {
             crate::Channel::SavedMessages { id, user } => Channel::SavedMessages { id, user },
@@ -225,6 +226,7 @@ impl From<crate::Channel> for Channel {
 }
 
 impl From<Channel> for crate::Channel {
+    #[allow(deprecated)]
     fn from(value: Channel) -> crate::Channel {
         match value {
             Channel::SavedMessages { id, user } => crate::Channel::SavedMessages { id, user },
@@ -319,6 +321,7 @@ impl From<crate::PartialChannel> for PartialChannel {
             role_permissions: value.role_permissions,
             default_permissions: value.default_permissions,
             last_message_id: value.last_message_id,
+            voice: value.voice
         }
     }
 }
@@ -336,6 +339,7 @@ impl From<PartialChannel> for crate::PartialChannel {
             role_permissions: value.role_permissions,
             default_permissions: value.default_permissions,
             last_message_id: value.last_message_id,
+            voice: value.voice
         }
     }
 }

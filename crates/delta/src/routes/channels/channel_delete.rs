@@ -26,6 +26,7 @@ pub async fn delete(
 
     permissions.throw_if_lacking_channel_permission(ChannelPermission::ViewChannel)?;
 
+    #[allow(deprecated)]
     match &channel {
         Channel::SavedMessages { .. } => Err(create_error!(NoEffect))?,
         Channel::DirectMessage { .. } => channel

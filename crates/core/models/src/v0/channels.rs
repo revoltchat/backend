@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 use super::{File, UserVoiceState};
 
 use revolt_permissions::{Override, OverrideField};
@@ -112,7 +113,7 @@ auto_derived!(
             #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
             voice: Option<VoiceInformation>
         },
-        /// DEPRECATED (use TextChannel { voice }): Voice channel belonging to a server
+        #[deprecated = "Use TextChannel { voice } instead"]
         VoiceChannel {
             /// Unique Id
             #[cfg_attr(feature = "serde", serde(rename = "_id"))]
@@ -183,6 +184,8 @@ auto_derived!(
         pub default_permissions: Option<OverrideField>,
         #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub last_message_id: Option<String>,
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub voice: Option<VoiceInformation>,
     }
 
     /// Optional fields on channel object
@@ -217,6 +220,9 @@ auto_derived!(
 
         /// Whether this channel is archived
         pub archived: Option<bool>,
+
+        /// Voice Information for voice channels
+        pub voice: Option<VoiceInformation>,
 
         /// Fields to remove from channel
         #[cfg_attr(feature = "serde", serde(default))]

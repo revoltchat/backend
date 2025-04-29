@@ -284,10 +284,7 @@ pub async fn get_voice_state(
 pub async fn get_channel_voice_state(channel: &Channel) -> Result<Option<v0::ChannelVoiceState>> {
     let members = get_voice_channel_members(channel.id()).await?;
 
-    let server = match channel {
-        Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => Some(server.as_str()),
-        _ => None
-    };
+    let server = channel.server();
 
     if let Some(members) = members {
         let mut participants = Vec::with_capacity(members.len());

@@ -18,6 +18,7 @@ use super::state::{Cache, State};
 impl Cache {
     /// Check whether the current user can view a channel
     pub async fn can_view_channel(&self, db: &Database, channel: &Channel) -> bool {
+        #[allow(deprecated)]
         match &channel {
             Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => {
                 let member = self.members.get(server);
@@ -284,6 +285,7 @@ impl State {
 
             let id = &id.to_string();
             for (channel_id, channel) in &self.cache.channels {
+                #[allow(deprecated)]
                 match channel {
                     Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => {
                         if server == id {

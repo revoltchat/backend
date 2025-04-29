@@ -89,7 +89,7 @@ impl VoiceClient {
         let room = self.get_node(node)?;
 
         let voice = match channel {
-            Channel::DirectMessage { .. } | Channel::VoiceChannel { .. } => Some(Cow::Owned(v0::VoiceInformation::default())),
+            Channel::DirectMessage { .. } => Some(Cow::Owned(v0::VoiceInformation::default())),
             Channel::TextChannel { voice: Some(voice), .. } => Some(Cow::Borrowed(voice)),
             _ => None
         }

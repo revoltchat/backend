@@ -342,6 +342,7 @@ impl Message {
 
         // Validate the mentions go to users in the channel/server
         if !mentions.is_empty() {
+            #[allow(deprecated)]
             match channel {
                 Channel::DirectMessage { ref recipients, .. }
                 | Channel::Group { ref recipients, .. } => {

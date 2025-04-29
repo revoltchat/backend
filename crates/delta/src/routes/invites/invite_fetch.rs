@@ -23,13 +23,6 @@ pub async fn fetch(db: &State<Database>, target: Reference) -> Result<Json<v0::I
                     name,
                     description,
                     ..
-                }
-                | Channel::VoiceChannel {
-                    id,
-                    server,
-                    name,
-                    description,
-                    ..
                 } => {
                     let server = db.fetch_server(&server).await?;
 

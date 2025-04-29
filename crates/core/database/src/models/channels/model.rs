@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 use std::{borrow::Cow, collections::HashMap};
 
 use revolt_config::config;
@@ -108,7 +109,7 @@ auto_derived!(
             #[serde(skip_serializing_if = "Option::is_none")]
             voice: Option<VoiceInformation>
         },
-        /// Voice channel belonging to a server
+        #[deprecated = "Use TextChannel { voice } instead"]
         VoiceChannel {
             /// Unique Id
             #[serde(rename = "_id")]
@@ -165,6 +166,8 @@ auto_derived!(
         pub default_permissions: Option<OverrideField>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub last_message_id: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub voice: Option<VoiceInformation>
     }
 
     /// Optional fields on channel object
@@ -225,15 +228,17 @@ impl Channel {
                 nsfw: data.nsfw.unwrap_or(false),
                 voice: data.voice
             },
-            v0::LegacyServerChannelType::Voice => Channel::VoiceChannel {
+            v0::LegacyServerChannelType::Voice => Channel::TextChannel {
                 id: id.clone(),
                 server: server.id.to_owned(),
                 name: data.name,
                 description: data.description,
                 icon: None,
+                last_message_id: None,
                 default_permissions: None,
                 role_permissions: HashMap::new(),
                 nsfw: data.nsfw.unwrap_or(false),
+                voice: Some(data.voice.unwrap_or_default())
             },
         };
 
@@ -464,12 +469,6 @@ impl Channel {
                 server,
                 role_permissions,
                 ..
-            }
-            | Channel::VoiceChannel {
-                id,
-                server,
-                role_permissions,
-                ..
             } => {
                 db.set_channel_role_permission(id, role_id, permissions)
                     .await?;
@@ -516,7 +515,7 @@ impl Channel {
             clear: remove.into_iter().map(|v| v.into()).collect(),
         }
         .p(match self {
-            Self::TextChannel { server, .. } | Self::VoiceChannel { server, .. } => server.clone(),
+            Self::TextChannel { server, .. } => server.clone(),
             _ => id,
         })
         .await;
@@ -529,26 +528,20 @@ impl Channel {
         match field {
             FieldsChannel::Description => match self {
                 Self::Group { description, .. }
-                | Self::TextChannel { description, .. }
-                | Self::VoiceChannel { description, .. } => {
+                | Self::TextChannel { description, .. } => {
                     description.take();
                 }
                 _ => {}
             },
             FieldsChannel::Icon => match self {
                 Self::Group { icon, .. }
-                | Self::TextChannel { icon, .. }
-                | Self::VoiceChannel { icon, .. } => {
+                | Self::TextChannel { icon, .. } => {
                     icon.take();
                 }
                 _ => {}
             },
             FieldsChannel::DefaultPermissions => match self {
                 Self::TextChannel {
-                    default_permissions,
-                    ..
-                }
-                | Self::VoiceChannel {
                     default_permissions,
                     ..
                 } => {
@@ -567,6 +560,7 @@ impl Channel {
     }
 
     /// Apply partial channel to channel
+    #[allow(deprecated)]
     pub fn apply_options(&mut self, partial: PartialChannel) {
         match self {
             Self::SavedMessages { .. } => {}
@@ -615,15 +609,7 @@ impl Channel {
                 nsfw,
                 default_permissions,
                 role_permissions,
-                ..
-            }
-            | Self::VoiceChannel {
-                name,
-                description,
-                icon,
-                nsfw,
-                default_permissions,
-                role_permissions,
+                voice,
                 ..
             } => {
                 if let Some(v) = partial.name {
@@ -649,7 +635,12 @@ impl Channel {
                 if let Some(v) = partial.default_permissions {
                     default_permissions.replace(v);
                 }
-            }
+
+                if let Some(v) = partial.voice {
+                    voice.replace(v);
+                }
+            },
+            Self::VoiceChannel { .. } => {}
         }
     }
 

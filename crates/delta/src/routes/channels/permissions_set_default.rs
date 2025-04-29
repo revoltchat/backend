@@ -48,10 +48,6 @@ pub async fn set_default_permissions(
         Channel::TextChannel {
             default_permissions,
             ..
-        }
-        | Channel::VoiceChannel {
-            default_permissions,
-            ..
         } => {
             if let DataDefaultChannelPermissions::Field { permissions: field } = data {
                 permissions
