@@ -61,7 +61,7 @@ jobs:
     if: github.event_name != 'pull_request'
     strategy:
       matrix:
-        project: [delta, bonfire, autumn, january, pushd]
+        project: [delta, bonfire, autumn, january, pushd, crond]
     name: Build ${{ matrix.project }} image
     steps:
       # Configure build environment
