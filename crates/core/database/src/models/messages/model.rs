@@ -5,8 +5,7 @@ use iso8601_timestamp::Timestamp;
 use revolt_config::{config, FeaturesLimits};
 use revolt_models::v0::{
     self, BulkMessageResponse, DataMessageSend, Embed, MessageAuthor, MessageFlags, MessageSort,
-    MessageWebhook, PushNotification, ReplyIntent, SendableEmbed, Text, RE_BLOCKS, RE_MENTION,
-    RE_ROLE_MENTION,
+    MessageWebhook, PushNotification, ReplyIntent, SendableEmbed, Text
 };
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission, PermissionValue};
 use revolt_result::{ErrorType, Result};
@@ -371,52 +370,30 @@ impl Message {
         };
 
         // Parse mentions in message.
-        let mut mentions = HashSet::new();
-        let mut role_mentions = HashSet::new();
-        let mut role_model_mentions = vec![];
 
-        if let Some(raw_content) = &data.content {
-            // remove all codeblocks before running the mention regex
-            let modified_content = RE_BLOCKS.replace_all(raw_content, "");
+        let mut message_mentions = if let Some(raw_content) = &data.content {
+            revolt_parser::parse_message(raw_content)
+        } else {
+            revolt_parser::MessageResults::default()
+        };
 
-            for capture in RE_MENTION.captures_iter(&modified_content).flatten() {
-                if let Some(mention) = capture.get(1) {
-                    mentions.insert(mention.as_str().to_string());
-                }
-            }
-            if allow_mass_mentions && server_id.is_some() {
-                // Second step of mass mention resolution.
-                for capture in RE_ROLE_MENTION.captures_iter(&modified_content).flatten() {
-                    let raw = capture.get(0).expect("No capture?").as_str();
-                    if raw == "@everyone" {
-                        mentions_everyone = true;
-                        // Can't break early here since we want to capture any role ids
-                    } else if raw == "@online" {
-                        mentions_online = true;
-                    } else if let Some(role_match) = capture.get(1) {
-                        role_mentions.insert(role_match.as_str().to_string());
-                    }
-                }
+        message_mentions.mentions_everyone |= mentions_everyone;
+        message_mentions.mentions_online |= mentions_online;
 
-                if !role_mentions.is_empty() {
-                    let server_data = db
-                        .fetch_server(server_id.unwrap().as_str())
-                        .await
-                        .expect("Failed to fetch server");
+        let revolt_parser::MessageResults {
+            mut user_mentions,
+            mut role_mentions,
+            mut mentions_everyone,
+            mut mentions_online
+        } = message_mentions;
 
-                    role_mentions = role_mentions
-                        .iter()
-                        .filter(|role_id| server_data.roles.contains_key(*role_id))
-                        .cloned()
-                        .collect();
+        if allow_mass_mentions && server_id.is_some() && !role_mentions.is_empty() {
+            let server_data = db
+                .fetch_server(server_id.unwrap().as_str())
+                .await
+                .expect("Failed to fetch server");
 
-                    role_model_mentions.extend(
-                        role_mentions
-                            .iter()
-                            .map(|role_id| server_data.roles.get(role_id).to_owned()),
-                    );
-                }
-            }
+            role_mentions.retain(|role_id| server_data.roles.contains_key(role_id));
         }
 
         // Validate the user can perform a mass mention
@@ -481,7 +458,7 @@ impl Message {
                     // Referenced message exists
                     Ok(message) => {
                         if mention && allow_mentions {
-                            mentions.insert(message.author.to_owned());
+                            user_mentions.insert(message.author.to_owned());
                         }
 
                         replies.insert(message.id);
@@ -505,23 +482,21 @@ impl Message {
             match channel {
                 Channel::DirectMessage { ref recipients, .. }
                 | Channel::Group { ref recipients, .. } => {
-                    let recipients_hash: HashSet<&String, RandomState> =
-                        HashSet::from_iter(recipients);
-                    mentions.retain(|m| recipients_hash.contains(m));
+                    let recipients_hash = HashSet::<&String, RandomState>::from_iter(recipients);
+                    user_mentions.retain(|m| recipients_hash.contains(m));
                     role_mentions.clear();
                 }
                 Channel::TextChannel { ref server, .. }
                 | Channel::VoiceChannel { ref server, .. } => {
-                    let mentions_vec = Vec::from_iter(mentions.iter().cloned());
+                    let mentions_vec = Vec::from_iter(user_mentions.iter().cloned());
 
                     let valid_members = db.fetch_members(server.as_str(), &mentions_vec[..]).await;
                     if let Ok(valid_members) = valid_members {
-                        let valid_mentions: HashSet<&String, RandomState> =
-                            HashSet::from_iter(valid_members.iter().map(|m| &m.id.user));
+                        let valid_mentions = HashSet::<&String, RandomState>::from_iter(valid_members.iter().map(|m| &m.id.user));
 
-                        mentions.retain(|m| valid_mentions.contains(m)); // quick pass, validate mentions are in the server
+                        user_mentions.retain(|m| valid_mentions.contains(m)); // quick pass, validate mentions are in the server
 
-                        if !mentions.is_empty() {
+                        if !user_mentions.is_empty() {
                             // if there are still mentions, drill down to a channel-level
                             let member_channel_view_perms =
                                 BulkDatabasePermissionQuery::from_server_id(db, server)
@@ -531,8 +506,7 @@ impl Message {
                                     .members_can_see_channel()
                                     .await;
 
-                            mentions
-                                .retain(|m| *member_channel_view_perms.get(m).unwrap_or(&false));
+                            user_mentions.retain(|m| *member_channel_view_perms.get(m).unwrap_or(&false));
                         }
                     } else {
                         revolt_config::capture_error(&valid_members.unwrap_err());
@@ -540,13 +514,13 @@ impl Message {
                     }
                 }
                 Channel::SavedMessages { .. } => {
-                    mentions.clear();
+                    user_mentions.clear();
                 }
             }
         }
 
-        if !mentions.is_empty() {
-            message.mentions.replace(mentions.into_iter().collect());
+        if !user_mentions.is_empty() {
+            message.mentions.replace(user_mentions.into_iter().collect());
         }
 
         if !role_mentions.is_empty() {
