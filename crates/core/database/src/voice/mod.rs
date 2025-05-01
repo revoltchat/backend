@@ -244,9 +244,14 @@ pub async fn update_voice_state(
 pub async fn get_voice_channel_members(channel_id: &str) -> Result<Option<Vec<String>>> {
     get_connection()
         .await?
-        .smembers(format!("vc_members:{}", channel_id))
+        .smembers::<_, Option<Vec<String>>>(format!("vc_members:{}", channel_id))
         .await
         .to_internal_error()
+        .map(|opt| opt.and_then(|v| if v.is_empty() {
+            None
+        } else {
+            Some(v)
+        }))
 }
 
 pub async fn get_voice_state(

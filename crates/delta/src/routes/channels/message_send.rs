@@ -616,6 +616,8 @@ mod test {
                     nickname: None,
                     roles: Some(vec![role_id.clone()]),
                     timeout: None,
+                    can_publish: None,
+                    can_receive: None
                 },
                 vec![],
             )

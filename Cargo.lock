@@ -4451,10 +4451,10 @@ dependencies = [
  "fnv",
  "lazy_static",
  "proc-macro2",
- "quote 1.0.38",
+ "quote 1.0.40",
  "regex-syntax 0.8.5",
  "rustc_version",
- "syn 2.0.94",
+ "syn 2.0.101",
 ]
 
 [[package]]
