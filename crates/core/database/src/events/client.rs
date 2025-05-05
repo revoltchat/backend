@@ -20,16 +20,29 @@ pub enum Ping {
 }
 
 /// Fields provided in Ready payload
-#[derive(PartialEq)]
-pub enum ReadyPayloadFields {
-    Users,
-    Servers,
-    Channels,
-    Members,
-    Emoji,
+#[derive(PartialEq, Debug, Clone, Deserialize)]
+pub struct ReadyPayloadFields {
+    pub users: bool,
+    pub servers: bool,
+    pub channels: bool,
+    pub members: bool,
+    pub emojis: bool,
+    pub user_settings: Vec<String>,
+    pub channel_unreads: bool
+}
 
-    UserSettings(Vec<String>),
-    ChannelUnreads,
+impl Default for ReadyPayloadFields {
+    fn default() -> Self {
+        Self {
+            users: true,
+            servers: true,
+            channels: true,
+            members: true,
+            emojis: true,
+            user_settings: Vec::new(),
+            channel_unreads: false
+        }
+    }
 }
 
 /// Protocol Events

@@ -6294,6 +6294,7 @@ dependencies = [
  "once_cell",
  "querystring",
  "redis-kiss",
+ "regex",
  "revolt-config",
  "revolt-database",
  "revolt-models",
