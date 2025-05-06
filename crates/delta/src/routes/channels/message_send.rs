@@ -192,6 +192,7 @@ mod test {
                 d: ChannelPermission::ViewChannel as i64,
             }),
             last_message_id: None,
+            parent: None,
         };
         locked_channel
             .update(&harness.db, partial, vec![])

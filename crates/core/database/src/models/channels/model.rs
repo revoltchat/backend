@@ -100,6 +100,10 @@ auto_derived!(
             )]
             role_permissions: HashMap<String, OverrideField>,
 
+            /// Category the channel is in
+            #[serde(skip_serializing_if = "Option::is_none")]
+            parent: Option<String>,
+
             /// Whether this channel is marked as not safe for work
             #[serde(skip_serializing_if = "crate::if_false", default)]
             nsfw: bool,
@@ -131,6 +135,10 @@ auto_derived!(
             )]
             role_permissions: HashMap<String, OverrideField>,
 
+            /// Category the channel is in
+            #[serde(skip_serializing_if = "Option::is_none")]
+            parent: Option<String>,
+
             /// Whether this channel is marked as not safe for work
             #[serde(skip_serializing_if = "crate::if_false", default)]
             nsfw: bool,
@@ -161,6 +169,8 @@ auto_derived!(
         pub default_permissions: Option<OverrideField>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub last_message_id: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub parent: Option<String>,
     }
 
     /// Optional fields on channel object
@@ -219,6 +229,7 @@ impl Channel {
                 default_permissions: None,
                 role_permissions: HashMap::new(),
                 nsfw: data.nsfw.unwrap_or(false),
+                parent: None
             },
             v0::LegacyServerChannelType::Voice => Channel::VoiceChannel {
                 id: id.clone(),
@@ -229,6 +240,7 @@ impl Channel {
                 default_permissions: None,
                 role_permissions: HashMap::new(),
                 nsfw: data.nsfw.unwrap_or(false),
+                parent: None
             },
         };
 
@@ -434,6 +446,13 @@ impl Channel {
             | Channel::SavedMessages { id, .. }
             | Channel::TextChannel { id, .. }
             | Channel::VoiceChannel { id, .. } => id,
+        }
+    }
+
+    pub fn parent(&self) -> Option<&str> {
+        match self {
+            Channel::TextChannel { parent, .. } | Channel::VoiceChannel { parent, .. } => parent.as_deref(),
+            _ => None
         }
     }
 

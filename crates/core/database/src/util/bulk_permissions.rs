@@ -5,7 +5,7 @@ use revolt_permissions::{
     DEFAULT_PERMISSION_DIRECT_MESSAGE,
 };
 
-use crate::{Channel, Database, Member, Server, User};
+use crate::{Category, Channel, Database, Member, Server, User};
 
 #[derive(Clone)]
 pub struct BulkDatabasePermissionQuery<'a> {
@@ -197,7 +197,7 @@ async fn calculate_members_permissions<'a>(
 ) -> HashMap<String, PermissionValue> {
     let mut resp = HashMap::new();
 
-    let (_, channel_role_permissions, channel_default_permissions) = match query
+    let (_, channel_role_permissions, channel_default_permissions, parent) = match query
         .channel
         .as_ref()
         .expect("A channel must be assigned to calculate channel permissions")
@@ -207,14 +207,16 @@ async fn calculate_members_permissions<'a>(
             id,
             role_permissions,
             default_permissions,
+            parent,
             ..
         }
         | Channel::VoiceChannel {
             id,
             role_permissions,
             default_permissions,
+            parent,
             ..
-        } => (id, role_permissions, default_permissions),
+        } => (id, role_permissions, default_permissions, parent),
         _ => panic!("Calculation of member permissions must be done on a server channel"),
     };
 
@@ -268,6 +270,8 @@ async fn calculate_members_permissions<'a>(
             .map(|m| (&m.id.user, m)),
     );
 
+    let category = parent.map(|parent| query.server.categories.get(&parent).expect("Channel parent doesnt exist"));
+
     for user in users {
         let member = members.get(&user.id);
 
@@ -298,11 +302,39 @@ async fn calculate_members_permissions<'a>(
         // Get the user's server permissions
         let mut permission = calculate_server_permissions(&query.server, user, member);
 
+        // Apply category overrides
+        if let Some(category) = category {
+            if let Some(defaults) = category.default_permissions {
+                permission.apply(defaults.into());
+            };
+
+            // Get the applicable role overrides for the category
+            let mut roles = category.role_permissions
+                .iter()
+                .filter(|(id, _)| member.roles.contains(id))
+                .filter_map(|(id, permission)| {
+                    query.server.roles.get(id).map(|role| {
+                        let v: Override = (*permission).into();
+                        (role.rank, v)
+                    })
+                })
+                .collect::<Vec<(i64, Override)>>();
+
+            roles.sort_by(|a, b| b.0.cmp(&a.0));
+            let overrides = roles.into_iter().map(|(_, v)| v);
+
+            for role_override in overrides {
+                permission.apply(role_override)
+            }
+        };
+
+        // apply channel overrides
+
         if let Some(defaults) = channel_default_permissions {
             permission.apply(defaults.into());
         }
 
-        // Get the applicable role overrides
+        // Get the applicable role overrides for the channel
         let mut roles = channel_role_permissions
             .iter()
             .filter(|(id, _)| member.roles.contains(id))

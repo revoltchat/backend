@@ -413,7 +413,7 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
 
     async fn set_category_from_channel(&mut self) {
         if let Some((server, channel)) = self.server.as_ref().zip(self.channel.as_ref()) {
-            let category = server.categories.values().find(|c| c.channels.contains(&channel.id().to_string())).cloned();
+            let category = channel.parent().and_then(|id| server.categories.get(id)).cloned();
 
             self.category = category.map(Cow::Owned);
         }

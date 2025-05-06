@@ -187,6 +187,7 @@ impl From<crate::Channel> for Channel {
                 last_message_id,
                 default_permissions,
                 role_permissions,
+                parent,
                 nsfw,
             } => Channel::TextChannel {
                 id,
@@ -197,6 +198,7 @@ impl From<crate::Channel> for Channel {
                 last_message_id,
                 default_permissions,
                 role_permissions,
+                parent,
                 nsfw,
             },
             crate::Channel::VoiceChannel {
@@ -207,6 +209,7 @@ impl From<crate::Channel> for Channel {
                 icon,
                 default_permissions,
                 role_permissions,
+                parent,
                 nsfw,
             } => Channel::VoiceChannel {
                 id,
@@ -216,6 +219,7 @@ impl From<crate::Channel> for Channel {
                 icon: icon.map(|file| file.into()),
                 default_permissions,
                 role_permissions,
+                parent,
                 nsfw,
             },
         }
@@ -267,6 +271,7 @@ impl From<Channel> for crate::Channel {
                 last_message_id,
                 default_permissions,
                 role_permissions,
+                parent,
                 nsfw,
             } => crate::Channel::TextChannel {
                 id,
@@ -277,6 +282,7 @@ impl From<Channel> for crate::Channel {
                 last_message_id,
                 default_permissions,
                 role_permissions,
+                parent,
                 nsfw,
             },
             Channel::VoiceChannel {
@@ -287,6 +293,7 @@ impl From<Channel> for crate::Channel {
                 icon,
                 default_permissions,
                 role_permissions,
+                parent,
                 nsfw,
             } => crate::Channel::VoiceChannel {
                 id,
@@ -296,6 +303,7 @@ impl From<Channel> for crate::Channel {
                 icon: icon.map(|file| file.into()),
                 default_permissions,
                 role_permissions,
+                parent,
                 nsfw,
             },
         }
@@ -315,6 +323,7 @@ impl From<crate::PartialChannel> for PartialChannel {
             role_permissions: value.role_permissions,
             default_permissions: value.default_permissions,
             last_message_id: value.last_message_id,
+            parent: value.parent,
         }
     }
 }
@@ -332,6 +341,7 @@ impl From<PartialChannel> for crate::PartialChannel {
             role_permissions: value.role_permissions,
             default_permissions: value.default_permissions,
             last_message_id: value.last_message_id,
+            parent: value.parent,
         }
     }
 }
