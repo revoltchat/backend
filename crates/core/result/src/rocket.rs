@@ -49,12 +49,14 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::Banned => Status::Forbidden,
             ErrorType::AlreadyInServer => Status::Conflict,
             ErrorType::CannotTimeoutYourself => Status::BadRequest,
-
+            ErrorType::UnknownCategory => Status::NotFound,
+            
             ErrorType::TooManyServers { .. } => Status::BadRequest,
             ErrorType::TooManyEmbeds { .. } => Status::BadRequest,
             ErrorType::TooManyEmoji { .. } => Status::BadRequest,
             ErrorType::TooManyChannels { .. } => Status::BadRequest,
             ErrorType::TooManyRoles { .. } => Status::BadRequest,
+            ErrorType::TooManyCategories { .. } => Status::BadRequest,
 
             ErrorType::ReachedMaximumBots => Status::BadRequest,
             ErrorType::IsBot => Status::BadRequest,

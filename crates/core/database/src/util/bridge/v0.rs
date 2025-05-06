@@ -729,9 +729,7 @@ impl From<crate::Server> for Server {
             name: value.name,
             description: value.description,
             channels: value.channels,
-            categories: value
-                .categories
-                .map(|categories| categories.into_iter().map(|v| v.into()).collect()),
+            categories: value.categories.into_iter().map(|(k, v)| (k, v.into())).collect(),
             system_messages: value.system_messages.map(|v| v.into()),
             roles: value
                 .roles
@@ -757,9 +755,7 @@ impl From<Server> for crate::Server {
             name: value.name,
             description: value.description,
             channels: value.channels,
-            categories: value
-                .categories
-                .map(|categories| categories.into_iter().map(|v| v.into()).collect()),
+            categories: value.categories.into_iter().map(|(k, v)| (k, v.into())).collect(),
             system_messages: value.system_messages.map(|v| v.into()),
             roles: value
                 .roles
@@ -785,9 +781,7 @@ impl From<crate::PartialServer> for PartialServer {
             name: value.name,
             description: value.description,
             channels: value.channels,
-            categories: value
-                .categories
-                .map(|categories| categories.into_iter().map(|v| v.into()).collect()),
+            categories: value.categories.map(|x| x.into_iter().map(|(k, v)| (k, v.into())).collect()),
             system_messages: value.system_messages.map(|v| v.into()),
             roles: value
                 .roles
@@ -811,9 +805,7 @@ impl From<PartialServer> for crate::PartialServer {
             name: value.name,
             description: value.description,
             channels: value.channels,
-            categories: value
-                .categories
-                .map(|categories| categories.into_iter().map(|v| v.into()).collect()),
+            categories: value.categories.map(|x| x.into_iter().map(|(k, v)| (k, v.into())).collect()),
             system_messages: value.system_messages.map(|v| v.into()),
             roles: value
                 .roles
@@ -859,6 +851,8 @@ impl From<crate::Category> for Category {
             id: value.id,
             title: value.title,
             channels: value.channels,
+            role_permissions: value.role_permissions,
+            default_permissions: value.default_permissions,
         }
     }
 }
@@ -869,6 +863,24 @@ impl From<Category> for crate::Category {
             id: value.id,
             title: value.title,
             channels: value.channels,
+            role_permissions: value.role_permissions,
+            default_permissions: value.default_permissions,
+        }
+    }
+}
+
+impl From<crate::FieldsCategory> for FieldsCategory {
+    fn from(value: crate::FieldsCategory) -> Self {
+        match value {
+            crate::FieldsCategory::DefaultPermissions => FieldsCategory::DefaultPermissions,
+        }
+    }
+}
+
+impl From<FieldsCategory> for crate::FieldsCategory {
+    fn from(value: FieldsCategory) -> crate::FieldsCategory {
+        match value {
+            FieldsCategory::DefaultPermissions => crate::FieldsCategory::DefaultPermissions,
         }
     }
 }

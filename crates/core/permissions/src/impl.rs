@@ -68,6 +68,26 @@ pub async fn calculate_server_permissions<P: PermissionQuery>(query: &mut P) -> 
     permissions
 }
 
+pub async fn calculate_category_permissions<P: PermissionQuery>(query: &mut P) -> PermissionValue {
+    let mut permissions = calculate_server_permissions(query).await;
+
+    permissions.apply(query.get_default_category_permissions().await);
+
+    for role_override in query.get_our_category_role_overrides().await {
+        permissions.apply(role_override)
+    }
+
+    if !permissions.has_channel_permission(ChannelPermission::ViewChannel) {
+        permissions.revoke_all();
+    }
+
+    if query.are_we_timed_out().await {
+        permissions.restrict(*ALLOW_IN_TIMEOUT);
+    }
+
+    permissions
+}
+
 /// Calculate permissions against a channel
 pub async fn calculate_channel_permissions<P: PermissionQuery>(query: &mut P) -> PermissionValue {
     if query.are_we_privileged().await {
@@ -109,11 +129,19 @@ pub async fn calculate_channel_permissions<P: PermissionQuery>(query: &mut P) ->
         }
         ChannelType::ServerChannel => {
             query.set_server_from_channel().await;
+            query.set_category_from_channel().await;
 
             if query.are_we_server_owner().await {
                 ChannelPermission::GrantAllSafe.into()
             } else if query.are_we_a_member().await {
                 let mut permissions = calculate_server_permissions(query).await;
+
+                permissions.apply(query.get_default_category_permissions().await);
+
+                for role_override in query.get_our_category_role_overrides().await {
+                    permissions.apply(role_override)
+                }
+
                 permissions.apply(query.get_default_channel_permissions().await);
 
                 for role_override in query.get_our_channel_role_overrides().await {

@@ -51,6 +51,12 @@ pub trait PermissionQuery {
     /// Get the ordered role overrides (from lowest to highest) for this member in this channel
     async fn get_our_channel_role_overrides(&mut self) -> Vec<Override>;
 
+    /// Get the default category permissions
+    async fn get_default_category_permissions(&mut self) -> Override;
+
+    /// Get the ordered role overrides (from lowest to highest) for this member in this category
+    async fn get_our_category_role_overrides(&mut self) -> Vec<Override>;
+
     /// Do we own this group or saved messages channel if it is one of those?
     async fn do_we_own_the_channel(&mut self) -> bool;
 
@@ -64,4 +70,7 @@ pub trait PermissionQuery {
     /// Set the current server as the server owning this channel
     /// (this will only ever be called for server channels, use unimplemented!() for other code paths)
     async fn set_server_from_channel(&mut self);
+
+    //// SEts the current category as the category the channel is in
+    async fn set_category_from_channel(&mut self);
 }

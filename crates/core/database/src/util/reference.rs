@@ -10,7 +10,7 @@ use schemars::{
 };
 
 use crate::{
-    Bot, Channel, Database, Emoji, Invite, Member, Message, Server, ServerBan, User, Webhook,
+    Bot, Category, Channel, Database, Emoji, Invite, Member, Message, Server, ServerBan, User, Webhook
 };
 
 /// Reference to some object in the database

@@ -115,6 +115,10 @@ pub enum ErrorType {
     TooManyRoles {
         max: usize,
     },
+    TooManyCategories {
+        max: usize,
+    },
+    UnknownCategory,
     AlreadyInServer,
     CannotTimeoutYourself,
 

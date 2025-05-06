@@ -28,8 +28,8 @@ auto_derived_partial!(
         // TODO: investigate if this is redundant and can be removed
         pub channels: Vec<String>,
         /// Categories for this server
-        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-        pub categories: Option<Vec<Category>>,
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "HashMap::is_empty"))]
+        pub categories: HashMap<String, Category>,
         /// Configuration for sending system event messages
         #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub system_messages: Option<SystemMessageChannels>,
@@ -126,13 +126,50 @@ auto_derived!(
     #[cfg_attr(feature = "validator", derive(Validate))]
     pub struct Category {
         /// Unique ID for this category
-        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
         pub id: String,
         /// Title for this category
         #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
         pub title: String,
+        /// Default permissions assigned to users in this channel
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub default_permissions: Option<OverrideField>,
+        /// Permissions assigned based on role to this channel
+        #[cfg_attr(
+            feature = "serde",
+            serde(
+                default = "HashMap::<String, OverrideField>::new",
+                skip_serializing_if = "HashMap::<String, OverrideField>::is_empty"
+            )
+        )]
+        pub role_permissions: HashMap<String, OverrideField>,
         /// Channels in this category
         pub channels: Vec<String>,
+    }
+
+    #[cfg_attr(feature = "validator", derive(Validate))]
+    pub struct DataCreateCategory {
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
+        pub title: String,
+        /// Channels in this category
+        pub channels: Option<Vec<String>>,
+    }
+
+    #[cfg_attr(feature = "validator", derive(Validate))]
+    pub struct DataEditCategory {
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
+        pub title: Option<String>,
+        /// Channels in this category
+        pub channels: Option<Vec<String>>,
+        /// Fields to remove from category object
+        pub remove: Option<Vec<FieldsCategory>>,
+    }
+
+    pub enum FieldsCategory {
+        DefaultPermissions
+    }
+
+    pub struct DataDefaultCategoryPermissions {
+        pub permissions: Override
     }
 
     /// System message channel assignments
@@ -226,10 +263,6 @@ auto_derived!(
         pub icon: Option<String>,
         /// Attachment Id for banner
         pub banner: Option<String>,
-
-        /// Category structure for server
-        #[cfg_attr(feature = "validator", validate)]
-        pub categories: Option<Vec<Category>>,
         /// System message configuration
         pub system_messages: Option<SystemMessageChannels>,
 

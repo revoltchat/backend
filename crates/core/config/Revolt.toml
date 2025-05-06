@@ -200,6 +200,7 @@ message_reactions = 20
 server_emoji = 100
 server_roles = 200
 server_channels = 200
+server_categories = 50
 
 # How many hours since creation a user is considered new
 new_user_hours = 72

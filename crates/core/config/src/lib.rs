@@ -281,6 +281,7 @@ pub struct GlobalLimits {
     pub server_emoji: usize,
     pub server_roles: usize,
     pub server_channels: usize,
+    pub server_categories: usize,
 
     pub new_user_hours: usize,
 

@@ -5,7 +5,7 @@ use revolt_permissions::{
     RelationshipStatus, DEFAULT_PERMISSION_DIRECT_MESSAGE,
 };
 
-use crate::{Channel, Database, Member, Server, User};
+use crate::{Category, Channel, Database, Member, Server, User};
 
 /// Permissions calculator
 #[derive(Clone)]
@@ -16,6 +16,7 @@ pub struct DatabasePermissionQuery<'a> {
     perspective: &'a User,
     user: Option<Cow<'a, User>>,
     channel: Option<Cow<'a, Channel>>,
+    category: Option<Cow<'a, Category>>,
     server: Option<Cow<'a, Server>>,
     member: Option<Cow<'a, Member>>,
 
@@ -288,6 +289,40 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
         }
     }
 
+    async fn get_default_category_permissions(&mut self) -> Override {
+        if let Some(category) = &self.category {
+            category.default_permissions.unwrap_or_default().into()
+        } else {
+            Default::default()
+        }
+    }
+
+    async fn get_our_category_role_overrides(&mut self) -> Vec<Override> {
+        if let Some((server, category)) = self.server.as_ref().zip(self.category.as_ref()) {
+            let member_roles = self
+                .member
+                .as_ref()
+                .map(|member| member.roles.clone())
+                .unwrap_or_default();
+
+            let mut roles = category.role_permissions
+                .iter()
+                .filter(|(id, _)| member_roles.contains(id))
+                .filter_map(|(id, permission)| {
+                    server.roles.get(id).map(|role| {
+                        let v: Override = (*permission).into();
+                        (role.rank, v)
+                    })
+                })
+                .collect::<Vec<(i64, Override)>>();
+
+            roles.sort_by(|a, b| b.0.cmp(&a.0));
+            roles.into_iter().map(|(_, v)| v).collect()
+        } else {
+            vec![]
+        }
+    }
+
     /// Do we own this group or saved messages channel if it is one of those?
     async fn do_we_own_the_channel(&mut self) -> bool {
         if let Some(channel) = &self.channel {
@@ -375,6 +410,14 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
             }
         }
     }
+
+    async fn set_category_from_channel(&mut self) {
+        if let Some((server, channel)) = self.server.as_ref().zip(self.channel.as_ref()) {
+            let category = server.categories.values().find(|c| c.channels.contains(&channel.id().to_string())).cloned();
+
+            self.category = category.map(Cow::Owned);
+        }
+    }
 }
 
 impl<'a> DatabasePermissionQuery<'a> {
@@ -385,6 +428,7 @@ impl<'a> DatabasePermissionQuery<'a> {
             perspective,
             user: None,
             channel: None,
+            category: None,
             server: None,
             member: None,
 
@@ -439,6 +483,13 @@ impl<'a> DatabasePermissionQuery<'a> {
     pub fn server(self, server: &'a Server) -> DatabasePermissionQuery {
         DatabasePermissionQuery {
             server: Some(Cow::Borrowed(server)),
+            ..self
+        }
+    }
+
+    pub fn category(self, category: &'a Category) -> DatabasePermissionQuery<'a> {
+        DatabasePermissionQuery {
+            category: Some(Cow::Borrowed(category)),
             ..self
         }
     }
