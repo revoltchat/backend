@@ -91,6 +91,18 @@ async fn validate_user_permissions() {
         async fn set_server_from_channel(&mut self) {
             unreachable!()
         }
+
+        async fn get_default_category_permissions(&mut self) -> Override {
+            unreachable!()
+        }
+
+        async fn get_our_category_role_overrides(&mut self) -> Vec<Override> {
+            unreachable!()
+        }
+
+        async fn set_category_from_channel(&mut self) {
+            unreachable!()
+        }
     }
 }
 
@@ -181,6 +193,18 @@ async fn validate_group_permissions() {
         }
 
         async fn set_server_from_channel(&mut self) {
+            unreachable!()
+        }
+
+        async fn get_default_category_permissions(&mut self) -> Override {
+            unreachable!()
+        }
+
+        async fn get_our_category_role_overrides(&mut self) -> Vec<Override> {
+            unreachable!()
+        }
+
+        async fn set_category_from_channel(&mut self) {
             unreachable!()
         }
     }
@@ -287,6 +311,18 @@ async fn validate_server_permissions() {
         async fn set_server_from_channel(&mut self) {
             // no-op
         }
+
+        async fn get_default_category_permissions(&mut self) -> Override {
+            Override { allow: 0, deny: 0 }
+        }
+
+        async fn get_our_category_role_overrides(&mut self) -> Vec<Override> {
+            vec![]
+        }
+
+        async fn set_category_from_channel(&mut self) {
+            // no-op
+        }
     }
 }
 
@@ -371,6 +407,127 @@ async fn validate_timed_out_member() {
         }
 
         async fn set_server_from_channel(&mut self) {
+            // no-op
+        }
+
+        async fn get_default_category_permissions(&mut self) -> Override {
+            Override { allow: 0, deny: 0 }
+        }
+
+        async fn get_our_category_role_overrides(&mut self) -> Vec<Override> {
+            vec![]
+        }
+
+        async fn set_category_from_channel(&mut self) {
+            // no-op
+        }
+    }
+}
+
+#[async_std::test]
+async fn validate_category_permissions() {
+    /// Scenario in which we are in a channel in a server and has a role
+    /// Server defaults let us send messages, view channels
+    /// Category default denies sending, allows reacting
+    /// Category role allows sending message
+    struct Scenario {}
+    let mut query = Scenario {};
+
+    let perms = calculate_channel_permissions(&mut query).await;
+    let value: u64 = perms.into();
+    assert_eq!(value, ChannelPermission::ViewChannel as u64 | ChannelPermission::React as u64 | ChannelPermission::SendMessage as u64);
+
+    #[async_trait]
+    impl PermissionQuery for Scenario {
+        async fn are_we_privileged(&mut self) -> bool {
+            false
+        }
+
+        async fn are_we_a_bot(&mut self) -> bool {
+            unreachable!()
+        }
+
+        async fn are_the_users_same(&mut self) -> bool {
+            unreachable!()
+        }
+
+        async fn user_relationship(&mut self) -> RelationshipStatus {
+            unreachable!()
+        }
+
+        async fn user_is_bot(&mut self) -> bool {
+            unreachable!()
+        }
+
+        async fn have_mutual_connection(&mut self) -> bool {
+            unreachable!()
+        }
+
+        async fn are_we_server_owner(&mut self) -> bool {
+            false
+        }
+
+        async fn are_we_a_member(&mut self) -> bool {
+            true
+        }
+
+        async fn get_default_server_permissions(&mut self) -> u64 {
+            ChannelPermission::SendMessage as u64 | ChannelPermission::ViewChannel as u64
+        }
+
+        async fn get_our_server_role_overrides(&mut self) -> Vec<Override> {
+            vec![]
+        }
+
+        async fn are_we_timed_out(&mut self) -> bool {
+            false
+        }
+
+        async fn get_channel_type(&mut self) -> ChannelType {
+            ChannelType::ServerChannel
+        }
+
+        async fn get_default_channel_permissions(&mut self) -> Override {
+            Override { allow: 0, deny: 0 }
+        }
+
+        async fn get_our_channel_role_overrides(&mut self) -> Vec<Override> {
+            vec![]
+        }
+
+        async fn do_we_own_the_channel(&mut self) -> bool {
+            unreachable!()
+        }
+
+        async fn are_we_part_of_the_channel(&mut self) -> bool {
+            unreachable!()
+        }
+
+        async fn set_recipient_as_user(&mut self) {
+            unreachable!()
+        }
+
+        async fn set_server_from_channel(&mut self) {
+            // no-op
+        }
+
+        async fn get_default_category_permissions(&mut self) -> Override {
+            Override {
+                allow: ChannelPermission::React as u64,
+                deny: ChannelPermission::SendMessage as u64
+            }
+        }
+
+        async fn get_our_category_role_overrides(&mut self) -> Vec<Override> {
+            vec![
+                Override {
+                    allow: ChannelPermission::SendMessage as u64,
+                    deny: 0
+                }
+            ]
+        }
+
+        async fn set_category_from_channel(&mut self) {
             // no-op
         }
     }
