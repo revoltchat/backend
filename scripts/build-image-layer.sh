@@ -54,9 +54,9 @@ deps() {
     tee crates/core/result/src/lib.rs
   
   if [ -z "$TARGETARCH" ]; then
-    cargo build --locked --release
+    cargo build -j 24 --locked --release
   else
-    cargo build --locked --release --target "${BUILD_TARGET}"
+    cargo build -j 24 --locked --release --target "${BUILD_TARGET}"
   fi
 }
 
@@ -74,9 +74,9 @@ apps() {
     crates/core/result/src/lib.rs
   
   if [ -z "$TARGETARCH" ]; then
-    cargo build --locked --release
+    cargo build -j 24 --locked --release
   else
-    cargo build --locked --release --target "${BUILD_TARGET}"
+    cargo build -j 24 --locked --release --target "${BUILD_TARGET}"
     mv target _target && mv _target/"${BUILD_TARGET}" target
   fi
 }

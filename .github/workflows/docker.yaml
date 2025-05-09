@@ -2,24 +2,13 @@ name: Docker Test & Publish
 
 on:
   push:
-    # branches:
-    #   - "main"
     tags:
       - "*"
-    paths-ignore:
-      - ".github/**"
-      - "!.github/workflows/docker.yml"
-      - ".vscode/**"
-      - "doc/**"
-      - ".gitignore"
-      - "LICENSE"
-      - "README"
   pull_request:
     branches:
       - "main"
     paths:
       - "Dockerfile"
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -27,8 +16,9 @@ permissions:
 
 jobs:
   base:
+    name: Test base image build
     runs-on: ubuntu-latest
-    name: Build base image
+    if: github.event_name == 'pull_request'
     steps:
       # Configure build environment
       - name: Checkout
@@ -36,39 +26,36 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      # Authenticate with GHCR
-      - name: Login to Github Container Registry
-        if: ${{ github.event_name != 'pull_request' }}
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
+      # Build the image
       - name: Build base image
         uses: docker/build-push-action@v4
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
+          push: false
           platforms: linux/amd64,linux/arm64
           tags: ghcr.io/${{ github.repository_owner }}/base:latest
           cache-from: type=gha,scope=buildx-base-multi-arch
           cache-to: type=gha,scope=buildx-base-multi-arch,mode=max
 
   publish:
-    needs: [base]
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: github.event_name != 'pull_request'
-    strategy:
-      matrix:
-        project: [delta, bonfire, autumn, january, pushd, crond]
-    name: Build ${{ matrix.project }} image
+    name: Publish Docker images
     steps:
       # Configure build environment
       - name: Checkout
         uses: actions/checkout@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
+
+      # Build the image
+      - name: Build base image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: false
+          platforms: linux/amd64,linux/arm64
+          tags: base:latest
 
       # Authenticate with Docker Hub and GHCR
       - name: Login to DockerHub
@@ -77,6 +64,7 @@ jobs:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Login to Github Container Registry
         uses: docker/login-action@v2
         with:
@@ -84,58 +72,122 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Resolve the correct project
-      - uses: kanga333/variable-mapper@master
-        id: export
-        with:
-          key: "${{ matrix.project }}"
-          map: |
-            {
-              "delta": {
-                "path": "crates/delta",
-                "tag": "${{ github.repository_owner }}/server"
-              },
-              "bonfire": {
-                "path": "crates/bonfire",
-                "tag": "${{ github.repository_owner }}/bonfire"
-              },
-              "autumn": {
-                "path": "crates/services/autumn",
-                "tag": "${{ github.repository_owner }}/autumn"
-              },
-              "january": {
-                "path": "crates/services/january",
-                "tag": "${{ github.repository_owner }}/january"
-              },
-              "pushd": {
-                "path": "crates/daemons/pushd",
-                "tag": "${{ github.repository_owner }}/pushd"
-              },
-              "crond": {
-                "path": "crates/daemons/crond",
-                "tag": "${{ github.repository_owner }}/crond"
-              }
-            }
-          export_to: output
-
-      # Configure metadata
+      # revoltchat/server
       - name: Docker meta
-        id: meta
+        id: meta-delta
         uses: docker/metadata-action@v4
         with:
           images: |
-            docker.io/${{ steps.export.outputs.tag }}
-            ghcr.io/${{ steps.export.outputs.tag }}
-
-      # Build crate image
+            docker.io/revoltchat/server
+            ghcr.io/revoltchat/server
       - name: Publish
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
-          file: ${{ steps.export.outputs.path }}/Dockerfile
-          tags: ${{ steps.meta.outputs.tags }}
+          file: crates/delta/Dockerfile
+          tags: ${{ steps.meta-delta.outputs.tags }}
           build-args: |
-            BASE_IMAGE=ghcr.io/${{ github.repository_owner }}/base:latest
-          labels: ${{ steps.meta.outputs.labels }}
+            BASE_IMAGE=base:latest
+          labels: ${{ steps.meta-delta.outputs.labels }}
+
+      # revoltchat/bonfire
+      - name: Docker meta
+        id: meta-bonfire
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            docker.io/revoltchat/bonfire
+            ghcr.io/revoltchat/bonfire
+      - name: Publish
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          file: crates/bonfire/Dockerfile
+          tags: ${{ steps.meta-bonfire.outputs.tags }}
+          build-args: |
+            BASE_IMAGE=base:latest
+          labels: ${{ steps.meta-bonfire.outputs.labels }}
+
+      # revoltchat/autumn
+      - name: Docker meta
+        id: meta-autumn
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            docker.io/revoltchat/autumn
+            ghcr.io/revoltchat/autumn
+      - name: Publish
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          file: crates/services/autumn/Dockerfile
+          tags: ${{ steps.meta-autumn.outputs.tags }}
+          build-args: |
+            BASE_IMAGE=base:latest
+          labels: ${{ steps.meta-autumn.outputs.labels }}
+
+      # revoltchat/january
+      - name: Docker meta
+        id: meta-january
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            docker.io/revoltchat/january
+            ghcr.io/revoltchat/january
+      - name: Publish
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          file: crates/services/january/Dockerfile
+          tags: ${{ steps.meta-january.outputs.tags }}
+          build-args: |
+            BASE_IMAGE=base:latest
+          labels: ${{ steps.meta-january.outputs.labels }}
+
+      # revoltchat/crond
+      - name: Docker meta
+        id: meta-crond
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            docker.io/revoltchat/crond
+            ghcr.io/revoltchat/crond
+      - name: Publish
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          file: crates/daemons/crond/Dockerfile
+          tags: ${{ steps.meta-crond.outputs.tags }}
+          build-args: |
+            BASE_IMAGE=base:latest
+          labels: ${{ steps.meta-crond.outputs.labels }}
+
+      # revoltchat/pushd
+      - name: Docker meta
+        id: meta-pushd
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            docker.io/revoltchat/pushd
+            ghcr.io/revoltchat/pushd
+      - name: Publish
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          file: crates/daemons/pushd/Dockerfile
+          tags: ${{ steps.meta-pushd.outputs.tags }}
+          build-args: |
+            BASE_IMAGE=base:latest
+          labels: ${{ steps.meta-pushd.outputs.labels }}
