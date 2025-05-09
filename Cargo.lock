@@ -447,9 +447,9 @@ dependencies = [
 
 [[package]]
 name = "authifier"
-version = "1.0.9"
+version = "0.111.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ba4df3b5df5cf1a08d4af71c407fb56a675b6aaf4d1fec704da32595497d73d"
+checksum = "ffc8b1907dd2e7a7be725aaa5b7eee3d1a3758e05bc7db8a995ea0540c8698df"
 dependencies = [
  "async-std",
  "async-trait",
@@ -472,6 +472,37 @@ dependencies = [
  "rocket",
  "rust-argon2",
  "schemars",
+ "serde",
+ "serde_json",
+ "sha1",
+ "totp-lite",
+ "ulid 0.5.0",
+ "validator 0.15.0",
+]
+
+[[package]]
+name = "authifier"
+version = "1.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ba4df3b5df5cf1a08d4af71c407fb56a675b6aaf4d1fec704da32595497d73d"
+dependencies = [
+ "async-std",
+ "async-trait",
+ "base32",
+ "bson",
+ "chrono",
+ "futures",
+ "handlebars",
+ "iso8601-timestamp 0.1.10",
+ "lazy_static",
+ "lettre",
+ "log",
+ "mongodb",
+ "nanoid",
+ "rand 0.8.5",
+ "regex",
+ "reqwest 0.11.10",
+ "rust-argon2",
  "serde",
  "serde_json",
  "totp-lite",
@@ -5565,7 +5596,7 @@ dependencies = [
  "async-channel 2.3.1",
  "async-std",
  "async-tungstenite",
- "authifier",
+ "authifier 0.111.0",
  "bincode",
  "fred",
  "futures",
@@ -5625,7 +5656,7 @@ dependencies = [
  "async-recursion",
  "async-std",
  "async-trait",
- "authifier",
+ "authifier 0.111.0",
  "axum",
  "base64 0.21.3",
  "bson",
@@ -5672,7 +5703,7 @@ dependencies = [
  "amqprs",
  "async-channel 1.6.1",
  "async-std",
- "authifier",
+ "authifier 0.111.0",
  "bitfield",
  "chrono",
  "dashmap",
@@ -5826,7 +5857,7 @@ version = "0.8.3"
 dependencies = [
  "amqprs",
  "async-trait",
- "authifier",
+ "authifier 1.0.9",
  "base64 0.22.1",
  "fcm_v1",
  "isahc",
@@ -6051,11 +6082,11 @@ dependencies = [
 
 [[package]]
 name = "rocket_authifier"
-version = "1.0.9"
+version = "0.111.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "810753b79106c44a4e76247fc7576b660663133a9e8f4b0afeb303589ec51d59"
+checksum = "2e9a8046b68fd265519014988ac198503f9ffdc44e5bed8015057d28e814120c"
 dependencies = [
- "authifier",
+ "authifier 0.111.0",
  "iso8601-timestamp 0.1.10",
  "revolt_okapi",
  "revolt_rocket_okapi",

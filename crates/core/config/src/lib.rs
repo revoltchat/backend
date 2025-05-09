@@ -168,6 +168,7 @@ pub struct ApiSecurity {
     pub voso_legacy_token: String,
     pub captcha: ApiSecurityCaptcha,
     pub trust_cloudflare: bool,
+    pub easypwned: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]

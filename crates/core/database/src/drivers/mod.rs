@@ -102,6 +102,9 @@ impl Database {
         let config = config().await;
 
         let mut auth_config = authifier::Config {
+            password_scanning: authifier::config::PasswordScanning::EasyPwned {
+                endpoint: config.api.security.easypwned,
+            },
             email_verification: if !config.api.smtp.host.is_empty() {
                 EmailVerificationConfig::Enabled {
                     smtp: SMTPSettings {
@@ -158,7 +161,8 @@ impl Database {
                             },
                             deletion: Template {
                                 title: "Confirm account deletion.".into(),
-                                text: include_str!("../../templates/deletion.whitelabel.txt").into(),
+                                text: include_str!("../../templates/deletion.whitelabel.txt")
+                                    .into(),
                                 url: format!("{}/delete/", config.hosts.app),
                                 html: None,
                             },
