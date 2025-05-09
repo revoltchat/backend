@@ -34,10 +34,10 @@ The services and libraries that power the Revolt service.<br/>
 
 ## Minimum Supported Rust Version
 
-Rust 1.76 or higher.
+Rust 1.86.0 or higher.
 
 > [!CAUTION]
-> The events server has a significant performance regression between Rust 1.77.2 and 1.78.0 onwards, see [issue #341](https://github.com/revoltchat/backend/issues/341).
+> The events server has a significant performance regression between Rust 1.77.2 and 1.78.0 onwards, see [issue #341](https://github.com/revoltchat/backend/issues/341). This is currently solved by build time options but we are looking for a proper fix.
 
 ## Development Guide
 
