@@ -53,10 +53,9 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          push: false
-          load: true
+          push: true
           platforms: linux/amd64,linux/arm64
-          tags: base:latest
+          tags: ghcr.io/${{ github.repository_owner }}/base:latest
 
       # Authenticate with Docker Hub and GHCR
       - name: Login to DockerHub
@@ -90,7 +89,7 @@ jobs:
           file: crates/delta/Dockerfile
           tags: ${{ steps.meta-delta.outputs.tags }}
           build-args: |
-            BASE_IMAGE=base:latest
+            BASE_IMAGE=ghcr.io/${{ github.repository_owner }}/base:latest
           labels: ${{ steps.meta-delta.outputs.labels }}
 
       # revoltchat/bonfire
@@ -110,7 +109,7 @@ jobs:
           file: crates/bonfire/Dockerfile
           tags: ${{ steps.meta-bonfire.outputs.tags }}
           build-args: |
-            BASE_IMAGE=base:latest
+            BASE_IMAGE=ghcr.io/${{ github.repository_owner }}/base:latest
           labels: ${{ steps.meta-bonfire.outputs.labels }}
 
       # revoltchat/autumn
@@ -130,7 +129,7 @@ jobs:
           file: crates/services/autumn/Dockerfile
           tags: ${{ steps.meta-autumn.outputs.tags }}
           build-args: |
-            BASE_IMAGE=base:latest
+            BASE_IMAGE=ghcr.io/${{ github.repository_owner }}/base:latest
           labels: ${{ steps.meta-autumn.outputs.labels }}
 
       # revoltchat/january
@@ -150,7 +149,7 @@ jobs:
           file: crates/services/january/Dockerfile
           tags: ${{ steps.meta-january.outputs.tags }}
           build-args: |
-            BASE_IMAGE=base:latest
+            BASE_IMAGE=ghcr.io/${{ github.repository_owner }}/base:latest
           labels: ${{ steps.meta-january.outputs.labels }}
 
       # revoltchat/crond
@@ -170,7 +169,7 @@ jobs:
           file: crates/daemons/crond/Dockerfile
           tags: ${{ steps.meta-crond.outputs.tags }}
           build-args: |
-            BASE_IMAGE=base:latest
+            BASE_IMAGE=ghcr.io/${{ github.repository_owner }}/base:latest
           labels: ${{ steps.meta-crond.outputs.labels }}
 
       # revoltchat/pushd
@@ -190,5 +189,5 @@ jobs:
           file: crates/daemons/pushd/Dockerfile
           tags: ${{ steps.meta-pushd.outputs.tags }}
           build-args: |
-            BASE_IMAGE=base:latest
+            BASE_IMAGE=ghcr.io/${{ github.repository_owner }}/base:latest
           labels: ${{ steps.meta-pushd.outputs.labels }}
