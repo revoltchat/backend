@@ -17,7 +17,6 @@ RUN sh /tmp/build-image-layer.sh tools
 
 # Build all dependencies
 COPY Cargo.toml Cargo.lock ./
-COPY crates/bindings/node/Cargo.toml ./crates/bindings/node/
 COPY crates/bonfire/Cargo.toml ./crates/bonfire/
 COPY crates/delta/Cargo.toml ./crates/delta/
 COPY crates/core/config/Cargo.toml ./crates/core/config/

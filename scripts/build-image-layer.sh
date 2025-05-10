@@ -22,7 +22,6 @@ tools() {
 
 deps() {
   mkdir -p \
-    crates/bindings/node/src \
     crates/bonfire/src \
     crates/delta/src \
     crates/core/config/src \
@@ -45,7 +44,6 @@ deps() {
     tee crates/daemons/crond/src/main.rs |
     tee crates/daemons/pushd/src/main.rs
   echo '' |
-    tee crates/bindings/node/src/lib.rs |
     tee crates/core/config/src/lib.rs |
     tee crates/core/database/src/lib.rs |
     tee crates/core/files/src/lib.rs |

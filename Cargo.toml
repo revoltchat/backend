@@ -6,7 +6,6 @@ members = [
     "crates/bonfire",
     "crates/core/*",
     "crates/services/*",
-    "crates/bindings/*",
     "crates/daemons/*",
 ]
 
