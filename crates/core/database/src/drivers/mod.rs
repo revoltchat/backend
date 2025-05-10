@@ -121,7 +121,7 @@ impl Database {
                         ),
                         port: config.api.smtp.port,
                         use_tls: config.api.smtp.use_tls,
-                        use_starttls: None,
+                        use_starttls: config.api.smtp.use_starttls,
                     },
                     expiry: Default::default(),
                     templates: if config.production {

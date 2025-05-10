@@ -38,6 +38,7 @@ from_address = "development@revolt.chat"
 reply_to = "support@revolt.chat"
 port = 14025
 use_tls = false
+use_starttls = false
 
 [files.s3]
 # S3 protocol endpoint

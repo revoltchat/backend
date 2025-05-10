@@ -123,6 +123,7 @@ pub struct ApiSmtp {
     pub reply_to: Option<String>,
     pub port: Option<i32>,
     pub use_tls: Option<bool>,
+    pub use_starttls: Option<bool>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -178,7 +179,7 @@ pub struct ApiWorkers {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct ApiUsers {
-    pub early_adopter_cutoff: Option<u64>
+    pub early_adopter_cutoff: Option<u64>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
