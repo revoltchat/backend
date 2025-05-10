@@ -54,6 +54,8 @@ authifier_shield_key = ""
 voso_legacy_token = ""
 # Whether services are behind the Cloudflare network
 trust_cloudflare = false
+# easypwned endpoint
+easypwned = ""
 
 [api.security.captcha]
 # hCaptcha configuration

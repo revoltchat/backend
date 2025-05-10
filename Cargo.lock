@@ -443,9 +443,9 @@ dependencies = [
 
 [[package]]
 name = "authifier"
-version = "1.0.10"
+version = "1.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edfe88c4a9fcf24b18a216b27c9766966af2a40603d24c7782237afd6ca0d5cd"
+checksum = "ca26cb6b5ab776a1de5a8122fe6cc77fadd84fed30704c496f2aca451637877b"
 dependencies = [
  "async-std",
  "async-trait",
@@ -454,7 +454,7 @@ dependencies = [
  "chrono",
  "futures",
  "handlebars",
- "iso8601-timestamp 0.1.11",
+ "iso8601-timestamp",
  "lazy_static",
  "lettre",
  "log",
@@ -470,6 +470,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "sha1",
  "totp-lite",
  "ulid 0.5.0",
  "validator 0.15.0",
@@ -3649,17 +3650,6 @@ dependencies = [
 
 [[package]]
 name = "iso8601-timestamp"
-version = "0.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b088f3296223f11d6bd70998132653b30b6f39e6ab4be055c0bda486fa8d11c7"
-dependencies = [
- "generic-array 0.14.7",
- "serde",
- "time",
-]
-
-[[package]]
-name = "iso8601-timestamp"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "24d4e5d712dd664b11e778d1cfc06c79ba2700d6bc1771e44fb7b6a4656b487d"
@@ -6095,7 +6085,7 @@ dependencies = [
  "futures",
  "indexmap 1.9.3",
  "isahc",
- "iso8601-timestamp 0.2.17",
+ "iso8601-timestamp",
  "linkify 0.8.1",
  "log",
  "lru 0.11.1",
@@ -6140,7 +6130,7 @@ dependencies = [
  "env_logger",
  "futures",
  "impl_ops",
- "iso8601-timestamp 0.2.17",
+ "iso8601-timestamp",
  "lettre",
  "linkify 0.6.0",
  "log",
@@ -6229,7 +6219,7 @@ name = "revolt-models"
 version = "0.8.4"
 dependencies = [
  "indexmap 1.9.3",
- "iso8601-timestamp 0.2.17",
+ "iso8601-timestamp",
  "num_enum 0.6.1",
  "once_cell",
  "regex",
@@ -6299,7 +6289,7 @@ dependencies = [
  "base64 0.22.1",
  "fcm_v1",
  "isahc",
- "iso8601-timestamp 0.2.17",
+ "iso8601-timestamp",
  "log",
  "pretty_env_logger",
  "revolt-config",
@@ -6517,12 +6507,12 @@ dependencies = [
 
 [[package]]
 name = "rocket_authifier"
-version = "1.0.10"
+version = "1.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2aa1bfaee106d088b78de7c3cc2a8ab2c9e05a0286b6b912f0b18ea656b329e"
+checksum = "0490f4a6f0a359a9ffff9acbdf4eddf49890ec94941b8ddd88163c16f6159f5a"
 dependencies = [
  "authifier",
- "iso8601-timestamp 0.1.11",
+ "iso8601-timestamp",
  "revolt_okapi",
  "revolt_rocket_okapi",
  "rocket",

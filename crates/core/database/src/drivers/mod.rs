@@ -102,6 +102,9 @@ impl Database {
         let config = config().await;
 
         let mut auth_config = authifier::Config {
+            password_scanning: authifier::config::PasswordScanning::EasyPwned {
+                endpoint: config.api.security.easypwned,
+            },
             email_verification: if !config.api.smtp.host.is_empty() {
                 EmailVerificationConfig::Enabled {
                     smtp: SMTPSettings {
@@ -118,6 +121,7 @@ impl Database {
                         ),
                         port: config.api.smtp.port,
                         use_tls: config.api.smtp.use_tls,
+                        use_starttls: None,
                     },
                     expiry: Default::default(),
                     templates: if config.production {
@@ -130,6 +134,13 @@ impl Database {
                             },
                             reset: Template {
                                 title: "Reset your Revolt password.".into(),
+                                text: include_str!("../../templates/reset.txt").into(),
+                                url: format!("{}/login/reset/", config.hosts.app),
+                                html: Some(include_str!("../../templates/reset.html").into()),
+                            },
+                            reset_existing: Template {
+                                title: "You already have a Revolt account, reset your password."
+                                    .into(),
                                 text: include_str!("../../templates/reset.txt").into(),
                                 url: format!("{}/login/reset/", config.hosts.app),
                                 html: Some(include_str!("../../templates/reset.html").into()),
@@ -156,9 +167,16 @@ impl Database {
                                 url: format!("{}/login/reset/", config.hosts.app),
                                 html: None,
                             },
+                            reset_existing: Template {
+                                title: "Reset your password.".into(),
+                                text: include_str!("../../templates/reset.whitelabel.txt").into(),
+                                url: format!("{}/login/reset/", config.hosts.app),
+                                html: None,
+                            },
                             deletion: Template {
                                 title: "Confirm account deletion.".into(),
-                                text: include_str!("../../templates/deletion.whitelabel.txt").into(),
+                                text: include_str!("../../templates/deletion.whitelabel.txt")
+                                    .into(),
                                 url: format!("{}/delete/", config.hosts.app),
                                 html: None,
                             },
