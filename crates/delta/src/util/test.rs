@@ -154,6 +154,7 @@ impl TestHarness {
                 name: "Test Channel".to_string(),
                 description: None,
                 nsfw: Some(false),
+                voice: None
             },
             true,
         )

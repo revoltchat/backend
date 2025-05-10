@@ -4,6 +4,7 @@ use futures::future::join_all;
 use revolt_database::{
     events::client::{EventV1, ReadyPayloadFields},
     util::permissions::DatabasePermissionQuery,
+    voice::{delete_voice_state, get_voice_channel_members, get_voice_state, get_channel_voice_state},
     Channel, Database, Member, MemberCompositeKey, Presence, RelationshipStatus,
 };
 use revolt_models::v0;
@@ -11,12 +12,14 @@ use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_presence::filter_online;
 use revolt_result::Result;
 
+
 use super::state::{Cache, State};
 
 /// Cache Manager
 impl Cache {
     /// Check whether the current user can view a channel
     pub async fn can_view_channel(&self, db: &Database, channel: &Channel) -> bool {
+        #[allow(deprecated)]
         match &channel {
             Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => {
                 let member = self.members.get(server);
@@ -228,6 +231,22 @@ impl State {
         for channel in &channels {
             self.insert_subscription(channel.id().to_string()).await;
         }
+
+        let voice_states = if fields.contains(&ReadyPayloadFields::VoiceStates) {
+            // fetch voice states for all the channels we can see
+            let mut voice_states = Vec::new();
+
+            for channel in &channels {
+                if let Ok(Some(voice_state)) = get_channel_voice_state(channel).await {
+                    voice_states.push(voice_state)
+                }
+            }
+
+            Some(voice_states)
+        } else {
+            None
+        };
+
         Ok(EventV1::Ready {
             users: if fields.contains(&ReadyPayloadFields::Users) {
                 Some(users)
@@ -250,6 +269,7 @@ impl State {
                 None
             },
             emojis: emojis.map(|vec| vec.into_iter().map(Into::into).collect()),
+            voice_states,
 
             user_settings,
             channel_unreads: channel_unreads.map(|vec| vec.into_iter().map(Into::into).collect()),
@@ -265,6 +285,7 @@ impl State {
 
             let id = &id.to_string();
             for (channel_id, channel) in &self.cache.channels {
+                #[allow(deprecated)]
                 match channel {
                     Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => {
                         if server == id {
@@ -445,6 +466,7 @@ impl State {
                 server,
                 channels,
                 emojis: _,
+                voice_states: _,
             } => {
                 self.insert_subscription(id.clone()).await;
 

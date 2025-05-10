@@ -185,9 +185,26 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
         }
     }
 
+    async fn do_we_have_publish_overwrites(&mut self) -> bool {
+        if let Some(member) = &self.member {
+            member.can_publish.unwrap_or(false)
+        } else {
+            false
+        }
+    }
+
+    async fn do_we_have_receive_overwrites(&mut self) -> bool {
+        if let Some(member) = &self.member {
+            member.can_receive.unwrap_or(false)
+        } else {
+            false
+        }
+    }
+
     // * For calculating channel permission
 
     /// Get the type of the channel
+    #[allow(deprecated)]
     async fn get_channel_type(&mut self) -> ChannelType {
         if let Some(channel) = &self.channel {
             match channel {
@@ -225,14 +242,6 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
                 | Cow::Owned(Channel::TextChannel {
                     default_permissions,
                     ..
-                })
-                | Cow::Borrowed(Channel::VoiceChannel {
-                    default_permissions,
-                    ..
-                })
-                | Cow::Owned(Channel::VoiceChannel {
-                    default_permissions,
-                    ..
                 }) => default_permissions.unwrap_or_default().into(),
                 _ => Default::default(),
             }
@@ -249,12 +258,6 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
                     role_permissions, ..
                 })
                 | Cow::Owned(Channel::TextChannel {
-                    role_permissions, ..
-                })
-                | Cow::Borrowed(Channel::VoiceChannel {
-                    role_permissions, ..
-                })
-                | Cow::Owned(Channel::VoiceChannel {
                     role_permissions, ..
                 }) => {
                     if let Some(server) = &self.server {
@@ -345,6 +348,7 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
     /// (this will only ever be called for server channels, use unimplemented!() for other code paths)
     async fn set_server_from_channel(&mut self) {
         if let Some(channel) = &self.channel {
+            #[allow(deprecated)]
             match channel {
                 Cow::Borrowed(Channel::TextChannel { server, .. })
                 | Cow::Owned(Channel::TextChannel { server, .. })

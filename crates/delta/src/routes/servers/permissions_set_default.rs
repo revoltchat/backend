@@ -1,6 +1,5 @@
 use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Database, PartialServer, Server, User,
+    util::{permissions::DatabasePermissionQuery, reference::Reference}, voice::{sync_voice_permissions, VoiceClient}, Database, PartialServer, Server, User
 };
 use revolt_models::v0;
 use revolt_permissions::{
@@ -16,6 +15,7 @@ use rocket::{serde::json::Json, State};
 #[put("/<target>/permissions/default", data = "<data>", rank = 1)]
 pub async fn set_default_permissions(
     db: &State<Database>,
+    voice_client: &State<VoiceClient>,
     user: User,
     target: Reference,
     data: Json<DataPermissionsValue>,
@@ -38,6 +38,12 @@ pub async fn set_default_permissions(
             },
         )
         .await?;
+
+    for channel_id in &server.channels {
+        let channel = Reference::from_unchecked(channel_id.clone()).as_channel(db).await?;
+
+        sync_voice_permissions(db, voice_client, &channel, Some(&server), None).await?;
+    };
 
     server
         .update(

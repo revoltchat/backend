@@ -21,7 +21,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 31;
+pub const LATEST_REVISION: i32 = 33;
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -909,6 +909,7 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
     }
 
     if revision <= 26 {
+        // Need to migrate fields on attachments, change `user_id`, `object_id`, etc to `parent`.
         info!("Running migration [revision 26 / 15-05-2024]: fix invites being incorrectly serialized with wrong enum tagging.");
 
         auto_derived!(
@@ -1086,6 +1087,7 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             .await;
 
         for webhook in webhooks {
+            #[allow(deprecated)]
             match db.fetch_channel(&webhook.channel_id).await {
                 Ok(channel) => {
                     let creator_id = match channel {
@@ -1127,6 +1129,40 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             }
         }
     }
+
+    if revision <= 32 {
+        info!("Running migration [revision 32 / 26-01-2025]: Add `is_publishing` and `is_receiving` to members");
+
+        db.col::<Document>("server_members")
+            .update_many(
+                doc! {},
+                doc! {
+                    "$set": {
+                        "is_publishing": true,
+                        "is_receiving": true
+                    }
+                }
+            )
+            .await
+            .expect("Failed to update members");
+    }
+
+    if revision <= 33 {
+        info!("Running migration [revision 33 / 29-04-2025]: Convert all `VoiceChannel`'s into `TextChannel` ");
+
+        db.col::<Document>("channels")
+            .update_many(
+                doc! { "channel_type": "VoiceChannel" },
+                doc! {
+                    "$set": {
+                        "channel_type": "TextChannel",
+                        "voice": {}
+                    }
+                }
+            )
+            .await
+            .expect("Failed to update voice channels");
+    };
 
     // Reminder to update LATEST_REVISION when adding new migrations.
     LATEST_REVISION.max(revision)
