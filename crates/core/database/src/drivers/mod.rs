@@ -3,6 +3,7 @@ mod reference;
 
 use authifier::config::Captcha;
 use authifier::config::EmailVerificationConfig;
+use authifier::config::PasswordScanning;
 use authifier::config::ResolveIp;
 use authifier::config::SMTPSettings;
 use authifier::config::Shield;
@@ -102,8 +103,12 @@ impl Database {
         let config = config().await;
 
         let mut auth_config = authifier::Config {
-            password_scanning: authifier::config::PasswordScanning::EasyPwned {
-                endpoint: config.api.security.easypwned,
+            password_scanning: if config.api.security.easypwned.is_empty() {
+                Default::default()
+            } else {
+                PasswordScanning::EasyPwned {
+                    endpoint: config.api.security.easypwned,
+                }
             },
             email_verification: if !config.api.smtp.host.is_empty() {
                 EmailVerificationConfig::Enabled {
