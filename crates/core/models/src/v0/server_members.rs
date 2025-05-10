@@ -77,6 +77,7 @@ auto_derived!(
         Avatar,
         Roles,
         Timeout,
+        JoinedAt,
     }
 
     /// Member removal intention

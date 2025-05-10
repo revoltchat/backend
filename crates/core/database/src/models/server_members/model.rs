@@ -50,6 +50,7 @@ auto_derived!(
         Avatar,
         Roles,
         Timeout,
+        JoinedAt,
     }
 
     /// Member removal intention
@@ -186,6 +187,7 @@ impl Member {
 
     pub fn remove_field(&mut self, field: &FieldsMember) {
         match field {
+            FieldsMember::JoinedAt => (),
             FieldsMember::Avatar => self.avatar = None,
             FieldsMember::Nickname => self.nickname = None,
             FieldsMember::Roles => self.roles.clear(),
@@ -224,7 +226,7 @@ impl Member {
         intention: RemovalIntention,
         silent: bool,
     ) -> Result<()> {
-        db.delete_member(&self.id).await?;
+        db.soft_delete_member(&self.id).await?;
 
         EventV1::ServerMemberLeave {
             id: self.id.server.to_string(),
