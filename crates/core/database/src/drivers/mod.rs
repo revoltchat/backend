@@ -141,9 +141,11 @@ impl Database {
                             reset_existing: Template {
                                 title: "You already have a Revolt account, reset your password."
                                     .into(),
-                                text: include_str!("../../templates/reset.txt").into(),
+                                text: include_str!("../../templates/reset-existing.txt").into(),
                                 url: format!("{}/login/reset/", config.hosts.app),
-                                html: Some(include_str!("../../templates/reset.html").into()),
+                                html: Some(
+                                    include_str!("../../templates/reset-existing.html").into(),
+                                ),
                             },
                             deletion: Template {
                                 title: "Confirm account deletion.".into(),
