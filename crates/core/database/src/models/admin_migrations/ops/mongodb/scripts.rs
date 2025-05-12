@@ -21,7 +21,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 31;
+pub const LATEST_REVISION: i32 = 32;
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -1126,6 +1126,17 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
                 Err(err) => panic!("{err:?}"),
             }
         }
+    }
+
+    if revision <= 32 {
+        info!(
+            "Running migration [revision 32 / 12-05-2025]: (Authifier) Add last_seen to sessions."
+        );
+
+        let db = authifier::Database::MongoDb(authifier::database::MongoDb(db.db()));
+        db.run_migration(authifier::Migration::M2025_02_20AddLastSeenToSession)
+            .await
+            .unwrap();
     }
 
     // Reminder to update LATEST_REVISION when adding new migrations.
