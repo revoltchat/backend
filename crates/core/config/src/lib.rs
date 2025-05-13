@@ -7,6 +7,7 @@ use once_cell::sync::Lazy;
 use serde::Deserialize;
 
 pub use sentry::{capture_error, capture_message, Level};
+pub use sentry_anyhow::capture_anyhow;
 
 #[cfg(feature = "report-macros")]
 #[macro_export]
@@ -343,6 +344,7 @@ pub struct Sentry {
     pub events: String,
     pub files: String,
     pub proxy: String,
+    pub pushd: String,
     pub crond: String,
 }
 

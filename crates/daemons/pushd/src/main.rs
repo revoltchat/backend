@@ -27,6 +27,9 @@ async fn main() {
     let config = config().await;
     pretty_env_logger::init();
 
+    // Configure logging and environment
+    revolt_config::configure!(pushd);
+
     // Setup database
     let db = revolt_database::DatabaseInfo::Auto.connect().await.unwrap();
     let authifier: authifier::Database;

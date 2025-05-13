@@ -9,9 +9,10 @@ description = "Revolt Backend: Configuration"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
+anyhow = ["dep:sentry-anyhow"]
 report-macros = ["revolt-result"]
 test = ["async-std"]
-default = ["test"]
+default = ["test", "anyhow"]
 
 [dependencies]
 # Utility
@@ -32,6 +33,7 @@ pretty_env_logger = "0.4.0"
 
 # Sentry
 sentry = "0.31.5"
+sentry-anyhow = { version = "0.38.1", optional = true }
 
 # Core
 revolt-result = { version = "0.8.5", path = "../result", optional = true }

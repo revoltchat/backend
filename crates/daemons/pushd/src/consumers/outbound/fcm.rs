@@ -2,6 +2,7 @@ use std::{collections::HashMap, time::Duration};
 
 use amqprs::{channel::Channel as AmqpChannel, consumer::AsyncConsumer, BasicProperties, Deliver};
 
+use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
 use fcm_v1::{
     android::AndroidConfig,
@@ -64,22 +65,16 @@ impl FcmOutboundConsumer {
             ),
         })
     }
-}
 
-#[allow(unused_variables)]
-#[async_trait]
-impl AsyncConsumer for FcmOutboundConsumer {
-    async fn consume(
+    async fn consume_event(
         &mut self,
-        channel: &AmqpChannel,
-        deliver: Deliver,
-        basic_properties: BasicProperties,
+        _channel: &AmqpChannel,
+        _deliver: Deliver,
+        _basic_properties: BasicProperties,
         content: Vec<u8>,
-    ) {
-        let content = String::from_utf8(content).unwrap();
-        let payload: PayloadToService = serde_json::from_str(content.as_str()).unwrap();
-
-        let config = revolt_config::config().await;
+    ) -> Result<()> {
+        let content = String::from_utf8(content)?;
+        let payload: PayloadToService = serde_json::from_str(content.as_str())?;
 
         #[allow(clippy::needless_late_init)]
         let resp: Result<Message, FcmError>;
@@ -94,7 +89,7 @@ impl AsyncConsumer for FcmOutboundConsumer {
                         alert.from_user.username, alert.from_user.discriminator
                     )))
                     .clone()
-                    .unwrap();
+                    .ok_or_else(|| anyhow!("missing name"))?;
 
                 let mut data = HashMap::new();
                 data.insert(
@@ -122,7 +117,7 @@ impl AsyncConsumer for FcmOutboundConsumer {
                         alert.accepted_user.username, alert.accepted_user.discriminator
                     )))
                     .clone()
-                    .unwrap();
+                    .ok_or_else(|| anyhow!("missing name"))?;
 
                 let mut data: HashMap<String, Value> = HashMap::new();
                 data.insert(
@@ -175,7 +170,7 @@ impl AsyncConsumer for FcmOutboundConsumer {
             }
 
             PayloadKind::BadgeUpdate(_) => {
-                panic!("FCM cannot handle badge updates, and they should not be sent here.")
+                bail!("FCM cannot handle badge updates and they should not be sent here.");
             }
         }
 
@@ -194,6 +189,28 @@ impl AsyncConsumer for FcmOutboundConsumer {
                     revolt_config::capture_error(&err);
                 }
             }
+        }
+
+        Ok(())
+    }
+}
+
+#[allow(unused_variables)]
+#[async_trait]
+impl AsyncConsumer for FcmOutboundConsumer {
+    async fn consume(
+        &mut self,
+        channel: &AmqpChannel,
+        deliver: Deliver,
+        basic_properties: BasicProperties,
+        content: Vec<u8>,
+    ) {
+        if let Err(err) = self
+            .consume_event(channel, deliver, basic_properties, content)
+            .await
+        {
+            revolt_config::capture_anyhow(&err);
+            eprintln!("Failed to process FCM event: {err:?}");
         }
     }
 }
