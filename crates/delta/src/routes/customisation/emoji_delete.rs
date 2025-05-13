@@ -3,7 +3,7 @@ use revolt_database::{
     Database, EmojiParent, User,
 };
 use revolt_permissions::{calculate_server_permissions, ChannelPermission};
-use revolt_result::{create_error, Result};
+use revolt_result::Result;
 
 use rocket::State;
 use rocket_empty::EmptyResponse;
@@ -18,7 +18,6 @@ pub async fn delete_emoji(
     user: User,
     emoji_id: Reference,
 ) -> Result<EmptyResponse> {
-
     // Fetch the emoji
     let emoji = emoji_id.as_emoji(db).await?;
 

@@ -142,7 +142,7 @@ mod tests {
                 ..Default::default()
             };
 
-            db.insert_webhook(&webhook).await.unwrap();
+            webhook.create(&db).await.unwrap();
 
             let mut updated_webhook = webhook.clone();
             updated_webhook

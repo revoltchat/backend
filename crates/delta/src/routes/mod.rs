@@ -1,4 +1,4 @@
-use revolt_config::{config, Settings};
+use revolt_config::Settings;
 use revolt_rocket_okapi::{revolt_okapi::openapi3::OpenApi, settings::OpenApiSettings};
 pub use rocket::http::Status;
 pub use rocket::response::Redirect;

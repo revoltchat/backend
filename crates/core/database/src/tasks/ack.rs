@@ -4,7 +4,6 @@ use crate::{Database, Message, AMQP};
 use deadqueue::limited::Queue;
 use once_cell::sync::Lazy;
 use revolt_models::v0::PushNotification;
-use rocket::form::validate::Contains;
 use std::{
     collections::{HashMap, HashSet},
     time::Duration,

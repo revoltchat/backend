@@ -1,7 +1,7 @@
 use revolt_models::v0::*;
 use revolt_permissions::{calculate_user_permissions, UserPermission};
 
-use crate::{util::permissions::DatabasePermissionQuery, Database, FileUsedFor};
+use crate::{util::permissions::DatabasePermissionQuery, Database};
 
 impl crate::Bot {
     pub fn into_public_bot(self, user: crate::User) -> PublicBot {
@@ -488,7 +488,7 @@ impl crate::Message {
             reactions: self.reactions,
             interactions: self.interactions.into(),
             masquerade: self.masquerade.map(Into::into),
-            flags: self.flags.map(|flags| flags as u32).unwrap_or_default(),
+            flags: self.flags.unwrap_or_default(),
             pinned: self.pinned,
         }
     }
@@ -517,7 +517,7 @@ impl From<crate::PartialMessage> for PartialMessage {
             reactions: value.reactions,
             interactions: value.interactions.map(Into::into),
             masquerade: value.masquerade.map(Into::into),
-            flags: value.flags.map(|flags| flags as u32),
+            flags: value.flags,
             pinned: value.pinned,
         }
     }

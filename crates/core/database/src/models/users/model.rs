@@ -8,7 +8,7 @@ use iso8601_timestamp::Timestamp;
 use once_cell::sync::Lazy;
 use rand::seq::SliceRandom;
 use revolt_config::{config, FeaturesLimits};
-use revolt_models::v0::{self, UserFlags, UserBadges};
+use revolt_models::v0::{self, UserBadges, UserFlags};
 use revolt_presence::filter_online;
 use revolt_result::{create_error, Result};
 use serde_json::json;
@@ -349,16 +349,13 @@ impl User {
     ) -> Result<Vec<v0::User>> {
         let online_ids = filter_online(ids).await;
 
-        Ok(join_all(
-            db
-            .fetch_users(ids)
-            .await?
-            .into_iter()
-            .map(|user| async {
+        Ok(
+            join_all(db.fetch_users(ids).await?.into_iter().map(|user| async {
                 let is_online = online_ids.contains(&user.id);
                 user.into_known(perspective, is_online).await
-            })
-        ).await)
+            }))
+            .await,
+        )
     }
 
     /// Find a free discriminator for a given username
@@ -639,7 +636,7 @@ impl User {
     }
 
     /// Update user data
-    pub async fn update<'a>(
+    pub async fn update(
         &mut self,
         db: &Database,
         partial: PartialUser,
@@ -817,7 +814,7 @@ impl User {
 
         if let Some(cutoff) = config.api.users.early_adopter_cutoff {
             if Ulid::from_string(&self.id).unwrap().timestamp_ms() < cutoff {
-                return badges + UserBadges::EarlyAdopter as u32
+                return badges + UserBadges::EarlyAdopter as u32;
             };
         };
 

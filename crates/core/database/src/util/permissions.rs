@@ -305,16 +305,14 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
 
     /// Are we a recipient of this channel?
     async fn are_we_part_of_the_channel(&mut self) -> bool {
-        if let Some(channel) = &self.channel {
-            match channel {
-                Cow::Borrowed(Channel::DirectMessage { recipients, .. })
-                | Cow::Owned(Channel::DirectMessage { recipients, .. })
-                | Cow::Borrowed(Channel::Group { recipients, .. })
-                | Cow::Owned(Channel::Group { recipients, .. }) => {
-                    recipients.contains(&self.perspective.id)
-                }
-                _ => false,
-            }
+        if let Some(
+            Cow::Borrowed(Channel::DirectMessage { recipients, .. })
+            | Cow::Owned(Channel::DirectMessage { recipients, .. })
+            | Cow::Borrowed(Channel::Group { recipients, .. })
+            | Cow::Owned(Channel::Group { recipients, .. }),
+        ) = &self.channel
+        {
+            recipients.contains(&self.perspective.id)
         } else {
             false
         }
@@ -420,7 +418,7 @@ impl<'a> DatabasePermissionQuery<'a> {
     }
 
     /// Use user
-    pub fn user(self, user: &'a User) -> DatabasePermissionQuery {
+    pub fn user(self, user: &'a User) -> DatabasePermissionQuery<'a> {
         DatabasePermissionQuery {
             user: Some(Cow::Borrowed(user)),
             ..self
@@ -428,7 +426,7 @@ impl<'a> DatabasePermissionQuery<'a> {
     }
 
     /// Use channel
-    pub fn channel(self, channel: &'a Channel) -> DatabasePermissionQuery {
+    pub fn channel(self, channel: &'a Channel) -> DatabasePermissionQuery<'a> {
         DatabasePermissionQuery {
             channel: Some(Cow::Borrowed(channel)),
             ..self
@@ -436,7 +434,7 @@ impl<'a> DatabasePermissionQuery<'a> {
     }
 
     /// Use server
-    pub fn server(self, server: &'a Server) -> DatabasePermissionQuery {
+    pub fn server(self, server: &'a Server) -> DatabasePermissionQuery<'a> {
         DatabasePermissionQuery {
             server: Some(Cow::Borrowed(server)),
             ..self
@@ -444,7 +442,7 @@ impl<'a> DatabasePermissionQuery<'a> {
     }
 
     /// Use member
-    pub fn member(self, member: &'a Member) -> DatabasePermissionQuery {
+    pub fn member(self, member: &'a Member) -> DatabasePermissionQuery<'a> {
         DatabasePermissionQuery {
             member: Some(Cow::Borrowed(member)),
             ..self
