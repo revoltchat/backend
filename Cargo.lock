@@ -446,9 +446,9 @@ dependencies = [
 
 [[package]]
 name = "authifier"
-version = "1.0.13"
+version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca26cb6b5ab776a1de5a8122fe6cc77fadd84fed30704c496f2aca451637877b"
+checksum = "b1a03b810b342b4c584cdc1cfc40d1ec763b1d653ef4086f7494740f35d9e1f0"
 dependencies = [
  "async-std",
  "async-trait",
@@ -6478,9 +6478,9 @@ dependencies = [
 
 [[package]]
 name = "rocket_authifier"
-version = "1.0.13"
+version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0490f4a6f0a359a9ffff9acbdf4eddf49890ec94941b8ddd88163c16f6159f5a"
+checksum = "c1f98a5be96ac4144ee1adc809c1594e8212032b8a08d9bc4cef70735dfd976e"
 dependencies = [
  "authifier",
  "iso8601-timestamp",
@@ -8294,6 +8294,7 @@ checksum = "220b18413e1fe5e85a5580b22f44241f82404a66c792c9f3c9eda74c52d9a22e"
 dependencies = [
  "chrono",
  "rand 0.8.5",
+ "serde",
 ]
 
 [[package]]

@@ -97,7 +97,7 @@ web-push = "0.10.0"
 revolt_a2 = { version = "0.10", default-features = false, features = ["ring"] }
 
 # Authifier
-authifier = { version = "1.0.13", features = ["rocket_impl"] }
+authifier = { version = "1.0.15", features = ["rocket_impl"] }
 
 # RabbitMQ
 amqprs = { version = "1.7.0" }

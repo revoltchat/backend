@@ -28,7 +28,7 @@ tokio = "1.39.2"
 async-trait = "0.1.81"
 ulid = "1.0.0"
 
-authifier = "1.0.10"
+authifier = "1.0.15"
 
 log = "0.4.11"
 pretty_env_logger = "0.4.0"
