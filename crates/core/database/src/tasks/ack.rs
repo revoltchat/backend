@@ -113,7 +113,7 @@ pub async fn handle_ack_event(
         }
         AckEvent::ProcessMessage { messages } => {
             let mut users: HashSet<&String> = HashSet::new();
-            debug!(
+            info!(
                 "Processing {} messages from channel {}",
                 messages.len(),
                 messages[0].1.channel
@@ -124,7 +124,7 @@ pub async fn handle_ack_event(
                 users.extend(recipents.iter());
             });
 
-            debug!("Found {} users to notify.", users.len());
+            info!("Found {} users to notify.", users.len());
 
             for user in users {
                 let message_ids: Vec<String> = messages
@@ -142,7 +142,7 @@ pub async fn handle_ack_event(
                     db.add_mention_to_unread(channel, user, &message_ids)
                         .await?;
                 }
-                debug!("Added {} mentions for user {}", message_ids.len(), &user);
+                info!("Added {} mentions for user {}", message_ids.len(), &user);
             }
 
             let mut mass_mentions = vec![];
@@ -231,7 +231,7 @@ pub async fn worker(db: Database, amqp: AMQP) {
                     revolt_config::capture_error(&err);
                     error!("{err:?} for {event:?}. ({user:?}, {channel})");
                 } else {
-                    debug!("User {user:?} ack in {channel} with {event:?}");
+                    info!("User {user:?} ack in {channel} with {event:?}");
                 }
             }
         }
@@ -246,6 +246,8 @@ pub async fn worker(db: Database, amqp: AMQP) {
             mut event,
         }) = Q.try_pop()
         {
+            info!("Took next ack from queue, now {} remaining", Q.len());
+
             let key: (Option<String>, String, u8) = (
                 user,
                 channel,
