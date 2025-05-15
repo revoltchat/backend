@@ -3,6 +3,7 @@ use crate::{Database, Message, AMQP};
 
 use deadqueue::limited::Queue;
 use once_cell::sync::Lazy;
+use revolt_config::capture_message;
 use revolt_models::v0::PushNotification;
 use std::{
     collections::{HashMap, HashSet},
@@ -64,6 +65,7 @@ pub async fn queue_ack(channel: String, user: String, event: AckEvent) {
     );
 }
 
+/// Do not add more than one message per event.
 pub async fn queue_message(channel: String, event: AckEvent) {
     Q.try_push(Data {
         channel,
@@ -262,24 +264,31 @@ pub async fn worker(db: Database, amqp: AMQP) {
                         if let AckEvent::ProcessMessage { messages: existing } =
                             &mut task.data.event
                         {
-                            // add the new message to the list of messages to be processed.
-                            existing.append(new_data);
+                            if let Some(new_event) = new_data.pop() {
+                                // if the message contains a mass mention, do not delay it any further.
+                                if new_event.1.contains_mass_push_mention() {
+                                    // add the new message to the list of messages to be processed.
+                                    existing.push(new_event);
+                                    task.run_immediately();
+                                    continue;
+                                }
 
-                            // if the message contains a mass mention, do not delay it any further.
-                            if new_data[0].1.contains_mass_push_mention() {
-                                task.run_immediately();
-                                continue;
-                            }
+                                existing.push(new_event);
 
-                            // put a cap on the amount of messages that can be queued, for particularly active channels
-                            if (existing.length() as u16)
-                                < revolt_config::config()
-                                    .await
-                                    .features
-                                    .advanced
-                                    .process_message_delay_limit
-                            {
-                                task.delay();
+                                // put a cap on the amount of messages that can be queued, for particularly active channels
+                                if (existing.length() as u16)
+                                    < revolt_config::config()
+                                        .await
+                                        .features
+                                        .advanced
+                                        .process_message_delay_limit
+                                {
+                                    task.delay();
+                                }
+                            } else {
+                                let err_msg = format!("Got zero-length message event: {event:?}");
+                                capture_message(&err_msg, revolt_config::Level::Warning);
+                                info!("{err_msg}")
                             }
                         } else {
                             panic!("Somehow got an ack message in the add mention arm");
