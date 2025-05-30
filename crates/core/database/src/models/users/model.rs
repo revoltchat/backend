@@ -57,6 +57,8 @@ auto_derived_partial!(
         /// Time until user is unsuspended
         #[serde(skip_serializing_if = "Option::is_none")]
         pub suspended_until: Option<Timestamp>,
+        /// Last acknowledged policy change
+        pub last_acknowledged_policy_change: Timestamp,
     },
     "PartialUser"
 );
@@ -178,6 +180,7 @@ impl Default for User {
             privileged: Default::default(),
             bot: Default::default(),
             suspended_until: Default::default(),
+            last_acknowledged_policy_change: Timestamp::UNIX_EPOCH,
         }
     }
 }
@@ -200,6 +203,7 @@ impl User {
             id: account_id.into().unwrap_or_else(|| Ulid::new().to_string()),
             discriminator: User::find_discriminator(db, &username, None).await?,
             username,
+            last_acknowledged_policy_change: Timestamp::now_utc(),
             ..Default::default()
         };
 

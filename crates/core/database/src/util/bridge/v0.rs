@@ -1,3 +1,4 @@
+use iso8601_timestamp::Timestamp;
 use revolt_models::v0::*;
 use revolt_permissions::{calculate_user_permissions, UserPermission};
 
@@ -597,6 +598,17 @@ impl From<Masquerade> for crate::Masquerade {
     }
 }
 
+impl From<crate::PolicyChange> for PolicyChange {
+    fn from(value: crate::PolicyChange) -> Self {
+        PolicyChange {
+            created_time: value.created_time,
+            effective_time: value.effective_time,
+            description: value.description,
+            url: value.url,
+        }
+    }
+}
+
 impl From<crate::Report> for Report {
     fn from(value: crate::Report) -> Self {
         Report {
@@ -1188,6 +1200,7 @@ impl From<User> for crate::User {
             privileged: value.privileged,
             bot: value.bot.map(Into::into),
             suspended_until: None,
+            last_acknowledged_policy_change: Timestamp::UNIX_EPOCH,
         }
     }
 }

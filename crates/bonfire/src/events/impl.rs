@@ -100,6 +100,18 @@ impl State {
         let user = self.clone_user();
         self.cache.is_bot = user.bot.is_some();
 
+        // Fetch pending policy changes.
+        let policy_changes = if user.bot.is_some() {
+            vec![]
+        } else {
+            db.fetch_policy_changes()
+                .await?
+                .into_iter()
+                .filter(|policy| policy.created_time > user.last_acknowledged_policy_change)
+                .map(Into::into)
+                .collect()
+        };
+
         // Find all relationships to the user.
         let mut user_ids: HashSet<String> = user
             .relations
@@ -227,6 +239,7 @@ impl State {
         for channel in &channels {
             self.insert_subscription(channel.id().to_string()).await;
         }
+
         Ok(EventV1::Ready {
             users: if fields.contains(&ReadyPayloadFields::Users) {
                 Some(users)
@@ -252,6 +265,8 @@ impl State {
 
             user_settings,
             channel_unreads: channel_unreads.map(|vec| vec.into_iter().map(Into::into).collect()),
+
+            policy_changes,
         })
     }
 

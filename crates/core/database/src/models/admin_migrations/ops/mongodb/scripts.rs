@@ -5,10 +5,11 @@ use crate::{
         bson::{doc, from_bson, from_document, to_document, Bson, DateTime, Document},
         options::FindOptions,
     },
-    AbstractChannels, AbstractServers, Channel, Invite, MongoDb, DISCRIMINATOR_SEARCH_SPACE,
+    AbstractChannels, AbstractServers, Channel, Invite, MongoDb, User, DISCRIMINATOR_SEARCH_SPACE,
 };
-use bson::oid::ObjectId;
+use bson::{oid::ObjectId, to_bson};
 use futures::StreamExt;
+use iso8601_timestamp::Timestamp;
 use rand::seq::SliceRandom;
 use revolt_permissions::DEFAULT_WEBHOOK_PERMISSIONS;
 use revolt_result::{Error, ErrorType};
@@ -21,7 +22,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 33; // MUST BE +1 to last migration
+pub const LATEST_REVISION: i32 = 41; // MUST BE +1 to last migration
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -1137,6 +1138,31 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
         db.run_migration(authifier::Migration::M2025_02_20AddLastSeenToSession)
             .await
             .unwrap();
+    }
+
+    if revision <= 40 {
+        info!(
+            "Running migration [revision |> 40 / 30-05-2025]: Set last policy acknowlegement date to now and create policy changes collection."
+        );
+
+        db.db()
+            .create_collection("policy_changes")
+            .await
+            .expect("Failed to create policy_changes collection.");
+
+        db.db()
+            .collection::<User>("users")
+            .update_many(
+                doc! {},
+                doc! {
+                    "$set": {
+                        "last_acknowledged_policy_change": to_bson(&Timestamp::now_utc())
+                            .expect("failed to serialise timestamp")
+                    }
+                },
+            )
+            .await
+            .expect("failed to update users");
     }
 
     // Reminder to update LATEST_REVISION when adding new migrations.
