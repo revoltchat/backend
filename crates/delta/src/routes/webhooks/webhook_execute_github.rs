@@ -588,6 +588,7 @@ pub enum PullRequestEvent {
 #[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum BaseEvent {
+    #[allow(dead_code)]
     Star(StarEvent),
     Ping,
     Push(PushEvent),
@@ -829,7 +830,7 @@ pub async fn webhook_execute_github(
                         })
                         .collect::<Vec<String>>()
                         .join("\n"),
-                        1000
+                    1000,
                 );
 
                 SendableEmbed {

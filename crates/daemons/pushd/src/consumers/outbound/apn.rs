@@ -1,6 +1,7 @@
 use std::{borrow::Cow, collections::BTreeMap, io::Cursor};
 
 use amqprs::{channel::Channel as AmqpChannel, consumer::AsyncConsumer, BasicProperties, Deliver};
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use base64::{
     engine::{self},
@@ -123,20 +124,16 @@ impl ApnsOutboundConsumer {
 
         Ok(ApnsOutboundConsumer { db, client })
     }
-}
 
-#[allow(unused_variables)]
-#[async_trait]
-impl AsyncConsumer for ApnsOutboundConsumer {
-    async fn consume(
+    async fn consume_event(
         &mut self,
-        channel: &AmqpChannel,
-        deliver: Deliver,
-        basic_properties: BasicProperties,
+        _channel: &AmqpChannel,
+        _deliver: Deliver,
+        _basic_properties: BasicProperties,
         content: Vec<u8>,
-    ) {
-        let content = String::from_utf8(content).unwrap();
-        let payload: PayloadToService = serde_json::from_str(content.as_str()).unwrap();
+    ) -> Result<()> {
+        let content = String::from_utf8(content)?;
+        let payload: PayloadToService = serde_json::from_str(content.as_str())?;
 
         let payload_options = NotificationOptions {
             apns_id: None,
@@ -160,7 +157,7 @@ impl AsyncConsumer for ApnsOutboundConsumer {
                             alert.from_user.username, alert.from_user.discriminator
                         )))
                         .clone()
-                        .unwrap(),
+                        .ok_or_else(|| anyhow!("missing name"))?,
                 )];
 
                 let apn_payload = Payload {
@@ -206,7 +203,7 @@ impl AsyncConsumer for ApnsOutboundConsumer {
                             alert.accepted_user.username, alert.accepted_user.discriminator
                         )))
                         .clone()
-                        .unwrap(),
+                        .ok_or_else(|| anyhow!("missing name"))?,
                 )];
 
                 let apn_payload = Payload {
@@ -355,6 +352,28 @@ impl AsyncConsumer for ApnsOutboundConsumer {
                     revolt_config::capture_error(&err);
                 }
             }
+        }
+
+        Ok(())
+    }
+}
+
+#[allow(unused_variables)]
+#[async_trait]
+impl AsyncConsumer for ApnsOutboundConsumer {
+    async fn consume(
+        &mut self,
+        channel: &AmqpChannel,
+        deliver: Deliver,
+        basic_properties: BasicProperties,
+        content: Vec<u8>,
+    ) {
+        if let Err(err) = self
+            .consume_event(channel, deliver, basic_properties, content)
+            .await
+        {
+            revolt_config::capture_anyhow(&err);
+            eprintln!("Failed to process APN event: {err:?}");
         }
     }
 }

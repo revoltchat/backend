@@ -7,6 +7,7 @@ use once_cell::sync::Lazy;
 use serde::Deserialize;
 
 pub use sentry::{capture_error, capture_message, Level};
+pub use sentry_anyhow::capture_anyhow;
 
 #[cfg(feature = "report-macros")]
 #[macro_export]
@@ -122,6 +123,7 @@ pub struct ApiSmtp {
     pub reply_to: Option<String>,
     pub port: Option<i32>,
     pub use_tls: Option<bool>,
+    pub use_starttls: Option<bool>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -167,6 +169,7 @@ pub struct ApiSecurity {
     pub voso_legacy_token: String,
     pub captcha: ApiSecurityCaptcha,
     pub trust_cloudflare: bool,
+    pub easypwned: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -190,7 +193,7 @@ pub struct LiveKitNode {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct ApiUsers {
-    pub early_adopter_cutoff: Option<u64>
+    pub early_adopter_cutoff: Option<u64>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -356,6 +359,7 @@ pub struct Sentry {
     pub voice_ingress: String,
     pub files: String,
     pub proxy: String,
+    pub pushd: String,
     pub crond: String,
 }
 

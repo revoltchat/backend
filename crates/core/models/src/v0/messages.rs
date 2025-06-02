@@ -401,7 +401,7 @@ impl Interactions {
     }
 }
 
-impl<'a> MessageAuthor<'a> {
+impl MessageAuthor<'_> {
     pub fn id(&self) -> &str {
         match self {
             MessageAuthor::User(user) => &user.id,

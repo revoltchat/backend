@@ -7,6 +7,7 @@ use amqprs::{
     consumer::AsyncConsumer,
     BasicProperties, Deliver,
 };
+use anyhow::Result;
 use async_trait::async_trait;
 use log::debug;
 use revolt_database::{events::rabbit::*, Database};
@@ -54,21 +55,16 @@ impl GenericConsumer {
             channel: None,
         }
     }
-}
 
-#[allow(unused_variables)]
-#[async_trait]
-impl AsyncConsumer for GenericConsumer {
-    /// This consumer handles delegating messages into their respective platform queues.
-    async fn consume(
+    async fn consume_event(
         &mut self,
-        channel: &Channel,
-        deliver: Deliver,
-        basic_properties: BasicProperties,
+        _channel: &Channel,
+        _deliver: Deliver,
+        _basic_properties: BasicProperties,
         content: Vec<u8>,
-    ) {
-        let content = String::from_utf8(content).unwrap();
-        let payload: MessageSentPayload = serde_json::from_str(content.as_str()).unwrap();
+    ) -> Result<()> {
+        let content = String::from_utf8(content)?;
+        let payload: MessageSentPayload = serde_json::from_str(content.as_str())?;
 
         debug!("Received message event on origin");
 
@@ -117,11 +113,34 @@ impl AsyncConsumer for GenericConsumer {
                             .insert("endpoint".to_string(), sub.endpoint.clone());
                     }
 
-                    let payload = serde_json::to_string(&sendable).unwrap();
+                    let payload = serde_json::to_string(&sendable)?;
 
                     publish_message(self, payload.into(), args).await;
                 }
             }
+        }
+
+        Ok(())
+    }
+}
+
+#[allow(unused_variables)]
+#[async_trait]
+impl AsyncConsumer for GenericConsumer {
+    /// This consumer handles delegating messages into their respective platform queues.
+    async fn consume(
+        &mut self,
+        channel: &Channel,
+        deliver: Deliver,
+        basic_properties: BasicProperties,
+        content: Vec<u8>,
+    ) {
+        if let Err(err) = self
+            .consume_event(channel, deliver, basic_properties, content)
+            .await
+        {
+            revolt_config::capture_anyhow(&err);
+            eprintln!("Failed to process generic event: {err:?}");
         }
     }
 }

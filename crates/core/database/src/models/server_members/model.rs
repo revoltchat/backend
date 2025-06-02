@@ -180,7 +180,7 @@ impl Member {
     }
 
     /// Update member data
-    pub async fn update<'a>(
+    pub async fn update(
         &mut self,
         db: &Database,
         partial: PartialMember,

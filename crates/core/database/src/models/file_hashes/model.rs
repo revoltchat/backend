@@ -28,7 +28,7 @@ auto_derived_partial!(
         /// Size of this file (in bytes)
         pub size: isize,
     },
-    "PartialFile"
+    "PartialFileHash"
 );
 
 auto_derived!(

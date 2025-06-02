@@ -1,5 +1,4 @@
 use iso8601_timestamp::Timestamp;
-use revolt_config::config;
 use revolt_database::{
     tasks,
     util::{permissions::DatabasePermissionQuery, reference::Reference},

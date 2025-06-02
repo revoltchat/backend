@@ -5,7 +5,7 @@ use iso8601_timestamp::Timestamp;
 use revolt_config::{config, FeaturesLimits};
 use revolt_models::v0::{
     self, BulkMessageResponse, DataMessageSend, Embed, MessageAuthor, MessageFlags, MessageSort,
-    MessageWebhook, PushNotification, ReplyIntent, SendableEmbed, Text
+    MessageWebhook, PushNotification, ReplyIntent, SendableEmbed, Text,
 };
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission, PermissionValue};
 use revolt_result::{ErrorType, Result};
@@ -288,9 +288,9 @@ impl Message {
             .map_err(|_| create_error!(InvalidOperation))?;
 
         // Check the message is not empty
-        if (data.content.as_ref().map_or(true, |v| v.is_empty()))
-            && (data.attachments.as_ref().map_or(true, |v| v.is_empty()))
-            && (data.embeds.as_ref().map_or(true, |v| v.is_empty()))
+        if (data.content.as_ref().is_none_or(|v| v.is_empty()))
+            && (data.attachments.as_ref().is_none_or(|v| v.is_empty()))
+            && (data.embeds.as_ref().is_none_or(|v| v.is_empty()))
         {
             return Err(create_error!(EmptyMessage));
         }
@@ -384,7 +384,7 @@ impl Message {
             mut user_mentions,
             mut role_mentions,
             mut mentions_everyone,
-            mut mentions_online
+            mut mentions_online,
         } = message_mentions;
 
         if allow_mass_mentions && server_id.is_some() && !role_mentions.is_empty() {
@@ -492,7 +492,9 @@ impl Message {
 
                     let valid_members = db.fetch_members(server.as_str(), &mentions_vec[..]).await;
                     if let Ok(valid_members) = valid_members {
-                        let valid_mentions = HashSet::<&String, RandomState>::from_iter(valid_members.iter().map(|m| &m.id.user));
+                        let valid_mentions = HashSet::<&String, RandomState>::from_iter(
+                            valid_members.iter().map(|m| &m.id.user),
+                        );
 
                         user_mentions.retain(|m| valid_mentions.contains(m)); // quick pass, validate mentions are in the server
 
@@ -506,7 +508,8 @@ impl Message {
                                     .members_can_see_channel()
                                     .await;
 
-                            user_mentions.retain(|m| *member_channel_view_perms.get(m).unwrap_or(&false));
+                            user_mentions
+                                .retain(|m| *member_channel_view_perms.get(m).unwrap_or(&false));
                         }
                     } else {
                         revolt_config::capture_error(&valid_members.unwrap_err());
@@ -520,7 +523,9 @@ impl Message {
         }
 
         if !user_mentions.is_empty() {
-            message.mentions.replace(user_mentions.into_iter().collect());
+            message
+                .mentions
+                .replace(user_mentions.into_iter().collect());
         }
 
         if !role_mentions.is_empty() {
@@ -654,7 +659,7 @@ impl Message {
     pub async fn send(
         &mut self,
         db: &Database,
-        amqp: Option<&AMQP>, // this is optional mostly for tests.
+        _amqp: Option<&AMQP>, // this is optional mostly for tests.
         author: MessageAuthor<'_>,
         user: Option<v0::User>,
         member: Option<v0::Member>,

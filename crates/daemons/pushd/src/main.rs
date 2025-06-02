@@ -24,8 +24,8 @@ use consumers::{
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() {
-    let config = config().await;
-    pretty_env_logger::init();
+    // Configure logging and environment
+    revolt_config::configure!(pushd);
 
     // Setup database
     let db = revolt_database::DatabaseInfo::Auto.connect().await.unwrap();
@@ -51,6 +51,8 @@ async fn main() {
 
     // This'll require some interesting shimming if we need to add more events once this is in prod (different payloads between prod and test),
     // but that sounds like a problem for future us.
+
+    let config = config().await;
 
     // inbound: generic
     connections.push(
