@@ -267,6 +267,7 @@ auto_derived!(
         pub hoist: Option<bool>,
         /// Ranking position
         ///
+        /// **Deprecated** - use the edit server role positions route.
         /// Smaller values take priority.
         pub rank: Option<i64>,
         /// Fields to remove from role object
@@ -285,5 +286,10 @@ auto_derived!(
     pub struct OptionsServerDelete {
         /// Whether to not send a leave message
         pub leave_silently: Option<bool>,
+    }
+
+    /// New role positions
+    pub struct DataEditRoleRanks {
+        pub ranks: Vec<String>,
     }
 );
