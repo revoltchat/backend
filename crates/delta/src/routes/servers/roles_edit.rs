@@ -12,7 +12,7 @@ use validator::Validate;
 ///
 /// Edit a role by its id.
 #[openapi(tag = "Server Permissions")]
-#[patch("/<target>/roles/<role_id>", data = "<data>")]
+#[patch("/<target>/roles/<role_id>", data = "<data>", rank = 1)]
 pub async fn edit(
     db: &State<Database>,
     user: User,

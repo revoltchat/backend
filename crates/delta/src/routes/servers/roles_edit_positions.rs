@@ -8,7 +8,7 @@ use revolt_models::v0;
 ///
 /// Edit's server role's ranks.
 #[openapi(tag = "Server Permissions")]
-#[patch("/<target>/roles/ranks", data = "<data>", rank = 1)]
+#[patch("/<target>/roles/ranks", data = "<data>")]
 pub async fn edit_role_ranks(
     db: &State<Database>,
     user: User,
@@ -31,24 +31,27 @@ pub async fn edit_role_ranks(
         return Err(create_error!(InvalidOperation))
     }
 
-    let member_top_rank = query.get_member_rank();
+    // dont have to check what the user cant modify if they are the server owner
+    if server.owner != user.id {
+        let member_top_rank = query.get_member_rank();
 
-    // find all roles above the member which we should not be able to reorder
-    let cant_modify = server.roles.clone()
-        .into_iter()
-        .filter(|(_, role)| if let Some(top_rank) = member_top_rank { role.rank <= top_rank } else { true })
-        .collect::<Vec<_>>();
+        // find all roles above the member which we should not be able to reorder
+        let cant_modify = server.roles.clone()
+            .into_iter()
+            .filter(|(_, role)| if let Some(top_rank) = member_top_rank { role.rank <= top_rank } else { true })
+            .collect::<Vec<_>>();
 
-    // check if any roles which we cant reorder have tried to been reordered
-    if cant_modify.iter()
-        .any(|(id, _)| {
-            let existing_rank = existing_order.iter().position(|existing_id| id == existing_id);
-            let new_rank = new_order.iter().position(|new_id| id == new_id);
+        // check if any roles which we cant reorder have tried to been reordered
+        if cant_modify.iter()
+            .any(|(id, _)| {
+                let existing_rank = existing_order.iter().position(|existing_id| id == existing_id);
+                let new_rank = new_order.iter().position(|new_id| id == new_id);
 
-            existing_rank != new_rank
-        })
-    {
-        return Err(create_error!(NotElevated))
+                existing_rank != new_rank
+            })
+        {
+            return Err(create_error!(NotElevated))
+        }
     }
 
     // update the roles which have had their rank changed
