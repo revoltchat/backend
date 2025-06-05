@@ -316,7 +316,7 @@ auto_derived!(
         /// Token for authenticating with the voice server
         pub token: String,
         /// Url of the livekit server to connect to
-        pub url: String
+        pub url: String,
     }
 
     /// Voice state for a channel
@@ -324,13 +324,11 @@ auto_derived!(
         pub id: String,
         /// The states of the users who are connected to the channel
         pub participants: Vec<UserVoiceState>,
-        /// The node's node which the channel is currently using
-        pub node: String
     }
 
     /// Join a voice channel
     pub struct DataJoinCall {
-        pub node: Option<String>
+        pub node: Option<String>,
     }
 
 );

@@ -293,7 +293,6 @@ pub async fn get_channel_voice_state(channel: &Channel) -> Result<Option<v0::Cha
 
     if let Some(members) = members {
         let mut participants = Vec::with_capacity(members.len());
-        let node = get_channel_node(channel.id()).await?.unwrap();
 
         for user_id in members {
             if let Some(voice_state) = get_voice_state(channel.id(), server, &user_id).await? {
@@ -307,8 +306,7 @@ pub async fn get_channel_voice_state(channel: &Channel) -> Result<Option<v0::Cha
 
         Ok(Some(v0::ChannelVoiceState {
             id: channel.id().to_string(),
-            participants,
-            node
+            participants
         }))
     } else {
         Ok(None)
