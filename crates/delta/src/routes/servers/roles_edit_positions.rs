@@ -8,7 +8,7 @@ use revolt_models::v0;
 ///
 /// Edit's server role's ranks.
 #[openapi(tag = "Server Permissions")]
-#[patch("/<target>/roles/ranks", data = "<data>")]
+#[patch("/<target>/roles/ranks", data = "<data>", rank = 1)]
 pub async fn edit_role_ranks(
     db: &State<Database>,
     user: User,
@@ -36,7 +36,7 @@ pub async fn edit_role_ranks(
     // find all roles above the member which we should not be able to reorder
     let cant_modify = server.roles.clone()
         .into_iter()
-        .filter(|(_, role)| if let Some(top_rank) = member_top_rank { role.rank >= top_rank } else { true })
+        .filter(|(_, role)| if let Some(top_rank) = member_top_rank { role.rank <= top_rank } else { true })
         .collect::<Vec<_>>();
 
     // check if any roles which we cant reorder have tried to been reordered

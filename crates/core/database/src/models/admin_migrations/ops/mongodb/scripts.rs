@@ -4,8 +4,7 @@ use crate::{
     mongodb::{
         bson::{doc, from_bson, from_document, to_document, Bson, DateTime, Document},
         options::FindOptions,
-    },
-    AbstractChannels, AbstractServers, Channel, Invite, MongoDb, User, DISCRIMINATOR_SEARCH_SPACE,
+    }, AbstractChannels, AbstractServers, Channel, Invite, MongoDb, Server, User, DISCRIMINATOR_SEARCH_SPACE
 };
 use bson::{oid::ObjectId, to_bson};
 use futures::StreamExt;
@@ -22,7 +21,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 41; // MUST BE +1 to last migration
+pub const LATEST_REVISION: i32 = 42; // MUST BE +1 to last migration
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -1163,6 +1162,43 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             )
             .await
             .expect("failed to update users");
+    }
+
+    if revision <= 41 {
+        info!("Running migration [revision 41 / 05-06-2025]: convert role ranks to uniform numbers.");
+
+        let mut servers = db.db()
+            .collection::<Server>("servers")
+            .find(doc! {
+                "roles": {
+                    "$exists": true,
+                    "$ne": []
+                }
+            })
+            .await
+            .unwrap()
+            .filter_map(|s| async { s.ok() })
+            .boxed();
+
+        while let Some(mut server) = servers.next().await {
+            let mut ordered_roles = server.roles.clone().into_iter().collect::<Vec<_>>();
+            ordered_roles.sort_by(|(_, role_a), (_, role_b)| role_a.rank.cmp(&role_b.rank));
+            let ordered_roles = ordered_roles.into_iter().map(|(id, _)| id).collect::<Vec<_>>();
+
+            for (id, role) in server.roles.iter_mut() {
+                role.rank = ordered_roles.iter().position(|x| id == x).unwrap() as i64;
+            }
+
+            db.db().collection::<Server>("servers")
+                .update_one(
+                    doc! { "_id": &server.id },
+                    doc! { "$set": {
+                        "roles": bson::to_bson(&server.roles).unwrap()
+                    } }
+                )
+                .await
+                .unwrap();
+        }
     }
 
     // Reminder to update LATEST_REVISION when adding new migrations.
