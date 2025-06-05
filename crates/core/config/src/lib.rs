@@ -188,7 +188,11 @@ pub struct LiveKitNode {
     pub lat: f64,
     pub lon: f64,
     pub key: String,
-    pub secret: String
+    pub secret: String,
+
+    // whether to hide the node in the nodes list
+    #[serde(default)]
+    pub private: bool,
 }
 
 #[derive(Deserialize, Debug, Clone)]
