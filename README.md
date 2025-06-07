@@ -114,7 +114,8 @@ If you'd like to change anything, create a `Revolt.overrides.toml` file and spec
 > And corresponding Revolt configuration:
 >
 > ```toml
-> # Revolt.overrides.toml
+> #     Revolt.overrides.toml
+> # and Revolt.test-overrides.toml
 > [database]
 > mongodb = "mongodb://127.0.0.1:14017"
 > redis = "redis://127.0.0.1:14079/"
