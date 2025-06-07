@@ -23,6 +23,11 @@ mod server_create;
 mod server_delete;
 mod server_edit;
 mod server_fetch;
+mod category_create;
+mod category_edit;
+mod category_delete;
+mod category_permissions_set_default;
+mod category_permissions_set;
 
 pub fn routes() -> (Vec<Route>, OpenApi) {
     openapi_get_routes_spec![
@@ -47,6 +52,11 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         roles_delete::delete,
         permissions_set::set_role_permission,
         permissions_set_default::set_default_permissions,
-        emoji_list::list_emoji
+        emoji_list::list_emoji,
+        category_create::create,
+        category_edit::edit,
+        category_delete::delete,
+        category_permissions_set_default::set_default_permissions,
+        category_permissions_set::set_role_permission,
     ]
 }

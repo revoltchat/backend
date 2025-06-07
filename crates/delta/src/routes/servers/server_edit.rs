@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use revolt_database::{
     util::{permissions::DatabasePermissionQuery, reference::Reference},
@@ -38,7 +38,6 @@ pub async fn edit(
         && data.icon.is_none()
         && data.banner.is_none()
         && data.system_messages.is_none()
-        && data.categories.is_none()
         // && data.nsfw.is_none()
         && data.flags.is_none()
         && data.analytics.is_none()
@@ -63,18 +62,11 @@ pub async fn edit(
     {
         return Err(create_error!(NotPrivileged));
     }
-
-    // Changing categories requires manage channel
-    if data.categories.is_some() {
-        permissions.throw_if_lacking_channel_permission(ChannelPermission::ManageChannel)?;
-    }
-
     let v0::DataEditServer {
         name,
         description,
         icon,
         banner,
-        categories,
         system_messages,
         flags,
         // nsfw,
@@ -86,7 +78,6 @@ pub async fn edit(
     let mut partial = PartialServer {
         name,
         description,
-        categories: categories.map(|v| v.into_iter().map(Into::into).collect()),
         system_messages: system_messages.map(Into::into),
         flags,
         // nsfw,
@@ -116,23 +107,6 @@ pub async fn edit(
             if !server.channels.contains(&id) {
                 return Err(create_error!(NotFound));
             }
-        }
-    }
-
-    if let Some(categories) = &mut partial.categories {
-        let mut channel_ids = HashSet::new();
-        for category in categories {
-            for channel in &category.channels {
-                if channel_ids.contains(channel) {
-                    return Err(create_error!(InvalidOperation));
-                }
-
-                channel_ids.insert(channel.to_string());
-            }
-
-            category
-                .channels
-                .retain(|item| server.channels.contains(item));
         }
     }
 

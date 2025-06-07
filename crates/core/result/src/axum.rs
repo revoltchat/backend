@@ -42,12 +42,14 @@ impl IntoResponse for Error {
             ErrorType::Banned => StatusCode::FORBIDDEN,
             ErrorType::AlreadyInServer => StatusCode::CONFLICT,
             ErrorType::CannotTimeoutYourself => StatusCode::BAD_REQUEST,
+            ErrorType::UnknownCategory => StatusCode::NOT_FOUND,
 
             ErrorType::TooManyServers { .. } => StatusCode::BAD_REQUEST,
             ErrorType::TooManyEmbeds { .. } => StatusCode::BAD_REQUEST,
             ErrorType::TooManyEmoji { .. } => StatusCode::BAD_REQUEST,
             ErrorType::TooManyChannels { .. } => StatusCode::BAD_REQUEST,
             ErrorType::TooManyRoles { .. } => StatusCode::BAD_REQUEST,
+            ErrorType::TooManyCategories { .. } => StatusCode::BAD_REQUEST,
 
             ErrorType::ReachedMaximumBots => StatusCode::BAD_REQUEST,
             ErrorType::IsBot => StatusCode::BAD_REQUEST,

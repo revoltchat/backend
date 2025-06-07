@@ -101,6 +101,10 @@ auto_derived!(
             )]
             role_permissions: HashMap<String, OverrideField>,
 
+            /// Category the channel is in
+            #[serde(skip_serializing_if = "Option::is_none")]
+            parent: Option<String>,
+
             /// Whether this channel is marked as not safe for work
             #[cfg_attr(
                 feature = "serde",
@@ -138,6 +142,10 @@ auto_derived!(
             )]
             role_permissions: HashMap<String, OverrideField>,
 
+            /// Category the channel is in
+            #[serde(skip_serializing_if = "Option::is_none")]
+            parent: Option<String>,
+
             /// Whether this channel is marked as not safe for work
             #[cfg_attr(
                 feature = "serde",
@@ -170,6 +178,8 @@ auto_derived!(
         pub default_permissions: Option<OverrideField>,
         #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub last_message_id: Option<String>,
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub parent: Option<String>
     }
 
     /// Optional fields on channel object
