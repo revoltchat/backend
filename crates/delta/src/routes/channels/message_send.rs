@@ -84,7 +84,8 @@ pub async fn message_send(
     // Create model user / members
     let model_user = user
         .clone()
-        .into_known_static(revolt_presence::is_online(&user.id).await).await;
+        .into_known_static(revolt_presence::is_online(&user.id).await)
+        .await;
 
     let model_member: Option<v0::Member> = query
         .member_ref()
@@ -491,7 +492,7 @@ mod test {
         let (_, _, other_user) = harness.new_user().await;
         let (server, _) = harness.new_server(&user).await;
         let channel = harness.new_channel(&server).await;
-        let (role_id, mut role) = harness
+        let (role_id, _role) = harness
             .new_role(
                 &server,
                 1,

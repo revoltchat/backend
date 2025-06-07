@@ -54,7 +54,7 @@ use revolt_rocket_okapi::{
 use schemars::schema::{InstanceType, SchemaObject, SingleOrVec};
 
 #[cfg(feature = "rocket-impl")]
-impl<'r> OpenApiFromRequest<'r> for IdempotencyKey {
+impl OpenApiFromRequest<'_> for IdempotencyKey {
     fn from_request_input(
         _gen: &mut OpenApiGenerator,
         _name: String,

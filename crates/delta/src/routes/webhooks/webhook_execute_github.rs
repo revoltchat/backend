@@ -621,7 +621,7 @@ pub struct Event {
 #[derive(Debug, JsonSchema)]
 pub struct EventHeader<'r>(pub &'r str);
 
-impl<'r> std::ops::Deref for EventHeader<'r> {
+impl std::ops::Deref for EventHeader<'_> {
     type Target = str;
 
     fn deref(&self) -> &Self::Target {

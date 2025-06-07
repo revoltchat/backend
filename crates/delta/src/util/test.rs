@@ -198,10 +198,7 @@ impl TestHarness {
         (channel.clone(), member, message)
     }
 
-    pub async fn with_session<'c>(
-        session: Session,
-        request: LocalRequest<'c>,
-    ) -> LocalResponse<'c> {
+    pub async fn with_session(session: Session, request: LocalRequest<'_>) -> LocalResponse<'_> {
         request
             .header(Header::new("x-session-token", session.token.to_string()))
             .dispatch()

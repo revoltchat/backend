@@ -4,7 +4,7 @@ use once_cell::sync::Lazy;
 
 use crate::events::client::EventV1;
 
-static Q: Lazy<(Sender<AuthifierEvent>, Receiver<AuthifierEvent>)> = Lazy::new(|| unbounded());
+static Q: Lazy<(Sender<AuthifierEvent>, Receiver<AuthifierEvent>)> = Lazy::new(unbounded);
 
 /// Get sender
 pub fn sender() -> Sender<AuthifierEvent> {

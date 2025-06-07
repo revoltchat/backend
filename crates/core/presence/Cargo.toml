@@ -15,6 +15,9 @@ redis-is-patched = []
 # Async
 async-std = { version = "1.8.0", features = ["attributes"] }
 
+# Config for loading Redis URI
+revolt-config = { version = "0.8.7", path = "../config" }
+
 [dependencies]
 # Utility
 log = "0.4.17"

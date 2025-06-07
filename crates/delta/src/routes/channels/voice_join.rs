@@ -41,7 +41,7 @@ pub async fn call(
     // - If not, create it.
     let client = reqwest::Client::new();
     let result = client
-        .get(&format!(
+        .get(format!(
             "{}/room/{}",
             config.hosts.voso_legacy,
             channel.id()
@@ -59,7 +59,7 @@ pub async fn call(
             reqwest::StatusCode::OK => (),
             reqwest::StatusCode::NOT_FOUND => {
                 if (client
-                    .post(&format!(
+                    .post(format!(
                         "{}/room/{}",
                         config.hosts.voso_legacy,
                         channel.id()
@@ -81,7 +81,7 @@ pub async fn call(
 
     // Then create a user for the room.
     if let Ok(response) = client
-        .post(&format!(
+        .post(format!(
             "{}/room/{}/user/{}",
             config.hosts.voso_legacy,
             channel.id(),

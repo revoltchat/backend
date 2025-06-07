@@ -1,7 +1,7 @@
 use ::mongodb::options::{Collation, CollationStrength, FindOneOptions, FindOptions};
 use authifier::models::Session;
 use futures::StreamExt;
-use iso8601_timestamp::{typenum as t, Timestamp, UtcOffset};
+use iso8601_timestamp::Timestamp;
 use revolt_result::Result;
 
 use crate::DocumentId;

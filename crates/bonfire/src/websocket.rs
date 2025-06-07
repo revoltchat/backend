@@ -101,9 +101,9 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
 
     info!("User {addr:?} authenticated as @{}", user.username);
 
-    let _ = db
-        .update_session_last_seen(&session_id, Timestamp::now_utc())
-        .await;
+    db.update_session_last_seen(&session_id, Timestamp::now_utc())
+        .await
+        .ok();
 
     // Create local state.
     let mut state = State::from(user, session_id);
