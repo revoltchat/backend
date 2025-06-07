@@ -3,10 +3,7 @@ use revolt_result::Error;
 use serde::{Deserialize, Serialize};
 
 use revolt_models::v0::{
-    AppendMessage, Channel, ChannelUnread, Emoji, FieldsChannel, FieldsMember, FieldsMessage,
-    FieldsRole, FieldsServer, FieldsUser, FieldsWebhook, Member, MemberCompositeKey, Message,
-    PartialChannel, PartialMember, PartialMessage, PartialRole, PartialServer, PartialUser,
-    PartialWebhook, PolicyChange, RemovalIntention, Report, Server, User, UserSettings, Webhook,
+    AppendMessage, Channel, ChannelUnread, ChannelVoiceState, Emoji, FieldsChannel, FieldsMember, FieldsMessage, FieldsRole, FieldsServer, FieldsUser, FieldsWebhook, Member, MemberCompositeKey, Message, PartialChannel, PartialMember, PartialMessage, PartialRole, PartialServer, PartialUser, PartialUserVoiceState, PartialWebhook, PolicyChange, RemovalIntention, Report, Server, User, UserSettings, UserVoiceState, Webhook
 };
 
 use crate::Database;
@@ -27,6 +24,7 @@ pub enum ReadyPayloadFields {
     Channels,
     Members,
     Emoji,
+    VoiceStates,
 
     UserSettings(Vec<String>),
     ChannelUnreads,
@@ -57,6 +55,8 @@ pub enum EventV1 {
         members: Option<Vec<Member>>,
         #[serde(skip_serializing_if = "Option::is_none")]
         emojis: Option<Vec<Emoji>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        voice_states: Option<Vec<ChannelVoiceState>>,
 
         #[serde(skip_serializing_if = "Option::is_none")]
         user_settings: Option<UserSettings>,
@@ -122,6 +122,7 @@ pub enum EventV1 {
         server: Server,
         channels: Vec<Channel>,
         emojis: Vec<Emoji>,
+        voice_states: Vec<ChannelVoiceState>
     },
 
     /// Update existing server
@@ -245,6 +246,31 @@ pub enum EventV1 {
 
     /// Auth events
     Auth(AuthifierEvent),
+
+    /// Voice events
+    VoiceChannelJoin {
+        id: String,
+        state: UserVoiceState,
+    },
+    VoiceChannelLeave {
+        id: String,
+        user: String,
+    },
+    VoiceChannelMove {
+        user: String,
+        from: String,
+        to: String,
+        state: UserVoiceState
+    },
+    UserVoiceStateUpdate {
+        id: String,
+        channel_id: String,
+        data: PartialUserVoiceState,
+    },
+    UserMoveVoiceChannel {
+        node: String,
+        token: String
+    }
 }
 
 impl EventV1 {

@@ -1,6 +1,7 @@
 use revolt_database::{
     util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Database, PartialRole, User,
+    voice::{sync_voice_permissions, VoiceClient},
+    Database, PartialRole, User
 };
 use revolt_models::v0;
 use revolt_permissions::{calculate_server_permissions, ChannelPermission};
@@ -15,6 +16,7 @@ use validator::Validate;
 #[patch("/<target>/roles/<role_id>", data = "<data>")]
 pub async fn edit(
     db: &State<Database>,
+    voice_client: &State<VoiceClient>,
     user: User,
     target: Reference,
     role_id: String,
@@ -74,6 +76,12 @@ pub async fn edit(
                 .unwrap_or_default(),
         )
         .await?;
+
+        for channel_id in &server.channels {
+            let channel = Reference::from_unchecked(channel_id.clone()).as_channel(db).await?;
+
+            sync_voice_permissions(db, voice_client, &channel, Some(&server), Some(&role_id)).await?;
+        };
 
         Ok(Json(role.into()))
     } else {
