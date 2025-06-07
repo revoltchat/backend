@@ -87,6 +87,10 @@ auto_derived_partial!(
     pub struct Role {
         /// Role name
         pub name: String,
+        /// Icon attachment
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub icon: Option<File>,
+
         /// Permissions available to this role
         pub permissions: OverrideField,
         /// Colour used for this role
@@ -117,9 +121,10 @@ auto_derived!(
         Banner,
     }
 
-    /// Optional fields on server object
+    /// Optional fields on role object
     pub enum FieldsRole {
         Colour,
+        Icon,
     }
 
     /// Channel category
@@ -257,6 +262,9 @@ auto_derived!(
         /// Role name
         #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
         pub name: Option<String>,
+        /// Attachment Id for icon
+        pub icon: Option<String>,
+
         /// Role colour
         #[cfg_attr(
             feature = "validator",
@@ -269,6 +277,7 @@ auto_derived!(
         ///
         /// Smaller values take priority.
         pub rank: Option<i64>,
+
         /// Fields to remove from role object
         #[cfg_attr(feature = "validator", validate(length(min = 1)))]
         pub remove: Option<Vec<FieldsRole>>,

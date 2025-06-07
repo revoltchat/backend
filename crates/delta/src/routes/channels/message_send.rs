@@ -160,6 +160,7 @@ mod test {
         let role = Role {
             name: "Show Hidden Channel".to_string(),
             permissions: OverrideField { a: 0, d: 0 },
+            icon: None,
             colour: None,
             hoist: false,
             rank: 5,
