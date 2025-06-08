@@ -36,7 +36,7 @@ pub async fn edit_role_ranks(
 
     // Verify all roles are in the new ordering
     if data.ranks.len() != server.roles.len()
-        && server.roles.iter().all(|(id, _)| data.ranks.contains(id))
+        || !server.roles.iter().all(|(id, _)| data.ranks.contains(id))
     {
         return Err(create_error!(InvalidOperation));
     }
