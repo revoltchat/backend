@@ -72,3 +72,54 @@ pub async fn edit_role_ranks(
 
     Ok(Json(server.into()))
 }
+
+#[cfg(test)]
+mod test {
+    use revolt_database::fixture;
+    use revolt_models::v0;
+    use rocket::http::{ContentType, Header, Status};
+
+    use crate::util::test::TestHarness;
+
+    #[rocket::async_test]
+    async fn edit_role_rankings() {
+        let harness = TestHarness::new().await;
+
+        fixture!(harness.db, "server_with_roles",
+            owner user 0
+            moderator user 1
+            user user 2
+            server server 4);
+
+        // Moderator can re-order the roles below them
+        let (_, moderator_session) = harness.account_from_user(moderator.id).await;
+        let mut target_order: Vec<String> = server
+            .ordered_roles()
+            .into_iter()
+            .map(|(id, _)| id)
+            .collect();
+
+        // Swap the two lower ranked roles
+        target_order.swap(2, 3);
+
+        let response = harness
+            .client
+            .post(format!("/servers/{}/roles/ranks", server.id))
+            .header(ContentType::JSON)
+            .body(
+                json!(v0::DataEditRoleRanks {
+                    ranks: target_order.clone()
+                })
+                .to_string(),
+            )
+            .header(Header::new(
+                "x-session-token",
+                moderator_session.token.to_string(),
+            ))
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        drop(response);
+    }
+}
