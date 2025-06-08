@@ -1,10 +1,15 @@
-use std::{collections::{HashMap, HashSet}, ops::BitXor, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::BitXor,
+    time::Duration,
+};
 
 use crate::{
     mongodb::{
         bson::{doc, from_bson, from_document, to_document, Bson, DateTime, Document},
         options::FindOptions,
-    }, AbstractChannels, AbstractServers, Channel, Invite, MongoDb, Server, User, DISCRIMINATOR_SEARCH_SPACE
+    },
+    AbstractChannels, AbstractServers, Channel, Invite, MongoDb, User, DISCRIMINATOR_SEARCH_SPACE,
 };
 use bson::{oid::ObjectId, to_bson};
 use futures::StreamExt;
@@ -1165,7 +1170,9 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
     }
 
     if revision <= 41 {
-        info!("Running migration [revision 41 / 05-06-2025]: convert role ranks to uniform numbers.");
+        info!(
+            "Running migration [revision 41 / 05-06-2025]: convert role ranks to uniform numbers."
+        );
 
         #[derive(Serialize, Deserialize, Clone)]
         struct Role {
@@ -1180,7 +1187,8 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             pub roles: HashMap<String, Role>,
         }
 
-        let mut servers = db.db()
+        let mut servers = db
+            .db()
             .collection::<Server>("servers")
             .find(doc! {
                 "roles": {
@@ -1196,19 +1204,23 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
         while let Some(server) = servers.next().await {
             let mut ordered_roles = server.roles.clone().into_iter().collect::<Vec<_>>();
             ordered_roles.sort_by(|(_, role_a), (_, role_b)| role_a.rank.cmp(&role_b.rank));
-            let ordered_roles = ordered_roles.into_iter().map(|(id, _)| id).collect::<Vec<_>>();
+            let ordered_roles = ordered_roles
+                .into_iter()
+                .map(|(id, _)| id)
+                .collect::<Vec<_>>();
 
             let mut doc = doc! {};
 
             for id in server.roles.keys() {
-                doc.insert(format!("roles.{id}.rank"), ordered_roles.iter().position(|x| id == x).unwrap() as i64);
-            };
+                doc.insert(
+                    format!("roles.{id}.rank"),
+                    ordered_roles.iter().position(|x| id == x).unwrap() as i64,
+                );
+            }
 
-            db.db().collection::<Server>("servers")
-                .update_one(
-                    doc! { "_id": &server.id },
-                    doc! { "$set": doc }
-                )
+            db.db()
+                .collection::<Server>("servers")
+                .update_one(doc! { "_id": &server.id }, doc! { "$set": doc })
                 .await
                 .unwrap();
         }

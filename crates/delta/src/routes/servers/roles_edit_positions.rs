@@ -85,10 +85,9 @@ mod test {
     async fn edit_role_rankings() {
         let harness = TestHarness::new().await;
 
-        fixture!(harness.db, "server_with_roles",
+        fixture!(harness.db, "server_with_many_roles",
             owner user 0
             moderator user 1
-            user user 2
             server server 4);
 
         // Moderator can re-order the roles below them
@@ -104,7 +103,7 @@ mod test {
 
         let response = harness
             .client
-            .post(format!("/servers/{}/roles/ranks", server.id))
+            .patch(format!("/servers/{}/roles/ranks", server.id))
             .header(ContentType::JSON)
             .body(
                 json!(v0::DataEditRoleRanks {
@@ -115,6 +114,59 @@ mod test {
             .header(Header::new(
                 "x-session-token",
                 moderator_session.token.to_string(),
+            ))
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        drop(response);
+
+        // ... but not above them
+        let mut target_order: Vec<String> = server
+            .ordered_roles()
+            .into_iter()
+            .map(|(id, _)| id)
+            .collect();
+
+        // Swap the two lower ranked roles
+        target_order.swap(0, 1);
+
+        let response = harness
+            .client
+            .patch(format!("/servers/{}/roles/ranks", server.id))
+            .header(ContentType::JSON)
+            .body(
+                json!(v0::DataEditRoleRanks {
+                    ranks: target_order.clone()
+                })
+                .to_string(),
+            )
+            .header(Header::new(
+                "x-session-token",
+                moderator_session.token.to_string(),
+            ))
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Forbidden);
+        drop(response);
+
+        // The owner can set any order they want
+        let (_, owner_session) = harness.account_from_user(owner.id).await;
+
+        let response = harness
+            .client
+            .patch(format!("/servers/{}/roles/ranks", server.id))
+            .header(ContentType::JSON)
+            .body(
+                json!(v0::DataEditRoleRanks {
+                    ranks: target_order.clone()
+                })
+                .to_string(),
+            )
+            .header(Header::new(
+                "x-session-token",
+                owner_session.token.to_string(),
             ))
             .dispatch()
             .await;

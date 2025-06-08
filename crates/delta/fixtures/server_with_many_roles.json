@@ -3,18 +3,21 @@
     "_object_type": "User",
     "_id": "__ID:0__",
     "username": "Owner",
+    "last_acknowledged_policy_change": "2025-06-07T04:04:48+0000",
     "discriminator": "0001"
   },
   {
     "_object_type": "User",
     "_id": "__ID:1__",
     "username": "Moderator",
+    "last_acknowledged_policy_change": "2025-06-07T04:04:48+0000",
     "discriminator": "0001"
   },
   {
     "_object_type": "User",
     "_id": "__ID:2__",
     "username": "User",
+    "last_acknowledged_policy_change": "2025-06-07T04:04:48+0000",
     "discriminator": "0001"
   },
   {
@@ -46,7 +49,7 @@
       "__ID:5__": {
         "name": "Moderator",
         "permissions": {
-          "a": 545270208,
+          "a": 545270216,
           "d": 0
         },
         "rank": 1
