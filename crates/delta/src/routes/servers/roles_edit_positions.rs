@@ -26,7 +26,12 @@ pub async fn edit_role_ranks(
         .await
         .throw_if_lacking_channel_permission(ChannelPermission::ManageRole)?;
 
-    let existing_order = server.roles.keys().cloned().collect::<Vec<_>>();
+    let existing_order = server
+        .ordered_roles()
+        .into_iter()
+        .map(|(id, _)| id)
+        .collect::<Vec<_>>();
+
     let new_order = data.ranks.clone().into_iter().collect::<Vec<_>>();
 
     // Verify all roles are in the new ordering
@@ -36,7 +41,7 @@ pub async fn edit_role_ranks(
         return Err(create_error!(InvalidOperation));
     }
 
-    // Don't have to check what the user cant modify if they are the server owner
+    // Don't have to check what the user can't modify if they are the server owner
     if server.owner != user.id {
         let member_top_rank = query.get_member_rank();
 

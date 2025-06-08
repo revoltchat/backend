@@ -228,6 +228,13 @@ impl Server {
         }
     }
 
+    /// Ordered roles list
+    pub fn ordered_roles(&self) -> Vec<(String, Role)> {
+        let mut ordered_roles = self.roles.clone().into_iter().collect::<Vec<_>>();
+        ordered_roles.sort_by(|(_, role_a), (_, role_b)| role_a.rank.cmp(&role_b.rank));
+        ordered_roles
+    }
+
     /// Set role permission on a server
     pub async fn set_role_permission(
         &mut self,
@@ -275,9 +282,12 @@ impl Server {
         .await?;
 
         // Publish bulk update event
-        EventV1::ServerRoleRanksUpdate { ranks: new_order }
-            .p(self.id.clone())
-            .await;
+        EventV1::ServerRoleRanksUpdate {
+            id: self.id.clone(),
+            ranks: new_order,
+        }
+        .p(self.id.clone())
+        .await;
 
         Ok(())
     }
