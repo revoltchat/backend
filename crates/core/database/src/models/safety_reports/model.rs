@@ -18,5 +18,7 @@ auto_derived!(
         /// Additional notes included on the report
         #[serde(default)]
         pub notes: String,
+        /// The case this report is assigned to
+        pub case_id: Option<String>,
     }
 );

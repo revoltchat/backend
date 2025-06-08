@@ -175,6 +175,9 @@ pub enum ErrorType {
     FeatureDisabled {
         feature: String,
     },
+
+    // :)
+    ImATeaPot,
 }
 
 #[macro_export]

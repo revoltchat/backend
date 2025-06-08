@@ -90,6 +90,8 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::FileTypeNotAllowed => Status::BadRequest,
             ErrorType::ImageProcessingFailed => Status::InternalServerError,
             ErrorType::NoEmbedData => Status::BadRequest,
+
+            ErrorType::ImATeaPot => Status::ImATeapot,
         };
 
         // Serialize the error data structure into JSON.

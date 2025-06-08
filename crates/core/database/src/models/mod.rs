@@ -1,4 +1,11 @@
+mod admin_audits;
+mod admin_case_comments;
+mod admin_cases;
 mod admin_migrations;
+mod admin_notes;
+mod admin_strikes;
+mod admin_tokens;
+mod admin_users;
 mod bots;
 mod channel_invites;
 mod channel_unreads;
@@ -18,7 +25,14 @@ mod servers;
 mod user_settings;
 mod users;
 
+pub use admin_audits::*;
+pub use admin_case_comments::*;
+pub use admin_cases::*;
 pub use admin_migrations::*;
+pub use admin_notes::*;
+pub use admin_strikes::*;
+pub use admin_tokens::*;
+pub use admin_users::*;
 pub use bots::*;
 pub use channel_invites::*;
 pub use channel_unreads::*;
@@ -43,6 +57,13 @@ use crate::{Database, MongoDb, ReferenceDb};
 pub trait AbstractDatabase:
     Sync
     + Send
+    + admin_audits::AbstractAdminAudits
+    + admin_case_comments::AbstractAdminCaseComments
+    + admin_cases::AbstractAdminCases
+    + admin_notes::AbstractAdminNotes
+    + admin_strikes::AbstractAdminStrikes
+    + admin_users::AbstractAdminUsers
+    + admin_tokens::AbstractAdminTokens
     + admin_migrations::AbstractMigrations
     + bots::AbstractBots
     + channels::AbstractChannels

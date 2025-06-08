@@ -84,6 +84,8 @@ impl IntoResponse for Error {
             ErrorType::FileTypeNotAllowed => StatusCode::BAD_REQUEST,
             ErrorType::ImageProcessingFailed => StatusCode::INTERNAL_SERVER_ERROR,
             ErrorType::NoEmbedData => StatusCode::BAD_REQUEST,
+
+            ErrorType::ImATeaPot => StatusCode::IM_A_TEAPOT,
         };
 
         (status, Json(&self)).into_response()

@@ -56,6 +56,9 @@ voso_legacy_token = ""
 trust_cloudflare = false
 # easypwned endpoint
 easypwned = ""
+# admin api machine keys
+# admin_keys = ["key_1", "key_2"]
+admin_keys = []
 
 [api.security.captcha]
 # hCaptcha configuration
@@ -186,6 +189,7 @@ default_bucket = "revolt-uploads"
 [features]
 # Feature gate options
 webhooks_enabled = false
+admin_api_enabled = false
 # Enable push notifications for mass pings (everyone, online, roles)
 # When false this will still ping in-client but will not send notifications from pushd
 mass_mentions_send_notifications = true

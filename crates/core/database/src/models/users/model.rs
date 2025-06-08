@@ -825,3 +825,27 @@ impl User {
         badges
     }
 }
+
+pub struct UserFlagsValue(pub u32);
+
+impl UserFlagsValue {
+    pub fn has(&self, flag: UserFlags) -> bool {
+        self.has_value(flag as u32)
+    }
+    pub fn has_value(&self, bit: u32) -> bool {
+        let mask = 1 << bit;
+        self.0 & mask == mask
+    }
+
+    pub fn set(&mut self, flag: UserFlags, toggle: bool) -> &mut Self {
+        self.set_value(flag as u32, toggle)
+    }
+    pub fn set_value(&mut self, bit: u32, toggle: bool) -> &mut Self {
+        if toggle {
+            self.0 |= 1 << bit;
+        } else {
+            self.0 &= !(1 << bit);
+        }
+        self
+    }
+}

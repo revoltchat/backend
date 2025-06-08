@@ -171,6 +171,7 @@ pub struct ApiSecurity {
     pub captcha: ApiSecurityCaptcha,
     pub trust_cloudflare: bool,
     pub easypwned: String,
+    pub admin_keys: Vec<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -333,6 +334,7 @@ pub struct Features {
     pub webhooks_enabled: bool,
     pub mass_mentions_send_notifications: bool,
     pub mass_mentions_enabled: bool,
+    pub admin_api_enabled: bool,
 
     #[serde(default)]
     pub advanced: FeaturesAdvanced,
