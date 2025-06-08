@@ -57,6 +57,6 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         category_edit::edit,
         category_delete::delete,
         category_permissions_set_default::set_default_permissions,
-        category_permissions_set::set_role_permission,
+        category_permissions_set::set_role_permissions,
     ]
 }
