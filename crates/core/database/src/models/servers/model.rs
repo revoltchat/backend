@@ -228,6 +228,13 @@ impl Server {
         }
     }
 
+    /// Ordered roles list
+    pub fn ordered_roles(&self) -> Vec<(String, Role)> {
+        let mut ordered_roles = self.roles.clone().into_iter().collect::<Vec<_>>();
+        ordered_roles.sort_by(|(_, role_a), (_, role_b)| role_a.rank.cmp(&role_b.rank));
+        ordered_roles
+    }
+
     /// Set role permission on a server
     pub async fn set_role_permission(
         &mut self,
@@ -252,6 +259,37 @@ impl Server {
         } else {
             Err(create_error!(NotFound))
         }
+    }
+
+    /// Reorders the server's roles rankings
+    pub async fn set_role_ordering(&mut self, db: &Database, new_order: Vec<String>) -> Result<()> {
+        // New order must always contain every role
+        debug_assert_eq!(self.roles.len(), new_order.len());
+
+        // Set the role's ranks to the positions in the vec
+        for (rank, id) in new_order.iter().enumerate() {
+            self.roles.get_mut(id).unwrap().rank = rank as i64;
+        }
+
+        db.update_server(
+            &self.id,
+            &PartialServer {
+                roles: Some(self.roles.clone()),
+                ..Default::default()
+            },
+            Vec::new(),
+        )
+        .await?;
+
+        // Publish bulk update event
+        EventV1::ServerRoleRanksUpdate {
+            id: self.id.clone(),
+            ranks: new_order,
+        }
+        .p(self.id.clone())
+        .await;
+
+        Ok(())
     }
 }
 
