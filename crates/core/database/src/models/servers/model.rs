@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use revolt_models::v0::{self, DataCreateServerChannel};
+use revolt_models::v0::{self, DataCreateCategory, DataCreateServerChannel, DataEditCategory};
 use revolt_permissions::{OverrideField, DEFAULT_PERMISSION_SERVER};
 use revolt_result::Result;
 use ulid::Ulid;
@@ -26,8 +26,8 @@ auto_derived_partial!(
         // TODO: investigate if this is redundant and can be removed
         pub channels: Vec<String>,
         /// Categories for this server
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub categories: Option<Vec<Category>>,
+        #[serde(skip_serializing_if = "HashMap::is_empty")]
+        pub categories: HashMap<String, Category>,
         /// Configuration for sending system event messages
         #[serde(skip_serializing_if = "Option::is_none")]
         pub system_messages: Option<SystemMessageChannels>,
@@ -87,17 +87,29 @@ auto_derived_partial!(
     "PartialRole"
 );
 
-auto_derived!(
+auto_derived_partial!(
     /// Channel category
     pub struct Category {
         /// Unique ID for this category
         pub id: String,
         /// Title for this category
         pub title: String,
+        /// Default permissions assigned to users in this category
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub default_permissions: Option<OverrideField>,
+        /// Permissions assigned based on role to this category
+        #[serde(
+            default = "HashMap::<String, OverrideField>::new",
+            skip_serializing_if = "HashMap::<String, OverrideField>::is_empty"
+        )]
+        pub role_permissions: HashMap<String, OverrideField>,
         /// Channels in this category
         pub channels: Vec<String>,
-    }
+    },
+    "PartialCategory"
+);
 
+auto_derived!(
     /// System message channel assignments
     pub struct SystemMessageChannels {
         /// ID of channel to send user join messages in
@@ -127,6 +139,10 @@ auto_derived!(
     pub enum FieldsRole {
         Colour,
     }
+
+    pub enum FieldsCategory {
+        DefaultPermissions
+    }
 );
 
 #[allow(clippy::disallowed_methods)]
@@ -149,7 +165,7 @@ impl Server {
 
             analytics: false,
             banner: None,
-            categories: None,
+            categories: HashMap::new(),
             discoverable: false,
             flags: None,
             icon: None,
@@ -221,7 +237,7 @@ impl Server {
     pub fn remove_field(&mut self, field: &FieldsServer) {
         match field {
             FieldsServer::Description => self.description = None,
-            FieldsServer::Categories => self.categories = None,
+            FieldsServer::Categories => self.categories.clear(),
             FieldsServer::SystemMessages => self.system_messages = None,
             FieldsServer::Icon => self.icon = None,
             FieldsServer::Banner => self.banner = None,
@@ -331,6 +347,110 @@ impl Role {
         .await;
 
         db.delete_role(server_id, role_id).await
+    }
+}
+
+impl Category {
+    pub fn remove_field(&mut self, field: FieldsCategory) {
+        match field {
+            FieldsCategory::DefaultPermissions => self.default_permissions = None
+        };
+    }
+
+    pub async fn create(db: &Database, server: &mut Server, data: DataCreateCategory) -> Result<Category> {
+        let channels = data.channels.clone().unwrap_or_default()
+            .into_iter()
+            .filter(|c| server.channels.contains(&c))
+            .collect();
+
+        let category = Category {
+            id: Ulid::new().to_string(),
+            title: data.title,
+            channels: channels,
+            default_permissions: None,
+            role_permissions: HashMap::new()
+        };
+
+        server.categories.insert(category.id.clone(), category.clone());
+
+        let partial_server = PartialServer { categories: Some(server.categories.clone()), ..Default::default() };
+
+        db.update_server(&server.id, &partial_server, Vec::new()).await?;
+
+        EventV1::ServerUpdate {
+            id: server.id.clone(),
+            data: partial_server.into(),
+            clear: Vec::new(),
+        }
+        .p(server.id.clone())
+        .await;
+
+        Ok(category)
+    }
+
+    pub async fn delete(&self, db: &Database, server: &mut Server) -> Result<()> {
+        // update the parent server model with the new category
+        server.categories.remove(&self.id);
+
+        let partial_server = PartialServer { categories: Some(server.categories.clone()), ..Default::default() };
+
+        db.update_server(&server.id, &partial_server, Vec::new()).await?;
+
+        EventV1::ServerUpdate {
+            id: server.id.clone(),
+            data: partial_server.into(),
+            clear: Vec::new(),
+        }
+        .p(server.id.clone())
+        .await;
+
+        Ok(())
+    }
+
+    pub async fn update(&mut self, db: &Database, server: &mut Server, partial: PartialCategory, remove: Vec<FieldsCategory>) -> Result<()> {
+        for field in remove {
+            self.remove_field(field);
+        };
+
+        self.apply_options(partial);
+
+        // update the parent server model with the new category
+        server.categories.insert(self.id.clone(), self.clone());
+
+        let partial_server = PartialServer { categories: Some(server.categories.clone()), ..Default::default() };
+
+        db.update_server(&server.id, &partial_server, Vec::new()).await?;
+
+        EventV1::ServerUpdate {
+            id: server.id.clone(),
+            data: partial_server.into(),
+            clear: Vec::new(),
+        }
+        .p(server.id.clone())
+        .await;
+
+        Ok(())
+    }
+
+    pub async fn set_role_permission(&mut self, db: &Database, server: &mut Server, role_id: String, role_override: OverrideField) -> Result<()> {
+        self.role_permissions.insert(role_id, role_override);
+
+        // update the parent server model with the new category
+        server.categories.insert(self.id.clone(), self.clone());
+
+        let partial_server = PartialServer { categories: Some(server.categories.clone()), ..Default::default() };
+
+        db.update_server(&server.id, &partial_server, Vec::new()).await?;
+
+        EventV1::ServerUpdate {
+            id: server.id.clone(),
+            data: partial_server.into(),
+            clear: Vec::new(),
+        }
+        .p(server.id.clone())
+        .await;
+
+        Ok(())
     }
 }
 
