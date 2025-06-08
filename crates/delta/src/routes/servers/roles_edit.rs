@@ -46,7 +46,6 @@ pub async fn edit(
             colour,
             hoist,
             remove,
-            // rank is deprecated
             ..
         } = data;
 

@@ -267,8 +267,7 @@ auto_derived!(
         pub hoist: Option<bool>,
         /// Ranking position
         ///
-        /// **Deprecated** - use the edit server role positions route.
-        /// Smaller values take priority.
+        /// **Removed** - no effect, use the edit server role positions route
         pub rank: Option<i64>,
         /// Fields to remove from role object
         #[cfg_attr(feature = "validator", validate(length(min = 1)))]

@@ -1,8 +1,11 @@
-use revolt_database::{events::client::EventV1, util::{permissions::DatabasePermissionQuery, reference::Reference}, Database, PartialRole, PartialServer, User};
-use revolt_permissions::{calculate_server_permissions, ChannelPermission};
-use rocket::{serde::json::Json, State};
-use revolt_result::{create_error, Result};
+use revolt_database::{
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Database, User,
+};
 use revolt_models::v0;
+use revolt_permissions::{calculate_server_permissions, ChannelPermission};
+use revolt_result::{create_error, Result};
+use rocket::{serde::json::Json, State};
 
 /// # Edits server roles ranks
 ///
@@ -26,27 +29,41 @@ pub async fn edit_role_ranks(
     let existing_order = server.roles.keys().cloned().collect::<Vec<_>>();
     let new_order = data.ranks.clone().into_iter().collect::<Vec<_>>();
 
-    // verify all roles are in the new ordering
-    if data.ranks.len() != server.roles.len() && server.roles.iter().all(|(id, _)| data.ranks.contains(id)) {
-        return Err(create_error!(InvalidOperation))
+    // Verify all roles are in the new ordering
+    if data.ranks.len() != server.roles.len()
+        && server.roles.iter().all(|(id, _)| data.ranks.contains(id))
+    {
+        return Err(create_error!(InvalidOperation));
     }
 
-    // dont have to check what the user cant modify if they are the server owner
+    // Don't have to check what the user cant modify if they are the server owner
     if server.owner != user.id {
         let member_top_rank = query.get_member_rank();
 
-        // find all roles above the member which we should not be able to reorder then
-        // check if any roles which we cant reorder have tried to been reordered
-        if server.roles
+        if server
+            .roles
             .iter()
-            .filter(|(_, role)| if let Some(top_rank) = member_top_rank { role.rank <= top_rank } else { true })
-            .any(|(id, _)| existing_order.iter().position(|existing_id| id == existing_id) != new_order.iter().position(|new_id| id == new_id))
+            // Find all roles above the member which we should not be able to reorder
+            .filter(|(_, role)| {
+                if let Some(top_rank) = member_top_rank {
+                    role.rank <= top_rank
+                } else {
+                    true
+                }
+            })
+            // Check if user is trying to reorder roles they can't reorder (as found previously)
+            .any(|(id, _)| {
+                existing_order
+                    .iter()
+                    .position(|existing_id| id == existing_id)
+                    != new_order.iter().position(|new_id| id == new_id)
+            })
         {
-            return Err(create_error!(NotElevated))
+            return Err(create_error!(NotElevated));
         }
     }
 
-    server.update_role_rankings(db, new_order).await?;
+    server.set_role_ordering(db, new_order).await?;
 
     Ok(Json(server.into()))
 }

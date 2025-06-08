@@ -254,12 +254,12 @@ impl Server {
         }
     }
 
-    /// reorders the server's roles rankings
-    pub async fn update_role_rankings(&mut self, db: &Database, new_order: Vec<String>) -> Result<()> {
-        // new_order must always contain every role
+    /// Reorders the server's roles rankings
+    pub async fn set_role_ordering(&mut self, db: &Database, new_order: Vec<String>) -> Result<()> {
+        // New order must always contain every role
         debug_assert_eq!(self.roles.len(), new_order.len());
 
-        // set the role's ranks to the positions in the vec
+        // Set the role's ranks to the positions in the vec
         for (rank, id) in new_order.iter().enumerate() {
             self.roles.get_mut(id).unwrap().rank = rank as i64;
         }
@@ -270,13 +270,14 @@ impl Server {
                 roles: Some(self.roles.clone()),
                 ..Default::default()
             },
-            Vec::new()
-        ).await?;
+            Vec::new(),
+        )
+        .await?;
 
-        // publish bulk update event
-        EventV1::ServerRoleRanksUpdate {
-            ranks: new_order
-        }.p(self.id.clone()).await;
+        // Publish bulk update event
+        EventV1::ServerRoleRanksUpdate { ranks: new_order }
+            .p(self.id.clone())
+            .await;
 
         Ok(())
     }
