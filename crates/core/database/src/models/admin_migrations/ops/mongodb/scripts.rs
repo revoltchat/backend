@@ -1,4 +1,4 @@
-use std::{collections::HashSet, ops::BitXor, time::Duration};
+use std::{collections::{HashMap, HashSet}, ops::BitXor, time::Duration};
 
 use crate::{
     mongodb::{
@@ -1167,6 +1167,19 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
     if revision <= 41 {
         info!("Running migration [revision 41 / 05-06-2025]: convert role ranks to uniform numbers.");
 
+        #[derive(Serialize, Deserialize, Clone)]
+        struct Role {
+            pub rank: i64,
+        }
+
+        #[derive(Serialize, Deserialize, Clone)]
+        struct Server {
+            #[serde(rename = "_id")]
+            pub id: String,
+            #[serde(default = "HashMap::<String, Role>::new")]
+            pub roles: HashMap<String, Role>,
+        }
+
         let mut servers = db.db()
             .collection::<Server>("servers")
             .find(doc! {
@@ -1180,21 +1193,21 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             .filter_map(|s| async { s.ok() })
             .boxed();
 
-        while let Some(mut server) = servers.next().await {
+        while let Some(server) = servers.next().await {
             let mut ordered_roles = server.roles.clone().into_iter().collect::<Vec<_>>();
             ordered_roles.sort_by(|(_, role_a), (_, role_b)| role_a.rank.cmp(&role_b.rank));
             let ordered_roles = ordered_roles.into_iter().map(|(id, _)| id).collect::<Vec<_>>();
 
-            for (id, role) in server.roles.iter_mut() {
-                role.rank = ordered_roles.iter().position(|x| id == x).unwrap() as i64;
-            }
+            let mut doc = doc! {};
+
+            for id in server.roles.keys() {
+                doc.insert(format!("roles.{id}.rank"), ordered_roles.iter().position(|x| id == x).unwrap() as i64);
+            };
 
             db.db().collection::<Server>("servers")
                 .update_one(
                     doc! { "_id": &server.id },
-                    doc! { "$set": {
-                        "roles": bson::to_bson(&server.roles).unwrap()
-                    } }
+                    doc! { "$set": doc }
                 )
                 .await
                 .unwrap();

@@ -1,4 +1,4 @@
-use revolt_database::{events::client::EventV1, util::{permissions::DatabasePermissionQuery, reference::Reference}, Database, PartialRole, User};
+use revolt_database::{events::client::EventV1, util::{permissions::DatabasePermissionQuery, reference::Reference}, Database, PartialRole, PartialServer, User};
 use revolt_permissions::{calculate_server_permissions, ChannelPermission};
 use rocket::{serde::json::Json, State};
 use revolt_result::{create_error, Result};
@@ -35,49 +35,18 @@ pub async fn edit_role_ranks(
     if server.owner != user.id {
         let member_top_rank = query.get_member_rank();
 
-        // find all roles above the member which we should not be able to reorder
-        let cant_modify = server.roles.clone()
-            .into_iter()
-            .filter(|(_, role)| if let Some(top_rank) = member_top_rank { role.rank <= top_rank } else { true })
-            .collect::<Vec<_>>();
-
+        // find all roles above the member which we should not be able to reorder then
         // check if any roles which we cant reorder have tried to been reordered
-        if cant_modify.iter()
-            .any(|(id, _)| {
-                let existing_rank = existing_order.iter().position(|existing_id| id == existing_id);
-                let new_rank = new_order.iter().position(|new_id| id == new_id);
-
-                existing_rank != new_rank
-            })
+        if server.roles
+            .iter()
+            .filter(|(_, role)| if let Some(top_rank) = member_top_rank { role.rank <= top_rank } else { true })
+            .any(|(id, _)| existing_order.iter().position(|existing_id| id == existing_id) != new_order.iter().position(|new_id| id == new_id))
         {
             return Err(create_error!(NotElevated))
         }
     }
 
-    // update the roles which have had their rank changed
-    for (role_id, role) in &mut server.roles {
-        let new_rank = new_order.iter().position(|id| id == role_id).unwrap() as i64;  // unwrap - we check if its in the data earlier on
-
-        if new_rank != role.rank {
-            // cant use Role::update here because we dont want to publish seperate role update events
-            let partial = PartialRole {
-                rank: Some(new_rank),
-                ..Default::default()
-            };
-
-            db.update_role(&server.id, role_id, &partial, Vec::new()).await?;
-
-            role.apply_options(PartialRole {
-                rank: Some(new_rank),
-                ..Default::default()
-            });
-        }
-    }
-
-    // publish bulk update event
-    EventV1::ServerRoleRanksUpdate {
-        ranks: new_order
-    }.p(server.id.clone()).await;
+    server.update_role_rankings(db, new_order).await?;
 
     Ok(Json(server.into()))
 }
