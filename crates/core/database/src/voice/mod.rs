@@ -102,11 +102,11 @@ pub fn get_allowed_sources(permissions: PermissionValue) -> Vec<&'static str> {
     let mut allowed_sources = Vec::new();
 
     if permissions.has(ChannelPermission::Speak as u64) {
-        allowed_sources.push("MICROPHONE")
+        allowed_sources.push("microphone")
     };
 
     if permissions.has(ChannelPermission::Video as u64) {
-        allowed_sources.extend(["CAMERA", "SCREEN_SHARE", "SCREEN_SHARE_AUDIO"]);
+        allowed_sources.extend(["camera", "screen_share", "screen_share_audio"]);
     };
 
     allowed_sources
@@ -259,7 +259,7 @@ pub async fn get_voice_state(
     server_id: Option<&str>,
     user_id: &str,
 ) -> Result<Option<UserVoiceState>> {
-    let unique_key = format!("{}:{user_id}", server_id.unwrap_or(channel_id));
+    let unique_key = format!("{}:{}", user_id, server_id.unwrap_or(channel_id));
 
     let (is_publishing, is_receiving, screensharing, camera) = get_connection()
         .await?
