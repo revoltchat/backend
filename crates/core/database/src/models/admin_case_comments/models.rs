@@ -14,3 +14,41 @@ auto_derived_partial! {
     },
     "PartialAdminCaseComment"
 }
+
+impl AdminCaseComment {
+    pub fn new(case_id: &str, user_id: &str, content: &str) -> AdminCaseComment {
+        let id = ulid::Ulid::new().to_string();
+        AdminCaseComment {
+            id,
+            case_id: case_id.to_string(),
+            user_id: user_id.to_string(),
+            edited_at: None,
+            content: content.to_string(),
+        }
+    }
+
+    /// Edit the comment, updating the edited_at time as well
+    pub fn edit(&mut self, content: &str) {
+        self.content = content.to_string();
+        self.edited_at = Some(
+            iso8601_timestamp::Timestamp::now_utc()
+                .format_short()
+                .to_string(),
+        );
+    }
+}
+
+impl PartialAdminCaseComment {
+    pub fn new() -> PartialAdminCaseComment {
+        PartialAdminCaseComment::default()
+    }
+    /// Edit the comment, updating the edited_at time as well
+    pub fn edit(&mut self, content: &str) {
+        self.content = Some(content.to_string());
+        self.edited_at = Some(
+            iso8601_timestamp::Timestamp::now_utc()
+                .format_short()
+                .to_string(),
+        );
+    }
+}

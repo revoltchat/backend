@@ -14,6 +14,16 @@ auto_derived_partial! {
 }
 
 impl AdminObjectNote {
+    pub fn new(object_id: &str, user_id: &str, content: &str) -> AdminObjectNote {
+        AdminObjectNote {
+            id: object_id.to_string(),
+            edited_at: iso8601_timestamp::Timestamp::now_utc()
+                .format_short()
+                .to_string(),
+            last_edited_by_id: user_id.to_string(),
+            content: content.to_string(),
+        }
+    }
     pub fn to_partial(&self) -> PartialAdminObjectNote {
         PartialAdminObjectNote {
             id: Some(self.id.clone()),

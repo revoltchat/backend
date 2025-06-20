@@ -36,6 +36,15 @@ impl AbstractAdminUsers for ReferenceDb {
         }
     }
 
+    async fn admin_user_fetch_email(&self, email: &str) -> Result<AdminUser> {
+        let admin_users = self.admin_users.lock().await;
+        if let Some((_, user)) = admin_users.iter().filter(|(_, p)| p.email == email).next() {
+            Ok(user.clone())
+        } else {
+            Err(create_error!(NotFound))
+        }
+    }
+
     async fn admin_user_list(&self) -> Result<Vec<AdminUser>> {
         let admin_users = self.admin_users.lock().await;
         Ok(admin_users.iter().map(|(_, u)| u).cloned().collect())

@@ -8,6 +8,8 @@ auto_derived!(
         pub id: String,
         /// Id of the user creating this report
         pub author_id: String,
+        /// The case this report is attached to
+        pub case_id: Option<String>,
         /// Reported content
         pub content: ReportedContent,
         /// Additional report context

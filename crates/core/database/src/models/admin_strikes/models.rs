@@ -1,3 +1,5 @@
+use crate::util::basic::transform_optional_string;
+
 auto_derived_partial! {
     pub struct AdminStrike {
         /// The strike ID
@@ -19,4 +21,27 @@ auto_derived_partial! {
         pub mod_context: Option<String>,
     },
     "PartialAdminStrike"
+}
+
+impl AdminStrike {
+    pub fn new(
+        target_id: &str,
+        mod_id: &str,
+        case_id: Option<&str>,
+        associated_action: Option<&str>,
+        reason: &str,
+        mod_context: Option<&str>,
+    ) -> AdminStrike {
+        let id = ulid::Ulid::new().to_string();
+        AdminStrike {
+            id,
+            target_id: target_id.to_string(),
+            mod_id: mod_id.to_string(),
+            case_id: transform_optional_string(case_id),
+            associated_action: transform_optional_string(associated_action),
+            overruled: false,
+            reason: reason.to_string(),
+            mod_context: transform_optional_string(mod_context),
+        }
+    }
 }

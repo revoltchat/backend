@@ -21,6 +21,10 @@ impl AbstractAdminUsers for MongoDb {
         query!(self, find_one_by_id, COL, user_id)?.ok_or_else(|| create_error!(NotFound))
     }
 
+    async fn admin_user_fetch_email(&self, email: &str) -> Result<AdminUser> {
+        query!(self, find_one, COL, doc! {"email": email})?.ok_or_else(|| create_error!(NotFound))
+    }
+
     async fn admin_user_list(&self) -> Result<Vec<AdminUser>> {
         query!(self, find, COL, doc! {})
     }

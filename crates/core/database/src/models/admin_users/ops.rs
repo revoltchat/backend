@@ -12,5 +12,7 @@ pub trait AbstractAdminUsers: Sync + Send {
 
     async fn admin_user_fetch(&self, user_id: &str) -> Result<AdminUser>;
 
+    async fn admin_user_fetch_email(&self, email: &str) -> Result<AdminUser>;
+
     async fn admin_user_list(&self) -> Result<Vec<AdminUser>>;
 }

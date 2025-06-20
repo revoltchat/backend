@@ -200,6 +200,8 @@ auto_derived!(
         Banned = 4,
         /// User was marked as spam and removed from platform
         Spam = 8,
+        /// User is a global moderator
+        GlobalModerator = 16,
     }
 
     /// New user profile data

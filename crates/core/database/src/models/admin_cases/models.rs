@@ -19,3 +19,35 @@ auto_derived_partial! {
     },
     "PartialAdminCase"
 }
+
+impl AdminCase {
+    pub fn new(owner_id: &str, title: &str) -> AdminCase {
+        let id = ulid::Ulid::new().to_string();
+        let short_id = id.clone().split_off(id.len() - 7);
+
+        AdminCase {
+            id,
+            short_id,
+            owner_id: owner_id.to_string(),
+            title: title.to_string(),
+            status: "Open".to_string(),
+            closed_at: None,
+            tags: vec![],
+        }
+    }
+
+    pub fn merge_tags(&self, other: &[String]) -> Vec<String> {
+        let mut resp: Vec<String> = vec![];
+        // Shitty combining chain; itll only ever be like 5 items
+        resp.extend(self.tags.clone());
+        resp.extend(other.iter().filter_map(|p| {
+            if !self.tags.contains(p) {
+                Some(p.clone())
+            } else {
+                None
+            }
+        }));
+
+        resp
+    }
+}
