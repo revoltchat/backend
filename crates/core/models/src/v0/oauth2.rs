@@ -24,8 +24,8 @@ auto_derived!(
     #[derive(Copy)]
     #[cfg_attr(feature = "rocket", derive(rocket::FromFormField))]
     pub enum OAuth2GrantType {
-        #[cfg_attr(feature = "rocket", field(value = "code"))]
-        #[cfg_attr(feature = "serde", serde(rename = "code"))]
+        #[cfg_attr(feature = "rocket", field(value = "authorization_code"))]
+        #[cfg_attr(feature = "serde", serde(rename = "authorization_code"))]
         AuthorizationCode,
         #[cfg_attr(feature = "rocket", field(value = "implicit"))]
         #[cfg_attr(feature = "serde", serde(rename = "implicit"))]

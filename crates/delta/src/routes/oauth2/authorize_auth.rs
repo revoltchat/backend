@@ -12,11 +12,11 @@ use redis_kiss::AsyncCommands;
 ///
 /// Generates an OAuth2 code to be passed to the redirect URI.
 #[openapi(tag = "OAuth2")]
-#[post("/authorize", data="<info>")]
+#[post("/authorize?<info..>")]
 pub async fn auth(
     db: &State<Database>,
     user: User,
-    info: Form<v0::OAuth2AuthorizationForm>,
+    info: v0::OAuth2AuthorizationForm,
 ) -> Result<Json<v0::OAuth2AuthorizeAuthResponse>> {
     let bot = Reference::from_unchecked(info.client_id.clone())
         .as_bot(db)
