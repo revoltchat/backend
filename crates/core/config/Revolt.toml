@@ -56,6 +56,8 @@ voso_legacy_token = ""
 trust_cloudflare = false
 # easypwned endpoint
 easypwned = ""
+# Secret used to encode and decode tokens
+token_secret = ""
 
 [api.security.captcha]
 # hCaptcha configuration

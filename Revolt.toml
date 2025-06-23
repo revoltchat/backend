@@ -40,6 +40,9 @@ port = 14025
 use_tls = false
 use_starttls = false
 
+[api.security]
+token_secret = "trolt"
+
 [files.s3]
 # S3 protocol endpoint
 endpoint = "http://127.0.0.1:14009"

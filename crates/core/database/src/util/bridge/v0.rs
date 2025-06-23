@@ -33,6 +33,7 @@ impl From<crate::Bot> for Bot {
             interactions_url: value.interactions_url,
             terms_of_service_url: value.terms_of_service_url,
             privacy_policy_url: value.privacy_policy_url,
+            oauth2: value.oauth2.map(|oauth2| oauth2.into()),
             flags: value.flags.unwrap_or_default() as u32,
         }
     }
@@ -43,6 +44,8 @@ impl From<FieldsBot> for crate::FieldsBot {
         match value {
             FieldsBot::InteractionsURL => crate::FieldsBot::InteractionsURL,
             FieldsBot::Token => crate::FieldsBot::Token,
+            FieldsBot::Oauth2 => crate::FieldsBot::Oauth2,
+            FieldsBot::Oauth2Secret => crate::FieldsBot::Oauth2Secret,
         }
     }
 }
@@ -52,6 +55,28 @@ impl From<crate::FieldsBot> for FieldsBot {
         match value {
             crate::FieldsBot::InteractionsURL => FieldsBot::InteractionsURL,
             crate::FieldsBot::Token => FieldsBot::Token,
+            crate::FieldsBot::Oauth2 => FieldsBot::Oauth2,
+            crate::FieldsBot::Oauth2Secret => FieldsBot::Oauth2Secret,
+        }
+    }
+}
+
+impl From<BotOauth2> for crate::BotOauth2 {
+    fn from(value: BotOauth2) -> Self {
+        crate::BotOauth2 {
+            public: value.public,
+            secret: value.secret,
+            redirects: value.redirects,
+        }
+    }
+}
+
+impl From<crate::BotOauth2> for BotOauth2 {
+    fn from(value: crate::BotOauth2) -> Self {
+        BotOauth2 {
+            public: value.public,
+            secret: value.secret,
+            redirects: value.redirects,
         }
     }
 }

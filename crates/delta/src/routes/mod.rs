@@ -8,6 +8,7 @@ mod bots;
 mod channels;
 mod customisation;
 mod invites;
+mod oauth2;
 mod onboard;
 mod policy;
 mod push;
@@ -31,6 +32,7 @@ pub fn mount(config: Settings, mut rocket: Rocket<Build>) -> Rocket<Build> {
             "/channels" => channels::routes(),
             "/servers" => servers::routes(),
             "/invites" => invites::routes(),
+            "/oauth2" => oauth2::routes(),
             "/custom" => customisation::routes(),
             "/safety" => safety::routes(),
             "/auth/account" => rocket_authifier::routes::account::routes(),
@@ -52,6 +54,7 @@ pub fn mount(config: Settings, mut rocket: Rocket<Build>) -> Rocket<Build> {
             "/channels" => channels::routes(),
             "/servers" => servers::routes(),
             "/invites" => invites::routes(),
+            "/oauth2" => oauth2::routes(),
             "/custom" => customisation::routes(),
             "/safety" => safety::routes(),
             "/auth/account" => rocket_authifier::routes::account::routes(),
@@ -74,6 +77,7 @@ pub fn mount(config: Settings, mut rocket: Rocket<Build>) -> Rocket<Build> {
             "/channels" => channels::routes(),
             "/servers" => servers::routes(),
             "/invites" => invites::routes(),
+            "/oauth2" => oauth2::routes(),
             "/custom" => customisation::routes(),
             "/safety" => safety::routes(),
             "/auth/account" => rocket_authifier::routes::account::routes(),
@@ -94,6 +98,7 @@ pub fn mount(config: Settings, mut rocket: Rocket<Build>) -> Rocket<Build> {
             "/channels" => channels::routes(),
             "/servers" => servers::routes(),
             "/invites" => invites::routes(),
+            "/oauth2" => oauth2::routes(),
             "/custom" => customisation::routes(),
             "/safety" => safety::routes(),
             "/auth/account" => rocket_authifier::routes::account::routes(),

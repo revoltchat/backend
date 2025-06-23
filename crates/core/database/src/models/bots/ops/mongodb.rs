@@ -87,6 +87,8 @@ impl IntoDocumentPath for FieldsBot {
         match self {
             FieldsBot::InteractionsURL => Some("interactions_url"),
             FieldsBot::Token => None,
+            FieldsBot::Oauth2 => Some("oauth2"),
+            FieldsBot::Oauth2Secret => None,
         }
     }
 }

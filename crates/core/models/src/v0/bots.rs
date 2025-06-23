@@ -1,5 +1,8 @@
 use super::User;
 
+#[cfg(feature = "validator")]
+use validator::Validate;
+
 auto_derived!(
     /// Bot
     #[derive(Default)]
@@ -48,6 +51,13 @@ auto_derived!(
         )]
         pub privacy_policy_url: String,
 
+        /// Oauth2 bot settings
+        #[cfg_attr(
+            feature = "serde",
+            serde(skip_serializing_if = "Option::is_none", default)
+        )]
+        pub oauth2: Option<BotOauth2>,
+
         /// Enum of bot flags
         #[cfg_attr(
             feature = "serde",
@@ -60,6 +70,8 @@ auto_derived!(
     pub enum FieldsBot {
         Token,
         InteractionsURL,
+        Oauth2,
+        Oauth2Secret,
     }
 
     /// Flags that may be attributed to a bot
@@ -101,7 +113,7 @@ auto_derived!(
 
     /// Bot Details
     #[derive(Default)]
-    #[cfg_attr(feature = "validator", derive(validator::Validate))]
+    #[cfg_attr(feature = "validator", derive(Validate))]
     pub struct DataCreateBot {
         /// Bot username
         #[cfg_attr(
@@ -113,7 +125,7 @@ auto_derived!(
 
     /// New Bot Details
     #[derive(Default)]
-    #[cfg_attr(feature = "validator", derive(validator::Validate))]
+    #[cfg_attr(feature = "validator", derive(Validate))]
     pub struct DataEditBot {
         /// Bot username
         #[cfg_attr(
@@ -131,9 +143,22 @@ auto_derived!(
         /// Interactions URL
         #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
         pub interactions_url: Option<String>,
+
+        #[cfg_attr(feature = "validator", validate)]
+        pub oauth2: Option<DataEditBotOauth2>,
+
         /// Fields to remove from bot object
         #[cfg_attr(feature = "serde", serde(default))]
         pub remove: Vec<FieldsBot>,
+    }
+
+    #[derive(Default)]
+    #[cfg_attr(feature = "validator", derive(Validate))]
+    pub struct DataEditBotOauth2 {
+        #[cfg_attr(feature = "serde", serde(default))]
+        pub public: Option<bool>,
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 10)))]
+        pub redirects: Option<Vec<String>>,
     }
 
     /// Where we are inviting a bot to
@@ -169,4 +194,20 @@ auto_derived!(
         pub bot: Bot,
         pub user: User,
     }
+);
+
+auto_derived_partial!(
+    /// Bot Oauth2 information
+    pub struct BotOauth2 {
+        /// Whether the oauth client is public and should not receive a secret key
+        #[serde(default)]
+        pub public: bool,
+        /// Secret key used for authorisation, not provided if the client is public
+        #[serde(default)]
+        pub secret: Option<String>,
+        /// Allowed redirects for the authorisation
+        #[serde(default)]
+        pub redirects: Vec<String>
+    },
+    "PartialBotOauth2"
 );

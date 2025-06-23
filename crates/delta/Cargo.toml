@@ -82,5 +82,8 @@ revolt-presence = { path = "../core/presence" }
 revolt-result = { path = "../core/result", features = ["rocket", "okapi"] }
 revolt-permissions = { path = "../core/permissions", features = ["schemas"] }
 
+# oauth2
+pkce = "0.2.0"
+
 [build-dependencies]
 vergen = "7.5.0"

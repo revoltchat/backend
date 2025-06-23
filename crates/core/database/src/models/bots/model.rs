@@ -35,6 +35,10 @@ auto_derived_partial!(
         #[serde(skip_serializing_if = "String::is_empty", default)]
         pub privacy_policy_url: String,
 
+        /// Oauth2 bot settings
+        #[serde(skip_serializing_if = "Option::is_none", default)]
+        pub oauth2: Option<BotOauth2>,
+
         /// Enum of bot flags
         #[serde(skip_serializing_if = "Option::is_none")]
         pub flags: Option<i32>,
@@ -42,11 +46,28 @@ auto_derived_partial!(
     "PartialBot"
 );
 
+auto_derived_partial!(
+    pub struct BotOauth2 {
+        /// Whether the oauth2 client is public and should not receive a secret key
+        #[serde(default)]
+        pub public: bool,
+        /// Secret key used for authorisation, not provided if the client is public
+        #[serde(default)]
+        pub secret: Option<String>,
+        /// Allowed redirects for the authorisation
+        #[serde(default)]
+        pub redirects: Vec<String>
+    },
+    "PartialBotOauth2"
+);
+
 auto_derived!(
     /// Optional fields on bot object
     pub enum FieldsBot {
         Token,
         InteractionsURL,
+        Oauth2,
+        Oauth2Secret,
     }
 );
 
@@ -63,7 +84,19 @@ impl Default for Bot {
             interactions_url: Default::default(),
             terms_of_service_url: Default::default(),
             privacy_policy_url: Default::default(),
+            oauth2: Default::default(),
             flags: Default::default(),
+        }
+    }
+}
+
+#[allow(clippy::derivable_impls)]
+impl Default for BotOauth2 {
+    fn default() -> Self {
+        Self {
+            public: false,
+            secret: Some(nanoid::nanoid!(64)),
+            redirects: Default::default()
         }
     }
 }
@@ -124,6 +157,14 @@ impl Bot {
             FieldsBot::Token => self.token = nanoid::nanoid!(64),
             FieldsBot::InteractionsURL => {
                 self.interactions_url = String::new();
+            },
+            FieldsBot::Oauth2 => self.oauth2 = None,
+            FieldsBot::Oauth2Secret => {
+                if let Some(oauth2) = &mut self.oauth2 {
+                    if !oauth2.public {
+                        oauth2.secret = Some(nanoid::nanoid!(64))
+                    }
+                }
             }
         }
     }

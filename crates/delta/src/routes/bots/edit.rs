@@ -1,3 +1,4 @@
+use revolt_database::BotOauth2;
 use revolt_database::{util::reference::Reference, Database, PartialBot, User};
 use revolt_models::v0::{self, DataEditBot};
 use revolt_result::{create_error, Result};
@@ -37,7 +38,8 @@ pub async fn edit_bot(
     if data.public.is_none()
         && data.analytics.is_none()
         && data.interactions_url.is_none()
-        && data.remove.is_empty()
+        && data.oauth2.is_none()
+        && data.remove.is_none()
     {
         return Ok(Json(v0::BotWithUserResponse {
             bot: bot.into(),
@@ -49,16 +51,35 @@ pub async fn edit_bot(
         public,
         analytics,
         interactions_url,
+        oauth2,
         remove,
         ..
     } = data;
 
-    let partial = PartialBot {
+    let mut partial = PartialBot {
         public,
         analytics,
         interactions_url,
         ..Default::default()
     };
+
+    if let Some(edit_oauth2) = oauth2 {
+        let mut oauth2 = bot.oauth2.clone().unwrap_or_default();
+
+        if let Some(public) = edit_oauth2.public {
+            if oauth2.public && !public {
+                oauth2.secret = Some(nanoid::nanoid!(64))
+            } else if !oauth2.public && public {
+                oauth2.secret = None;
+            };
+
+            oauth2.public = public;
+        }
+
+        oauth2.redirects = edit_oauth2.redirects.unwrap_or(oauth2.redirects);
+
+        partial.oauth2 = Some(oauth2)
+    }
 
     bot.update(
         db,

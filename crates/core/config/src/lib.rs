@@ -190,6 +190,7 @@ pub struct ApiSecurity {
     pub captcha: ApiSecurityCaptcha,
     pub trust_cloudflare: bool,
     pub easypwned: String,
+    pub token_secret: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
