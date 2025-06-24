@@ -7,13 +7,15 @@ use rocket::{form::Form, serde::json::Json, State};
 ///
 /// Fetches the information needed for displaying on the OAuth grant page
 #[openapi(tag = "OAuth2")]
-#[get("/authorize", data="<info>")]
+#[get("/authorize?<info..>")]
 pub async fn info(
     db: &State<Database>,
     user: User,
-    info: Form<v0::OAuth2AuthorizationForm>,
+    info: v0::OAuth2AuthorizationForm,
 ) -> Result<Json<v0::OAuth2AuthorizeInfoResponse>> {
     let bot = Reference::from_unchecked(info.client_id.to_string()).as_bot(db).await?;
+    let bot_user = Reference::from_unchecked(bot.id.clone()).as_user(db).await?;
+    let public_bot = bot.clone().into_public_bot(bot_user);
 
     let Some(oauth2) = &bot.oauth2 else {
         return Err(create_error!(InvalidOperation));
@@ -24,7 +26,7 @@ pub async fn info(
     };
 
     Ok(Json(v0::OAuth2AuthorizeInfoResponse {
-        bot: bot.into(),
+        bot: public_bot,
         user: user.into(db, None).await
     }))
 }

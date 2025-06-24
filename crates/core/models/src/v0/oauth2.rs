@@ -1,4 +1,4 @@
-use crate::v0::{Bot, User};
+use crate::v0::{PublicBot, User};
 
 auto_derived!(
     pub struct OAuth2AuthorizeAuthResponse {
@@ -7,7 +7,7 @@ auto_derived!(
     }
 
     pub struct OAuth2AuthorizeInfoResponse {
-        pub bot: Bot,
+        pub bot: PublicBot,
         pub user: User,
     }
 

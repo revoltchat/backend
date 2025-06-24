@@ -125,10 +125,6 @@ pub fn scope_can_access_route(scope: &str, request: &Request<'_>) -> bool {
 
     match scope {
         "identify" => {
-            println!("{:?}", request.method() == Method::Get);
-            println!("{:?}", segments.get(0));
-            println!("{:?}", segments.get(1));
-
             request.method() == Method::Get &&
             segments.get(0) == Some("users") &&
             segments.get(1) == Some("@me")
