@@ -7,9 +7,9 @@ use authifier::{
 use futures::StreamExt;
 use lapin::types::AMQPValue;
 use rand::Rng;
+use revolt_broker::event_stream;
 use revolt_database::{
-    events::client::{get_event_stream_channel, EventV1},
-    Channel, Database, Member, Message, Server, User, AMQP,
+    events::client::EventV1, Channel, Database, Member, Message, Server, User, AMQP,
 };
 use revolt_database::{util::idempotency::IdempotencyKey, Role};
 use revolt_models::v0;
@@ -40,7 +40,7 @@ impl TestHarness {
             .collect();
 
         static QUEUE_NAME: &str = "revolt.events";
-        let consumer = get_event_stream_channel()
+        let consumer = event_stream::get_channel()
             .await
             .basic_consume(QUEUE_NAME, &tag, Default::default(), Default::default())
             .await

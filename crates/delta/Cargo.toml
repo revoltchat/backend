@@ -71,6 +71,7 @@ lapin = { version = "3.0.0" }
 # core
 authifier = "1.0.15"
 revolt-config = { path = "../core/config" }
+revolt-broker = { path = "../core/broker" }
 revolt-database = { path = "../core/database", features = [
     "rocket-impl",
     "redis-is-patched",

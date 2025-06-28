@@ -6573,6 +6573,7 @@ dependencies = [
  "querystring",
  "rand 0.6.5",
  "redis-kiss",
+ "revolt-broker",
  "revolt-config",
  "revolt-database",
  "revolt-models",
@@ -6584,6 +6585,19 @@ dependencies = [
  "serde",
  "serde_json",
  "ulid 0.5.0",
+]
+
+[[package]]
+name = "revolt-broker"
+version = "0.8.8"
+dependencies = [
+ "async-std",
+ "lapin",
+ "log",
+ "rand 0.9.1",
+ "revolt-config",
+ "rmp-serde",
+ "serde",
 ]
 
 [[package]]
@@ -6645,6 +6659,7 @@ dependencies = [
  "rand 0.8.5",
  "redis-kiss",
  "regex",
+ "revolt-broker",
  "revolt-config",
  "revolt-models",
  "revolt-parser",
@@ -6694,6 +6709,7 @@ dependencies = [
  "redis-kiss",
  "regex",
  "reqwest 0.11.27",
+ "revolt-broker",
  "revolt-config",
  "revolt-database",
  "revolt-models",

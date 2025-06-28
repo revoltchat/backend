@@ -1,28 +1,16 @@
-use std::collections::HashMap;
-
 use async_channel::Receiver;
 use async_std::{net::TcpStream, sync::Mutex};
 use async_tungstenite::WebSocketStream;
 use authifier::AuthifierEvent;
-use futures::{pin_mut, select, stream::SplitSink, FutureExt, SinkExt, StreamExt};
-use lapin::{
-    options::BasicAckOptions,
-    types::{AMQPValue, FieldArray, FieldTable, LongLongInt},
-};
-use rand::Rng;
-use revolt_config::report_internal_error;
-use revolt_database::{
-    events::client::{get_event_stream_channel, EventV1},
-    Database,
-};
+use futures::{pin_mut, select, stream::SplitSink, FutureExt, SinkExt};
+use revolt_broker::event_stream;
+use revolt_database::{events::client::EventV1, Database};
 use sentry::Level;
 
 use crate::{
     config::ProtocolConfiguration,
     events::state::{State, SubscriptionStateChange},
 };
-
-static QUEUE_NAME: &str = "revolt.events";
 
 /// Event subscriber loop
 pub async fn client_subscriber(
@@ -33,42 +21,16 @@ pub async fn client_subscriber(
     db: &'static Database,
     state: &mut State,
 ) {
-    // * --- CHANNEL CREATE ---
-    let channel = get_event_stream_channel().await;
-    // * --- CHANNEL END ---
+    let mut consumer = event_stream::Consumer::new().await;
+    consumer.set_topics(state.subscribed.read().await.clone());
 
-    let mut offset: Option<LongLongInt> = None;
     let mut cancel = false;
 
     loop {
-        // Build arguments for consumer
-        let mut args: FieldTable = Default::default();
-
-        // Configure stream filter to select topics we are listening for
-        {
-            let mut filter: FieldArray = Default::default();
-            for topic in state.subscribed.read().await.iter() {
-                filter.push(AMQPValue::LongString(topic.as_str().into()));
-            }
-
-            args.insert("x-stream-filter".into(), AMQPValue::FieldArray(filter));
+        // Reload consumer if subscriptions change
+        if !matches!(state.apply_state().await, SubscriptionStateChange::None) {
+            consumer.set_topics(state.subscribed.read().await.clone());
         }
-
-        // Set stream offset if applicable
-        if let Some(offset) = offset {
-            args.insert("x-stream-offset".into(), AMQPValue::LongLongInt(offset));
-        }
-
-        // Create the consumer
-        let tag: String = rand::thread_rng()
-            .sample_iter::<char, _>(&rand::distributions::Standard)
-            .take(32)
-            .collect();
-
-        let mut consumer = channel
-            .basic_consume(QUEUE_NAME, &tag, Default::default(), args)
-            .await
-            .unwrap();
 
         // Read incoming events
         loop {
@@ -85,43 +47,8 @@ pub async fn client_subscriber(
                     cancel = true;
                     break;
                 }
-                delivery = delivery => {
-                    let delivery = delivery.expect("error in consumer").expect("error in consumer");
-
-                    // Acknowledgement is required
-                    delivery.ack(BasicAckOptions::default()).await.expect("ack");
-
-                    // Parse the delivery headers
-                    let headers: HashMap<String, AMQPValue> = delivery
-                        .properties
-                        .headers()
-                        .as_ref()
-                        .map(|table| {
-                            table
-                                .into_iter()
-                                .map(|(k, v)| (k.to_string(), v.clone()))
-                                .collect()
-                        })
-                        .unwrap_or_default();
-
-                    // Client-side topic filtering (broker uses Bloom filter so may have false-positives)
-                    let filter_value = headers
-                        .get("x-stream-filter-value")
-                        .expect("`x-stream-filter-value` not present in message!");
-
-                    if state
-                        .subscribed
-                        .read()
-                        .await
-                        .contains(
-                            &filter_value
-                            .as_long_string()
-                            .expect("`string`")
-                            .to_string()
-                        ) {
-                        // Deserialise the data
-                        let mut event: EventV1 = rmp_serde::from_slice(&delivery.data).expect("`data`");
-
+                event = delivery => {
+                    if let Some(mut event) = event {
                         // Handle the event
                         if let EventV1::Auth(auth) = &event {
                             if let AuthifierEvent::DeleteSession { session_id, .. } = auth {
@@ -165,31 +92,13 @@ pub async fn client_subscriber(
                             cancel = true;
                             break;
                         }
-                    }
 
-                    // Keep track of the current offset
-                    let stream_offset = headers
-                        .get("x-stream-offset")
-                        .expect("`x-stream-offset` not present in message!");
-
-                    offset = Some(stream_offset.as_long_long_int().unwrap() + 1);
-
-                    // Reload consumer if subscriptions change
-                    if !matches!(state.apply_state().await, SubscriptionStateChange::None) {
+                        break;
+                    } else {
+                        cancel = true;
                         break;
                     }
                 }
-            }
-        }
-
-        // Close the consumer
-        if let Err(err) = channel.basic_cancel(&tag, Default::default()).await {
-            eprintln!("Failed to close consumer! {:?}", err);
-        } else {
-            // Read the consumer to the end
-            while let Some(delivery) = consumer.next().await {
-                let delivery = delivery.expect("error in consumer");
-                delivery.ack(BasicAckOptions::default()).await.expect("ack");
             }
         }
 
@@ -199,5 +108,5 @@ pub async fn client_subscriber(
         }
     }
 
-    report_internal_error!(channel.close(0, "closing channel").await).ok();
+    consumer.dispose().await;
 }

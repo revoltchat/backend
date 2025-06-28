@@ -37,6 +37,7 @@ revolt-permissions = { version = "0.8.8", path = "../permissions", features = [
     "bson",
 ] }
 revolt-parser = { version = "0.8.8", path = "../parser" }
+revolt-broker = { version = "0.8.8", path = "../broker" }
 
 # Utility
 log = "0.4"

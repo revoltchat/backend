@@ -1,0 +1,25 @@
+[package]
+name = "revolt-broker"
+version = "0.8.8"
+edition = "2024"
+license = "AGPL-3.0-or-later"
+authors = ["Paul Makles <me@insrt.uk>"]
+description = "Revolt Backend: Event Broker"
+
+[dependencies]
+# Utility
+log = "0.4"
+rand = "0.9.1"
+
+# RabbitMQ/AMQP client
+lapin = "3.0.0"
+
+# Async runtime
+async-std = { version = "1.8.0" }
+
+# Serialisation
+serde = "1"
+rmp-serde = "1.3.0"
+
+# Core
+revolt-config = { version = "0.8.8", path = "../config" }
