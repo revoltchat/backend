@@ -67,6 +67,10 @@ impl From<BotOauth2> for crate::BotOauth2 {
             public: value.public,
             secret: value.secret,
             redirects: value.redirects,
+            allowed_scopes: value.allowed_scopes
+                .into_iter()
+                .map(|(scope, value)| (scope.into(), value.into()))
+                .collect(),
         }
     }
 }
@@ -77,6 +81,46 @@ impl From<crate::BotOauth2> for BotOauth2 {
             public: value.public,
             secret: value.secret,
             redirects: value.redirects,
+            allowed_scopes: value.allowed_scopes
+                .into_iter()
+                .map(|(scope, value)| (scope.into(), value.into()))
+                .collect(),
+        }
+    }
+}
+
+impl From<crate::OAuth2Scope> for OAuth2Scope {
+    fn from(value: crate::OAuth2Scope) -> Self {
+        match value {
+            crate::OAuth2Scope::Identify => OAuth2Scope::Identify,
+            crate::OAuth2Scope::Full => OAuth2Scope::Full,
+        }
+    }
+}
+
+impl From<OAuth2Scope> for crate::OAuth2Scope {
+    fn from(value: OAuth2Scope) -> Self {
+        match value {
+            OAuth2Scope::Identify => crate::OAuth2Scope::Identify,
+            OAuth2Scope::Full => crate::OAuth2Scope::Full,
+        }
+    }
+}
+
+impl From<crate::OAuth2ScopeReasoning> for OAuth2ScopeReasoning {
+    fn from(value: crate::OAuth2ScopeReasoning) -> Self {
+        OAuth2ScopeReasoning {
+            allow: value.allow,
+            deny: value.deny,
+        }
+    }
+}
+
+impl From<OAuth2ScopeReasoning> for crate::OAuth2ScopeReasoning {
+    fn from(value: OAuth2ScopeReasoning) -> Self {
+        crate::OAuth2ScopeReasoning {
+            allow: value.allow,
+            deny: value.deny,
         }
     }
 }

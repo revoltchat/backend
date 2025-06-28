@@ -27,6 +27,10 @@ pub async fn info(
 
     Ok(Json(v0::OAuth2AuthorizeInfoResponse {
         bot: public_bot,
-        user: user.into(db, None).await
+        user: user.into(db, None).await,
+        allowed_scopes: oauth2.allowed_scopes.clone()
+            .into_iter()
+            .map(|(scope, value)| (scope.into(), value.into()))
+            .collect()
     }))
 }

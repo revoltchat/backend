@@ -1,4 +1,5 @@
-use super::User;
+use super::{User, OAuth2Scope, OAuth2ScopeReasoning};
+use std::collections::HashMap;
 
 #[cfg(feature = "validator")]
 use validator::Validate;
@@ -155,10 +156,10 @@ auto_derived!(
     #[derive(Default)]
     #[cfg_attr(feature = "validator", derive(Validate))]
     pub struct DataEditBotOauth2 {
-        #[cfg_attr(feature = "serde", serde(default))]
         pub public: Option<bool>,
         #[cfg_attr(feature = "validator", validate(length(min = 1, max = 10)))]
         pub redirects: Option<Vec<String>>,
+        pub allowed_scopes: Option<HashMap<OAuth2Scope, OAuth2ScopeReasoning>>
     }
 
     /// Where we are inviting a bot to
@@ -207,7 +208,10 @@ auto_derived_partial!(
         pub secret: Option<String>,
         /// Allowed redirects for the authorisation
         #[serde(default)]
-        pub redirects: Vec<String>
+        pub redirects: Vec<String>,
+        /// Mapping of allowed scopes and the reasonings
+        #[serde(default)]
+        pub allowed_scopes: HashMap<OAuth2Scope, OAuth2ScopeReasoning>,
     },
     "PartialBotOauth2"
 );

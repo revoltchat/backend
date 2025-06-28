@@ -1,4 +1,5 @@
 use crate::v0::{PublicBot, User};
+use std::collections::HashMap;
 
 auto_derived!(
     pub struct OAuth2AuthorizeAuthResponse {
@@ -6,9 +7,15 @@ auto_derived!(
         pub redirect_uri: String,
     }
 
+    pub struct OAuth2ScopeReasoning {
+        pub allow: String,
+        pub deny: String
+    }
+
     pub struct OAuth2AuthorizeInfoResponse {
         pub bot: PublicBot,
         pub user: User,
+        pub allowed_scopes: HashMap<OAuth2Scope, OAuth2ScopeReasoning>
     }
 
     #[derive(Copy)]
@@ -69,6 +76,7 @@ auto_derived!(
         pub scope: String,
     }
 
+    #[derive(Copy, Hash)]
     pub enum OAuth2Scope {
         Identify,
         Full,

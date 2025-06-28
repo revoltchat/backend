@@ -1,5 +1,6 @@
 use revolt_result::Result;
 use ulid::Ulid;
+use std::collections::HashMap;
 
 use crate::{events::client::EventV1, BotInformation, Database, PartialUser, User};
 
@@ -46,6 +47,19 @@ auto_derived_partial!(
     "PartialBot"
 );
 
+auto_derived!(
+    #[derive(Copy, Hash)]
+    pub enum OAuth2Scope {
+        Identify,
+        Full,
+    }
+
+    pub struct OAuth2ScopeReasoning {
+        pub allow: String,
+        pub deny: String
+    }
+);
+
 auto_derived_partial!(
     pub struct BotOauth2 {
         /// Whether the oauth2 client is public and should not receive a secret key
@@ -56,7 +70,10 @@ auto_derived_partial!(
         pub secret: Option<String>,
         /// Allowed redirects for the authorisation
         #[serde(default)]
-        pub redirects: Vec<String>
+        pub redirects: Vec<String>,
+        /// Mapping of allowed scopes and the reasonings
+        #[serde(default)]
+        pub allowed_scopes: HashMap<OAuth2Scope, OAuth2ScopeReasoning>,
     },
     "PartialBotOauth2"
 );
@@ -96,7 +113,8 @@ impl Default for BotOauth2 {
         Self {
             public: false,
             secret: Some(nanoid::nanoid!(64)),
-            redirects: Default::default()
+            redirects: Vec::new(),
+            allowed_scopes: HashMap::new(),
         }
     }
 }

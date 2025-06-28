@@ -1,7 +1,6 @@
 use revolt_config::config;
 use revolt_database::{
-    util::{oauth2, reference::Reference},
-    Database, User,
+    util::{oauth2, reference::Reference}, Database, User
 };
 use revolt_models::v0;
 use revolt_result::{create_error, Result};
@@ -26,13 +25,20 @@ pub async fn auth(
         return Err(create_error!(InvalidOperation));
     };
 
-    if !oauth2.redirects.contains(&info.redirect_uri) || v0::OAuth2Scope::scopes_from_str(&info.scope).is_none() {
+    let Some(scopes) = v0::OAuth2Scope::scopes_from_str(&info.scope) else {
+        return Err(create_error!(InvalidOperation));
+    };
+
+    if scopes.into_iter().any(|scope| !oauth2.allowed_scopes.contains_key(&scope.into()))
+        || !oauth2.redirects.contains(&info.redirect_uri)
+        || v0::OAuth2Scope::scopes_from_str(&info.scope).is_none()
+    {
         return Err(create_error!(InvalidOperation));
     };
 
     let config = config().await;
 
-    let code = match info.response_type {
+    let token = match info.response_type {
         // implicit
         v0::OAuth2ResponseType::Code => {
             if info.state.is_some() || info.code_challenge.is_some() || info.code_challenge_method.is_some() {
@@ -66,7 +72,7 @@ pub async fn auth(
                 return Err(create_error!(InvalidOperation))
             };
 
-            let code = oauth2::encode_token(
+            let token = oauth2::encode_token(
                 &config.api.security.token_secret,
                 oauth2::TokenType::Access,
                 user.id.clone(),
@@ -78,25 +84,15 @@ pub async fn auth(
             .map_err(|_| create_error!(InternalError))?;
 
             if let Some(code_challenge) = info.code_challenge.as_ref() {
-                let mut conn = redis_kiss::get_connection()
-                    .await
-                    .map_err(|_| create_error!(InternalError))?;
-
-                conn.pset_ex::<_, _, ()>(
-                    format!("oauth2:{code}:code_challenge"),
-                    code_challenge,
-                    oauth2::TokenType::Access.lifetime().num_milliseconds() as usize
-                )
-                .await
-                .map_err(|_| create_error!(InternalError))?;
+                oauth2::add_code_challange(&token, code_challenge).await?;
             };
 
-            code
+            token
 
         },
     };
 
-    let redirect_uri = format!("{}/?code={code}", &info.redirect_uri);
+    let redirect_uri = format!("{}/?code={token}", &info.redirect_uri);
 
     Ok(Json(v0::OAuth2AuthorizeAuthResponse { redirect_uri }))
 }

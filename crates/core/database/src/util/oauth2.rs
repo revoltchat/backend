@@ -2,48 +2,11 @@ use chrono::{TimeDelta, Utc};
 use jsonwebtoken::{decode, encode, errors::Error, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Serialize, Deserialize};
 use revolt_models::v0;
+use redis_kiss::AsyncCommands;
+use revolt_result::Result;
 
 #[cfg(feature = "rocket")]
 use rocket::{http::Method, Request};
-
-// use redis_kiss::{get_connection, redis::Pipeline, AsyncCommands};
-// use revolt_result::Result;
-
-// pub async fn add_access_token(code: &str, redirect_uri: &str, client_id: &str) -> Result<()> {
-//     let conn = get_connection()
-//         .await
-//         .map_err(|_| create_error!(InternalError))?;
-
-//     // 10 mins
-//     Pipeline::new()
-//         .pset_ex(format!("oauth:{code}:client_id"), client_id, 600000)
-//         .pset_ex(format!("oauth:{code}:redirect_uri"), redirect_uri, 600000)
-//         .query_async::<_, ()>(&mut conn.into_inner())
-//         .await
-//         .map_err(|_| create_error!(InternalError))?;
-
-//     Ok(())
-// }
-
-// pub struct CodeInfo {
-//     pub redirect_uri: String,
-//     pub client_id: String
-// }
-
-// pub async fn get_access_token_info(code: &str) -> Result<CodeInfo> {
-//     let conn = get_connection()
-//         .await
-//         .map_err(|_| create_error!(InternalError))?;
-
-//     let (redirect_uri, client_id) = Pipeline::new()
-//         .get(format!("oauth:{code}:client_id"))
-//         .get(format!("oauth:{code}:redirect_uri"))
-//         .query_async::<_, (String, String)>(&mut conn.into_inner())
-//         .await
-//         .map_err(|_| create_error!(InternalError))?;
-
-//     Ok(CodeInfo { redirect_uri, client_id })
-// }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum TokenType {
@@ -144,4 +107,20 @@ pub fn scopes_can_access_route(scopes: &str, request: &Request<'_>) -> bool {
     }
 
     false
+}
+
+pub async fn add_code_challange(token: &str, code_challenge: &str) -> Result<()> {
+    let mut conn = redis_kiss::get_connection()
+        .await
+        .map_err(|_| create_error!(InternalError))?;
+
+    conn.pset_ex::<_, _, ()>(
+        format!("oauth2:{token}:code_challenge"),
+        code_challenge,
+        TokenType::Access.lifetime().num_milliseconds() as usize
+    )
+    .await
+    .map_err(|_| create_error!(InternalError))?;
+
+    Ok(())
 }

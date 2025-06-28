@@ -77,6 +77,13 @@ pub async fn edit_bot(
         }
 
         oauth2.redirects = edit_oauth2.redirects.unwrap_or(oauth2.redirects);
+        oauth2.allowed_scopes = edit_oauth2.allowed_scopes
+            .map(|scopes|scopes
+                .into_iter()
+                .map(|(scope, value)| (scope.into(), value.into()))
+                .collect()
+            )
+            .unwrap_or(oauth2.allowed_scopes);
 
         partial.oauth2 = Some(oauth2)
     }
