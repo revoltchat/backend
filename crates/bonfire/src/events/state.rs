@@ -66,6 +66,7 @@ impl Default for Cache {
 pub struct State {
     pub cache: Cache,
 
+    pub user_id: String,
     pub session_id: String,
     pub private_topic: String,
     pub state: SubscriptionStateChange,
@@ -87,6 +88,7 @@ impl State {
             ..Default::default()
         };
 
+        let user_id = user.id.clone();
         cache.users.insert(user.id.clone(), user);
 
         State {
@@ -96,6 +98,7 @@ impl State {
                 Duration::from_secs(900),
                 5,
             ))),
+            user_id,
             session_id,
             private_topic,
             state: SubscriptionStateChange::Reset,

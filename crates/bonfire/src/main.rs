@@ -6,10 +6,11 @@ use revolt_presence::clear_region;
 #[macro_use]
 extern crate log;
 
-pub mod config;
-pub mod events;
+pub mod client;
 
+mod config;
 mod database;
+mod events;
 mod websocket;
 
 #[async_std::main]

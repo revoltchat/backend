@@ -1,4 +1,13 @@
+use std::sync::Arc;
+
+use async_std::sync::Mutex;
 use authifier::AuthifierEvent;
+use lapin::{
+    options::QueueDeclareOptions,
+    protocol::basic::AMQPProperties,
+    types::{AMQPValue, FieldTable},
+};
+use revolt_config::config;
 use revolt_result::Error;
 use serde::{Deserialize, Serialize};
 
@@ -250,17 +259,135 @@ pub enum EventV1 {
     Auth(AuthifierEvent),
 }
 
+// * not sure where to put this yet...
+pub async fn create_client() -> lapin::Connection {
+    let config = config().await;
+
+    lapin::Connection::connect(
+        &format!(
+            "amqp://{}:{}@{}:{}/%2f",
+            config.rabbit.username, config.rabbit.password, config.rabbit.host, config.rabbit.port
+        ),
+        Default::default(),
+    )
+    .await
+    .unwrap()
+}
+
+pub async fn create_event_stream_channel(conn: lapin::Connection) -> lapin::Channel {
+    static STREAM_NAME: &str = "revolt.events";
+
+    let channel = conn.create_channel().await.unwrap();
+
+    let mut args: FieldTable = Default::default();
+
+    args.insert(
+        // set queue type to stream
+        "x-queue-type".into(),
+        AMQPValue::LongString("stream".into()),
+    );
+
+    args.insert(
+        // max. size of the stream
+        "x-max-length-bytes".into(),
+        AMQPValue::LongLongInt(5_000_000_000), // 5 GB
+    );
+
+    args.insert(
+        // size of the Bloom filter
+        "x-stream-filter-size-bytes".into(),
+        AMQPValue::LongLongInt(26), // 26 B
+    );
+
+    channel
+        .queue_declare(
+            STREAM_NAME,
+            QueueDeclareOptions {
+                durable: true,
+                ..Default::default()
+            },
+            args,
+        )
+        .await
+        .unwrap();
+
+    channel.basic_qos(100, Default::default()).await.unwrap();
+
+    channel
+}
+
+/// simple connection pooling algorithm
+pub async fn get_event_stream_channel() -> Arc<lapin::Channel> {
+    static CLIENTS_PER_CONN: usize = 128;
+    static CONNECTIONS: Mutex<Vec<Arc<lapin::Channel>>> = Mutex::new(Vec::new());
+
+    let mut connections = CONNECTIONS.lock().await;
+    connections.retain(|item| {
+        if item.status().connected() {
+            true
+        } else {
+            info!(
+                "Dropping connection with status {:?}",
+                item.status().state()
+            );
+            false
+        }
+    });
+
+    info!(
+        "Connections: {}, Clients: {:?}",
+        connections.len(),
+        connections
+            .iter()
+            .map(Arc::strong_count)
+            .collect::<Vec<usize>>()
+    );
+
+    for channel in connections.iter() {
+        if Arc::strong_count(channel) < CLIENTS_PER_CONN {
+            return channel.clone();
+        }
+    }
+
+    let conn = create_client().await;
+    let channel = Arc::new(create_event_stream_channel(conn).await);
+    connections.push(channel.clone());
+    channel
+}
+// * ---
+
 impl EventV1 {
     /// Publish helper wrapper
     pub async fn p(self, channel: String) {
-        #[cfg(not(debug_assertions))]
-        redis_kiss::p(channel, self).await;
-
         #[cfg(debug_assertions)]
         info!("Publishing event to {channel}: {self:?}");
 
+        static QUEUE_NAME: &str = "revolt.events";
+
+        let mut headers: FieldTable = Default::default();
+        headers.insert(
+            "x-stream-filter-value".into(),
+            AMQPValue::LongString(channel.into()),
+        );
+
+        let properties: AMQPProperties = Default::default();
+
+        let result = get_event_stream_channel()
+            .await
+            .basic_publish(
+                "",
+                QUEUE_NAME,
+                Default::default(),
+                &rmp_serde::to_vec_named(&self).unwrap(),
+                properties.with_headers(headers),
+            )
+            .await;
+
+        #[cfg(not(debug_assertions))]
+        result.ok();
+
         #[cfg(debug_assertions)]
-        redis_kiss::publish(channel, self).await.unwrap();
+        result.unwrap();
     }
 
     /// Publish user event
