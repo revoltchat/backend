@@ -40,7 +40,9 @@ impl TestHarness {
             .collect();
 
         static QUEUE_NAME: &str = "revolt.events";
-        let consumer = event_stream::get_channel()
+        let conn = event_stream::get_connection().await;
+
+        let consumer = event_stream::create_channel(&conn, config.rabbit.event_stream)
             .await
             .basic_consume(QUEUE_NAME, &tag, Default::default(), Default::default())
             .await

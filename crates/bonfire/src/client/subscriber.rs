@@ -108,5 +108,5 @@ pub async fn client_subscriber(
         }
     }
 
-    consumer.dispose().await;
+    consumer.dispose_channel().await;
 }

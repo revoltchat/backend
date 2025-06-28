@@ -1,6 +1,6 @@
 use async_std::sync::Mutex;
 use lapin::{
-    Channel,
+    Connection,
     options::QueueDeclareOptions,
     types::{AMQPValue, FieldTable},
 };
@@ -11,10 +11,10 @@ use std::sync::Arc;
 use crate::create_client;
 
 /// Get a handle to the event stream
-pub async fn get_channel() -> Arc<Channel> {
+pub async fn get_connection() -> Arc<Connection> {
     let config = config().await;
 
-    static CONNECTIONS: Mutex<Vec<Arc<lapin::Channel>>> = Mutex::new(Vec::new());
+    static CONNECTIONS: Mutex<Vec<Arc<Connection>>> = Mutex::new(Vec::new());
 
     let mut connections = CONNECTIONS.lock().await;
     connections.retain(|item| {
@@ -39,22 +39,21 @@ pub async fn get_channel() -> Arc<Channel> {
             .collect::<Vec<usize>>()
     );
 
-    for channel in connections.iter() {
-        if Arc::strong_count(channel) < config.rabbit.event_stream.channels_per_conn {
-            return channel.clone();
+    for conn in connections.iter() {
+        if Arc::strong_count(conn) < config.rabbit.event_stream.channels_per_conn {
+            return conn.clone();
         }
     }
 
-    let conn = create_client().await;
-    let channel = Arc::new(create_channel(conn, config.rabbit.event_stream).await);
+    let conn = Arc::new(create_client().await);
 
-    connections.push(channel.clone());
-    channel
+    connections.push(conn.clone());
+    conn
 }
 
 /// Create a channel
-async fn create_channel(
-    conn: lapin::Connection,
+pub async fn create_channel(
+    conn: &lapin::Connection,
     event_stream: RabbitEventStream,
 ) -> lapin::Channel {
     let channel = conn.create_channel().await.unwrap();

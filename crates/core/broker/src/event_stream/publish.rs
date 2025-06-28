@@ -7,7 +7,7 @@ use lapin::{
 use revolt_config::config;
 use serde::Serialize;
 
-use crate::event_stream::get_channel;
+use crate::event_stream::{create_channel, get_connection};
 
 /// Publish an event to the message broker
 pub async fn publish_event<T: Serialize>(
@@ -22,7 +22,9 @@ pub async fn publish_event<T: Serialize>(
         AMQPValue::LongString(channel.into()),
     );
 
-    get_channel()
+    let conn = get_connection().await;
+
+    create_channel(&conn, config.rabbit.event_stream.clone())
         .await
         .basic_publish(
             &config.rabbit.event_stream.exchange,

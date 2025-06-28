@@ -5,18 +5,21 @@ use std::{
 
 use async_std::stream::StreamExt;
 use lapin::{
-    Channel,
+    Channel, Connection,
     options::BasicAckOptions,
     types::{AMQPValue, FieldArray, FieldTable, LongLongInt},
 };
+use log::info;
 use rand::Rng;
-use revolt_config::config;
+use revolt_config::{capture_internal_error, config};
 use serde::de::DeserializeOwned;
 
-use crate::event_stream::get_channel;
+use crate::event_stream::{create_channel, get_connection};
 
 pub struct Consumer {
-    channel: Arc<Channel>,
+    #[allow(dead_code)]
+    conn: Arc<Connection>,
+    channel: Channel,
     tag: String,
     topics: HashSet<String>,
     topics_changed: bool,
@@ -27,8 +30,13 @@ pub struct Consumer {
 impl Consumer {
     /// Create a new event stream consumer
     pub async fn new() -> Consumer {
+        let config = config().await;
+        let conn = get_connection().await;
+        let channel = create_channel(&conn, config.rabbit.event_stream).await;
+
         Consumer {
-            channel: get_channel().await,
+            conn,
+            channel,
             tag: rand::rng()
                 .sample_iter::<char, _>(&rand::distr::StandardUniform)
                 .take(32)
@@ -49,10 +57,13 @@ impl Consumer {
     /// Get the current consumer
     pub async fn ensure_consumer(&mut self) {
         if self.topics_changed {
-            self.consumer = None;
+            info!("Topics changed, disposing the consumer.");
+            self.dispose_consumer().await;
+            self.topics_changed = false;
         }
 
         if self.consumer.is_none() {
+            info!("Creating a new consumer, tag={}", self.tag);
             let config = config().await;
 
             // Build arguments for consumer
@@ -88,27 +99,36 @@ impl Consumer {
         }
     }
 
-    /// Close the active consumer
-    pub async fn dispose(&mut self) {
-        // Close the channel -- don't do this actually
-        // capture_internal_error!(self.channel.close(0, "closing channel").await);
+    /// Close the active consumer if one exists
+    pub async fn dispose_consumer(&mut self) {
+        if let Some(consumer) = self.consumer.as_ref() {
+            if consumer.state().is_active() {
+                if let Err(err) = self
+                    .channel
+                    .basic_cancel(&self.tag, Default::default())
+                    .await
+                {
+                    eprintln!("Failed to close consumer! {:?}", err);
+                }
 
-        // Close the consumer
-        if let Err(err) = self
-            .channel
-            .basic_cancel(&self.tag, Default::default())
-            .await
-        {
-            eprintln!("Failed to close consumer! {:?}", err);
+                // is this necessary?
+                // else {
+                // Read the consumer to the end
+                //     while let Some(delivery) = consumer.next().await {
+                //         let delivery = delivery.expect("error in consumer");
+                //         delivery.ack(BasicAckOptions::default()).await.expect("ack");
+                //     }
+                // }
+            }
+
+            self.consumer = None;
         }
-        // is this necessary?
-        // else {
-        // Read the consumer to the end
-        //     while let Some(delivery) = consumer.next().await {
-        //         let delivery = delivery.expect("error in consumer");
-        //         delivery.ack(BasicAckOptions::default()).await.expect("ack");
-        //     }
-        // }
+    }
+
+    /// Close the active channel
+    pub async fn dispose_channel(&mut self) {
+        // Close the channel -- don't do this actually
+        capture_internal_error!(self.channel.close(0, "closing channel").await);
     }
 
     /// Get the next item
