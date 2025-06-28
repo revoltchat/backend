@@ -53,12 +53,11 @@ pub async fn client_worker(
                     Ok(Some(msg)) => msg,
                     Ok(None) => {
                         warn!("Received a None message!");
-                        sentry::capture_message("Received a None message!", Level::Warning);
                         return;
                     }
                     Err(e) => {
                         use async_tungstenite::tungstenite::Error;
-                        if !matches!(e, Error::AlreadyClosed | Error::ConnectionClosed) {
+                        if !matches!(e, Error::AlreadyClosed | Error::ConnectionClosed | Error::Protocol(_)) {
                             let err = format!("Error while reading an event: {e:?}");
                             warn!("{}", err);
                             sentry::capture_message(&err, Level::Warning);
