@@ -77,6 +77,7 @@ auto_derived!(
     }
 
     #[derive(Copy, Hash)]
+    #[cfg_attr(feature = "serde", serde(rename = "lowercase"))]
     pub enum OAuth2Scope {
         Identify,
         Full,

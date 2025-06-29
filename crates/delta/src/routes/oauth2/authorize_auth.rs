@@ -17,6 +17,10 @@ pub async fn auth(
     user: User,
     info: v0::OAuth2AuthorizationForm,
 ) -> Result<Json<v0::OAuth2AuthorizeAuthResponse>> {
+    if user.bot.is_some() {
+        return Err(create_error!(IsBot));
+    };
+
     let bot = Reference::from_unchecked(info.client_id.clone())
         .as_bot(db)
         .await?;

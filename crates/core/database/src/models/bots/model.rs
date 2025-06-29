@@ -49,6 +49,7 @@ auto_derived_partial!(
 
 auto_derived!(
     #[derive(Copy, Hash)]
+    #[serde(rename = "lowercase")]
     pub enum OAuth2Scope {
         Identify,
         Full,

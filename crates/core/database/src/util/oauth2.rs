@@ -124,3 +124,13 @@ pub async fn add_code_challange(token: &str, code_challenge: &str) -> Result<()>
 
     Ok(())
 }
+
+pub async fn get_code_challange(token: &str) -> Result<Option<String>> {
+    let mut conn = redis_kiss::get_connection()
+        .await
+        .map_err(|_| create_error!(InternalError))?;
+
+    conn.get(format!("oauth2:{token}:code_challenge"))
+        .await
+        .map_err(|_| create_error!(InternalError))
+}

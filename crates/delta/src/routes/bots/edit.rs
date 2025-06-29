@@ -1,4 +1,3 @@
-use revolt_database::BotOauth2;
 use revolt_database::{util::reference::Reference, Database, PartialBot, User};
 use revolt_models::v0::{self, DataEditBot};
 use revolt_result::{create_error, Result};

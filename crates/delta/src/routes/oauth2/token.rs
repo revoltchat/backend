@@ -35,13 +35,9 @@ pub async fn token(
             return Err(create_error!(NotAuthenticated))
         }
     } else if let Some((code_verifier, method)) = info.code_verifier.as_ref().zip(claims.code_challange_method) {
-        let mut conn = redis_kiss::get_connection()
-            .await
-            .map_err(|_| create_error!(InternalError))?;
-
-        let server_code_challenge = conn.get::<_, String>(format!("oauth2:{}:code_challenge", &info.code))
-            .await
-            .map_err(|_| create_error!(InternalError))?;
+        let Some(server_code_challenge) = oauth2::get_code_challange(&info.code).await? else {
+            return Err(create_error!(NotAuthenticated))
+        };
 
         let is_valid = match method {
             v0::OAuth2CodeChallangeMethod::Plain => &server_code_challenge == code_verifier,
@@ -51,6 +47,8 @@ pub async fn token(
         if !is_valid {
             return Err(create_error!(NotAuthenticated))
         }
+    } else {
+        return Err(create_error!(NotAuthenticated))
     }
 
     if claims.client_id != info.client_id || claims.exp < Utc::now().timestamp() {
@@ -81,6 +79,7 @@ pub async fn token(
             }))
         },
         v0::OAuth2GrantType::Implicit => {
+            // token is already an access token so this endpoint does not need to be called - in theory this should be unreachable
             Err(create_error!(InvalidOperation))
         }
     }
