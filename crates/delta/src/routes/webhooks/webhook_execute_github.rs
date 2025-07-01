@@ -1,6 +1,6 @@
 use revolt_database::{util::reference::Reference, Database, Message, AMQP};
 use revolt_models::v0::{MessageAuthor, SendableEmbed, Webhook};
-use revolt_result::{create_error, Error, Result};
+use revolt_result::{create_error, Error, Result, ToRevoltError};
 use revolt_rocket_okapi::{
     gen::OpenApiGenerator,
     request::{OpenApiFromRequest, RequestHeaderInput},
@@ -1061,11 +1061,13 @@ pub async fn webhook_execute_github(
         },
     };
 
-    sendable_embed.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    sendable_embed.validate()
+        .capture_error()
+        .map_err(|error| {
+            create_error!(FailedValidation {
+                error: error.to_string()
+            })
+        })?;
 
     let message_id = Ulid::new().to_string();
 

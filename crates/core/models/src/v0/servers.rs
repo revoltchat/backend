@@ -1,4 +1,4 @@
-use super::{Channel, File, RE_COLOUR};
+use super::{Channel, File, Member, User, RE_COLOUR};
 
 use revolt_permissions::{Override, OverrideField};
 use std::collections::HashMap;
@@ -292,5 +292,23 @@ auto_derived!(
     /// New role positions
     pub struct DataEditRoleRanks {
         pub ranks: Vec<String>,
+    }
+
+    /// # Query Parameters
+    #[derive(FromForm)]
+    pub struct OptionsQueryMembers {
+        /// String to search for
+        pub query: String,
+
+        /// Discourage use of this API
+        pub experimental_api: bool,
+    }
+
+    /// # Query members by name
+    pub struct MemberQueryResponse {
+        /// List of members
+        pub members: Vec<Member>,
+        /// List of users
+        pub users: Vec<User>,
     }
 );

@@ -5,8 +5,8 @@ use revolt_database::{
 use revolt_models::v0;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
-use validator::Validate;
+use rocket::State;
+use crate::util::json::{Json, Validate};
 
 /// # Edit Channel
 ///
@@ -18,14 +18,9 @@ pub async fn edit(
     amqp: &State<AMQP>,
     user: User,
     target: Reference<'_>,
-    data: Json<v0::DataEditChannel>,
+    data: Validate<Json<v0::DataEditChannel>>,
 ) -> Result<Json<v0::Channel>> {
-    let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    let data = data.into_inner().into_inner();
 
     let mut channel = target.as_channel(db).await?;
     let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);

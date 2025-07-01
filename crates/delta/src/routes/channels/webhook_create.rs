@@ -7,9 +7,9 @@ use revolt_permissions::{
     calculate_channel_permissions, ChannelPermission, DEFAULT_WEBHOOK_PERMISSIONS,
 };
 use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
+use rocket::State;
+use crate::util::json::{Json, Validate};
 use ulid::Ulid;
-use validator::Validate;
 
 /// # Creates a webhook
 ///
@@ -20,14 +20,9 @@ pub async fn create_webhook(
     db: &State<Database>,
     user: User,
     target: Reference<'_>,
-    data: Json<v0::CreateWebhookBody>,
+    data: Validate<Json<v0::CreateWebhookBody>>,
 ) -> Result<Json<v0::Webhook>> {
-    let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    let data = data.into_inner().into_inner();
 
     let channel = target.as_channel(db).await?;
 

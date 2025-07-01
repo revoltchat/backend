@@ -3,7 +3,8 @@ use authifier::{
     Authifier,
 };
 use revolt_result::{create_database_error, Result};
-use rocket::{serde::json::Json, State};
+use rocket::State;
+use crate::util::json::Json;
 use rocket_empty::EmptyResponse;
 
 /// # Push Subscribe

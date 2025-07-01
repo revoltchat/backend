@@ -2,9 +2,8 @@ use revolt_database::{Channel, Database, RelationshipStatus, User};
 use revolt_models::v0;
 use revolt_result::{create_error, Result};
 
-use rocket::serde::json::Json;
+use crate::util::json::{Json, Validate};
 use rocket::State;
-use validator::Validate;
 
 /// # Create Group
 ///
@@ -14,18 +13,13 @@ use validator::Validate;
 pub async fn create_group(
     db: &State<Database>,
     user: User,
-    data: Json<v0::DataCreateGroup>,
+    data: Validate<Json<v0::DataCreateGroup>>,
 ) -> Result<Json<v0::Channel>> {
     if user.bot.is_some() {
         return Err(create_error!(IsBot));
     }
 
-    let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    let data = data.into_inner().into_inner();
 
     for target in &data.users {
         match user.relationship_with(target) {

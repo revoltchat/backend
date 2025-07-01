@@ -1,9 +1,9 @@
 use revolt_database::util::reference::Reference;
 use revolt_database::{Database, File, PartialWebhook};
 use revolt_models::v0::{DataEditWebhook, Webhook};
-use revolt_models::validator::Validate;
-use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
+use revolt_result::Result;
+use crate::util::json::{Json, Validate};
+use rocket::State;
 
 /// # Edits a webhook
 ///
@@ -14,14 +14,9 @@ pub async fn webhook_edit_token(
     db: &State<Database>,
     webhook_id: Reference<'_>,
     token: String,
-    data: Json<DataEditWebhook>,
+    data: Validate<Json<DataEditWebhook>>,
 ) -> Result<Json<Webhook>> {
-    let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    let data = data.into_inner().into_inner();
 
     let mut webhook = webhook_id.as_webhook(db).await?;
     webhook.assert_token(&token)?;

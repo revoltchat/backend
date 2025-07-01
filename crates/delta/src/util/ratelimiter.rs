@@ -8,7 +8,7 @@ use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::uri::Origin;
 use rocket::http::{Method, Status};
 use rocket::request::{FromRequest, Outcome};
-use rocket::serde::json::Json;
+use crate::util::json::Json;
 use rocket::{Data, Request, Response};
 
 use revolt_rocket_okapi::gen::OpenApiGenerator;

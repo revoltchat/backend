@@ -6,9 +6,9 @@ use revolt_database::{
 use revolt_models::v0;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
+use rocket::State;
 use rocket_empty::EmptyResponse;
-use validator::Validate;
+use crate::util::json::{Json, Validate};
 
 /// # Bulk Delete Messages
 ///
@@ -23,14 +23,9 @@ pub async fn bulk_delete_messages(
     db: &State<Database>,
     user: User,
     target: Reference<'_>,
-    options: Json<v0::OptionsBulkDelete>,
+    options: Validate<Json<v0::OptionsBulkDelete>>,
 ) -> Result<EmptyResponse> {
-    let options = options.into_inner();
-    options.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    let options = options.into_inner().into_inner();
 
     for id in &options.ids {
         if ulid::Ulid::from_string(id)

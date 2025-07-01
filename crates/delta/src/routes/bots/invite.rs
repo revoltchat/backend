@@ -8,7 +8,7 @@ use revolt_permissions::{
 use revolt_result::{create_error, Result};
 use rocket::State;
 
-use rocket::serde::json::Json;
+use crate::util::json::Json;
 use rocket_empty::EmptyResponse;
 
 /// # Invite Bot

@@ -5,7 +5,8 @@ use revolt_database::{
 use revolt_models::v0;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission, PermissionQuery};
 use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
+use rocket::State;
+use crate::util::json::Json;
 
 /// # Fetch Server
 ///

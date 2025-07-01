@@ -4,9 +4,9 @@ use revolt_database::{
 };
 use revolt_models::v0::{DataEditWebhook, Webhook};
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
-use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
-use validator::Validate;
+use revolt_result::Result;
+use crate::util::json::{Json, Validate};
+use rocket::State;
 
 /// # Edits a webhook
 ///
@@ -17,14 +17,9 @@ pub async fn webhook_edit(
     db: &State<Database>,
     webhook_id: Reference<'_>,
     user: User,
-    data: Json<DataEditWebhook>,
+    data: Validate<Json<DataEditWebhook>>,
 ) -> Result<Json<Webhook>> {
-    let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    let data = data.into_inner().into_inner();
 
     let mut webhook = webhook_id.as_webhook(db).await?;
     let channel = db.fetch_channel(&webhook.channel_id).await?;

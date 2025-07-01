@@ -7,7 +7,8 @@ use revolt_permissions::{
     calculate_server_permissions, ChannelPermission, DataPermissionsValue, Override,
 };
 use revolt_result::Result;
-use rocket::{serde::json::Json, State};
+use rocket::State;
+use crate::util::json::Json;
 
 /// # Set Default Permission
 ///
