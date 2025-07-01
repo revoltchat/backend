@@ -1,10 +1,11 @@
 use iso8601_timestamp::Timestamp;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
+use crate::voice::get_channel_voice_state;
 
 use crate::{
-    events::client::EventV1, util::permissions::DatabasePermissionQuery, Channel, Database, File,
-    Server, SystemMessage, User,
+    events::client::EventV1, if_false, util::permissions::DatabasePermissionQuery, Channel,
+    Database, File, Server, SystemMessage, User,
 };
 
 auto_derived_partial!(
@@ -30,6 +31,13 @@ auto_derived_partial!(
         /// Timestamp this member is timed out until
         #[serde(skip_serializing_if = "Option::is_none")]
         pub timeout: Option<Timestamp>,
+
+        /// Whether the member is server-wide voice muted
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub can_publish: Option<bool>,
+        /// Whether the member is server-wide voice deafened
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub can_receive: Option<bool>,
     },
     "PartialMember"
 );
@@ -50,6 +58,8 @@ auto_derived!(
         Avatar,
         Roles,
         Timeout,
+        CanReceive,
+        CanPublish,
     }
 
     /// Member removal intention
@@ -69,6 +79,8 @@ impl Default for Member {
             avatar: None,
             roles: vec![],
             timeout: None,
+            can_publish: None,
+            can_receive: None,
         }
     }
 }
@@ -121,6 +133,14 @@ impl Member {
 
         let emojis = db.fetch_emoji_by_parent_id(&server.id).await?;
 
+        let mut voice_states = Vec::new();
+
+        for channel in &channels {
+            if let Ok(Some(voice_state)) = get_channel_voice_state(channel).await {
+                voice_states.push(voice_state)
+            }
+        }
+
         EventV1::ServerMemberJoin {
             id: server.id.clone(),
             user: user.id.clone(),
@@ -137,6 +157,7 @@ impl Member {
                 .map(|channel| channel.into())
                 .collect(),
             emojis: emojis.into_iter().map(|emoji| emoji.into()).collect(),
+            voice_states
         }
         .private(user.id.clone())
         .await;
@@ -190,6 +211,8 @@ impl Member {
             FieldsMember::Nickname => self.nickname = None,
             FieldsMember::Roles => self.roles.clear(),
             FieldsMember::Timeout => self.timeout = None,
+            FieldsMember::CanReceive => self.can_receive = None,
+            FieldsMember::CanPublish => self.can_publish = None,
         }
     }
 

@@ -143,6 +143,7 @@ impl From<crate::FieldsWebhook> for FieldsWebhook {
 }
 
 impl From<crate::Channel> for Channel {
+    #[allow(deprecated)]
     fn from(value: crate::Channel) -> Self {
         match value {
             crate::Channel::SavedMessages { id, user } => Channel::SavedMessages { id, user },
@@ -188,6 +189,7 @@ impl From<crate::Channel> for Channel {
                 default_permissions,
                 role_permissions,
                 nsfw,
+                voice,
             } => Channel::TextChannel {
                 id,
                 server,
@@ -198,6 +200,7 @@ impl From<crate::Channel> for Channel {
                 default_permissions,
                 role_permissions,
                 nsfw,
+                voice,
             },
             crate::Channel::VoiceChannel {
                 id,
@@ -223,6 +226,7 @@ impl From<crate::Channel> for Channel {
 }
 
 impl From<Channel> for crate::Channel {
+    #[allow(deprecated)]
     fn from(value: Channel) -> crate::Channel {
         match value {
             Channel::SavedMessages { id, user } => crate::Channel::SavedMessages { id, user },
@@ -268,6 +272,7 @@ impl From<Channel> for crate::Channel {
                 default_permissions,
                 role_permissions,
                 nsfw,
+                voice,
             } => crate::Channel::TextChannel {
                 id,
                 server,
@@ -278,6 +283,7 @@ impl From<Channel> for crate::Channel {
                 default_permissions,
                 role_permissions,
                 nsfw,
+                voice,
             },
             Channel::VoiceChannel {
                 id,
@@ -315,6 +321,7 @@ impl From<crate::PartialChannel> for PartialChannel {
             role_permissions: value.role_permissions,
             default_permissions: value.default_permissions,
             last_message_id: value.last_message_id,
+            voice: value.voice
         }
     }
 }
@@ -332,6 +339,7 @@ impl From<PartialChannel> for crate::PartialChannel {
             role_permissions: value.role_permissions,
             default_permissions: value.default_permissions,
             last_message_id: value.last_message_id,
+            voice: value.voice
         }
     }
 }
@@ -543,6 +551,7 @@ impl From<crate::SystemMessage> for SystemMessage {
             crate::SystemMessage::UserRemove { id, by } => Self::UserRemove { id, by },
             crate::SystemMessage::MessagePinned { id, by } => Self::MessagePinned { id, by },
             crate::SystemMessage::MessageUnpinned { id, by } => Self::MessageUnpinned { id, by },
+            crate::SystemMessage::CallStarted { by } => Self::CallStarted { by }
         }
     }
 }
@@ -639,6 +648,8 @@ impl From<crate::Member> for Member {
             avatar: value.avatar.map(|f| f.into()),
             roles: value.roles,
             timeout: value.timeout,
+            can_publish: value.can_publish,
+            can_receive: value.can_receive,
         }
     }
 }
@@ -652,6 +663,8 @@ impl From<Member> for crate::Member {
             avatar: value.avatar.map(|f| f.into()),
             roles: value.roles,
             timeout: value.timeout,
+            can_publish: value.can_publish,
+            can_receive: value.can_receive,
         }
     }
 }
@@ -665,6 +678,8 @@ impl From<crate::PartialMember> for PartialMember {
             avatar: value.avatar.map(|f| f.into()),
             roles: value.roles,
             timeout: value.timeout,
+            can_publish: value.can_publish,
+            can_receive: value.can_receive,
         }
     }
 }
@@ -678,6 +693,8 @@ impl From<PartialMember> for crate::PartialMember {
             avatar: value.avatar.map(|f| f.into()),
             roles: value.roles,
             timeout: value.timeout,
+            can_publish: value.can_publish,
+            can_receive: value.can_receive,
         }
     }
 }
@@ -707,6 +724,8 @@ impl From<crate::FieldsMember> for FieldsMember {
             crate::FieldsMember::Nickname => FieldsMember::Nickname,
             crate::FieldsMember::Roles => FieldsMember::Roles,
             crate::FieldsMember::Timeout => FieldsMember::Timeout,
+            crate::FieldsMember::CanReceive => FieldsMember::CanReceive,
+            crate::FieldsMember::CanPublish => FieldsMember::CanPublish,
         }
     }
 }
@@ -718,6 +737,8 @@ impl From<FieldsMember> for crate::FieldsMember {
             FieldsMember::Nickname => crate::FieldsMember::Nickname,
             FieldsMember::Roles => crate::FieldsMember::Roles,
             FieldsMember::Timeout => crate::FieldsMember::Timeout,
+            FieldsMember::CanReceive => crate::FieldsMember::CanReceive,
+            FieldsMember::CanPublish => crate::FieldsMember::CanPublish,
         }
     }
 }
