@@ -83,8 +83,8 @@ revolt-result = { path = "../core/result", features = ["rocket", "okapi"] }
 revolt-permissions = { path = "../core/permissions", features = ["schemas"] }
 
 # voice
-livekit-api = "0.4.1"
-livekit-protocol = "0.3.6"
+livekit-api = "0.4.4"
+livekit-protocol = "0.4.0"
 
 [build-dependencies]
 vergen = "7.5.0"

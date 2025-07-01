@@ -39,6 +39,6 @@ revolt-database = { path = "../../core/database" }
 revolt-permissions = { path = "../../core/permissions" }
 
 # voice
-livekit-api = "0.4.1"
-livekit-protocol = "0.3.6"
+livekit-api = "0.4.4"
+livekit-protocol = "0.4.0"
 livekit-runtime = { version = "0.3.1", features = ["tokio"] }

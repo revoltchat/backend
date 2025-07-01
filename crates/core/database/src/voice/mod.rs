@@ -40,9 +40,7 @@ pub async fn set_channel_node(channel: &str, node: &str) -> Result<()> {
         .await?
         .set(format!("node:{channel}"), node)
         .await
-        .to_internal_error()?;
-
-    Ok(())
+        .to_internal_error()
 }
 
 pub async fn get_channel_node(channel: &str) -> Result<Option<String>> {
@@ -144,7 +142,7 @@ pub async fn create_voice_state(
             voice_state.screensharing,
         )
         .set(format!("camera:{unique_key}"), voice_state.camera)
-        .query_async(&mut get_connection().await?.into_inner())
+        .query_async::<_, ()>(&mut get_connection().await?.into_inner())
         .await
         .to_internal_error()?;
 
@@ -170,9 +168,7 @@ pub async fn delete_voice_state(
         ])
         .query_async(&mut get_connection().await?.into_inner())
         .await
-        .to_internal_error()?;
-
-    Ok(())
+        .to_internal_error()
 }
 
 pub async fn update_voice_state_tracks(
@@ -236,9 +232,7 @@ pub async fn update_voice_state(
     pipeline
         .query_async(&mut get_connection().await?.into_inner())
         .await
-        .to_internal_error()?;
-
-    Ok(())
+        .to_internal_error()
 }
 
 pub async fn get_voice_channel_members(channel_id: &str) -> Result<Option<Vec<String>>> {
@@ -322,9 +316,7 @@ pub async fn move_user(user: &str, from: &str, to: &str) -> Result<()> {
             user,
         )
         .await
-        .to_internal_error()?;
-
-    Ok(())
+        .to_internal_error()
 }
 
 pub async fn sync_voice_permissions(db: &Database, voice_client: &VoiceClient, channel: &Channel, server: Option<&Server>, role_id: Option<&str>) -> Result<()> {
