@@ -123,24 +123,26 @@ impl AsyncConsumer for AckConsumer {
                     token: session.subscription.as_ref().unwrap().auth.clone(),
                     extras: Default::default(),
                 };
-                let raw_service_payload = serde_json::to_string(&service_payload);
 
-                if let Ok(p) = raw_service_payload {
-                    let args = BasicPublishArguments::new(
-                        config.pushd.exchange.as_str(),
-                        config.pushd.apn.queue.as_str(),
-                    )
-                    .finish();
+                match serde_json::to_string(&service_payload) {
+                    Ok(p) => {
+                        let args = BasicPublishArguments::new(
+                            config.pushd.exchange.as_str(),
+                            config.pushd.apn.queue.as_str(),
+                        )
+                        .finish();
 
-                    log::debug!(
-                        "Publishing ack to apn session {}",
-                        session.subscription.as_ref().unwrap().auth
-                    );
+                        log::debug!(
+                            "Publishing ack to apn session {}",
+                            session.subscription.as_ref().unwrap().auth
+                        );
 
-                    publish_message(self, p.into(), args).await;
-                } else {
-                    log::warn!("Failed to serialize ack badge update payload!");
-                    revolt_config::capture_error(&raw_service_payload.unwrap_err());
+                        publish_message(self, p.into(), args).await;
+                    },
+                    Err(e) => {
+                        log::warn!("Failed to serialize ack badge update payload!");
+                        revolt_config::capture_error(&e);
+                    }
                 }
             }
         }

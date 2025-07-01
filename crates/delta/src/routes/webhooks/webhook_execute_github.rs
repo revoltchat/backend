@@ -701,7 +701,7 @@ fn safe_from_str<T: for<'de> Deserialize<'de>>(data: &str) -> Result<T> {
     match serde_json::from_str(data) {
         Ok(output) => Ok(output),
         Err(err) => {
-            log::error!("{err:?}");
+            revolt_config::capture_error(&err);
             Err(create_error!(InvalidOperation))
         }
     }

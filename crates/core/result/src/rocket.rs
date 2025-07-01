@@ -8,10 +8,9 @@ use rocket::{
 
 use crate::{Error, ErrorType};
 
-/// HTTP response builder for Error enum
-impl<'r> Responder<'r, 'static> for Error {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
-        let status = match self.error_type {
+impl Error {
+    pub fn rocket_status(&self) -> Status {
+        match self.error_type {
             ErrorType::LabelMe => Status::InternalServerError,
 
             ErrorType::AlreadyOnboarded => Status::Forbidden,
@@ -81,7 +80,10 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::VosoUnavailable => Status::BadRequest,
             ErrorType::NotFound => Status::NotFound,
             ErrorType::NoEffect => Status::Ok,
-            ErrorType::FailedValidation { .. } => Status::BadRequest,
+            ErrorType::IOError => Status::BadRequest,
+            ErrorType::UnprocessableEntity => Status::UnprocessableEntity,
+            ErrorType::DeserializationError { .. } => Status::UnprocessableEntity,
+            ErrorType::FailedValidation { .. } => Status::UnprocessableEntity,
             ErrorType::FeatureDisabled { .. } => Status::BadRequest,
 
             ErrorType::ProxyError => Status::BadRequest,
@@ -90,8 +92,13 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::FileTypeNotAllowed => Status::BadRequest,
             ErrorType::ImageProcessingFailed => Status::InternalServerError,
             ErrorType::NoEmbedData => Status::BadRequest,
-        };
+        }
+    }
+}
 
+/// HTTP response builder for Error enum
+impl<'r> Responder<'r, 'static> for Error {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         // Serialize the error data structure into JSON.
         let string = serde_json::to_string(&self).unwrap();
 
@@ -99,7 +106,7 @@ impl<'r> Responder<'r, 'static> for Error {
         Response::build()
             .sized_body(string.len(), Cursor::new(string))
             .header(ContentType::new("application", "json"))
-            .status(status)
+            .status(self.rocket_status())
             .ok()
     }
 }

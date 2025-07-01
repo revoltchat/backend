@@ -2,10 +2,9 @@ use axum::{http::StatusCode, response::IntoResponse, Json};
 
 use crate::{Error, ErrorType};
 
-/// HTTP response builder for Error enum
-impl IntoResponse for Error {
-    fn into_response(self) -> axum::response::Response {
-        let status = match self.error_type {
+impl Error {
+    pub fn axum_status(&self) -> StatusCode {
+        match self.error_type {
             ErrorType::LabelMe => StatusCode::INTERNAL_SERVER_ERROR,
 
             ErrorType::AlreadyOnboarded => StatusCode::FORBIDDEN,
@@ -74,7 +73,10 @@ impl IntoResponse for Error {
             ErrorType::VosoUnavailable => StatusCode::BAD_REQUEST,
             ErrorType::NotFound => StatusCode::NOT_FOUND,
             ErrorType::NoEffect => StatusCode::OK,
-            ErrorType::FailedValidation { .. } => StatusCode::BAD_REQUEST,
+            ErrorType::IOError => StatusCode::BAD_REQUEST,
+            ErrorType::UnprocessableEntity => StatusCode::UNPROCESSABLE_ENTITY,
+            ErrorType::DeserializationError { .. } => StatusCode::UNPROCESSABLE_ENTITY,
+            ErrorType::FailedValidation { .. } => StatusCode::UNPROCESSABLE_ENTITY,
             ErrorType::InvalidFlagValue => StatusCode::BAD_REQUEST,
             ErrorType::FeatureDisabled { .. } => StatusCode::BAD_REQUEST,
 
@@ -84,8 +86,13 @@ impl IntoResponse for Error {
             ErrorType::FileTypeNotAllowed => StatusCode::BAD_REQUEST,
             ErrorType::ImageProcessingFailed => StatusCode::INTERNAL_SERVER_ERROR,
             ErrorType::NoEmbedData => StatusCode::BAD_REQUEST,
-        };
+        }
+    }
+}
 
-        (status, Json(&self)).into_response()
+/// HTTP response builder for Error enum
+impl IntoResponse for Error {
+    fn into_response(self) -> axum::response::Response {
+        (self.axum_status(), Json(&self)).into_response()
     }
 }

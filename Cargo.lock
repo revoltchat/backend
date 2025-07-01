@@ -6511,6 +6511,7 @@ dependencies = [
  "revolt_rocket_okapi",
  "rocket",
  "schemars",
+ "sentry",
  "serde",
  "serde_json",
  "utoipa",
