@@ -1,7 +1,7 @@
 use async_tungstenite::tungstenite::{handshake, Message};
 use futures::channel::oneshot::Sender;
 use revolt_database::events::client::ReadyPayloadFields;
-use revolt_result::{create_error, Result};
+use revolt_result::{create_error, Result, ToRevoltError};
 use serde::{Deserialize, Serialize};
 
 /// Enumeration of supported protocol formats
@@ -38,14 +38,14 @@ impl ProtocolConfiguration {
         match self.format {
             ProtocolFormat::Json => {
                 if let Message::Text(text) = msg {
-                    serde_json::from_str(text).map_err(|_| create_error!(InternalError))
+                    serde_json::from_str(text).to_internal_error()
                 } else {
                     Err(create_error!(InternalError))
                 }
             }
             ProtocolFormat::Msgpack => {
                 if let Message::Binary(buf) = msg {
-                    rmp_serde::from_slice(buf).map_err(|_| create_error!(InternalError))
+                    rmp_serde::from_slice(buf).to_internal_error()
                 } else {
                     Err(create_error!(InternalError))
                 }

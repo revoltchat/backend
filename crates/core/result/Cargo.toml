@@ -34,3 +34,6 @@ revolt_okapi = { version = "0.9.1", optional = true }
 
 # Axum
 axum = { version = "0.7.5", optional = true }
+
+# Sentry
+sentry = "0.31.5"
