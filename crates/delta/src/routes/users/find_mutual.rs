@@ -5,7 +5,7 @@ use revolt_models::v0;
 
 use revolt_permissions::{calculate_user_permissions, UserPermission};
 use revolt_result::{create_error, Result};
-use rocket::serde::json::Json;
+use crate::util::json::Json;
 use rocket::State;
 
 /// # Fetch Mutual Friends And Servers

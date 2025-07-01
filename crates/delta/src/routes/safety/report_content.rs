@@ -1,22 +1,9 @@
 use revolt_database::{events::client::EventV1, Database, Report, Snapshot, SnapshotContent, User};
-use revolt_models::v0::{ReportStatus, ReportedContent};
+use revolt_models::v0::{DataReportContent, ReportStatus, ReportedContent};
 use revolt_result::{create_error, Result};
-use serde::Deserialize;
 use ulid::Ulid;
-use validator::Validate;
-
-use rocket::{serde::json::Json, State};
-
-/// # Report Data
-#[derive(Validate, Deserialize, JsonSchema)]
-pub struct DataReportContent {
-    /// Content being reported
-    content: ReportedContent,
-    /// Additional report description
-    #[validate(length(min = 0, max = 1000))]
-    #[serde(default)]
-    additional_context: String,
-}
+use rocket::State;
+use crate::util::json::{Json, Validate};
 
 /// # Report Content
 ///
@@ -26,14 +13,9 @@ pub struct DataReportContent {
 pub async fn report_content(
     db: &State<Database>,
     user: User,
-    data: Json<DataReportContent>,
+    data: Validate<Json<DataReportContent>>,
 ) -> Result<()> {
-    let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    let data = data.into_inner().into_inner();
 
     // Bots cannot create reports
     if user.bot.is_some() {

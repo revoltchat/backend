@@ -26,3 +26,7 @@ disallowed-methods = [
     # Prefer to use Object::delete(&self)
     "revolt_database::models::bots::ops::AbstractBots::delete_bot",
 ]
+
+disallowed-types = [
+    "rocket::serde::json::Json",
+]

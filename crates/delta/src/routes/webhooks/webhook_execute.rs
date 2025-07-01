@@ -5,10 +5,9 @@ use revolt_database::{
 };
 use revolt_models::v0;
 use revolt_permissions::{ChannelPermission, PermissionValue};
-use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
-
-use validator::Validate;
+use revolt_result::Result;
+use crate::util::json::{Json, Validate};
+use rocket::State;
 
 /// # Executes a webhook
 ///
@@ -20,15 +19,10 @@ pub async fn webhook_execute(
     amqp: &State<AMQP>,
     webhook_id: Reference,
     token: String,
-    data: Json<v0::DataMessageSend>,
+    data: Validate<Json<v0::DataMessageSend>>,
     idempotency: IdempotencyKey,
 ) -> Result<Json<v0::Message>> {
-    let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    let data = data.into_inner().into_inner();
 
     let webhook = webhook_id.as_webhook(db).await?;
     webhook.assert_token(&token)?;

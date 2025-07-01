@@ -10,7 +10,6 @@ use revolt_models::v0::{
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission, PermissionValue};
 use revolt_result::{ErrorType, Result};
 use ulid::Ulid;
-use validator::Validate;
 
 use crate::{
     events::client::EventV1,
@@ -710,12 +709,6 @@ impl Message {
 
     /// Create text embed from sendable embed
     pub async fn create_embed(&self, db: &Database, embed: SendableEmbed) -> Result<Embed> {
-        embed.validate().map_err(|error| {
-            create_error!(FailedValidation {
-                error: error.to_string()
-            })
-        })?;
-
         let media = if let Some(id) = embed.media {
             Some(File::use_attachment(db, &id, &self.id, &self.author).await?)
         } else {

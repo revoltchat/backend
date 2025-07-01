@@ -6,7 +6,8 @@ use revolt_models::v0;
 
 use revolt_permissions::{calculate_user_permissions, UserPermission};
 use revolt_result::Result;
-use rocket::{serde::json::Json, State};
+use rocket::State;
+use crate::util::json::Json;
 
 /// # Fetch User
 ///

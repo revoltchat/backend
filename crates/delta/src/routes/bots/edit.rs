@@ -3,8 +3,7 @@ use revolt_models::v0::{self, DataEditBot};
 use revolt_result::{create_error, Result};
 use rocket::State;
 
-use rocket::serde::json::Json;
-use validator::Validate;
+use crate::util::json::{Json, Validate};
 
 /// # Edit Bot
 ///
@@ -15,14 +14,9 @@ pub async fn edit_bot(
     db: &State<Database>,
     user: User,
     target: Reference,
-    data: Json<DataEditBot>,
+    data: Validate<Json<DataEditBot>>,
 ) -> Result<Json<v0::BotWithUserResponse>> {
-    let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    let data = data.into_inner().into_inner();
 
     let mut bot = target.as_bot(db).await?;
     if bot.owner != user.id {

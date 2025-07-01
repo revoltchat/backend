@@ -2,16 +2,11 @@ use std::fmt::Debug;
 
 use revolt_rocket_okapi::{
     r#gen::OpenApiGenerator,
-    response::OpenApiResponderInner,
-    revolt_okapi::openapi3::Responses,
-    util::add_schema_response,
     request::OpenApiFromData,
-    revolt_okapi::{
-        openapi3::{MediaType, RequestBody},
-        Map,
-    },
+    response::OpenApiResponderInner,
+    revolt_okapi::openapi3::{RequestBody, Responses}, util::add_schema_response
 };
-use rocket::data::{Data, FromData, Limits, Outcome};
+use rocket::{data::{Data, FromData, Limits, Outcome}};
 use rocket::response::{self, Responder, content};
 use rocket::request::{local_cache, Request};
 use schemars::JsonSchema;
@@ -20,27 +15,6 @@ use revolt_result::{create_error, Error, ToRevoltError};
 
 // A lot of this code is modified versions of rocket::serde::json so we can store
 // the error so it can be passed to the error catcher.
-
-macro_rules! fn_request_body {
-    ($gen:ident, $ty:path, $mime_type:expr) => {{
-        let schema = $gen.json_schema::<$ty>();
-        Ok(RequestBody {
-            content: {
-                let mut map = Map::new();
-                map.insert(
-                    $mime_type.to_owned(),
-                    MediaType {
-                        schema: Some(schema),
-                        ..MediaType::default()
-                    },
-                );
-                map
-            },
-            required: true,
-            ..revolt_rocket_okapi::revolt_okapi::openapi3::RequestBody::default()
-        })
-    }};
-}
 
 #[derive(Debug, Clone)]
 pub struct Json<T>(pub T);
@@ -107,11 +81,11 @@ impl<'r, T: Serialize> Responder<'r, 'static> for Json<T> {
 
 impl<'r, T: JsonSchema + Deserialize<'r> + Debug> OpenApiFromData<'r> for Json<T> {
     fn request_body(gen: &mut OpenApiGenerator) -> revolt_rocket_okapi::Result<RequestBody> {
-        fn_request_body!(gen, T, "application/json")
+        crate::fn_request_body!(gen, T, "application/json")
     }
 }
 
-impl<T: Serialize + JsonSchema + Send> OpenApiResponderInner for Json<T> {
+impl<T: JsonSchema + Serialize> OpenApiResponderInner for Json<T> {
     fn responses(gen: &mut OpenApiGenerator) -> revolt_rocket_okapi::Result<Responses> {
         let mut responses = Responses::default();
         let schema = gen.json_schema::<T>();
@@ -123,54 +97,5 @@ impl<T: Serialize + JsonSchema + Send> OpenApiResponderInner for Json<T> {
 impl<T: validator::Validate> validator::Validate for Json<T> {
     fn validate(&self) -> Result<(), validator::ValidationErrors> {
         self.0.validate()
-    }
-}
-
-pub struct Validate<T>(pub T);
-
-impl<T> Validate<Json<T>> {
-    pub fn into_inner(self) -> T {
-        self.0.0
-    }
-}
-
-#[async_trait]
-impl<'r, T: validator::Validate + Deserialize<'r> + Debug> FromData<'r> for Validate<Json<T>> {
-    type Error = Error;
-
-    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
-        <Json::<T> as FromData<'r>>::from_data(req, data).await.and_then(|inner| {
-            if let Err(e) = inner.validate() {
-                let error = create_error!(FailedValidation { error: e.to_string() });
-                req.local_cache(|| Some(error.clone()));
-
-                return Outcome::Error((error.rocket_status(), error))
-            };
-
-            Outcome::Success(Self(inner))
-        })
-    }
-}
-
-impl<'r, T: JsonSchema + Deserialize<'r> + validator::Validate + Debug> OpenApiFromData<'r> for Validate<Json<T>> {
-    fn request_body(gen: &mut OpenApiGenerator) -> revolt_rocket_okapi::Result<RequestBody> {
-        fn_request_body!(gen, T, "application/json")
-    }
-}
-
-impl<T: Serialize + JsonSchema + Send> OpenApiResponderInner for Validate<Json<T>> {
-    fn responses(gen: &mut OpenApiGenerator) -> revolt_rocket_okapi::Result<Responses> {
-        let mut responses = Responses::default();
-        let schema = gen.json_schema::<T>();
-        add_schema_response(&mut responses, 200, "application/json", schema)?;
-        Ok(responses)
-    }
-}
-
-impl<T> std::ops::Deref for Validate<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
     }
 }

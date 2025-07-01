@@ -2,9 +2,8 @@ use revolt_database::FieldsUser;
 use revolt_database::{util::reference::Reference, Database, File, PartialUser, User};
 use revolt_models::v0;
 use revolt_result::{create_error, Result};
-use rocket::serde::json::Json;
+use crate::util::json::{Json, Validate};
 use rocket::State;
-use validator::Validate;
 
 /// # Edit User
 ///
@@ -15,14 +14,9 @@ pub async fn edit(
     db: &State<Database>,
     mut user: User,
     target: Reference,
-    data: Json<v0::DataEditUser>,
+    data: Validate<Json<v0::DataEditUser>>,
 ) -> Result<Json<v0::User>> {
-    let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    let data = data.into_inner().into_inner();
 
     // Filter out invalid edit fields
     if !user.privileged && (data.badges.is_some() || data.flags.is_some()) {

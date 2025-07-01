@@ -7,8 +7,8 @@ use revolt_database::{
 use revolt_models::v0::{self, Embed};
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
-use validator::Validate;
+use rocket::State;
+use crate::util::json::{Json, Validate};
 
 /// # Edit Message
 ///
@@ -20,14 +20,9 @@ pub async fn edit(
     user: User,
     target: Reference,
     msg: Reference,
-    edit: Json<v0::DataEditMessage>,
+    edit: Validate<Json<v0::DataEditMessage>>,
 ) -> Result<Json<v0::Message>> {
-    let edit = edit.into_inner();
-    edit.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    let edit = edit.into_inner().into_inner();
 
     Message::validate_sum(
         &edit.content,

@@ -2,7 +2,8 @@ use revolt_database::{util::reference::Reference, Database};
 use revolt_models::v0;
 use revolt_result::Result;
 
-use rocket::{serde::json::Json, State};
+use rocket::State;
+use crate::util::json::Json;
 
 /// # Fetch Emoji
 ///

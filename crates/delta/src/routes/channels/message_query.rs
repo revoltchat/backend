@@ -5,8 +5,8 @@ use revolt_database::{
 use revolt_models::v0::{self, MessageSort};
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
-use validator::Validate;
+use rocket::State;
+use crate::util::json::{Json, Validate};
 
 /// # Fetch Messages
 ///
@@ -17,14 +17,8 @@ pub async fn query(
     db: &State<Database>,
     user: User,
     target: Reference,
-    options: v0::OptionsQueryMessages,
+    options: Validate<v0::OptionsQueryMessages>,
 ) -> Result<Json<v0::BulkMessageResponse>> {
-    options.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
-
     if let Some(MessageSort::Relevance) = options.sort {
         return Err(create_error!(InvalidOperation));
     }
@@ -43,7 +37,7 @@ pub async fn query(
         sort,
         nearby,
         include_users,
-    } = options;
+    } = options.into_inner();
 
     Message::fetch_with_users(
         db,

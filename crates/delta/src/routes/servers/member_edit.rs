@@ -8,8 +8,8 @@ use revolt_models::v0;
 
 use revolt_permissions::{calculate_server_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
-use validator::Validate;
+use crate::util::json::{Json, Validate};
+use rocket::State;
 
 /// # Edit Member
 ///
@@ -21,14 +21,9 @@ pub async fn edit(
     user: User,
     server: Reference,
     member: Reference,
-    data: Json<v0::DataMemberEdit>,
+    data: Validate<Json<v0::DataMemberEdit>>,
 ) -> Result<Json<v0::Member>> {
-    let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    let data = data.into_inner().into_inner();
 
     // Fetch server and member
     let mut server = server.as_server(db).await?;

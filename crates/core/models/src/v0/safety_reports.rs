@@ -1,6 +1,17 @@
 use iso8601_timestamp::Timestamp;
 
 auto_derived!(
+    /// # Report Data
+    #[derive(validator::Validate)]
+    pub struct DataReportContent {
+        /// Content being reported
+        pub content: ReportedContent,
+        /// Additional report description
+        #[validate(length(min = 0, max = 1000))]
+        #[serde(default)]
+        pub additional_context: String,
+    }
+
     /// User-generated platform moderation report
     pub struct Report {
         /// Unique Id

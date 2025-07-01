@@ -2,7 +2,7 @@ use revolt_database::{util::reference::Reference, Database, User};
 use revolt_models::v0::PublicBot;
 use revolt_result::{create_error, Result};
 
-use rocket::serde::json::Json;
+use crate::util::json::Json;
 use rocket::State;
 
 /// # Fetch Public Bot

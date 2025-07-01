@@ -1,7 +1,7 @@
 use revolt_database::User;
 use revolt_models::v0;
 use revolt_result::Result;
-use rocket::serde::json::Json;
+use crate::util::json::Json;
 
 /// # Fetch Self
 ///

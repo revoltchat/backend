@@ -2,7 +2,7 @@
 use revolt_database::{Database, User, AMQP};
 use revolt_models::v0;
 use revolt_result::{create_error, Result};
-use rocket::serde::json::Json;
+use crate::util::json::Json;
 use rocket::State;
 
 /// # Send Friend Request

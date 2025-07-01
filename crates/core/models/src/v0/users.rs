@@ -275,6 +275,17 @@ auto_derived!(
         /// Username and discriminator combo separated by #
         pub username: String,
     }
+
+    /// # Username Information
+    #[derive(Validate)]
+    pub struct DataChangeUsername {
+        /// New username
+        #[validate(length(min = 2, max = 32), regex = "super::RE_USERNAME")]
+        pub username: String,
+        /// Current account password
+        #[validate(length(min = 8, max = 1024))]
+        pub password: String,
+    }
 );
 
 pub trait CheckRelationship {
