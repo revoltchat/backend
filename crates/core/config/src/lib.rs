@@ -60,6 +60,9 @@ static CONFIG_SEARCH_PATHS: [&str; 3] = [
     "/Revolt.toml",
 ];
 
+/// Path to search for test overrides
+static TEST_OVERRIDE_PATH: &str = "Revolt.test-overrides.toml";
+
 /// Configuration builder
 static CONFIG_BUILDER: Lazy<RwLock<Config>> = Lazy::new(|| {
     RwLock::new({
@@ -73,6 +76,20 @@ static CONFIG_BUILDER: Lazy<RwLock<Config>> = Lazy::new(|| {
                 include_str!("../Revolt.test.toml"),
                 FileFormat::Toml,
             ));
+
+            // recursively search upwards for an overrides file (if there is one)
+            if let Ok(cwd) = std::env::current_dir() {
+                let mut path = Some(cwd.as_path());
+                while let Some(current_path) = path {
+                    let target_path = current_path.join(TEST_OVERRIDE_PATH);
+                    if target_path.exists() {
+                        builder = builder
+                            .add_source(File::new(target_path.to_str().unwrap(), FileFormat::Toml));
+                    }
+
+                    path = current_path.parent();
+                }
+            }
         }
 
         for path in CONFIG_SEARCH_PATHS {
@@ -407,6 +424,11 @@ pub async fn read() -> Config {
 pub async fn config() -> Settings {
     let mut config = read().await.try_deserialize::<Settings>().unwrap();
 
+    // inject REDIS_URI for redis-kiss library
+    if std::env::var("REDIS_URL").is_err() {
+        std::env::set_var("REDIS_URI", config.database.redis.clone());
+    }
+
     // auto-detect production nodes
     if config.hosts.api.contains("https") && config.hosts.api.contains("revolt.chat") {
         config.production = true;
@@ -423,12 +445,6 @@ pub async fn setup_logging(release: &'static str, dsn: String) -> Option<sentry:
 
     if std::env::var("ROCKET_ADDRESS").is_err() {
         std::env::set_var("ROCKET_ADDRESS", "0.0.0.0");
-    }
-
-    if std::env::var("REDIS_URL").is_err() {
-        // Configure redis-kiss library
-        let config = config().await;
-        std::env::set_var("REDIS_URI", config.database.redis);
     }
 
     pretty_env_logger::init();

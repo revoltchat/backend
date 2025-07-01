@@ -1,11 +1,7 @@
-use revolt_database::{events::client::EventV1, Database, Report, Snapshot, SnapshotContent, User};
-use revolt_models::v0::{ReportStatus, ReportedContent};
-use revolt_result::{create_error, Result};
-use serde::Deserialize;
-use ulid::Ulid;
-use validator::Validate;
+use revolt_database::{Database, User};
+use revolt_result::Result;
 
-use rocket::{serde::json::Json, State};
+use rocket::State;
 
 /// # Acknowledge Policy Changes
 ///

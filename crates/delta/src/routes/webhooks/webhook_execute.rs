@@ -36,11 +36,11 @@ pub async fn webhook_execute(
     let permissions: PermissionValue = webhook.permissions.into();
     permissions.throw_if_lacking_channel_permission(ChannelPermission::SendMessage)?;
 
-    if data.attachments.as_ref().map_or(false, |v| !v.is_empty()) {
+    if data.attachments.as_ref().is_some_and(|v| !v.is_empty()) {
         permissions.throw_if_lacking_channel_permission(ChannelPermission::UploadFiles)?;
     }
 
-    if data.embeds.as_ref().map_or(false, |v| !v.is_empty()) {
+    if data.embeds.as_ref().is_some_and(|v| !v.is_empty()) {
         permissions.throw_if_lacking_channel_permission(ChannelPermission::SendEmbeds)?;
     }
 

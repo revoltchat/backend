@@ -166,6 +166,9 @@ pub enum EventV1 {
     /// Server role deleted
     ServerRoleDelete { id: String, role_id: String },
 
+    /// Server roles ranks updated
+    ServerRoleRanksUpdate { id: String, ranks: Vec<String> },
+
     /// Update existing user
     UserUpdate {
         id: String,

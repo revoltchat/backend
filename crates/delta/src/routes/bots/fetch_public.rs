@@ -16,7 +16,7 @@ pub async fn fetch_public_bot(
     target: Reference,
 ) -> Result<Json<PublicBot>> {
     let bot = db.fetch_bot(&target.id).await?;
-    if !bot.public && user.map_or(true, |x| x.id != bot.owner) {
+    if !bot.public && user.is_none_or(|x| x.id != bot.owner) {
         return Err(create_error!(NotFound));
     }
 

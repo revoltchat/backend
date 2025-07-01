@@ -1,4 +1,8 @@
-use std::{collections::HashSet, ops::BitXor, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::BitXor,
+    time::Duration,
+};
 
 use crate::{
     mongodb::{
@@ -22,7 +26,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 43; // MUST BE +1 to last migration
+pub const LATEST_REVISION: i32 = 44; // MUST BE +1 to last migration
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -1200,6 +1204,63 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             .await
             .expect("Failed to update voice channels");
     };
+
+    if revision <= 43 {
+        info!(
+            "Running migration [revision 43 / 05-06-2025]: convert role ranks to uniform numbers."
+        );
+
+        #[derive(Serialize, Deserialize, Clone)]
+        struct Role {
+            pub rank: i64,
+        }
+
+        #[derive(Serialize, Deserialize, Clone)]
+        struct Server {
+            #[serde(rename = "_id")]
+            pub id: String,
+            #[serde(default = "HashMap::<String, Role>::new")]
+            pub roles: HashMap<String, Role>,
+        }
+
+        let mut servers = db
+            .db()
+            .collection::<Server>("servers")
+            .find(doc! {
+                "roles": {
+                    "$exists": true,
+                    "$ne": []
+                }
+            })
+            .await
+            .unwrap()
+            .filter_map(|s| async { s.ok() })
+            .boxed();
+
+        while let Some(server) = servers.next().await {
+            let mut ordered_roles = server.roles.clone().into_iter().collect::<Vec<_>>();
+            ordered_roles.sort_by(|(_, role_a), (_, role_b)| role_a.rank.cmp(&role_b.rank));
+            let ordered_roles = ordered_roles
+                .into_iter()
+                .map(|(id, _)| id)
+                .collect::<Vec<_>>();
+
+            let mut doc = doc! {};
+
+            for id in server.roles.keys() {
+                doc.insert(
+                    format!("roles.{id}.rank"),
+                    ordered_roles.iter().position(|x| id == x).unwrap() as i64,
+                );
+            }
+
+            db.db()
+                .collection::<Server>("servers")
+                .update_one(doc! { "_id": &server.id }, doc! { "$set": doc })
+                .await
+                .unwrap();
+        }
+    }
 
     // Reminder to update LATEST_REVISION when adding new migrations.
     LATEST_REVISION.max(revision)

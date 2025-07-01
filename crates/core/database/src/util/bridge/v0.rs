@@ -15,8 +15,7 @@ impl crate::Bot {
             avatar: user.avatar.map(|x| x.id).unwrap_or_default(),
             description: user
                 .profile
-                .map(|profile| profile.content)
-                .flatten()
+                .and_then(|profile| profile.content)
                 .unwrap_or_default(),
         }
     }
@@ -1135,7 +1134,7 @@ impl crate::User {
     }
 
     /// Convert user object into user model without presence information
-    pub async fn into_known_static<'a>(self, is_online: bool) -> User {
+    pub async fn into_known_static(self, is_online: bool) -> User {
         let badges = self.get_badges().await;
 
         User {

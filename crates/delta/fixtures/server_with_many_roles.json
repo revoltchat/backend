@@ -49,7 +49,7 @@
       "__ID:5__": {
         "name": "Moderator",
         "permissions": {
-          "a": 545270208,
+          "a": 545270216,
           "d": 0
         },
         "rank": 1
@@ -61,6 +61,22 @@
           "d": 0
         },
         "rank": 0
+      },
+      "__ID:7__": {
+        "name": "Lower Rank 1",
+        "permissions": {
+          "a": 0,
+          "d": 0
+        },
+        "rank": 2
+      },
+      "__ID:8__": {
+        "name": "Lower Rank 2",
+        "permissions": {
+          "a": 0,
+          "d": 0
+        },
+        "rank": 2
       }
     },
     "default_permissions": 4000322560
