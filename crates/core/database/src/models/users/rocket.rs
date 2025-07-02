@@ -38,6 +38,7 @@ impl<'r> FromRequest<'r> for User {
         if let Some(user) = user {
             Outcome::Success(user.clone())
         } else {
+            request.local_cache(|| Some(create_error!(DuplicateNonce)));
             Outcome::Error((Status::Unauthorized, authifier::Error::InvalidSession))
         }
     }

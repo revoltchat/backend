@@ -636,6 +636,8 @@ impl<'r> FromRequest<'r> for EventHeader<'r> {
     async fn from_request(request: &'r Request<'_>) -> rocket::request::Outcome<Self, Self::Error> {
         let headers = request.headers();
         let Some(event) = headers.get_one("X-GitHub-Event") else {
+            request.local_cache(|| Some(create_error!(InvalidOperation)));
+
             return rocket::request::Outcome::Error((
                 Status::BadRequest,
                 create_error!(InvalidOperation),
