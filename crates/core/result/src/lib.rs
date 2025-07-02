@@ -152,6 +152,7 @@ pub enum ErrorType {
     InvalidSession,
     InvalidFlagValue,
     NotAuthenticated,
+    Conflict,
     DuplicateNonce,
     NotFound,
     NoEffect,
@@ -180,7 +181,7 @@ pub enum ErrorType {
     // ? Feature flag disabled in the config
     FeatureDisabled {
         feature: String,
-    },
+    }
 }
 
 #[macro_export]

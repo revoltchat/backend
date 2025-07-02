@@ -3,12 +3,12 @@ use std::hash::Hasher;
 use std::ops::Add;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use crate::util::json::Json;
 use authifier::models::Session;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::uri::Origin;
 use rocket::http::{Method, Status};
 use rocket::request::{FromRequest, Outcome};
-use crate::util::json::Json;
 use rocket::{Data, Request, Response};
 
 use revolt_rocket_okapi::gen::OpenApiGenerator;

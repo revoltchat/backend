@@ -69,6 +69,7 @@ impl Error {
             ErrorType::InvalidProperty => StatusCode::BAD_REQUEST,
             ErrorType::InvalidSession => StatusCode::UNAUTHORIZED,
             ErrorType::NotAuthenticated => StatusCode::UNAUTHORIZED,
+            ErrorType::Conflict => StatusCode::CONFLICT,
             ErrorType::DuplicateNonce => StatusCode::CONFLICT,
             ErrorType::VosoUnavailable => StatusCode::BAD_REQUEST,
             ErrorType::NotFound => StatusCode::NOT_FOUND,
