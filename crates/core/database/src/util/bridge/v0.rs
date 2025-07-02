@@ -1454,3 +1454,43 @@ impl From<FieldsMessage> for crate::FieldsMessage {
         }
     }
 }
+
+impl From<AuthorizedBotId> for crate::AuthorizedBotId {
+    fn from(value: AuthorizedBotId) -> Self {
+        crate::AuthorizedBotId {
+            user: value.user,
+            bot: value.bot
+        }
+    }
+}
+
+impl From<crate::AuthorizedBotId> for AuthorizedBotId {
+    fn from(value: crate::AuthorizedBotId) -> Self {
+        AuthorizedBotId {
+            user: value.user,
+            bot: value.bot
+        }
+    }
+}
+
+impl From<AuthorizedBot> for crate::AuthorizedBot {
+    fn from(value: AuthorizedBot) -> Self {
+        crate::AuthorizedBot {
+            id: value.id.into(),
+            created_at: value.created_at,
+            deauthorized_at: value.deauthorized_at,
+            scope: value.scope
+        }
+    }
+}
+
+impl From<crate::AuthorizedBot> for AuthorizedBot {
+    fn from(value: crate::AuthorizedBot) -> Self {
+        AuthorizedBot {
+            id: value.id.into(),
+            created_at: value.created_at,
+            deauthorized_at: value.deauthorized_at,
+            scope: value.scope
+        }
+    }
+}

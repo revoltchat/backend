@@ -1,4 +1,5 @@
 mod admin_migrations;
+mod authorized_bots;
 mod bots;
 mod channel_invites;
 mod channel_unreads;
@@ -19,6 +20,7 @@ mod user_settings;
 mod users;
 
 pub use admin_migrations::*;
+pub use authorized_bots::*;
 pub use bots::*;
 pub use channel_invites::*;
 pub use channel_unreads::*;
@@ -46,6 +48,7 @@ use crate::MongoDb;
 pub trait AbstractDatabase:
     Sync
     + Send
+    + authorized_bots::AbstractAuthorizedBots
     + admin_migrations::AbstractMigrations
     + bots::AbstractBots
     + channels::AbstractChannels

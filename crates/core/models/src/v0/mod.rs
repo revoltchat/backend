@@ -1,3 +1,4 @@
+mod authorized_bots;
 mod bots;
 mod channel_invites;
 mod channel_unreads;
@@ -16,6 +17,7 @@ mod servers;
 mod user_settings;
 mod users;
 
+pub use authorized_bots::*;
 pub use bots::*;
 pub use channel_invites::*;
 pub use channel_unreads::*;

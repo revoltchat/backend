@@ -1,6 +1,7 @@
+use iso8601_timestamp::Timestamp;
 use revolt_config::config;
 use revolt_database::{
-    util::{oauth2, reference::Reference}, Database, User
+    util::{oauth2, reference::Reference}, AuthorizedBot, AuthorizedBotId, Database, User
 };
 use revolt_models::v0;
 use revolt_result::{create_error, Result};
@@ -49,7 +50,7 @@ pub async fn auth(
                 return Err(create_error!(InvalidOperation));
             };
 
-            oauth2::encode_token(
+            let token = oauth2::encode_token(
                 &config.api.security.token_secret,
                 oauth2::TokenType::Auth,
                 user.id.clone(),
@@ -58,7 +59,16 @@ pub async fn auth(
                 info.scope.clone(),
                 info.code_challenge_method,
             )
-            .map_err(|_| create_error!(InternalError))?
+            .map_err(|_| create_error!(InternalError))?;
+
+            db.insert_authorized_bot(&AuthorizedBot {
+                id: AuthorizedBotId { bot: info.client_id.clone(), user: user.id.clone() },
+                created_at: Timestamp::now_utc(),
+                deauthorized_at: None,
+                scope: info.scope.clone()
+            }).await?;
+
+            token
         },
         // authorization code
         v0::OAuth2ResponseType::Token => {

@@ -1,11 +1,11 @@
 use chrono::Utc;
+use iso8601_timestamp::Timestamp;
 use revolt_config::config;
 use revolt_database::{
     util::{
         oauth2,
         reference::Reference,
-    },
-    Database,
+    }, AuthorizedBot, AuthorizedBotId, Database
 };
 use revolt_models::v0;
 use revolt_result::{create_error, Result};
@@ -64,13 +64,20 @@ pub async fn token(
             let token = oauth2::encode_token(
                 &config.api.security.token_secret,
                 oauth2::TokenType::Access,
-                claims.sub,
-                claims.client_id,
+                claims.sub.clone(),
+                claims.client_id.clone(),
                 claims.redirect_uri,
                 claims.scope.clone(),
                 None,
             )
             .map_err(|_| create_error!(InternalError))?;
+
+            db.insert_authorized_bot(&AuthorizedBot {
+                id: AuthorizedBotId { bot: claims.client_id.clone(), user: claims.sub.clone() },
+                created_at: Timestamp::now_utc(),
+                deauthorized_at: None,
+                scope: claims.scope.clone()
+            }).await?;
 
             Ok(Json(v0::OAuth2TokenExchangeResponse {
                 access_token: token,
