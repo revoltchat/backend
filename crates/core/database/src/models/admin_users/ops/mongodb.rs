@@ -28,4 +28,8 @@ impl AbstractAdminUsers for MongoDb {
     async fn admin_user_list(&self) -> Result<Vec<AdminUser>> {
         query!(self, find, COL, doc! {})
     }
+
+    async fn admin_user_count(&self) -> Result<u16> {
+        query!(self, count_documents, COL, doc! {}).map(|resp| resp as u16)
+    }
 }

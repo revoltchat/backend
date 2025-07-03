@@ -1,6 +1,6 @@
 use iso8601_timestamp::Timestamp;
 
-use crate::v0::Report;
+use crate::v0::{Report, User};
 
 auto_derived! {
     #[derive(Default)]
@@ -211,9 +211,6 @@ auto_derived! {
 
     #[cfg_attr(feature = "validator", derive(validator::Validate))]
     pub struct AdminTokenCreate {
-        /// the user who this token is for
-        #[cfg_attr(feature = "serde", serde(rename="user"))]
-        pub user_id: String,
         /// The expiry timestamp for this token, in iso6801. Max 30 days from current time.
         pub expiry: Timestamp,
     }
@@ -229,6 +226,9 @@ auto_derived! {
         pub active: bool,
         /// The permissions of the user
         pub permissions: u64,
+        /// The Revolt user attached to this user. Use this for data like names and avatars.
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub revolt_user: Option<User>
     }
 
     #[cfg_attr(feature = "validator", derive(validator::Validate))]
@@ -257,5 +257,32 @@ auto_derived! {
         pub active: Option<bool>,
         /// The permissions of the user
         pub permissions: Option<u64>,
+    }
+
+    #[repr(u64)]
+    pub enum AdminUserPermissionFlags {
+        ObjectNotes = 0,
+
+        ManageAdminUsers = 1,
+        CreateTokens = 2,
+
+        ViewUsers = 3,
+        ManageUsers = 4,
+        ManageUsersSenstiveInfo = 5,
+
+        ViewServers = 6,
+        ManageServers = 7,
+        ViewDMChannels = 8,
+        ManageDMChannels = 9,
+
+        ViewCases = 10,
+        ManageOwnCases = 11,
+        ManageOtherCases = 12,
+
+        ViewReports = 13,
+
+        Search = 14,
+        ManageNotes = 15,
+        Discover = 16,
     }
 }

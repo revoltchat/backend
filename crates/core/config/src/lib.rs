@@ -335,6 +335,7 @@ pub struct Features {
     pub mass_mentions_send_notifications: bool,
     pub mass_mentions_enabled: bool,
     pub admin_api_enabled: bool,
+    pub admin_api_show_spec: bool,
 
     #[serde(default)]
     pub advanced: FeaturesAdvanced,

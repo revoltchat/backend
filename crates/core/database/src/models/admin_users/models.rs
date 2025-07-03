@@ -39,3 +39,31 @@ impl AdminUser {
         return db.admin_user_fetch_email(email).await;
     }
 }
+
+pub struct AdminUserPermissionFlagsValue(pub u64);
+
+impl AdminUserPermissionFlagsValue {
+    pub fn has(&self, flag: revolt_models::v0::AdminUserPermissionFlags) -> bool {
+        self.has_value(flag as u64)
+    }
+    pub fn has_value(&self, bit: u64) -> bool {
+        let mask = 1 << bit;
+        self.0 & mask == mask
+    }
+
+    pub fn set(
+        &mut self,
+        flag: revolt_models::v0::AdminUserPermissionFlags,
+        toggle: bool,
+    ) -> &mut Self {
+        self.set_value(flag as u64, toggle)
+    }
+    pub fn set_value(&mut self, bit: u64, toggle: bool) -> &mut Self {
+        if toggle {
+            self.0 |= 1 << bit;
+        } else {
+            self.0 &= !(1 << bit);
+        }
+        self
+    }
+}

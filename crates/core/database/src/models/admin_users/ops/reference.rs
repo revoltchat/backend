@@ -49,4 +49,8 @@ impl AbstractAdminUsers for ReferenceDb {
         let admin_users = self.admin_users.lock().await;
         Ok(admin_users.iter().map(|(_, u)| u).cloned().collect())
     }
+
+    async fn admin_user_count(&self) -> Result<u16> {
+        Ok(self.admin_users.lock().await.len() as u16)
+    }
 }

@@ -11,4 +11,6 @@ pub trait AbstractAdminTokens: Sync + Send {
     async fn admin_token_revoke(&self, token_id: &str) -> Result<()>;
 
     async fn admin_token_authenticate(&self, token: &str) -> Result<AdminToken>;
+
+    async fn admin_token_fetch(&self, id: &str) -> Result<AdminToken>;
 }

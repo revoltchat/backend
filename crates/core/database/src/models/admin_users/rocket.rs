@@ -31,9 +31,13 @@ impl<'r> FromRequest<'r> for AdminUser {
             .await;
 
         if let Some(user) = user {
-            Outcome::Success(user.clone())
+            if !user.active {
+                Outcome::Error((Status::Unauthorized, authifier::Error::LockedOut))
+            } else {
+                Outcome::Success(user.clone())
+            }
         } else {
-            Outcome::Error((Status::Unauthorized, authifier::Error::InvalidSession))
+            Outcome::Error((Status::Unauthorized, authifier::Error::InvalidCredentials))
         }
     }
 }

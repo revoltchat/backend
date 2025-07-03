@@ -195,6 +195,8 @@ admin_api_enabled = false
 mass_mentions_send_notifications = true
 # Can role/everyone pings be used at all
 mass_mentions_enabled = true
+# Show the admin api in the OpenAPI spec
+admin_api_show_spec = false
 
 [features.limits]
 

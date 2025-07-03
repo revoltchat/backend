@@ -618,6 +618,7 @@ impl From<crate::Report> for Report {
             additional_context: value.additional_context,
             status: value.status,
             notes: value.notes,
+            case_id: value.case_id,
         }
     }
 }
@@ -1383,6 +1384,75 @@ impl From<FieldsMessage> for crate::FieldsMessage {
     fn from(value: FieldsMessage) -> Self {
         match value {
             FieldsMessage::Pinned => crate::FieldsMessage::Pinned,
+        }
+    }
+}
+
+impl From<crate::AdminUser> for AdminUser {
+    fn from(value: crate::AdminUser) -> Self {
+        AdminUser {
+            id: value.id,
+            platform_user_id: value.platform_user_id,
+            email: value.email,
+            active: value.active,
+            permissions: value.permissions,
+            revolt_user: None,
+        }
+    }
+}
+
+impl From<AdminUser> for crate::AdminUser {
+    fn from(value: AdminUser) -> Self {
+        crate::AdminUser {
+            id: value.id,
+            platform_user_id: value.platform_user_id,
+            email: value.email,
+            active: value.active,
+            permissions: value.permissions,
+        }
+    }
+}
+
+impl From<AdminUserEdit> for crate::PartialAdminUser {
+    fn from(value: AdminUserEdit) -> Self {
+        crate::PartialAdminUser {
+            id: None,
+            platform_user_id: value.platform_user_id,
+            email: value.email,
+            active: value.active,
+            permissions: value.permissions,
+        }
+    }
+}
+
+impl From<AdminToken> for crate::AdminToken {
+    fn from(value: AdminToken) -> Self {
+        crate::AdminToken {
+            id: value.id,
+            user_id: value.user_id,
+            token: value.token,
+            expiry: value.expiry.format_short().to_string(),
+        }
+    }
+}
+
+impl From<crate::AdminToken> for AdminToken {
+    fn from(value: crate::AdminToken) -> Self {
+        AdminToken {
+            id: value.id,
+            user_id: value.user_id,
+            token: value.token,
+            expiry: Timestamp::parse(&value.expiry).unwrap(), // if it's invalid it shouldn't have made it to this point.
+        }
+    }
+}
+
+impl From<crate::AdminObjectNote> for AdminObjectNote {
+    fn from(value: crate::AdminObjectNote) -> Self {
+        AdminObjectNote {
+            edited_at: Timestamp::parse(&value.edited_at).unwrap(), // if it's invalid it shouldn't have made it to this point.
+            last_edited_by_id: value.last_edited_by_id,
+            content: value.content,
         }
     }
 }

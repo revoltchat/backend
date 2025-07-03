@@ -41,4 +41,13 @@ impl AbstractAdminTokens for ReferenceDb {
 
         Ok(result.ok_or_else(|| create_error!(NotFound))?)
     }
+
+    async fn admin_token_fetch(&self, id: &str) -> Result<AdminToken> {
+        let admin_tokens = self.admin_tokens.lock().await;
+        let result = admin_tokens.iter().find(|tok| tok.0 == id);
+
+        Ok(result
+            .map(|t| t.1.clone())
+            .ok_or_else(|| create_error!(NotFound))?)
+    }
 }

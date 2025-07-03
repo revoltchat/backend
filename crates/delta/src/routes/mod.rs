@@ -4,6 +4,7 @@ pub use rocket::http::Status;
 pub use rocket::response::Redirect;
 use rocket::{Build, Rocket};
 
+mod admin;
 mod bots;
 mod channels;
 mod customisation;
@@ -21,89 +22,79 @@ mod webhooks;
 pub fn mount(config: Settings, mut rocket: Rocket<Build>) -> Rocket<Build> {
     let settings = OpenApiSettings::default();
 
-    if config.features.webhooks_enabled {
-        mount_endpoints_and_merged_docs! {
-            rocket, "/".to_owned(), settings,
-            "/" => (vec![], custom_openapi_spec()),
-            "" => openapi_get_routes_spec![root::root],
-            "/users" => users::routes(),
-            "/bots" => bots::routes(),
-            "/channels" => channels::routes(),
-            "/servers" => servers::routes(),
-            "/invites" => invites::routes(),
-            "/custom" => customisation::routes(),
-            "/safety" => safety::routes(),
-            "/auth/account" => rocket_authifier::routes::account::routes(),
-            "/auth/session" => rocket_authifier::routes::session::routes(),
-            "/auth/mfa" => rocket_authifier::routes::mfa::routes(),
-            "/onboard" => onboard::routes(),
-            "/policy" => policy::routes(),
-            "/push" => push::routes(),
-            "/sync" => sync::routes(),
-            "/webhooks" => webhooks::routes()
-        };
-    } else {
-        mount_endpoints_and_merged_docs! {
-            rocket, "/".to_owned(), settings,
-            "/" => (vec![], custom_openapi_spec()),
-            "" => openapi_get_routes_spec![root::root],
-            "/users" => users::routes(),
-            "/bots" => bots::routes(),
-            "/channels" => channels::routes(),
-            "/servers" => servers::routes(),
-            "/invites" => invites::routes(),
-            "/custom" => customisation::routes(),
-            "/safety" => safety::routes(),
-            "/auth/account" => rocket_authifier::routes::account::routes(),
-            "/auth/session" => rocket_authifier::routes::session::routes(),
-            "/auth/mfa" => rocket_authifier::routes::mfa::routes(),
-            "/onboard" => onboard::routes(),
-            "/policy" => policy::routes(),
-            "/push" => push::routes(),
-            "/sync" => sync::routes()
-        };
+    let mut openapi_list: Vec<(_, revolt_rocket_okapi::revolt_okapi::openapi3::OpenApi)> =
+        Vec::new();
+
+    let routes = vec![
+        ("/", (vec![], custom_openapi_spec()), true, true),
+        ("/", openapi_get_routes_spec![root::root], true, true),
+        ("/users", users::routes(), true, true),
+        ("/bots", bots::routes(), true, true),
+        ("/channels", channels::routes(), true, true),
+        ("/servers", servers::routes(), true, true),
+        ("/invites", invites::routes(), true, true),
+        ("/custom", customisation::routes(), true, true),
+        ("/safety", safety::routes(), true, true),
+        (
+            "/auth/mfa",
+            rocket_authifier::routes::mfa::routes(),
+            true,
+            true,
+        ),
+        ("/onboard", onboard::routes(), true, true),
+        ("/policy", policy::routes(), true, true),
+        ("/push", push::routes(), true, true),
+        ("/sync", sync::routes(), true, true),
+        (
+            "/auth/account",
+            rocket_authifier::routes::account::routes(),
+            true,
+            true,
+        ),
+        (
+            "/auth/session",
+            rocket_authifier::routes::session::routes(),
+            true,
+            true,
+        ),
+        (
+            "/admin",
+            admin::routes(),
+            config.features.admin_api_enabled,
+            config.features.admin_api_show_spec,
+        ),
+        (
+            "/webhooks",
+            webhooks::routes(),
+            config.features.webhooks_enabled,
+            true,
+        ),
+    ];
+
+    for (base, (routes, openapi), enabled, show_spec) in routes {
+        if !enabled {
+            continue;
+        }
+
+        rocket = rocket.mount(base, routes);
+        if show_spec {
+            openapi_list.push((base, openapi));
+        }
     }
 
-    if config.features.webhooks_enabled {
-        mount_endpoints_and_merged_docs! {
-            rocket, "/0.8".to_owned(), settings,
-            "/" => (vec![], custom_openapi_spec()),
-            "" => openapi_get_routes_spec![root::root],
-            "/users" => users::routes(),
-            "/bots" => bots::routes(),
-            "/channels" => channels::routes(),
-            "/servers" => servers::routes(),
-            "/invites" => invites::routes(),
-            "/custom" => customisation::routes(),
-            "/safety" => safety::routes(),
-            "/auth/account" => rocket_authifier::routes::account::routes(),
-            "/auth/session" => rocket_authifier::routes::session::routes(),
-            "/auth/mfa" => rocket_authifier::routes::mfa::routes(),
-            "/onboard" => onboard::routes(),
-            "/push" => push::routes(),
-            "/sync" => sync::routes(),
-            "/webhooks" => webhooks::routes()
+    let openapi_docs =
+        match revolt_rocket_okapi::revolt_okapi::merge::marge_spec_list(&openapi_list) {
+            Ok(docs) => docs,
+            Err(err) => panic!("Could not merge OpenAPI spec: {}", err),
         };
-    } else {
-        mount_endpoints_and_merged_docs! {
-            rocket, "/0.8".to_owned(), settings,
-            "/" => (vec![], custom_openapi_spec()),
-            "" => openapi_get_routes_spec![root::root],
-            "/users" => users::routes(),
-            "/bots" => bots::routes(),
-            "/channels" => channels::routes(),
-            "/servers" => servers::routes(),
-            "/invites" => invites::routes(),
-            "/custom" => customisation::routes(),
-            "/safety" => safety::routes(),
-            "/auth/account" => rocket_authifier::routes::account::routes(),
-            "/auth/session" => rocket_authifier::routes::session::routes(),
-            "/auth/mfa" => rocket_authifier::routes::mfa::routes(),
-            "/onboard" => onboard::routes(),
-            "/push" => push::routes(),
-            "/sync" => sync::routes()
-        };
-    }
+
+    rocket = rocket.mount(
+        "/",
+        vec![revolt_rocket_okapi::get_openapi_route(
+            openapi_docs,
+            &settings,
+        )],
+    );
 
     rocket
 }
@@ -238,11 +229,6 @@ fn custom_openapi_spec() -> OpenApi {
                 description: Some("Local Revolt Environment".to_owned()),
                 ..Default::default()
             },
-            Server {
-                url: "http://local.revolt.chat:14702/0.8".to_owned(),
-                description: Some("Local Revolt Environment (v0.8)".to_owned()),
-                ..Default::default()
-            },
         ],
         external_docs: Some(ExternalDocs {
             url: "https://developers.revolt.chat".to_owned(),
@@ -251,6 +237,13 @@ fn custom_openapi_spec() -> OpenApi {
         }),
         extensions,
         tags: vec![
+            Tag {
+                name: "Admin".to_owned(),
+                description: Some(
+                    "Used when running your own instance to manage and moderate".to_owned(),
+                ),
+                ..Default::default()
+            },
             Tag {
                 name: "Core".to_owned(),
                 description: Some(

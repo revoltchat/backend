@@ -27,4 +27,8 @@ impl AbstractAdminTokens for MongoDb {
         query!(self, find_one, COL, doc! {"token": token})?
             .ok_or_else(|| create_error!(InvalidCredentials))
     }
+
+    async fn admin_token_fetch(&self, id: &str) -> Result<AdminToken> {
+        query!(self, find_one_by_id, COL, id)?.ok_or_else(|| create_error!(NotFound))
+    }
 }

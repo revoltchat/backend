@@ -123,6 +123,7 @@ pub async fn report_content(
         additional_context: data.additional_context,
         status: ReportStatus::Created {},
         notes: String::new(),
+        case_id: None,
     };
 
     db.insert_report(&report).await?;
