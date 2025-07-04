@@ -8,20 +8,20 @@ mod reference;
 #[async_trait]
 pub trait AbstractAuthorizedBots: Sync + Send {
     /// Insert emoji into database.
-    async fn insert_authorized_bot(&self, authorised_bot: &AuthorizedBot) -> Result<()>;
+    async fn insert_authorized_bot(&self, authorized_bot: &AuthorizedBot) -> Result<()>;
 
-    /// Fetch an emoji by its id
+    /// Fetch an authorized bot by its id
     async fn fetch_authorized_bot(&self, id: &AuthorizedBotId) -> Result<AuthorizedBot>;
 
-    /// Fetch all authorized bots for a user
+    /// Fetch a users authorized bot by its id
     async fn fetch_users_authorized_bots(&self, user_id: &str) -> Result<Vec<AuthorizedBot>>;
 
     /// Deletes an authorized bot
     async fn delete_authorized_bot(&self, id: &AuthorizedBotId) -> Result<()>;
 
-    /// Deauthorizes a bot access to a user's information
+    /// Deauthorizes an authorized bot
     async fn deauthorize_authorized_bot(&self, id: &AuthorizedBotId) -> Result<AuthorizedBot>;
 
-    /// Fetches all deauthorized bots
+    // Fetches all authorized bots which have been deauthorized
     async fn fetch_deauthorized_authorized_bots(&self) -> Result<Vec<AuthorizedBot>>;
 }

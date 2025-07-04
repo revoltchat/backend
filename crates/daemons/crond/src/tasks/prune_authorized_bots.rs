@@ -2,8 +2,6 @@ use revolt_database::{iso8601_timestamp::{Duration, Timestamp}, util::oauth2::To
 use revolt_result::Result;
 use tokio::time::sleep;
 
-use log::info;
-
 pub async fn task(db: Database) -> Result<()> {
     let lifetime = Duration::new(TokenType::Access.lifetime().num_seconds(), 0);
 

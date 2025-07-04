@@ -1,5 +1,7 @@
 use iso8601_timestamp::Timestamp;
 
+use crate::v0::PublicBot;
+
 auto_derived!(
     /// Unique id of the user and bot
     pub struct AuthorizedBotId {
@@ -23,5 +25,10 @@ auto_derived!(
 
         /// Scopes the bot has access to
         pub scope: String
+    }
+
+    pub struct AuthorizedBotsResponse {
+        pub public_bot: PublicBot,
+        pub authorized_bot: AuthorizedBot
     }
 );

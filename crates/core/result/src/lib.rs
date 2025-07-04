@@ -51,7 +51,7 @@ impl std::error::Error for Error {}
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ErrorType {
     /// This error was not labeled :(
     LabelMe,

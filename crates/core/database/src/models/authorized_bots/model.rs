@@ -2,6 +2,7 @@ use iso8601_timestamp::Timestamp;
 
 auto_derived! (
     /// Unique id of the user and bot
+    #[derive(Hash)]
     pub struct AuthorizedBotId {
         /// User id
         pub user: String,

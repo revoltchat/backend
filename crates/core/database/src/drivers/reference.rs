@@ -5,13 +5,14 @@ use futures::lock::Mutex;
 use crate::{
     Bot, Channel, ChannelCompositeKey, ChannelUnread, Emoji, File, FileHash, Invite, Member,
     MemberCompositeKey, Message, PolicyChange, RatelimitEvent, Report, Server, ServerBan, Snapshot,
-    User, UserSettings, Webhook,
+    User, UserSettings, Webhook, AuthorizedBotId, AuthorizedBot,
 };
 
 database_derived!(
     /// Reference implementation
     #[derive(Default)]
     pub struct ReferenceDb {
+        pub authorized_bots: Arc<Mutex<HashMap<AuthorizedBotId, AuthorizedBot>>>,
         pub bots: Arc<Mutex<HashMap<String, Bot>>>,
         pub channels: Arc<Mutex<HashMap<String, Channel>>>,
         pub channel_invites: Arc<Mutex<HashMap<String, Invite>>>,

@@ -37,6 +37,9 @@ auto_derived!(
         #[cfg_attr(feature = "rocket", field(value = "implicit"))]
         #[cfg_attr(feature = "serde", serde(rename = "implicit"))]
         Implicit,
+        #[cfg_attr(feature = "rocket", field(value = "refresh_token"))]
+        #[cfg_attr(feature = "serde", serde(rename = "refresh_token"))]
+        RefreshToken
     }
 
     #[derive(Copy)]
@@ -66,12 +69,17 @@ auto_derived!(
         pub client_id: String,
         pub client_secret: Option<String>,
 
-        pub code: String,
+        /// Authorization code
+        pub code: Option<String>,
+        // Refresh token to generate new access token
+        pub refresh_token: Option<String>,
+
         pub code_verifier: Option<String>,
     }
 
     pub struct OAuth2TokenExchangeResponse {
         pub access_token: String,
+        pub refresh_token: Option<String>,
         pub token_type: String,
         pub scope: String,
     }

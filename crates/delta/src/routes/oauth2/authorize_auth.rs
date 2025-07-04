@@ -5,8 +5,7 @@ use revolt_database::{
 };
 use revolt_models::v0;
 use revolt_result::{create_error, Result};
-use rocket::{form::Form, serde::json::Json, State};
-use redis_kiss::AsyncCommands;
+use rocket::{serde::json::Json, State};
 
 /// # OAuth2 Authorization Auth
 ///

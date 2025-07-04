@@ -12,7 +12,6 @@ mod fetch_user;
 mod fetch_user_flags;
 mod find_mutual;
 mod get_default_avatar;
-mod oauth2_connections;
 mod open_dm;
 mod remove_friend;
 mod send_friend_request;
