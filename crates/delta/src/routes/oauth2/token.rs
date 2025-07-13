@@ -45,10 +45,10 @@ pub async fn token(
         return Err(create_error!(NotAuthenticated))
     };
 
-    let authorized_bot = db.fetch_authorized_bot(&AuthorizedBotId { user: claims.sub.clone(), bot: claims.client_id.clone() }).await?;
-
-    if authorized_bot.deauthorized_at.is_some() {
-        return Err(create_error!(NotAuthenticated));
+    if let Ok(authorized_bot) = db.fetch_authorized_bot(&AuthorizedBotId { user: claims.sub.clone(), bot: claims.client_id.clone() }).await {
+        if authorized_bot.deauthorized_at.is_some() {
+            return Err(create_error!(NotAuthenticated));
+        }
     };
 
     // TODO: track used tokens and dont allow them to be used twice
@@ -88,7 +88,7 @@ pub async fn token(
                 claims.sub.clone(),
                 claims.client_id.clone(),
                 claims.redirect_uri.clone(),
-                claims.scope.clone(),
+                claims.scopes.clone(),
                 None,
             )
             .map_err(|_| create_error!(InternalError))?;
@@ -99,19 +99,23 @@ pub async fn token(
                 claims.sub.clone(),
                 claims.client_id.clone(),
                 claims.redirect_uri.clone(),
-                claims.scope.clone(),
+                claims.scopes.clone(),
                 None,
             )
             .map_err(|_| create_error!(InternalError))?;
 
             let authorized_bot_id = AuthorizedBotId { bot: claims.client_id.clone(), user: claims.sub.clone() };
+            let auth_bot = db.fetch_authorized_bot(&authorized_bot_id).await;
+            println!("{auth_bot:?}");
 
-            if db.fetch_authorized_bot(&authorized_bot_id).await.is_err_and(|err| err.error_type == ErrorType::NotFound) {
+            if auth_bot.is_err_and(|err| err.error_type == ErrorType::NotFound) {
+                println!("inserting");
+
                 db.insert_authorized_bot(&AuthorizedBot {
                     id: authorized_bot_id,
                     created_at: Timestamp::now_utc(),
                     deauthorized_at: None,
-                    scope: claims.scope.clone()
+                    scope: claims.scopes.iter().map(|&scope| scope.into()).collect()
                 }).await?;
             }
 
@@ -119,7 +123,7 @@ pub async fn token(
                 access_token: token,
                 refresh_token: Some(refresh_token),
                 token_type: "OAuth2".to_string(),
-                scope: claims.scope,
+                scope: claims.scopes.iter().map(|scope| scope.to_string()).collect::<Vec<_>>().join(" "),
             }))
         },
         v0::OAuth2GrantType::RefreshToken => {
@@ -133,7 +137,7 @@ pub async fn token(
                 claims.sub.clone(),
                 claims.client_id.clone(),
                 claims.redirect_uri.clone(),
-                claims.scope.clone(),
+                claims.scopes.clone(),
                 None,
             )
             .map_err(|_| create_error!(InternalError))?;
@@ -144,7 +148,7 @@ pub async fn token(
                 claims.sub.clone(),
                 claims.client_id.clone(),
                 claims.redirect_uri.clone(),
-                claims.scope.clone(),
+                claims.scopes.clone(),
                 None,
             )
             .map_err(|_| create_error!(InternalError))?;
@@ -153,7 +157,7 @@ pub async fn token(
                 access_token: token,
                 refresh_token: Some(refresh_token),
                 token_type: "OAuth2".to_string(),
-                scope: claims.scope,
+                scope: claims.scopes.iter().map(|scope| scope.to_string()).collect::<Vec<_>>().join(" "),
             }))
         }
         v0::OAuth2GrantType::Implicit => {

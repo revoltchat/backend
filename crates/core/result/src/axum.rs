@@ -78,6 +78,9 @@ impl IntoResponse for Error {
             ErrorType::InvalidFlagValue => StatusCode::BAD_REQUEST,
             ErrorType::FeatureDisabled { .. } => StatusCode::BAD_REQUEST,
 
+            ErrorType::MissingScope { .. } => StatusCode::UNAUTHORIZED,
+            ErrorType::ExpiredToken => StatusCode::UNAUTHORIZED,
+
             ErrorType::ProxyError => StatusCode::BAD_REQUEST,
             ErrorType::FileTooSmall => StatusCode::UNPROCESSABLE_ENTITY,
             ErrorType::FileTooLarge { .. } => StatusCode::UNPROCESSABLE_ENTITY,

@@ -92,7 +92,9 @@ impl From<crate::BotOauth2> for BotOauth2 {
 impl From<crate::OAuth2Scope> for OAuth2Scope {
     fn from(value: crate::OAuth2Scope) -> Self {
         match value {
-            crate::OAuth2Scope::Identify => OAuth2Scope::Identify,
+            crate::OAuth2Scope::ReadIdentify => OAuth2Scope::ReadIdentify,
+            crate::OAuth2Scope::ReadServers => OAuth2Scope::ReadServers,
+            crate::OAuth2Scope::Events => OAuth2Scope::Events,
             crate::OAuth2Scope::Full => OAuth2Scope::Full,
         }
     }
@@ -101,7 +103,9 @@ impl From<crate::OAuth2Scope> for OAuth2Scope {
 impl From<OAuth2Scope> for crate::OAuth2Scope {
     fn from(value: OAuth2Scope) -> Self {
         match value {
-            OAuth2Scope::Identify => crate::OAuth2Scope::Identify,
+            OAuth2Scope::ReadIdentify => crate::OAuth2Scope::ReadIdentify,
+            OAuth2Scope::ReadServers => crate::OAuth2Scope::ReadServers,
+            OAuth2Scope::Events => crate::OAuth2Scope::Events,
             OAuth2Scope::Full => crate::OAuth2Scope::Full,
         }
     }
@@ -1479,7 +1483,7 @@ impl From<AuthorizedBot> for crate::AuthorizedBot {
             id: value.id.into(),
             created_at: value.created_at,
             deauthorized_at: value.deauthorized_at,
-            scope: value.scope
+            scope: value.scope.into_iter().map(|scope| scope.into()).collect(),
         }
     }
 }
@@ -1490,7 +1494,7 @@ impl From<crate::AuthorizedBot> for AuthorizedBot {
             id: value.id.into(),
             created_at: value.created_at,
             deauthorized_at: value.deauthorized_at,
-            scope: value.scope
+            scope: value.scope.into_iter().map(|scope| scope.into()).collect(),
         }
     }
 }

@@ -1,5 +1,5 @@
 use crate::v0::{PublicBot, User};
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 auto_derived!(
     pub struct OAuth2AuthorizeAuthResponse {
@@ -85,18 +85,37 @@ auto_derived!(
     }
 
     #[derive(Copy, Hash)]
-    #[cfg_attr(feature = "serde", serde(rename = "lowercase"))]
+    #[cfg_attr(feature = "serde", serde(rename = "snake_case"))]
     pub enum OAuth2Scope {
-        Identify,
+        #[cfg_attr(feature = "serde", serde(rename = "read:identify"))]
+        ReadIdentify,
+        #[cfg_attr(feature = "serde", serde(rename = "read:servers"))]
+        ReadServers,
+        #[cfg_attr(feature = "serde", serde(rename = "events"))]
+        Events,
+        #[cfg_attr(feature = "serde", serde(rename = "full"))]
         Full,
     }
 );
+
+impl Display for OAuth2Scope {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            OAuth2Scope::ReadIdentify => "read:identify",
+            OAuth2Scope::ReadServers => "read:servers",
+            OAuth2Scope::Events => "events",
+            OAuth2Scope::Full => "full",
+        })
+    }
+}
 
 impl OAuth2Scope {
     #[allow(clippy::should_implement_trait)]
     pub fn from_str(str: &str) -> Option<OAuth2Scope> {
         match str {
-            "identify" => Some(OAuth2Scope::Identify),
+            "read:identify" => Some(OAuth2Scope::ReadIdentify),
+            "read:servers" => Some(OAuth2Scope::ReadServers),
+            "events" => Some(OAuth2Scope::Events),
             "full" => Some(OAuth2Scope::Full),
             _ => None,
         }

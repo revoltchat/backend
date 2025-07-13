@@ -29,7 +29,7 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
     openapi_get_routes_spec![
         server_create::create_server,
         server_delete::delete,
-        server_fetch::fetch,
+        server_fetch::fetch_server,
         server_edit::edit,
         server_ack::ack,
         channel_create::create_server_channel,

@@ -33,7 +33,7 @@ pub async fn auth(
         return Err(create_error!(InvalidOperation));
     };
 
-    if scopes.into_iter().any(|scope| !oauth2.allowed_scopes.contains_key(&scope.into()))
+    if scopes.iter().any(|&scope| !oauth2.allowed_scopes.contains_key(&scope.into()))
         || !oauth2.redirects.contains(&info.redirect_uri)
         || v0::OAuth2Scope::scopes_from_str(&info.scope).is_none()
     {
@@ -55,7 +55,7 @@ pub async fn auth(
                 user.id.clone(),
                 info.client_id.clone(),
                 info.redirect_uri.clone(),
-                info.scope.clone(),
+                scopes.clone(),
                 info.code_challenge_method,
             )
             .map_err(|_| create_error!(InternalError))?;
@@ -64,7 +64,7 @@ pub async fn auth(
                 id: AuthorizedBotId { bot: info.client_id.clone(), user: user.id.clone() },
                 created_at: Timestamp::now_utc(),
                 deauthorized_at: None,
-                scope: info.scope.clone()
+                scope: scopes.iter().map(|&scope| scope.into()).collect()
             }).await?;
 
             token
@@ -87,11 +87,11 @@ pub async fn auth(
 
             let token = oauth2::encode_token(
                 &config.api.security.token_secret,
-                oauth2::TokenType::Access,
+                oauth2::TokenType::Auth,
                 user.id.clone(),
                 info.client_id.clone(),
                 info.redirect_uri.clone(),
-                info.scope.clone(),
+                scopes.clone(),
                 info.code_challenge_method,
             )
             .map_err(|_| create_error!(InternalError))?;
