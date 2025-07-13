@@ -38,7 +38,7 @@ impl<'r> FromRequest<'r> for User {
 
                     let claims = oauth2::decode_token(&config.api.security.token_secret, &header_oauth_token).ok()?;
 
-                    if oauth2::scopes_can_access_route(&claims.scope, request) {
+                    if oauth2::scopes_can_access_route(&claims.scopes, request) {
                         if let Ok(user) = db.fetch_user(&claims.sub).await {
                             return Some(user)
                         }

@@ -168,6 +168,12 @@ pub enum ErrorType {
     ImageProcessingFailed,
     NoEmbedData,
 
+    // ? OAuth2 Errors
+    ExpiredToken,
+    MissingScope {
+        scope: String
+    },
+
     // ? Legacy errors
     VosoUnavailable,
 

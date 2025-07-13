@@ -1,6 +1,6 @@
 use iso8601_timestamp::Timestamp;
 
-use crate::v0::PublicBot;
+use crate::v0::{PublicBot, OAuth2Scope};
 
 auto_derived!(
     /// Unique id of the user and bot
@@ -24,11 +24,11 @@ auto_derived!(
         pub deauthorized_at: Option<Timestamp>,
 
         /// Scopes the bot has access to
-        pub scope: String
+        pub scope: Vec<OAuth2Scope>,
     }
 
     pub struct AuthorizedBotsResponse {
         pub public_bot: PublicBot,
-        pub authorized_bot: AuthorizedBot
+        pub authorized_bot: AuthorizedBot,
     }
 );

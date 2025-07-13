@@ -8,6 +8,6 @@ use rocket::serde::json::Json;
 /// Retrieve your user information.
 #[openapi(tag = "User Information")]
 #[get("/@me")]
-pub async fn fetch(user: User) -> Result<Json<v0::User>> {
+pub async fn fetch_self(user: User) -> Result<Json<v0::User>> {
     Ok(Json(user.into_self(false).await))
 }

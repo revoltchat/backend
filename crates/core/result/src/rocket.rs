@@ -84,6 +84,9 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::FailedValidation { .. } => Status::BadRequest,
             ErrorType::FeatureDisabled { .. } => Status::BadRequest,
 
+            ErrorType::MissingScope { .. } => Status::Unauthorized,
+            ErrorType::ExpiredToken => Status::Unauthorized,
+
             ErrorType::ProxyError => Status::BadRequest,
             ErrorType::FileTooSmall => Status::UnprocessableEntity,
             ErrorType::FileTooLarge { .. } => Status::UnprocessableEntity,

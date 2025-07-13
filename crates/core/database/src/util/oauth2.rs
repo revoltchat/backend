@@ -6,7 +6,10 @@ use redis_kiss::AsyncCommands;
 use revolt_result::Result;
 
 #[cfg(feature = "rocket")]
-use rocket::{http::Method, Request};
+use rocket::Request;
+
+pub use jsonwebtoken::errors::{Error as JWTError, ErrorKind as JWTErrorKind};
+use ulid::Ulid;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum TokenType {
@@ -27,12 +30,13 @@ impl TokenType {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
+    pub jti: String,
     pub sub: String,
     pub exp: i64,
 
     pub r#type: TokenType,
     pub client_id: String,
-    pub scope: String,
+    pub scopes: Vec<v0::OAuth2Scope>,
     pub redirect_uri: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub code_challange_method: Option<v0::OAuth2CodeChallangeMethod>,
@@ -45,21 +49,25 @@ pub fn encode_token(
     user_id: String,
     client_id: String,
     redirect_uri: String,
-    scope: String,
+    scopes: Vec<v0::OAuth2Scope>,
     code_challange_method: Option<v0::OAuth2CodeChallangeMethod>,
 ) -> Result<String, Error> {
-    let exp = Utc::now()
+    let now = Utc::now();
+
+    let exp = now
         .checked_add_signed(token_type.lifetime())
-        .unwrap()
-        .timestamp();
+        .unwrap();
+
+    println!("{now:?} {exp:}");
 
     let claims = Claims {
+        jti: Ulid::new().to_string(),
         sub: user_id,
-        exp,
+        exp: exp.timestamp(),
 
         r#type: token_type,
         client_id,
-        scope,
+        scopes,
         redirect_uri,
         code_challange_method
     };
@@ -78,7 +86,9 @@ pub fn decode_token(token_secret: &str, code: &str) -> Result<Claims, Error> {
 }
 
 #[cfg(feature = "rocket")]
-pub fn scope_can_access_route(scope: &str, request: &Request<'_>) -> bool {
+pub fn scope_can_access_route(scope: v0::OAuth2Scope, request: &Request<'_>) -> bool {
+    println!("{:?}", request.route());
+
     // TODO: figure out why request.segments(0..) is skipping the first segment
     let mut segments = request.uri().path().segments();
 
@@ -86,27 +96,30 @@ pub fn scope_can_access_route(scope: &str, request: &Request<'_>) -> bool {
         segments.next();  // skip first segment
     };
 
+    // Extract the function name of the route
+    let Some(route_name) = request
+        .route()
+        .and_then(|route| route.name.as_ref())
+        .map(|name| name.as_ref())
+    else {
+        return false
+    };
+
     match scope {
-        "identify" => {
-            request.method() == Method::Get &&
-            segments.get(0) == Some("users") &&
-            segments.get(1) == Some("@me")
-        },
-        "full" => true,
-        _ => false
+        v0::OAuth2Scope::ReadIdentify => route_name == "fetch_self",
+        v0::OAuth2Scope::ReadServers => route_name == "fetch_self_servers" || route_name == "fetch_server",
+        // This only grants access to the events websocket and not any routes
+        v0::OAuth2Scope::Events => false,
+        // TODO: maybe disallow revoking other sessions
+        v0::OAuth2Scope::Full => true,
     }
 }
 
 #[cfg(feature = "rocket")]
-pub fn scopes_can_access_route(scopes: &str, request: &Request<'_>) -> bool {
-    println!("{scopes}");
-    for scope in scopes.split(' ') {
-        if scope_can_access_route(scope, request) {
-            return true
-        }
-    }
-
-    false
+pub fn scopes_can_access_route(scopes: &[v0::OAuth2Scope], request: &Request<'_>) -> bool {
+    scopes
+        .iter()
+        .any(|&scope| scope_can_access_route(scope, request))
 }
 
 pub async fn add_code_challange(token: &str, code_challenge: &str) -> Result<()> {

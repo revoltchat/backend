@@ -17,9 +17,11 @@ use redis_kiss::{PayloadType, REDIS_PAYLOAD_TYPE, REDIS_URI};
 use revolt_config::report_internal_error;
 use revolt_database::{
     events::{client::EventV1, server::ClientMessage},
+    util::oauth2,
     iso8601_timestamp::Timestamp,
     Database, User, UserHint,
 };
+use revolt_models::v0;
 use revolt_presence::{create_session, delete_session};
 
 use async_std::{
@@ -88,22 +90,50 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
         return;
     };
 
+    // Presume the token is a proper token first
     let (user, session_id) = match User::from_token(db, token, UserHint::Any).await {
-        Ok(user) => user,
-        Err(err) => {
-            write
-                .send(config.encode(&EventV1::Error { data: err }))
+        Ok((user, session_id)) => {
+            db.update_session_last_seen(&session_id, Timestamp::now_utc())
                 .await
                 .ok();
-            return;
+
+            (user, session_id)
+        },
+        Err(err) => {
+            let revolt_config = revolt_config::config().await;
+
+            // If it fails to find the user from the token see if its an OAuth2 token
+            let res = match oauth2::decode_token(&revolt_config.api.security.token_secret, token) {
+                // Check if the OAuth2 token is allowed to establish an events websocket
+                Ok(claims) => if !claims.scopes.contains(&v0::OAuth2Scope::Events) {
+                    // TODO: maybe a last_seen system for OAuth2 as well
+                    db.fetch_user(&claims.sub).await.map(|user| (user, claims.jti))
+                } else {
+                    Err(create_error!(MissingScope { scope: v0::OAuth2Scope::Events.to_string() }))
+                },
+                // If its expired return an error
+                Err(e) => if e.into_kind() == oauth2::JWTErrorKind::ExpiredSignature {
+                    Err(create_error!(ExpiredToken))
+                } else {
+                    // Finally re-return the error from User::from_token if everything else fails to avoid a confusing error
+                    Err(err)
+                }
+            };
+
+            match res {
+                Ok(user) => user,
+                Err(err) => {
+                    write
+                        .send(config.encode(&EventV1::Error { data: err }))
+                        .await
+                        .ok();
+                    return;
+                }
+            }
         }
     };
 
     info!("User {addr:?} authenticated as @{}", user.username);
-
-    db.update_session_last_seen(&session_id, Timestamp::now_utc())
-        .await
-        .ok();
 
     // Create local state.
     let mut state = State::from(user, session_id);
