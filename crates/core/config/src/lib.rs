@@ -123,8 +123,7 @@ pub struct Hosts {
     pub events: String,
     pub autumn: String,
     pub january: String,
-    pub voso_legacy: String,
-    pub voso_legacy_ws: String,
+    pub livekit: HashMap<String, String>
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -196,6 +195,24 @@ pub struct ApiWorkers {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+pub struct ApiLiveKit {
+    pub nodes: HashMap<String, LiveKitNode>
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct LiveKitNode {
+    pub url: String,
+    pub lat: f64,
+    pub lon: f64,
+    pub key: String,
+    pub secret: String,
+
+    // whether to hide the node in the nodes list
+    #[serde(default)]
+    pub private: bool,
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct ApiUsers {
     pub early_adopter_cutoff: Option<u64>,
 }
@@ -206,6 +223,7 @@ pub struct Api {
     pub smtp: ApiSmtp,
     pub security: ApiSecurity,
     pub workers: ApiWorkers,
+    pub livekit: ApiLiveKit,
     pub users: ApiUsers,
 }
 
@@ -359,6 +377,7 @@ pub struct Features {
 pub struct Sentry {
     pub api: String,
     pub events: String,
+    pub voice_ingress: String,
     pub files: String,
     pub proxy: String,
     pub pushd: String,
