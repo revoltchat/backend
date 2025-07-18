@@ -109,11 +109,23 @@ pub struct Database {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+pub struct RabbitEventStream {
+    pub exchange: String,
+    pub queue: String,
+    pub channels_per_conn: usize,
+    pub stream_max_length_bytes: i64,
+    pub filter_size_bytes: i64,
+    pub qos_prefetch: u16,
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct Rabbit {
     pub host: String,
     pub port: u16,
     pub username: String,
     pub password: String,
+
+    pub event_stream: RabbitEventStream,
 }
 
 #[derive(Deserialize, Debug, Clone)]
