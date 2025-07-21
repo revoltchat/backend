@@ -17,17 +17,25 @@ impl AbstractAuthorizedBots for MongoDb {
 
     /// Fetch an authorized bot by its id
     async fn fetch_authorized_bot(&self, id: &AuthorizedBotId) -> Result<AuthorizedBot> {
-        query!(self, find_one, COL, doc! { "id.user": &id.user, "id.bot": &id.bot })?.ok_or_else(|| create_error!(NotFound))
+        query!(
+            self,
+            find_one,
+            COL,
+            doc! {
+                "_id.user": &id.user,
+                "_id.bot": &id.bot
+            }
+        )?.ok_or_else(|| create_error!(NotFound))
     }
 
     /// Fetch a users authorized bot by its id
     async fn fetch_users_authorized_bots(&self, user_id: &str) -> Result<Vec<AuthorizedBot>> {
-        query!(self, find, COL, doc! { "id.user": &user_id })
+        query!(self, find, COL, doc! { "_id.user": &user_id })
     }
 
     /// Deletes an authorized bot
     async fn delete_authorized_bot(&self, id: &AuthorizedBotId) -> Result<()> {
-        query!(self, delete_one, COL, doc! { "id.user": &id.user, "id.bot": &id.bot }).map(|_| ())
+        query!(self, delete_one, COL, doc! { "_id.user": &id.user, "_id.bot": &id.bot }).map(|_| ())
     }
 
     /// Deauthorizes an authorized bot
@@ -35,8 +43,8 @@ impl AbstractAuthorizedBots for MongoDb {
         self.col::<AuthorizedBot>(COL)
             .find_one_and_update(
                 doc! {
-                    "id.user": &id.user,
-                    "id.bot": &id.bot
+                    "_id.user": &id.user,
+                    "_id.bot": &id.bot
                 },
                 doc! {
                     "$set": {
