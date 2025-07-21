@@ -203,7 +203,13 @@ fn custom_openapi_spec() -> OpenApi {
               "Sync",
               "Web Push"
             ]
-          }
+          },
+          {
+            "name": "OAuth2",
+            "tags": [
+                "OAuth2",
+            ]
+          },
         ]),
     );
 
@@ -373,6 +379,11 @@ fn custom_openapi_spec() -> OpenApi {
             Tag {
                 name: "Webhooks".to_owned(),
                 description: Some("Send messages from 3rd party services".to_owned()),
+                ..Default::default()
+            },
+            Tag {
+                name: "OAuth2".to_owned(),
+                description: Some("Integrate Revolt into 3rd party applications".to_owned()),
                 ..Default::default()
             },
         ],

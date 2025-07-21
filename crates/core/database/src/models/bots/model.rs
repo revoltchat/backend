@@ -54,6 +54,8 @@ auto_derived!(
         ReadIdentify,
         #[serde(rename = "read:servers")]
         ReadServers,
+        #[serde(rename = "write:files")]
+        WriteFiles,
         #[serde(rename = "events")]
         Events,
         #[serde(rename = "full")]

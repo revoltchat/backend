@@ -1,5 +1,6 @@
 use authifier::models::Session;
 use revolt_config::config;
+use revolt_models::v0;
 use rocket::http::Status;
 use rocket::request::{self, FromRequest, Outcome, Request};
 
@@ -36,14 +37,22 @@ impl<'r> FromRequest<'r> for User {
                 } else if let Some(header_oauth_token) = header_oauth_token {
                     let config = config().await;
 
-                    let claims = oauth2::decode_token(&config.api.security.token_secret, &header_oauth_token).ok()?;
+                    let claims = oauth2::decode_token(
+                        &config.api.security.token_secret,
+                        &header_oauth_token,
+                    )
+                    .ok()?;
 
-                    if oauth2::scopes_can_access_route(&claims.scopes, request) {
+                    let required_scope: v0::OAuth2Scope = request.local_cache(|| None::<crate::OAuth2Scope>)
+                        .as_ref()
+                        .copied()?
+                        .into();
+
+                    if claims.scopes.contains(&v0::OAuth2Scope::Full) || claims.scopes.contains(&required_scope) {
                         if let Ok(user) = db.fetch_user(&claims.sub).await {
-                            return Some(user)
+                            return Some(user);
                         }
                     }
-
                 } else if let Outcome::Success(session) = request.guard::<Session>().await {
                     if let Ok(user) = db.fetch_user(&session.user_id).await {
                         return Some(user);

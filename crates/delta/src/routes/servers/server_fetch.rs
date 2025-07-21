@@ -1,5 +1,5 @@
 use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    util::{oauth2::{scopes, OAuth2Scoped}, permissions::DatabasePermissionQuery, reference::Reference},
     Database, User,
 };
 use revolt_models::v0;
@@ -14,6 +14,7 @@ use rocket::{serde::json::Json, State};
 #[get("/<target>?<options..>")]
 pub async fn fetch_server(
     db: &State<Database>,
+    _oauth2_scope: OAuth2Scoped<scopes::ReadServers>,
     user: User,
     target: Reference<'_>,
     options: v0::OptionsFetchServer,

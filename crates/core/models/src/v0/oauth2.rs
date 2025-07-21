@@ -91,6 +91,8 @@ auto_derived!(
         ReadIdentify,
         #[cfg_attr(feature = "serde", serde(rename = "read:servers"))]
         ReadServers,
+        #[cfg_attr(feature = "serde", serde(rename = "write:files"))]
+        WriteFiles,
         #[cfg_attr(feature = "serde", serde(rename = "events"))]
         Events,
         #[cfg_attr(feature = "serde", serde(rename = "full"))]
@@ -103,6 +105,7 @@ impl Display for OAuth2Scope {
         f.write_str(match self {
             OAuth2Scope::ReadIdentify => "read:identify",
             OAuth2Scope::ReadServers => "read:servers",
+            OAuth2Scope::WriteFiles => "write:files",
             OAuth2Scope::Events => "events",
             OAuth2Scope::Full => "full",
         })
