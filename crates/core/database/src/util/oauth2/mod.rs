@@ -1,12 +1,18 @@
 use chrono::{TimeDelta, Utc};
 use jsonwebtoken::{decode, encode, errors::Error, DecodingKey, EncodingKey, Header, Validation};
-use serde::{Serialize, Deserialize};
-use revolt_models::v0;
 use redis_kiss::AsyncCommands;
+use revolt_models::v0;
 use revolt_result::Result;
+use serde::{Deserialize, Serialize};
+
+pub mod scopes;
+pub use scopes::OAuth2Scoped;
 
 #[cfg(feature = "rocket")]
-use rocket::Request;
+pub mod rocket;
+
+#[cfg(feature = "axum")]
+pub mod axum;
 
 pub use jsonwebtoken::errors::{Error as JWTError, ErrorKind as JWTErrorKind};
 use ulid::Ulid;
@@ -15,7 +21,7 @@ use ulid::Ulid;
 pub enum TokenType {
     Auth,
     Access,
-    Refresh
+    Refresh,
 }
 
 impl TokenType {
@@ -54,9 +60,7 @@ pub fn encode_token(
 ) -> Result<String, Error> {
     let now = Utc::now();
 
-    let exp = now
-        .checked_add_signed(token_type.lifetime())
-        .unwrap();
+    let exp = now.checked_add_signed(token_type.lifetime()).unwrap();
 
     println!("{now:?} {exp:}");
 
@@ -69,7 +73,7 @@ pub fn encode_token(
         client_id,
         scopes,
         redirect_uri,
-        code_challange_method
+        code_challange_method,
     };
 
     let encoding_key = EncodingKey::from_secret(token_secret.as_bytes());
@@ -80,46 +84,13 @@ pub fn encode_token(
 pub fn decode_token(token_secret: &str, code: &str) -> Result<Claims, Error> {
     let decoding_key = DecodingKey::from_secret(token_secret.as_bytes());
 
-    let data = decode(code, &decoding_key, &Validation::new(jsonwebtoken::Algorithm::HS256))?;
+    let data = decode(
+        code,
+        &decoding_key,
+        &Validation::new(jsonwebtoken::Algorithm::HS256),
+    )?;
 
     Ok(data.claims)
-}
-
-#[cfg(feature = "rocket")]
-pub fn scope_can_access_route(scope: v0::OAuth2Scope, request: &Request<'_>) -> bool {
-    println!("{:?}", request.route());
-
-    // TODO: figure out why request.segments(0..) is skipping the first segment
-    let mut segments = request.uri().path().segments();
-
-    if segments.get(0) == Some("0.8") {
-        segments.next();  // skip first segment
-    };
-
-    // Extract the function name of the route
-    let Some(route_name) = request
-        .route()
-        .and_then(|route| route.name.as_ref())
-        .map(|name| name.as_ref())
-    else {
-        return false
-    };
-
-    match scope {
-        v0::OAuth2Scope::ReadIdentify => route_name == "fetch_self",
-        v0::OAuth2Scope::ReadServers => route_name == "fetch_self_servers" || route_name == "fetch_server",
-        // This only grants access to the events websocket and not any routes
-        v0::OAuth2Scope::Events => false,
-        // TODO: maybe disallow revoking other sessions
-        v0::OAuth2Scope::Full => true,
-    }
-}
-
-#[cfg(feature = "rocket")]
-pub fn scopes_can_access_route(scopes: &[v0::OAuth2Scope], request: &Request<'_>) -> bool {
-    scopes
-        .iter()
-        .any(|&scope| scope_can_access_route(scope, request))
 }
 
 pub async fn add_code_challange(token: &str, code_challenge: &str) -> Result<()> {
@@ -130,7 +101,7 @@ pub async fn add_code_challange(token: &str, code_challenge: &str) -> Result<()>
     conn.pset_ex::<_, _, ()>(
         format!("oauth2:{token}:code_challenge"),
         code_challenge,
-        TokenType::Access.lifetime().num_milliseconds() as usize
+        TokenType::Access.lifetime().num_milliseconds() as usize,
     )
     .await
     .map_err(|_| create_error!(InternalError))?;

@@ -1,4 +1,4 @@
-use revolt_database::{util::permissions::DatabasePermissionQuery, Database, User};
+use revolt_database::{util::{oauth2::{scopes, OAuth2Scoped}, permissions::DatabasePermissionQuery}, Database, User};
 use revolt_models::v0;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_result::Result;
@@ -11,6 +11,7 @@ use rocket::{serde::json::Json, State};
 #[get("/@me/servers?<options..>")]
 pub async fn fetch_self_servers(
     db: &State<Database>,
+    _oauth2_scope: OAuth2Scoped<scopes::ReadServers>,
     user: User,
     options: v0::OptionsFetchServer,
 ) -> Result<Json<Vec<v0::FetchServerResponse>>> {

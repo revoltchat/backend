@@ -94,6 +94,7 @@ impl From<crate::OAuth2Scope> for OAuth2Scope {
         match value {
             crate::OAuth2Scope::ReadIdentify => OAuth2Scope::ReadIdentify,
             crate::OAuth2Scope::ReadServers => OAuth2Scope::ReadServers,
+            crate::OAuth2Scope::WriteFiles => OAuth2Scope::WriteFiles,
             crate::OAuth2Scope::Events => OAuth2Scope::Events,
             crate::OAuth2Scope::Full => OAuth2Scope::Full,
         }
@@ -105,6 +106,7 @@ impl From<OAuth2Scope> for crate::OAuth2Scope {
         match value {
             OAuth2Scope::ReadIdentify => crate::OAuth2Scope::ReadIdentify,
             OAuth2Scope::ReadServers => crate::OAuth2Scope::ReadServers,
+            OAuth2Scope::WriteFiles => crate::OAuth2Scope::WriteFiles,
             OAuth2Scope::Events => crate::OAuth2Scope::Events,
             OAuth2Scope::Full => crate::OAuth2Scope::Full,
         }
