@@ -106,11 +106,8 @@ pub async fn token(
 
             let authorized_bot_id = AuthorizedBotId { bot: claims.client_id.clone(), user: claims.sub.clone() };
             let auth_bot = db.fetch_authorized_bot(&authorized_bot_id).await;
-            println!("{auth_bot:?}");
 
             if auth_bot.is_err_and(|err| err.error_type == ErrorType::NotFound) {
-                println!("inserting");
-
                 db.insert_authorized_bot(&AuthorizedBot {
                     id: authorized_bot_id,
                     created_at: Timestamp::now_utc(),
