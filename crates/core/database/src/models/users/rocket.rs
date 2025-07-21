@@ -43,6 +43,7 @@ impl<'r> FromRequest<'r> for User {
                     )
                     .ok()?;
 
+                    // access the scope required for the route stored in the request local cache set via `OAuth2Scoped`
                     let required_scope: v0::OAuth2Scope = request.local_cache(|| None::<crate::OAuth2Scope>)
                         .as_ref()
                         .copied()?

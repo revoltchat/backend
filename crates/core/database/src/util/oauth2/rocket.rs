@@ -46,7 +46,7 @@ impl<'r, Scope: OAuth2Scope> OpenApiFromRequest<'r> for OAuth2Scoped<Scope> {
                 }
             },
             revolt_okapi::map! {
-                "OAuth2".to_owned() => vec![Scope::NAME.to_owned()]
+                "OAuth2".to_owned() => vec![Scope::MODEL.to_string()]
             },
         ))
     }
