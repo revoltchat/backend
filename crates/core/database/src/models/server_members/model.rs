@@ -81,6 +81,7 @@ impl Member {
         server: &Server,
         user: &User,
         channels: Option<Vec<Channel>>,
+        create_alert: bool,
     ) -> Result<(Member, Vec<Channel>)> {
         if db.fetch_ban(&server.id, &user.id).await.is_ok() {
             return Err(create_error!(Banned));
@@ -141,18 +142,20 @@ impl Member {
         .private(user.id.clone())
         .await;
 
-        if let Some(id) = server
-            .system_messages
-            .as_ref()
-            .and_then(|x| x.user_joined.as_ref())
-        {
-            SystemMessage::UserJoined {
-                id: user.id.clone(),
+        if create_alert {
+            if let Some(id) = server
+                .system_messages
+                .as_ref()
+                .and_then(|x| x.user_joined.as_ref())
+            {
+                SystemMessage::UserJoined {
+                    id: user.id.clone(),
+                }
+                .into_message(id.to_string())
+                .send_without_notifications(db, None, None, false, false, false)
+                .await
+                .ok();
             }
-            .into_message(id.to_string())
-            .send_without_notifications(db, None, None, false, false, false)
-            .await
-            .ok();
         }
 
         Ok((member, channels))

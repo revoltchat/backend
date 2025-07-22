@@ -127,4 +127,9 @@ auto_derived!(
         #[cfg_attr(feature = "validator", validate(length(min = 1)))]
         pub remove: Option<Vec<FieldsMember>>,
     }
+
+    pub struct MemberWithUserResponse {
+        pub user: crate::v0::User,
+        pub member: Member,
+    }
 );
