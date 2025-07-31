@@ -38,16 +38,22 @@ impl ProtocolConfiguration {
         match self.format {
             ProtocolFormat::Json => {
                 if let Message::Text(text) = msg {
-                    serde_json::from_str(text).to_internal_error()
+                    // Log the error in-case we make a breaking change to the payload
+
+                    serde_json::from_str(text)
+                        .capture_error()
+                        .map_err(|_| create_error!(UnprocessableEntity))
                 } else {
-                    Err(create_error!(InternalError))
+                    Err(create_error!(UnprocessableEntity))
                 }
             }
             ProtocolFormat::Msgpack => {
                 if let Message::Binary(buf) = msg {
-                    rmp_serde::from_slice(buf).to_internal_error()
+                    rmp_serde::from_slice(buf)
+                        .capture_error()
+                        .map_err(|_| create_error!(UnprocessableEntity))
                 } else {
-                    Err(create_error!(InternalError))
+                    Err(create_error!(UnprocessableEntity))
                 }
             }
         }
