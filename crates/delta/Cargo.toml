@@ -79,7 +79,7 @@ revolt-models = { path = "../core/models", features = [
     "rocket",
 ] }
 revolt-presence = { path = "../core/presence" }
-revolt-result = { path = "../core/result", features = ["rocket", "okapi"] }
+revolt-result = { path = "../core/result", features = ["rocket", "okapi", "sentry"] }
 revolt-permissions = { path = "../core/permissions", features = ["schemas"] }
 
 [build-dependencies]

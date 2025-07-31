@@ -23,7 +23,7 @@ aws-sdk-s3 = { version = "1.46.0", features = ["behavior-version-latest"] }
 revolt-config = { version = "0.8.8", path = "../config", features = [
     "report-macros",
 ] }
-revolt-result = { version = "0.8.8", path = "../result" }
+revolt-result = { version = "0.8.8", path = "../result", features = ["sentry"] }
 
 # image processing
 jxl-oxide = "0.8.1"

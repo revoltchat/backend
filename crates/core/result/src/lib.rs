@@ -213,7 +213,12 @@ pub trait ToRevoltError<T>: Sized {
 
 impl<T, E: std::error::Error> ToRevoltError<T> for Result<T, E> {
     fn capture_error(self) -> Self {
-        self.inspect_err(|e| { sentry::capture_error(e); })
+
+        #[allow(unused_variables)]
+        self.inspect_err(|e| {
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(e);
+        })
     }
 
     #[track_caller]
@@ -233,7 +238,11 @@ impl<T, E: std::error::Error> ToRevoltError<T> for Result<T, E> {
 
 impl<T: std::error::Error> ToRevoltError<T> for Option<T> {
     fn capture_error(self) -> Self {
-        self.inspect(|e| { sentry::capture_error(e); })
+        #[allow(unused_variables)]
+        self.inspect(|e| {
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(e);
+        })
     }
 
     #[track_caller]
