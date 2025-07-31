@@ -488,31 +488,28 @@ impl Message {
                 | Channel::VoiceChannel { ref server, .. } => {
                     let mentions_vec = Vec::from_iter(user_mentions.iter().cloned());
 
-                    let valid_members = db.fetch_members(server.as_str(), &mentions_vec[..]).await;
-                    if let Ok(valid_members) = valid_members {
-                        let valid_mentions = HashSet::<&String, RandomState>::from_iter(
-                            valid_members.iter().map(|m| &m.id.user),
-                        );
+                    let valid_members = db.fetch_members(server.as_str(), &mentions_vec[..]).await?;
 
-                        user_mentions.retain(|m| valid_mentions.contains(m)); // quick pass, validate mentions are in the server
+                    let valid_mentions = HashSet::<&String, RandomState>::from_iter(
+                        valid_members.iter().map(|m| &m.id.user),
+                    );
 
-                        if !user_mentions.is_empty() {
-                            // if there are still mentions, drill down to a channel-level
-                            let member_channel_view_perms =
-                                BulkDatabasePermissionQuery::from_server_id(db, server)
-                                    .await
-                                    .channel(&channel)
-                                    .members(&valid_members)
-                                    .members_can_see_channel()
-                                    .await;
+                    user_mentions.retain(|m| valid_mentions.contains(m)); // quick pass, validate mentions are in the server
 
-                            user_mentions
-                                .retain(|m| *member_channel_view_perms.get(m).unwrap_or(&false));
-                        }
-                    } else {
-                        revolt_config::capture_error(&valid_members.unwrap_err());
-                        return Err(create_error!(InternalError));
+                    if !user_mentions.is_empty() {
+                        // if there are still mentions, drill down to a channel-level
+                        let member_channel_view_perms =
+                            BulkDatabasePermissionQuery::from_server_id(db, server)
+                                .await
+                                .channel(&channel)
+                                .members(&valid_members)
+                                .members_can_see_channel()
+                                .await;
+
+                        user_mentions
+                            .retain(|m| *member_channel_view_perms.get(m).unwrap_or(&false));
                     }
+
                 }
                 Channel::SavedMessages { .. } => {
                     user_mentions.clear();
