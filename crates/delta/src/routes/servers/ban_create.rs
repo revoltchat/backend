@@ -6,8 +6,8 @@ use revolt_models::v0;
 
 use revolt_permissions::{calculate_server_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
-use validator::Validate;
+use rocket::State;
+use crate::util::json::{Json, Validate};
 
 /// # Ban User
 ///
@@ -19,14 +19,9 @@ pub async fn ban(
     user: User,
     server: Reference,
     target: Reference,
-    data: Json<v0::DataBanCreate>,
+    data: Validate<Json<v0::DataBanCreate>>,
 ) -> Result<Json<v0::ServerBan>> {
-    let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    let data = data.into_inner().into_inner();
 
     let server = server.as_server(db).await?;
 

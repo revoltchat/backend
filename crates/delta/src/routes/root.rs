@@ -1,6 +1,6 @@
+use crate::util::json::Json;
 use revolt_config::config;
 use revolt_result::Result;
-use rocket::serde::json::Json;
 use serde::Serialize;
 
 /// # hCaptcha Configuration

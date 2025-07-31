@@ -7,10 +7,9 @@ use revolt_database::{Interactions, Message, AMQP};
 use revolt_models::v0;
 use revolt_permissions::PermissionQuery;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
-use revolt_result::{create_error, Result};
-use rocket::serde::json::Json;
+use revolt_result::Result;
+use crate::util::json::{Json, Validate};
 use rocket::State;
-use validator::Validate;
 
 /// # Send Message
 ///
@@ -22,15 +21,10 @@ pub async fn message_send(
     amqp: &State<AMQP>,
     user: User,
     target: Reference,
-    data: Json<v0::DataMessageSend>,
+    data: Validate<Json<v0::DataMessageSend>>,
     idempotency: IdempotencyKey,
 ) -> Result<Json<v0::Message>> {
-    let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    let data = data.into_inner().into_inner();
 
     // Ensure we have permissions to send a message
     let channel = target.as_channel(db).await?;

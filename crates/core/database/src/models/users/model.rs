@@ -705,6 +705,8 @@ impl User {
         duration_days: Option<usize>,
         reason: Option<Vec<String>>,
     ) -> Result<()> {
+        // TODO: authifier Error should implement Error
+
         let authifier = db.clone().to_authifier().await;
         let mut account = authifier
             .database

@@ -113,6 +113,8 @@ impl<'r> FromRequest<'r> for IdempotencyKey {
             let idempotency = IdempotencyKey { key };
             let mut cache = TOKEN_CACHE.lock().await;
             if cache.get(&idempotency.key).is_some() {
+                request.local_cache(|| Some(create_error!(DuplicateNonce)));
+
                 return Outcome::Error((Status::Conflict, create_error!(DuplicateNonce)));
             }
 

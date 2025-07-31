@@ -2,9 +2,8 @@ use revolt_database::{Database, Member, Server, User};
 use revolt_models::v0;
 use revolt_result::{create_error, Result};
 
-use rocket::serde::json::Json;
+use crate::util::json::{Json, Validate};
 use rocket::State;
-use validator::Validate;
 
 /// # Create Server
 ///
@@ -14,18 +13,13 @@ use validator::Validate;
 pub async fn create_server(
     db: &State<Database>,
     user: User,
-    data: Json<v0::DataCreateServer>,
+    data: Validate<Json<v0::DataCreateServer>>,
 ) -> Result<Json<v0::CreateServerLegacyResponse>> {
     if user.bot.is_some() {
         return Err(create_error!(IsBot));
     }
 
-    let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    let data = data.into_inner().into_inner();
 
     user.can_acquire_server(db).await?;
 

@@ -3,7 +3,8 @@ use revolt_models::v0;
 
 use chrono::prelude::*;
 use revolt_result::Result;
-use rocket::{serde::json::Json, State};
+use rocket::State;
+use crate::util::json::Json;
 use rocket_empty::EmptyResponse;
 use std::collections::HashMap;
 

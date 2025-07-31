@@ -5,8 +5,8 @@ use revolt_database::{
 use revolt_models::v0;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
-use validator::Validate;
+use rocket::State;
+use crate::util::json::{Json, Validate};
 
 /// # Search for Messages
 ///
@@ -17,18 +17,13 @@ pub async fn search(
     db: &State<Database>,
     user: User,
     target: Reference,
-    options: Json<v0::DataMessageSearch>,
+    options: Validate<Json<v0::DataMessageSearch>>,
 ) -> Result<Json<v0::BulkMessageResponse>> {
     if user.bot.is_some() {
         return Err(create_error!(IsBot));
     }
 
-    let options = options.into_inner();
-    options.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    let options = options.into_inner().into_inner();
 
     if options.query.is_some() && options.pinned.is_some() {
         return Err(create_error!(InvalidOperation))

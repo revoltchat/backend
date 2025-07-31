@@ -6,7 +6,7 @@ use aes_gcm::{
 };
 use image::{DynamicImage, ImageBuffer};
 use revolt_config::{config, report_internal_error, FilesS3};
-use revolt_result::{create_error, Result};
+use revolt_result::{create_error, Result, ToRevoltError};
 
 use aws_sdk_s3::{
     config::{Credentials, Region},
@@ -78,7 +78,7 @@ pub async fn fetch_from_s3(bucket_id: &str, path: &str, nonce: &str) -> Result<V
     // Decrypt the file
     create_cipher(&config.files.encryption_key)
         .decrypt_in_place(nonce, b"", &mut buf)
-        .map_err(|_| create_error!(InternalError))?;
+        .to_internal_error()?;
 
     Ok(buf)
 }
@@ -97,7 +97,7 @@ pub async fn upload_to_s3(bucket_id: &str, path: &str, buf: &[u8]) -> Result<Str
     // Encrypt the file in place
     create_cipher(&config.files.encryption_key)
         .encrypt_in_place(&nonce, b"", &mut buf)
-        .map_err(|_| create_error!(InternalError))?;
+        .to_internal_error()?;
 
     // Upload the file to remote
     report_internal_error!(

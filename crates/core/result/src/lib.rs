@@ -1,3 +1,4 @@
+use std::panic::Location;
 use std::fmt::Display;
 
 #[cfg(feature = "serde")]
@@ -151,9 +152,15 @@ pub enum ErrorType {
     InvalidSession,
     InvalidFlagValue,
     NotAuthenticated,
+    Conflict,
     DuplicateNonce,
     NotFound,
     NoEffect,
+    IOError,
+    UnprocessableEntity,
+    DeserializationError {
+        error: String,
+    },
     FailedValidation {
         error: String,
     },
@@ -174,7 +181,7 @@ pub enum ErrorType {
     // ? Feature flag disabled in the config
     FeatureDisabled {
         feature: String,
-    },
+    }
 }
 
 #[macro_export]
@@ -195,6 +202,62 @@ macro_rules! create_database_error {
             collection: $collection.to_string()
         })
     };
+}
+
+pub trait ToRevoltError<T>: Sized {
+    fn capture_error(self) -> Self;
+
+    #[track_caller]
+    fn to_internal_error(self) -> Result<T, Error>;
+}
+
+impl<T, E: std::error::Error> ToRevoltError<T> for Result<T, E> {
+    fn capture_error(self) -> Self {
+
+        #[allow(unused_variables)]
+        self.inspect_err(|e| {
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(e);
+        })
+    }
+
+    #[track_caller]
+    fn to_internal_error(self) -> Result<T, Error> {
+        let loc = Location::caller();
+
+        self
+            .capture_error()
+            .map_err(|_| {
+                Error {
+                    error_type: ErrorType::InternalError,
+                    location: format!("{}:{}:{}", loc.file(), loc.line(), loc.column())
+                }
+            })
+    }
+}
+
+impl<T: std::error::Error> ToRevoltError<T> for Option<T> {
+    fn capture_error(self) -> Self {
+        #[allow(unused_variables)]
+        self.inspect(|e| {
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(e);
+        })
+    }
+
+    #[track_caller]
+    fn to_internal_error(self) -> Result<T, Error> {
+        let loc = Location::caller();
+
+        self
+        .capture_error()
+        .ok_or_else(|| {
+            Error {
+                error_type: ErrorType::InternalError,
+                location: format!("{}:{}:{}", loc.file(), loc.line(), loc.column())
+            }
+        })
+    }
 }
 
 #[cfg(test)]

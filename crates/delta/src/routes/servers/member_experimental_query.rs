@@ -6,27 +6,8 @@ use revolt_database::{
 use revolt_models::v0;
 use revolt_permissions::PermissionQuery;
 use revolt_result::{create_error, Result};
-use rocket::{serde::json::Json, State};
-use serde::{Deserialize, Serialize};
-
-/// # Query Parameters
-#[derive(Deserialize, JsonSchema, FromForm)]
-pub struct OptionsQueryMembers {
-    /// String to search for
-    query: String,
-
-    /// Discourage use of this API
-    experimental_api: bool,
-}
-
-/// # Query members by name
-#[derive(Serialize, JsonSchema)]
-pub struct MemberQueryResponse {
-    /// List of members
-    members: Vec<v0::Member>,
-    /// List of users
-    users: Vec<v0::User>,
-}
+use rocket::State;
+use crate::util::json::Json;
 
 /// # Query members by name
 ///
@@ -37,8 +18,8 @@ pub async fn member_experimental_query(
     db: &State<Database>,
     user: User,
     target: Reference,
-    options: OptionsQueryMembers,
-) -> Result<Json<MemberQueryResponse>> {
+    options: v0::OptionsQueryMembers,
+) -> Result<Json<v0::MemberQueryResponse>> {
     if !options.experimental_api {
         return Err(create_error!(InternalError));
     }
@@ -84,7 +65,7 @@ pub async fn member_experimental_query(
 
     // Take the first ten and return them
     let (members, users): (Vec<Member>, Vec<User>) = zipped_vec.into_iter().take(10).unzip();
-    Ok(Json(MemberQueryResponse {
+    Ok(Json(v0::MemberQueryResponse {
         members: members.into_iter().map(Into::into).collect(),
         users: join_all(
             users

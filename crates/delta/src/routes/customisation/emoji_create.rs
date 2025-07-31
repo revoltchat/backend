@@ -3,9 +3,8 @@ use revolt_database::{util::permissions::DatabasePermissionQuery, Database, Emoj
 use revolt_models::v0;
 use revolt_permissions::{calculate_server_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
-use validator::Validate;
-
-use rocket::{serde::json::Json, State};
+use rocket::State;
+use crate::util::json::{Json, Validate};
 
 /// # Create New Emoji
 ///
@@ -16,16 +15,11 @@ pub async fn create_emoji(
     db: &State<Database>,
     user: User,
     id: String,
-    data: Json<v0::DataCreateEmoji>,
+    data: Validate<Json<v0::DataCreateEmoji>>,
 ) -> Result<Json<v0::Emoji>> {
     let config = config().await;
 
-    let data = data.into_inner();
-    data.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    let data = data.into_inner().into_inner();
 
     // Validate we have permission to write into parent
     match &data.parent {

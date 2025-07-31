@@ -6,7 +6,7 @@ use revolt_models::v0;
 
 use revolt_permissions::{calculate_server_permissions, ChannelPermission};
 use revolt_result::Result;
-use rocket::serde::json::Json;
+use crate::util::json::Json;
 use rocket::State;
 
 /// # Fetch Bans

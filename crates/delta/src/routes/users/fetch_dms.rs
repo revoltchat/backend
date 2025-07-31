@@ -1,7 +1,8 @@
 use revolt_database::{Database, User};
 use revolt_models::v0;
 use revolt_result::Result;
-use rocket::{serde::json::Json, State};
+use rocket::State;
+use crate::util::json::Json;
 
 /// # Fetch Direct Message Channels
 ///

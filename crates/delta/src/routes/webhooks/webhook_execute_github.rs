@@ -1,6 +1,6 @@
 use revolt_database::{util::reference::Reference, Database, Message, AMQP};
 use revolt_models::v0::{MessageAuthor, SendableEmbed, Webhook};
-use revolt_result::{create_error, Error, Result};
+use revolt_result::{create_error, Error, Result, ToRevoltError};
 use revolt_rocket_okapi::{
     gen::OpenApiGenerator,
     request::{OpenApiFromRequest, RequestHeaderInput},
@@ -636,6 +636,8 @@ impl<'r> FromRequest<'r> for EventHeader<'r> {
     async fn from_request(request: &'r Request<'_>) -> rocket::request::Outcome<Self, Self::Error> {
         let headers = request.headers();
         let Some(event) = headers.get_one("X-GitHub-Event") else {
+            request.local_cache(|| Some(create_error!(InvalidOperation)));
+
             return rocket::request::Outcome::Error((
                 Status::BadRequest,
                 create_error!(InvalidOperation),
@@ -701,7 +703,7 @@ fn safe_from_str<T: for<'de> Deserialize<'de>>(data: &str) -> Result<T> {
     match serde_json::from_str(data) {
         Ok(output) => Ok(output),
         Err(err) => {
-            log::error!("{err:?}");
+            revolt_config::capture_error(&err);
             Err(create_error!(InvalidOperation))
         }
     }
@@ -1061,11 +1063,13 @@ pub async fn webhook_execute_github(
         },
     };
 
-    sendable_embed.validate().map_err(|error| {
-        create_error!(FailedValidation {
-            error: error.to_string()
-        })
-    })?;
+    sendable_embed.validate()
+        .capture_error()
+        .map_err(|error| {
+            create_error!(FailedValidation {
+                error: error.to_string()
+            })
+        })?;
 
     let message_id = Ulid::new().to_string();
 
