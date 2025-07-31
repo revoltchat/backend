@@ -34,10 +34,11 @@ pub async fn edit(
         .ok_or(create_error!(UnknownCategory))?
         .clone();
 
-    let mut query = DatabasePermissionQuery::new(db, &user).server(&server);
-    calculate_server_permissions(&mut query)
-        .await
-        .throw_if_lacking_channel_permission(ChannelPermission::ManageChannel)?;
+    let mut query = DatabasePermissionQuery::new(db, &user).server(&server).category(&category);
+    let permissions = calculate_server_permissions(&mut query)
+        .await;
+
+    permissions.throw_if_lacking_channel_permission(ChannelPermission::ManageChannel)?;
 
     let DataEditCategory {
         title,
@@ -45,9 +46,24 @@ pub async fn edit(
         remove
     } = data;
 
+    if channels.is_some() {
+        permissions.throw_if_lacking_channel_permission(ChannelPermission::MoveChannels)?;
+    }
+
+    // if any channel we are adding to this category are in another category we need to make sure we have MoveChannels in the category before moving it over.
+    for category in server.categories.values() {
+        if category.channels.iter().any(|c| channels.as_ref().is_some_and(|cs| cs.contains(c))) {
+            let mut category_query = query.clone().category(category);
+
+            calculate_server_permissions(&mut category_query)
+                .await
+                .throw_if_lacking_channel_permission(ChannelPermission::MoveChannels)?;
+        }
+    }
+
     // remove the channels from any existing categories to avoid it having two
     for category in server.categories.values_mut() {
-        category.channels.retain(|c| channels.as_ref().map_or(false, |cs| cs.contains(c)));
+        category.channels.retain(|c| channels.as_ref().is_some_and(|cs| cs.contains(c)));
     }
 
     // only keep channels which exist in the server
