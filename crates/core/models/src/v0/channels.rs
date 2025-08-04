@@ -328,7 +328,12 @@ auto_derived!(
 
     /// Join a voice channel
     pub struct DataJoinCall {
+        /// Name of the node to join
         pub node: Option<String>,
+        /// Whether to force disconnect any other existing voice connections.
+        ///
+        /// useful for disconnecting on another device and joining on a new.
+        pub force_disconnect: Option<bool>
     }
 
 );
