@@ -36,7 +36,7 @@ pub async fn remove_member(
             return Err(create_error!(CannotRemoveYourself));
         }
 
-        if !recipients.iter().any(|x| *x == member.id) {
+        if !recipients.contains(&member.id) {
             return Err(create_error!(NotInGroup));
         }
 

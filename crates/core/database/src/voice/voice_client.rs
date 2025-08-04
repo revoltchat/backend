@@ -89,7 +89,7 @@ impl VoiceClient {
         let room = self.get_node(node)?;
 
         let voice = match channel {
-            Channel::DirectMessage { .. } => Some(Cow::Owned(v0::VoiceInformation::default())),
+            Channel::DirectMessage { .. } | Channel::Group { .. } => Some(Cow::Owned(v0::VoiceInformation::default())),
             Channel::TextChannel { voice: Some(voice), .. } => Some(Cow::Borrowed(voice)),
             _ => None
         }
@@ -99,7 +99,7 @@ impl VoiceClient {
             .create_room(
                 channel.id(),
                 CreateRoomOptions {
-                    max_participants: voice.max_users.unwrap_or(u32::MAX),
+                    max_participants: voice.max_users.unwrap_or(0),
                     empty_timeout: 5 * 60, // 5 minutes,
                     ..Default::default()
                 },

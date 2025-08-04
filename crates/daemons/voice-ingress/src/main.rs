@@ -63,7 +63,8 @@ async fn ingress(db: &State<Database>, node: &str, voice_client: &State<VoiceCli
     let config = revolt_config::config().await;
 
     let node_info = config.api.livekit.nodes.get(node)
-        .ok_or_else(|| create_error!(NotAuthenticated))?;
+        .to_internal_error()
+        .inspect_err(|_| log::error!("Unknown node {node}, make sure livekit has the correct node name set."))?;
 
     let webhook_receiver = WebhookReceiver::new(TokenVerifier::with_api_key(&node_info.key, &node_info.secret));
     let event = webhook_receiver.receive(body, &auth_header).to_internal_error()?;
