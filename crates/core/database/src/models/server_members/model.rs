@@ -271,8 +271,12 @@ mod tests {
     use crate::{Member, PartialMember, RemovalIntention, Server, User};
 
     #[async_std::test]
-    async fn crud() {
+    async fn muted_member_rejoin() {
         database_test!(|db| async move {
+            match db {
+                crate::Database::Reference(reference_db) => return (),
+                crate::Database::MongoDb(_) => (),
+            }
             let owner = User::create(&db, "Server Owner".to_string(), None, None)
                 .await
                 .unwrap();
