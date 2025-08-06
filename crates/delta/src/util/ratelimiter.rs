@@ -255,7 +255,7 @@ impl<'r> FromRequest<'r> for Ratelimiter {
     }
 }
 
-impl<'r> OpenApiFromRequest<'r> for Ratelimiter {
+impl OpenApiFromRequest<'_> for Ratelimiter {
     fn from_request_input(
         _gen: &mut OpenApiGenerator,
         _name: String,

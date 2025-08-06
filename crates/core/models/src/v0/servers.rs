@@ -267,7 +267,7 @@ auto_derived!(
         pub hoist: Option<bool>,
         /// Ranking position
         ///
-        /// Smaller values take priority.
+        /// **Removed** - no effect, use the edit server role positions route
         pub rank: Option<i64>,
         /// Fields to remove from role object
         #[cfg_attr(feature = "validator", validate(length(min = 1)))]
@@ -285,5 +285,10 @@ auto_derived!(
     pub struct OptionsServerDelete {
         /// Whether to not send a leave message
         pub leave_silently: Option<bool>,
+    }
+
+    /// New role positions
+    pub struct DataEditRoleRanks {
+        pub ranks: Vec<String>,
     }
 );

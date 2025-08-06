@@ -17,6 +17,7 @@ use redis_kiss::{PayloadType, REDIS_PAYLOAD_TYPE, REDIS_URI};
 use revolt_config::report_internal_error;
 use revolt_database::{
     events::{client::EventV1, server::ClientMessage},
+    iso8601_timestamp::Timestamp,
     Database, User, UserHint,
 };
 use revolt_presence::{create_session, delete_session};
@@ -99,6 +100,10 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
     };
 
     info!("User {addr:?} authenticated as @{}", user.username);
+
+    db.update_session_last_seen(&session_id, Timestamp::now_utc())
+        .await
+        .ok();
 
     // Create local state.
     let mut state = State::from(user, session_id);

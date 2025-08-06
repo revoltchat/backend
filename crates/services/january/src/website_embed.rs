@@ -327,7 +327,7 @@ pub async fn populate_special(original_url: String, metadata: &mut WebsiteMetada
             Special::Twitch { .. } => metadata.colour = Some("#7B68EE".to_string()),
             Special::Lightspeed { .. } => metadata.colour = Some("#7445D9".to_string()),
             Special::Spotify { .. } => metadata.colour = Some("#1ABC9C".to_string()),
-            Special::Soundcloud { .. } => metadata.colour = Some("#FF7F50".to_string()),
+            Special::Soundcloud => metadata.colour = Some("#FF7F50".to_string()),
             Special::AppleMusic { .. } => metadata.colour = Some("#FA233B".to_string()),
             _ => {}
         }

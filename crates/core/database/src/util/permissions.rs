@@ -104,7 +104,7 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
                 .unwrap_or_default();
 
             self.cached_mutual_connection = Some(value);
-            matches!(value, true)
+            value
         } else {
             false
         }

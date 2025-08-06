@@ -1,5 +1,5 @@
 use authifier::{
-    models::{Account, Session},
+    models::{Account, EmailVerification, Session},
     Authifier,
 };
 use futures::StreamExt;
@@ -83,30 +83,41 @@ impl TestHarness {
     }
 
     pub async fn new_user(&self) -> (Account, Session, User) {
-        let account = Account::new(
-            &self.authifier,
-            format!("{}@revolt.chat", TestHarness::rand_string()),
-            "password".to_string(),
-            false,
-        )
-        .await
-        .expect("`Account`");
+        let user = User::create(&self.db, TestHarness::rand_string(), None, None)
+            .await
+            .expect("`User`");
+
+        let (account, session) = self.account_from_user(user.id.clone()).await;
+
+        (account, session, user)
+    }
+
+    pub async fn account_from_user(&self, id: String) -> (Account, Session) {
+        let account = Account {
+            id,
+            email: format!("{}@revolt.chat", TestHarness::rand_string()),
+            password: Default::default(),
+            email_normalised: Default::default(),
+            deletion: None,
+            disabled: false,
+            lockout: None,
+            mfa: Default::default(),
+            password_reset: None,
+            verification: EmailVerification::Verified,
+        };
+
+        self.authifier
+            .database
+            .save_account(&account)
+            .await
+            .expect("`Account`");
 
         let session = account
             .create_session(&self.authifier, String::new())
             .await
             .expect("`Session`");
 
-        let user = User::create(
-            &self.db,
-            TestHarness::rand_string(),
-            account.id.to_string(),
-            None,
-        )
-        .await
-        .expect("`User`");
-
-        (account, session, user)
+        (account, session)
     }
 
     pub async fn new_server(&self, user: &User) -> (Server, Vec<Channel>) {
@@ -198,10 +209,7 @@ impl TestHarness {
         (channel.clone(), member, message)
     }
 
-    pub async fn with_session<'c>(
-        session: Session,
-        request: LocalRequest<'c>,
-    ) -> LocalResponse<'c> {
+    pub async fn with_session(session: Session, request: LocalRequest<'_>) -> LocalResponse<'_> {
         request
             .header(Header::new("x-session-token", session.token.to_string()))
             .dispatch()

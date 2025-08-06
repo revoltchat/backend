@@ -1,6 +1,6 @@
 [package]
 name = "revolt-parser"
-version = "0.8.7"
+version = "0.8.8"
 edition = "2021"
 license = "AGPL-3.0-or-later"
 description = "Revolt Backend: Message Parser"

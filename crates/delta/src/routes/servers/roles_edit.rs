@@ -12,7 +12,7 @@ use validator::Validate;
 ///
 /// Edit a role by its id.
 #[openapi(tag = "Server Permissions")]
-#[patch("/<target>/roles/<role_id>", data = "<data>")]
+#[patch("/<target>/roles/<role_id>", data = "<data>", rank = 1)]
 pub async fn edit(
     db: &State<Database>,
     user: User,
@@ -45,22 +45,14 @@ pub async fn edit(
             name,
             colour,
             hoist,
-            rank,
             remove,
+            ..
         } = data;
-
-        // Prevent us from moving a role above other roles
-        if let Some(rank) = &rank {
-            if rank <= &member_rank {
-                return Err(create_error!(NotElevated));
-            }
-        }
 
         let partial = PartialRole {
             name,
             colour,
             hoist,
-            rank,
             ..Default::default()
         };
 
