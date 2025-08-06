@@ -69,6 +69,7 @@ pub async fn search(
         },
         &user,
         include_users,
+        #[allow(deprecated)]
         match channel {
             Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => {
                 Some(server)
