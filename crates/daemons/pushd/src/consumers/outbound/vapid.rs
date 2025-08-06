@@ -2,13 +2,13 @@ use std::collections::HashMap;
 
 use amqprs::{channel::Channel as AmqpChannel, consumer::AsyncConsumer, BasicProperties, Deliver};
 
+use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
 use base64::{
     engine::{self},
     Engine as _,
 };
 use revolt_database::{events::rabbit::*, Database};
-// use revolt_models::v0::{Channel, PushNotification};
 use web_push::{
     ContentEncoding, IsahcWebPushClient, SubscriptionInfo, SubscriptionKeys, VapidSignatureBuilder,
     WebPushClient, WebPushError, WebPushMessageBuilder,
@@ -21,11 +21,11 @@ pub struct VapidOutboundConsumer {
 }
 
 impl VapidOutboundConsumer {
-    pub async fn new(db: Database) -> Result<VapidOutboundConsumer, &'static str> {
+    pub async fn new(db: Database) -> Result<VapidOutboundConsumer> {
         let config = revolt_config::config().await;
 
         if config.pushd.vapid.private_key.is_empty() | config.pushd.vapid.public_key.is_empty() {
-            return Err("No Vapid keys present");
+            bail!("no Vapid keys present");
         }
 
         let web_push_private_key = engine::general_purpose::URL_SAFE_NO_PAD
@@ -38,28 +38,30 @@ impl VapidOutboundConsumer {
             pkey: web_push_private_key,
         })
     }
-}
 
-#[allow(unused_variables)]
-#[async_trait]
-impl AsyncConsumer for VapidOutboundConsumer {
-    async fn consume(
+    async fn consume_event(
         &mut self,
-        channel: &AmqpChannel,
-        deliver: Deliver,
-        basic_properties: BasicProperties,
+        _channel: &AmqpChannel,
+        _deliver: Deliver,
+        _basic_properties: BasicProperties,
         content: Vec<u8>,
-    ) {
-        let content = String::from_utf8(content).unwrap();
-        let payload: PayloadToService = serde_json::from_str(content.as_str()).unwrap();
-
-        let config = revolt_config::config().await;
+    ) -> Result<()> {
+        let content = String::from_utf8(content)?;
+        let payload: PayloadToService = serde_json::from_str(content.as_str())?;
 
         let subscription = SubscriptionInfo {
-            endpoint: payload.extras.get("endpoint").unwrap().clone(),
+            endpoint: payload
+                .extras
+                .get("endpoint")
+                .ok_or_else(|| anyhow!("missing endpoint"))?
+                .clone(),
             keys: SubscriptionKeys {
                 auth: payload.token,
-                p256dh: payload.extras.get("p256dh").unwrap().clone(),
+                p256dh: payload
+                    .extras
+                    .get("p256dh")
+                    .ok_or_else(|| anyhow!("missing p256dh"))?
+                    .clone(),
             },
         };
 
@@ -76,12 +78,12 @@ impl AsyncConsumer for VapidOutboundConsumer {
                         alert.from_user.username, alert.from_user.discriminator
                     )))
                     .clone()
-                    .unwrap();
+                    .ok_or_else(|| anyhow!("missing name"))?;
 
                 let mut body = HashMap::new();
                 body.insert("body", format!("{} sent you a friend request", name));
 
-                payload_body = serde_json::to_string(&body).unwrap();
+                payload_body = serde_json::to_string(&body)?;
             }
             PayloadKind::FRAccepted(alert) => {
                 let name = alert
@@ -92,21 +94,21 @@ impl AsyncConsumer for VapidOutboundConsumer {
                         alert.accepted_user.username, alert.accepted_user.discriminator
                     )))
                     .clone()
-                    .unwrap();
+                    .ok_or_else(|| anyhow!("missing name"))?;
 
                 let mut body = HashMap::new();
                 body.insert("body", format!("{} accepted your friend request", name));
 
-                payload_body = serde_json::to_string(&body).unwrap();
+                payload_body = serde_json::to_string(&body)?;
             }
             PayloadKind::Generic(alert) => {
-                payload_body = serde_json::to_string(&alert).unwrap();
+                payload_body = serde_json::to_string(&alert)?;
             }
             PayloadKind::MessageNotification(alert) => {
-                payload_body = serde_json::to_string(&alert).unwrap();
+                payload_body = serde_json::to_string(&alert)?;
             }
             PayloadKind::BadgeUpdate(_) => {
-                panic!("Vapid cannot handle badge updates, and they should not be sent here.")
+                bail!("Vapid cannot handle badge updates and they should not be sent here.");
             }
         }
 
@@ -122,28 +124,40 @@ impl AsyncConsumer for VapidOutboundConsumer {
                         Ok(msg) => {
                             if let Err(err) = self.client.send(msg).await {
                                 if err == WebPushError::Unauthorized {
-                                    if let Err(err) = self
-                                        .db
+                                    self.db
                                         .remove_push_subscription_by_session_id(&payload.session_id)
-                                        .await
-                                    {
-                                        revolt_config::capture_error(&err);
-                                    }
+                                        .await?;
                                 }
                             }
+
+                            Ok(())
                         }
-                        Err(err) => {
-                            revolt_config::capture_error(&err);
-                        }
+                        Err(err) => Err(err.into()),
                     }
                 }
-                Err(err) => {
-                    revolt_config::capture_error(&err);
-                }
+                Err(err) => Err(err.into()),
             },
-            Err(err) => {
-                revolt_config::capture_error(&err);
-            }
+            Err(err) => Err(err.into()),
+        }
+    }
+}
+
+#[allow(unused_variables)]
+#[async_trait]
+impl AsyncConsumer for VapidOutboundConsumer {
+    async fn consume(
+        &mut self,
+        channel: &AmqpChannel,
+        deliver: Deliver,
+        basic_properties: BasicProperties,
+        content: Vec<u8>,
+    ) {
+        if let Err(err) = self
+            .consume_event(channel, deliver, basic_properties, content)
+            .await
+        {
+            revolt_config::capture_anyhow(&err);
+            eprintln!("Failed to process Vapid event: {err:?}");
         }
     }
 }

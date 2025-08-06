@@ -1,4 +1,3 @@
-use futures::future::join_all;
 use revolt_database::{
     util::{permissions::DatabasePermissionQuery, reference::Reference},
     Channel, Database, User,

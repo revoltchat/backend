@@ -1,6 +1,6 @@
 [package]
 name = "revolt-models"
-version = "0.8.4"
+version = "0.8.7"
 edition = "2021"
 license = "MIT"
 authors = ["Paul Makles <me@insrt.uk>"]
@@ -20,12 +20,11 @@ default = ["serde", "partials", "rocket"]
 
 [dependencies]
 # Core
-revolt-config = { version = "0.8.4", path = "../config" }
-revolt-permissions = { version = "0.8.4", path = "../permissions" }
+revolt-config = { version = "0.8.7", path = "../config" }
+revolt-permissions = { version = "0.8.7", path = "../permissions" }
 
 # Utility
 regex = "1.11"
-fancy-regex = "0.14"
 indexmap = "1.9.3"
 once_cell = "1.17.1"
 num_enum = "0.6.1"

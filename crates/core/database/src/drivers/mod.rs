@@ -3,6 +3,7 @@ mod reference;
 
 use authifier::config::Captcha;
 use authifier::config::EmailVerificationConfig;
+use authifier::config::PasswordScanning;
 use authifier::config::ResolveIp;
 use authifier::config::SMTPSettings;
 use authifier::config::Shield;
@@ -102,6 +103,13 @@ impl Database {
         let config = config().await;
 
         let mut auth_config = authifier::Config {
+            password_scanning: if config.api.security.easypwned.is_empty() {
+                Default::default()
+            } else {
+                PasswordScanning::EasyPwned {
+                    endpoint: config.api.security.easypwned,
+                }
+            },
             email_verification: if !config.api.smtp.host.is_empty() {
                 EmailVerificationConfig::Enabled {
                     smtp: SMTPSettings {
@@ -118,6 +126,7 @@ impl Database {
                         ),
                         port: config.api.smtp.port,
                         use_tls: config.api.smtp.use_tls,
+                        use_starttls: config.api.smtp.use_starttls,
                     },
                     expiry: Default::default(),
                     templates: if config.production {
@@ -133,6 +142,15 @@ impl Database {
                                 text: include_str!("../../templates/reset.txt").into(),
                                 url: format!("{}/login/reset/", config.hosts.app),
                                 html: Some(include_str!("../../templates/reset.html").into()),
+                            },
+                            reset_existing: Template {
+                                title: "You already have a Revolt account, reset your password."
+                                    .into(),
+                                text: include_str!("../../templates/reset-existing.txt").into(),
+                                url: format!("{}/login/reset/", config.hosts.app),
+                                html: Some(
+                                    include_str!("../../templates/reset-existing.html").into(),
+                                ),
                             },
                             deletion: Template {
                                 title: "Confirm account deletion.".into(),
@@ -156,9 +174,16 @@ impl Database {
                                 url: format!("{}/login/reset/", config.hosts.app),
                                 html: None,
                             },
+                            reset_existing: Template {
+                                title: "Reset your password.".into(),
+                                text: include_str!("../../templates/reset.whitelabel.txt").into(),
+                                url: format!("{}/login/reset/", config.hosts.app),
+                                html: None,
+                            },
                             deletion: Template {
                                 title: "Confirm account deletion.".into(),
-                                text: include_str!("../../templates/deletion.whitelabel.txt").into(),
+                                text: include_str!("../../templates/deletion.whitelabel.txt")
+                                    .into(),
                                 url: format!("{}/delete/", config.hosts.app),
                                 html: None,
                             },

@@ -1,3 +1,4 @@
+use iso8601_timestamp::Timestamp;
 use revolt_models::v0::*;
 use revolt_permissions::{calculate_user_permissions, UserPermission};
 
@@ -488,7 +489,7 @@ impl crate::Message {
             reactions: self.reactions,
             interactions: self.interactions.into(),
             masquerade: self.masquerade.map(Into::into),
-            flags: self.flags.map(|flags| flags as u32).unwrap_or_default(),
+            flags: self.flags.unwrap_or_default(),
             pinned: self.pinned,
         }
     }
@@ -517,7 +518,7 @@ impl From<crate::PartialMessage> for PartialMessage {
             reactions: value.reactions,
             interactions: value.interactions.map(Into::into),
             masquerade: value.masquerade.map(Into::into),
-            flags: value.flags.map(|flags| flags as u32),
+            flags: value.flags,
             pinned: value.pinned,
         }
     }
@@ -593,6 +594,17 @@ impl From<Masquerade> for crate::Masquerade {
             name: value.name,
             avatar: value.avatar,
             colour: value.colour,
+        }
+    }
+}
+
+impl From<crate::PolicyChange> for PolicyChange {
+    fn from(value: crate::PolicyChange) -> Self {
+        PolicyChange {
+            created_time: value.created_time,
+            effective_time: value.effective_time,
+            description: value.description,
+            url: value.url,
         }
     }
 }
@@ -996,6 +1008,8 @@ impl crate::User {
             (RelationshipStatus::None, false)
         };
 
+        let badges = self.get_badges().await;
+
         User {
             username: self.username,
             discriminator: self.discriminator,
@@ -1014,7 +1028,7 @@ impl crate::User {
             } else {
                 vec![]
             },
-            badges: self.badges.unwrap_or_default() as u32,
+            badges,
             online: can_see_profile
                 && revolt_presence::is_online(&self.id).await
                 && !matches!(
@@ -1025,7 +1039,7 @@ impl crate::User {
                     })
                 ),
             status: if can_see_profile {
-                self.status.map(|status| status.into())
+                self.status.and_then(|status| status.into(true))
             } else {
                 None
             },
@@ -1040,7 +1054,7 @@ impl crate::User {
     /// Convert user object into user model assuming mutual connection
     ///
     /// Relations will never be included, i.e. when we process ourselves
-    pub fn into_known<'a, P>(self, perspective: P, is_online: bool) -> User
+    pub async fn into_known<'a, P>(self, perspective: P, is_online: bool) -> User
     where
         P: Into<Option<&'a crate::User>>,
     {
@@ -1070,13 +1084,15 @@ impl crate::User {
             (RelationshipStatus::None, false)
         };
 
+        let badges = self.get_badges().await;
+
         User {
             username: self.username,
             discriminator: self.discriminator,
             display_name: self.display_name,
             avatar: self.avatar.map(|file| file.into()),
             relations: vec![],
-            badges: self.badges.unwrap_or_default() as u32,
+            badges,
             online: can_see_profile
                 && is_online
                 && !matches!(
@@ -1087,7 +1103,7 @@ impl crate::User {
                     })
                 ),
             status: if can_see_profile {
-                self.status.map(|status| status.into())
+                self.status.and_then(|status| status.into(true))
             } else {
                 None
             },
@@ -1100,14 +1116,16 @@ impl crate::User {
     }
 
     /// Convert user object into user model without presence information
-    pub fn into_known_static<'a>(self, is_online: bool) -> User {
+    pub async fn into_known_static<'a>(self, is_online: bool) -> User {
+        let badges = self.get_badges().await;
+
         User {
             username: self.username,
             discriminator: self.discriminator,
             display_name: self.display_name,
             avatar: self.avatar.map(|file| file.into()),
             relations: vec![],
-            badges: self.badges.unwrap_or_default() as u32,
+            badges,
             online: is_online
                 && !matches!(
                     self.status,
@@ -1116,7 +1134,7 @@ impl crate::User {
                         ..
                     })
                 ),
-            status: self.status.map(|status| status.into()),
+            status: self.status.and_then(|status| status.into(true)),
             flags: self.flags.unwrap_or_default() as u32,
             privileged: self.privileged,
             bot: self.bot.map(|bot| bot.into()),
@@ -1126,6 +1144,8 @@ impl crate::User {
     }
 
     pub async fn into_self(self, force_online: bool) -> User {
+        let badges = self.get_badges().await;
+
         User {
             username: self.username,
             discriminator: self.discriminator,
@@ -1140,7 +1160,7 @@ impl crate::User {
                         .collect()
                 })
                 .unwrap_or_default(),
-            badges: self.badges.unwrap_or_default() as u32,
+            badges,
             online: (force_online || revolt_presence::is_online(&self.id).await)
                 && !matches!(
                     self.status,
@@ -1149,7 +1169,7 @@ impl crate::User {
                         ..
                     })
                 ),
-            status: self.status.map(|status| status.into()),
+            status: self.status.and_then(|status| status.into(true)),
             flags: self.flags.unwrap_or_default() as u32,
             privileged: self.privileged,
             bot: self.bot.map(|bot| bot.into()),
@@ -1182,6 +1202,7 @@ impl From<User> for crate::User {
             privileged: value.privileged,
             bot: value.bot.map(Into::into),
             suspended_until: None,
+            last_acknowledged_policy_change: Timestamp::UNIX_EPOCH,
         }
     }
 }
@@ -1200,7 +1221,7 @@ impl From<crate::PartialUser> for PartialUser {
                     .collect()
             }),
             badges: value.badges.map(|badges| badges as u32),
-            status: value.status.map(|status| status.into()),
+            status: value.status.and_then(|status| status.into(false)),
             flags: value.flags.map(|flags| flags as u32),
             privileged: value.privileged,
             bot: value.bot.map(|bot| bot.into()),
@@ -1289,11 +1310,23 @@ impl From<Presence> for crate::Presence {
     }
 }
 
-impl From<crate::UserStatus> for UserStatus {
-    fn from(value: crate::UserStatus) -> Self {
-        UserStatus {
-            text: value.text,
-            presence: value.presence.map(|presence| presence.into()),
+impl crate::UserStatus {
+    fn into(self, discard_invisible: bool) -> Option<UserStatus> {
+        let status = UserStatus {
+            text: self.text,
+            presence: self.presence.and_then(|presence| {
+                if discard_invisible && presence == crate::Presence::Invisible {
+                    None
+                } else {
+                    Some(presence.into())
+                }
+            }),
+        };
+
+        if status.text.is_none() && status.presence.is_none() {
+            None
+        } else {
+            Some(status)
         }
     }
 }

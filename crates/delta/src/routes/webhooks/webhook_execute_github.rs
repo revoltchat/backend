@@ -588,6 +588,7 @@ pub enum PullRequestEvent {
 #[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum BaseEvent {
+    #[allow(dead_code)]
     Star(StarEvent),
     Ping,
     Push(PushEvent),
@@ -788,9 +789,7 @@ pub async fn webhook_execute_github(
             r#ref,
             ..
         }) => {
-            let Some(branch) = r#ref.split('/').nth(2) else {
-                return Ok(());
-            };
+            let branch = r#ref.split('/').skip(2).collect::<Vec<_>>().join("/");
 
             if forced {
                 let description = format!(
@@ -817,19 +816,22 @@ pub async fn webhook_execute_github(
                     commits.len(),
                     compare
                 );
-                let commit_description = commits
-                    .into_iter()
-                    .map(|commit| {
-                        format!(
-                            "[`{}`]({}) {} - {}",
-                            &commit.id[0..=7],
-                            commit.url,
-                            shorten_text(&commit.message, 50),
-                            commit.author.name
-                        )
-                    })
-                    .collect::<Vec<String>>()
-                    .join("\n");
+                let commit_description = shorten_text(
+                    &commits
+                        .into_iter()
+                        .map(|commit| {
+                            format!(
+                                "[`{}`]({}) {} - {}",
+                                &commit.id[0..=7],
+                                commit.url,
+                                shorten_text(&commit.message, 50),
+                                commit.author.name
+                            )
+                        })
+                        .collect::<Vec<String>>()
+                        .join("\n"),
+                    1000,
+                );
 
                 SendableEmbed {
                     title: Some(event.sender.login),

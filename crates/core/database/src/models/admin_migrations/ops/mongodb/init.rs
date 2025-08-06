@@ -64,6 +64,10 @@ pub async fn create_database(db: &MongoDb) {
         .await
         .expect("Failed to create user_settings collection.");
 
+    db.create_collection("policy_changes")
+        .await
+        .expect("Failed to create policy_changes collection.");
+
     db.create_collection("safety_reports")
         .await
         .expect("Failed to create safety_reports collection.");

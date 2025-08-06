@@ -3,7 +3,7 @@ use std::{collections::HashSet, net::SocketAddr, sync::Arc};
 use async_tungstenite::WebSocketStream;
 use authifier::AuthifierEvent;
 use fred::{
-    error::{RedisError, RedisErrorKind},
+    error::RedisErrorKind,
     interfaces::{ClientLike, EventInterface, PubsubInterface},
     types::RedisConfig,
 };

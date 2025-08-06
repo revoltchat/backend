@@ -1,6 +1,6 @@
 use revolt_database::{
     util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Database, PartialServer, Server, User,
+    Database, PartialServer, User,
 };
 use revolt_models::v0;
 use revolt_permissions::{

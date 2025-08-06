@@ -1,6 +1,6 @@
 [package]
 name = "revolt-delta"
-version = "0.8.4"
+version = "0.8.7"
 license = "AGPL-3.0-or-later"
 authors = ["Paul Makles <paulmakles@gmail.com>"]
 edition = "2018"
@@ -52,10 +52,11 @@ async-std = { version = "1.8.0", features = [
 lettre = "0.10.0-alpha.4"
 
 # web
+
 rocket = { version = "0.5.1", default-features = false, features = ["json"] }
 rocket_cors = { git = "https://github.com/lawliet89/rocket_cors", rev = "072d90359b23e9b291df6b672c07c93de9c46011" }
 rocket_empty = { version = "0.1.1", features = ["schema"] }
-rocket_authifier = { version = "1.0.10" }
+rocket_authifier = { version = "1.0.15" }
 rocket_prometheus = "0.10.0-rc.3"
 
 # spec generation
@@ -66,7 +67,7 @@ revolt_rocket_okapi = { version = "0.10.0", features = ["swagger"] }
 amqprs = { version = "1.7.0" }
 
 # core
-authifier = "1.0.10"
+authifier = "1.0.15"
 revolt-config = { path = "../core/config" }
 revolt-database = { path = "../core/database", features = [
     "rocket-impl",

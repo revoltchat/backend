@@ -3,11 +3,12 @@ use std::{collections::HashSet, str::FromStr, time::Duration};
 use crate::{events::client::EventV1, Database, File, RatelimitEvent, AMQP};
 
 use authifier::config::{EmailVerificationConfig, Template};
+use futures::future::join_all;
 use iso8601_timestamp::Timestamp;
 use once_cell::sync::Lazy;
 use rand::seq::SliceRandom;
 use revolt_config::{config, FeaturesLimits};
-use revolt_models::v0::{self, UserFlags};
+use revolt_models::v0::{self, UserBadges, UserFlags};
 use revolt_presence::filter_online;
 use revolt_result::{create_error, Result};
 use serde_json::json;
@@ -56,6 +57,8 @@ auto_derived_partial!(
         /// Time until user is unsuspended
         #[serde(skip_serializing_if = "Option::is_none")]
         pub suspended_until: Option<Timestamp>,
+        /// Last acknowledged policy change
+        pub last_acknowledged_policy_change: Timestamp,
     },
     "PartialUser"
 );
@@ -177,6 +180,7 @@ impl Default for User {
             privileged: Default::default(),
             bot: Default::default(),
             suspended_until: Default::default(),
+            last_acknowledged_policy_change: Timestamp::UNIX_EPOCH,
         }
     }
 }
@@ -199,6 +203,7 @@ impl User {
             id: account_id.into().unwrap_or_else(|| Ulid::new().to_string()),
             discriminator: User::find_discriminator(db, &username, None).await?,
             username,
+            last_acknowledged_policy_change: Timestamp::now_utc(),
             ..Default::default()
         };
 
@@ -348,15 +353,13 @@ impl User {
     ) -> Result<Vec<v0::User>> {
         let online_ids = filter_online(ids).await;
 
-        Ok(db
-            .fetch_users(ids)
-            .await?
-            .into_iter()
-            .map(|user| {
+        Ok(
+            join_all(db.fetch_users(ids).await?.into_iter().map(|user| async {
                 let is_online = online_ids.contains(&user.id);
-                user.into_known(perspective, is_online)
-            })
-            .collect())
+                user.into_known(perspective, is_online).await
+            }))
+            .await,
+        )
     }
 
     /// Find a free discriminator for a given username
@@ -637,7 +640,7 @@ impl User {
     }
 
     /// Update user data
-    pub async fn update<'a>(
+    pub async fn update(
         &mut self,
         db: &Database,
         partial: PartialUser,
@@ -806,5 +809,19 @@ impl User {
             ],
         )
         .await
+    }
+
+    /// Gets the user's badges along with calculating any dynamic badges
+    pub async fn get_badges(&self) -> u32 {
+        let config = config().await;
+        let badges = self.badges.unwrap_or_default() as u32;
+
+        if let Some(cutoff) = config.api.users.early_adopter_cutoff {
+            if Ulid::from_string(&self.id).unwrap().timestamp_ms() < cutoff {
+                return badges + UserBadges::EarlyAdopter as u32;
+            };
+        };
+
+        badges
     }
 }

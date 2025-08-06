@@ -1,18 +1,23 @@
 [package]
 name = "revolt-pushd"
-version = "0.8.4"
+version = "0.8.7"
 edition = "2021"
 license = "AGPL-3.0-or-later"
 
 [dependencies]
-revolt-config = { version = "0.8.4", path = "../../core/config" }
-revolt-database = { version = "0.8.4", path = "../../core/database" }
-revolt-models = { version = "0.8.4", path = "../../core/models", features = [
+revolt-result = { version = "0.8.7", path = "../../core/result" }
+revolt-config = { version = "0.8.7", path = "../../core/config", features = [
+    "report-macros",
+] }
+revolt-database = { version = "0.8.7", path = "../../core/database" }
+revolt-models = { version = "0.8.7", path = "../../core/models", features = [
     "validator",
 ] }
-revolt-presence = { version = "0.8.1", path = "../../core/presence", features = [
+revolt-presence = { version = "0.8.7", path = "../../core/presence", features = [
     "redis-is-patched",
 ] }
+
+anyhow = { version = "1.0.98" }
 
 amqprs = { version = "1.7.0" }
 fcm_v1 = "0.3.0"
@@ -23,7 +28,7 @@ tokio = "1.39.2"
 async-trait = "0.1.81"
 ulid = "1.0.0"
 
-authifier = "1.0.10"
+authifier = "1.0.15"
 
 log = "0.4.11"
 pretty_env_logger = "0.4.0"

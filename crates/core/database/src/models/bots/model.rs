@@ -1,4 +1,3 @@
-use revolt_config::config;
 use revolt_result::Result;
 use ulid::Ulid;
 

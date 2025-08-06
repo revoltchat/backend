@@ -87,7 +87,7 @@ impl<'z> BulkDatabasePermissionQuery<'z> {
         }
     }
 
-    pub fn channel(self, channel: &'z Channel) -> BulkDatabasePermissionQuery {
+    pub fn channel(self, channel: &'z Channel) -> BulkDatabasePermissionQuery<'z> {
         BulkDatabasePermissionQuery {
             channel: Some(channel.clone()),
             ..self
@@ -109,7 +109,7 @@ impl<'z> BulkDatabasePermissionQuery<'z> {
         }
     }
 
-    pub fn members(self, members: &'z [Member]) -> BulkDatabasePermissionQuery {
+    pub fn members(self, members: &'z [Member]) -> BulkDatabasePermissionQuery<'z> {
         BulkDatabasePermissionQuery {
             members: Some(members.to_owned()),
             cached_member_perms: None,
@@ -120,7 +120,7 @@ impl<'z> BulkDatabasePermissionQuery<'z> {
         }
     }
 
-    pub fn users(self, users: &'z [User]) -> BulkDatabasePermissionQuery {
+    pub fn users(self, users: &'z [User]) -> BulkDatabasePermissionQuery<'z> {
         BulkDatabasePermissionQuery {
             users: Some(users.to_owned()),
             cached_member_perms: None,

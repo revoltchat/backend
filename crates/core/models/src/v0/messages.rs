@@ -1,8 +1,6 @@
 use std::time::SystemTime;
 
-use fancy_regex::Regex;
 use indexmap::{IndexMap, IndexSet};
-use once_cell::sync::Lazy;
 use revolt_config::config;
 
 #[cfg(feature = "validator")]
@@ -14,15 +12,6 @@ use rocket::{FromForm, FromFormField};
 use iso8601_timestamp::Timestamp;
 
 use super::{Channel, Embed, File, Member, MessageWebhook, User, Webhook, RE_COLOUR};
-
-pub static RE_MENTION: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"<@([0-9A-HJKMNP-TV-Z]{26})>").unwrap());
-
-pub static RE_ROLE_MENTION: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"<%([0-9A-HJKMNP-TV-Z]{26})>|@online|@everyone").unwrap());
-
-pub static RE_BLOCKS: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?s)(?<!\\)(?:(```.+?(?<!\\)```)|`[^`\n\r]+?(?<!\\)`)").unwrap());
 
 auto_derived_partial!(
     /// Message
@@ -65,6 +54,7 @@ auto_derived_partial!(
         #[serde(skip_serializing_if = "Option::is_none")]
         pub mentions: Option<Vec<String>>,
         /// Array of role ids mentioned in this message
+        #[serde(skip_serializing_if = "Option::is_none")]
         pub role_mentions: Option<Vec<String>>,
         /// Array of message ids this message is replying to
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -409,7 +399,7 @@ impl Interactions {
     }
 }
 
-impl<'a> MessageAuthor<'a> {
+impl MessageAuthor<'_> {
     pub fn id(&self) -> &str {
         match self {
             MessageAuthor::User(user) => &user.id,

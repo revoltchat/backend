@@ -328,13 +328,10 @@ impl Channel {
 
             db.insert_channel(&channel).await?;
 
-            match &channel {
-                Channel::DirectMessage { .. } => {
-                    let event = EventV1::ChannelCreate(channel.clone().into());
-                    event.clone().private(user_a.id.clone()).await;
-                    event.private(user_b.id.clone()).await;
-                }
-                _ => {}
+            if let Channel::DirectMessage { .. } = &channel {
+                let event = EventV1::ChannelCreate(channel.clone().into());
+                event.clone().private(user_a.id.clone()).await;
+                event.private(user_b.id.clone()).await;
             };
 
             Ok(channel)
