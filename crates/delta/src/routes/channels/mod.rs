@@ -50,7 +50,7 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         group_remove_member::remove_member,
         voice_join::call,
         permissions_set::set_role_permissions,
-        permissions_set_default::set_default_permissions,
+        permissions_set_default::set_default_channel_permissions,
         message_react::react_message,
         message_unreact::unreact_message,
         message_clear_reactions::clear_reactions,
