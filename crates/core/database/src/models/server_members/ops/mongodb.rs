@@ -13,8 +13,8 @@ static COL: &str = "server_members";
 
 #[async_trait]
 impl AbstractServerMembers for MongoDb {
-    /// Insert a new server member into the database
-    async fn insert_member(&self, member: &Member) -> Result<()> {
+    /// Insert a new server member (or use the existing member if one is found)
+    async fn insert_or_merge_member(&self, member: &Member) -> Result<()> {
         let existing: Result<Option<Document>> = query!(
             self,
             find_one,

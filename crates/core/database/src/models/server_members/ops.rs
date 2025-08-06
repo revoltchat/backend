@@ -69,7 +69,7 @@ impl ChunkedServerMembersGenerator {
 #[async_trait]
 pub trait AbstractServerMembers: Sync + Send {
     /// Insert a new server member into the database
-    async fn insert_member(&self, member: &Member) -> Result<()>;
+    async fn insert_or_merge_member(&self, member: &Member) -> Result<()>;
 
     /// Fetch a server member by their id
     async fn fetch_member(&self, server_id: &str, user_id: &str) -> Result<Member>;

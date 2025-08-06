@@ -99,7 +99,7 @@ impl Member {
             ..Default::default()
         };
 
-        db.insert_member(&member).await?;
+        db.insert_or_merge_member(&member).await?;
 
         let should_fetch = channels.is_none();
         let mut channels = channels.unwrap_or_default();
@@ -260,5 +260,72 @@ impl Member {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use iso8601_timestamp::{Duration, Timestamp};
+    use revolt_models::v0::DataCreateServer;
+
+    use crate::{Member, PartialMember, RemovalIntention, Server, User};
+
+    #[async_std::test]
+    async fn crud() {
+        database_test!(|db| async move {
+            let owner = User::create(&db, "Server Owner".to_string(), None, None)
+                .await
+                .unwrap();
+
+            let kickable_user = User::create(&db, "Member".to_string(), None, None)
+                .await
+                .unwrap();
+
+            let server = Server::create(
+                &db,
+                DataCreateServer {
+                    name: "Server".to_string(),
+                    description: None,
+                    nsfw: None,
+                },
+                &owner,
+                false,
+            )
+            .await
+            .unwrap()
+            .0;
+
+            Member::create(&db, &server, &owner, None).await.unwrap();
+            let mut kickable_member = Member::create(&db, &server, &kickable_user, None)
+                .await
+                .unwrap()
+                .0;
+
+            kickable_member
+                .update(
+                    &db,
+                    PartialMember {
+                        timeout: Some(Timestamp::now_utc() + Duration::minutes(5)),
+                        ..Default::default()
+                    },
+                    vec![],
+                )
+                .await
+                .unwrap();
+
+            assert!(kickable_member.in_timeout());
+
+            kickable_member
+                .remove(&db, &server, RemovalIntention::Kick, false)
+                .await
+                .unwrap();
+
+            let kickable_member = Member::create(&db, &server, &kickable_user, None)
+                .await
+                .unwrap()
+                .0;
+
+            assert!(kickable_member.in_timeout())
+        });
     }
 }
