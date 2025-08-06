@@ -30,6 +30,9 @@ auto_derived_partial!(
         /// Timestamp this member is timed out until
         #[serde(skip_serializing_if = "Option::is_none")]
         pub timeout: Option<Timestamp>,
+        // This value only exists in the database, not the models.
+        // If it is not-None, the database layer should return None to member fetching queries.
+        // pub pending_deletion_at: Option<Timestamp>
     },
     "PartialMember"
 );
