@@ -175,6 +175,8 @@ auto_derived!(
         /// Ranking position
         ///
         /// Smaller values take priority.
+        ///
+        /// **Removed** - no effect, use the edit server role positions route
         pub rank: Option<i64>,
     }
 
