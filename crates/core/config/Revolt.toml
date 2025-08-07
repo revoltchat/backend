@@ -56,6 +56,8 @@ voso_legacy_token = ""
 trust_cloudflare = false
 # easypwned endpoint
 easypwned = ""
+# Tenor API Key
+tenor_key = ""
 
 [api.security.captcha]
 # hCaptcha configuration
@@ -277,3 +279,4 @@ files = ""
 proxy = ""
 pushd = ""
 crond = ""
+gifbox = ""
