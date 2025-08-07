@@ -249,8 +249,8 @@ auto_derived!(
         pub analytics: Option<bool>,
 
         /// Fields to remove from server object
-        #[cfg_attr(feature = "validator", validate(length(min = 1)))]
-        pub remove: Option<Vec<FieldsServer>>,
+        #[cfg_attr(feature = "serde", serde(default))]
+        pub remove: Vec<FieldsServer>,
     }
 
     /// New role information
@@ -272,8 +272,8 @@ auto_derived!(
         /// **Removed** - no effect, use the edit server role positions route
         pub rank: Option<i64>,
         /// Fields to remove from role object
-        #[cfg_attr(feature = "validator", validate(length(min = 1)))]
-        pub remove: Option<Vec<FieldsRole>>,
+        #[cfg_attr(feature = "serde", serde(default))]
+        pub remove: Vec<FieldsRole>,
     }
 
     /// New role permissions

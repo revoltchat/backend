@@ -124,7 +124,7 @@ auto_derived!(
         /// Timestamp this member is timed out until
         pub timeout: Option<Timestamp>,
         /// Fields to remove from channel object
-        #[cfg_attr(feature = "validator", validate(length(min = 1)))]
-        pub remove: Option<Vec<FieldsMember>>,
+        #[cfg_attr(feature = "serde", serde(default))]
+        pub remove: Vec<FieldsMember>,
     }
 );

@@ -39,13 +39,7 @@ pub async fn edit(
     let permissions = calculate_server_permissions(&mut query).await;
 
     // Check permissions in server
-    if data.nickname.is_some()
-        || data
-            .remove
-            .as_ref()
-            .map(|x| x.contains(&v0::FieldsMember::Nickname))
-            .unwrap_or_default()
-    {
+    if data.nickname.is_some() || data.remove.contains(&v0::FieldsMember::Nickname) {
         if user.id == member.id.user {
             permissions.throw_if_lacking_channel_permission(ChannelPermission::ChangeNickname)?;
         } else {
@@ -53,13 +47,7 @@ pub async fn edit(
         }
     }
 
-    if data.avatar.is_some()
-        || data
-            .remove
-            .as_ref()
-            .map(|x| x.contains(&v0::FieldsMember::Avatar))
-            .unwrap_or_default()
-    {
+    if data.avatar.is_some() || data.remove.contains(&v0::FieldsMember::Avatar) {
         if user.id == member.id.user {
             permissions.throw_if_lacking_channel_permission(ChannelPermission::ChangeAvatar)?;
         } else {
@@ -67,23 +55,11 @@ pub async fn edit(
         }
     }
 
-    if data.roles.is_some()
-        || data
-            .remove
-            .as_ref()
-            .map(|x| x.contains(&v0::FieldsMember::Roles))
-            .unwrap_or_default()
-    {
+    if data.roles.is_some() || data.remove.contains(&v0::FieldsMember::Roles) {
         permissions.throw_if_lacking_channel_permission(ChannelPermission::AssignRoles)?;
     }
 
-    if data.timeout.is_some()
-        || data
-            .remove
-            .as_ref()
-            .map(|x| x.contains(&v0::FieldsMember::Timeout))
-            .unwrap_or_default()
-    {
+    if data.timeout.is_some() || data.remove.contains(&v0::FieldsMember::Timeout) {
         if data.timeout.is_some() && member.id.user == user.id {
             return Err(create_error!(CannotTimeoutYourself));
         }
@@ -136,11 +112,9 @@ pub async fn edit(
     };
 
     // 1. Remove fields from object
-    if let Some(fields) = &remove {
-        if fields.contains(&v0::FieldsMember::Avatar) {
-            if let Some(avatar) = &member.avatar {
-                db.mark_attachment_as_deleted(&avatar.id).await?;
-            }
+    if remove.contains(&v0::FieldsMember::Avatar) {
+        if let Some(avatar) = &member.avatar {
+            db.mark_attachment_as_deleted(&avatar.id).await?;
         }
     }
 
@@ -150,13 +124,7 @@ pub async fn edit(
     }
 
     member
-        .update(
-            db,
-            partial,
-            remove
-                .map(|v| v.into_iter().map(Into::into).collect())
-                .unwrap_or_default(),
-        )
+        .update(db, partial, remove.into_iter().map(Into::into).collect())
         .await?;
 
     Ok(Json(member.into()))

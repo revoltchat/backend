@@ -61,9 +61,7 @@ pub async fn edit(
             &server.id,
             &role_id,
             partial,
-            remove
-                .map(|v| v.into_iter().map(Into::into).collect())
-                .unwrap_or_default(),
+            remove.into_iter().map(Into::into).collect(),
         )
         .await?;
 

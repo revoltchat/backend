@@ -37,7 +37,7 @@ pub async fn edit_bot(
     if data.public.is_none()
         && data.analytics.is_none()
         && data.interactions_url.is_none()
-        && data.remove.is_none()
+        && data.remove.is_empty()
     {
         return Ok(Json(v0::BotWithUserResponse {
             bot: bot.into(),
@@ -64,7 +64,6 @@ pub async fn edit_bot(
         db,
         partial,
         remove
-            .unwrap_or_default()
             .into_iter()
             .map(|v| v.into())
             .collect(),
@@ -100,7 +99,7 @@ mod test {
             .body(
                 json!(v0::DataEditBot {
                     public: Some(true),
-                    remove: Some(vec![FieldsBot::Token]),
+                    remove: vec![FieldsBot::Token],
                     ..Default::default()
                 })
                 .to_string(),

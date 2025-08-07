@@ -53,31 +53,29 @@ pub async fn edit(
         && data.avatar.is_none()
         && data.badges.is_none()
         && data.flags.is_none()
-        && data.remove.is_none()
+        && data.remove.is_empty()
     {
         return Ok(Json(user.into_self(false).await));
     }
 
     // 1. Remove fields from object
-    if let Some(fields) = &data.remove {
-        if fields.contains(&v0::FieldsUser::Avatar) {
-            if let Some(avatar) = &user.avatar {
-                db.mark_attachment_as_deleted(&avatar.id).await?;
+    if data.remove.contains(&v0::FieldsUser::Avatar) {
+        if let Some(avatar) = &user.avatar {
+            db.mark_attachment_as_deleted(&avatar.id).await?;
+        }
+    }
+
+    if data.remove.contains(&v0::FieldsUser::ProfileBackground) {
+        if let Some(profile) = &user.profile {
+            if let Some(background) = &profile.background {
+                db.mark_attachment_as_deleted(&background.id).await?;
             }
         }
+    }
 
-        if fields.contains(&v0::FieldsUser::ProfileBackground) {
-            if let Some(profile) = &user.profile {
-                if let Some(background) = &profile.background {
-                    db.mark_attachment_as_deleted(&background.id).await?;
-                }
-            }
-        }
-
-        for field in fields {
-            let field: FieldsUser = field.clone().into();
-            user.remove_field(&field);
-        }
+    for field in &data.remove {
+        let field: FieldsUser = field.clone().into();
+        user.remove_field(&field);
     }
 
     let mut partial: PartialUser = PartialUser {
@@ -124,9 +122,7 @@ pub async fn edit(
     user.update(
         db,
         partial,
-        data.remove
-            .map(|v| v.into_iter().map(Into::into).collect())
-            .unwrap_or_default(),
+        data.remove.into_iter().map(Into::into).collect(),
     )
     .await?;
 

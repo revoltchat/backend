@@ -207,7 +207,7 @@ auto_derived!(
 
         /// Fields to remove from channel
         #[cfg_attr(feature = "serde", serde(default))]
-        pub remove: Option<Vec<FieldsChannel>>,
+        pub remove: Vec<FieldsChannel>,
     }
 
     /// Create new group
