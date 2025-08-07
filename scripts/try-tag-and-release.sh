@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 date=$(date +'%Y%m%d')
 incr=1
 
