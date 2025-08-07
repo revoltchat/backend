@@ -23,7 +23,7 @@ revolt-result = { version = "0.8.8", path = "../../core/result", features = [
     "axum",
 ] }
 revolt-coalesced = { version = "0.8.8", path = "../../core/coalesced" }
-
+revolt-database = { version = "0.8.8", path = "../../core/database", features = ["axum-impl"] }
 # Axum / web server
 axum = { version = "0.7.5" }
 axum-extra = { version = "0.9", features = ["typed-header"] }

@@ -4,10 +4,11 @@ use axum::{extract::{Query, State}, routing::get, Json, Router};
 use revolt_result::{create_error, Result};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use revolt_database::User;
 
-use crate::tenor::{Tenor, types};
+use crate::{AppState, tenor::{Tenor, types}};
 
-pub async fn router() -> Router<Tenor> {
+pub async fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(root))
         .route("/search", get(search))
@@ -53,6 +54,7 @@ struct SearchQueryParams {
     )
 )]
 async fn search(
+    _user: User,
     Query(params): Query<SearchQueryParams>,
     State(tenor): State<Tenor>,
 ) -> Result<Json<Arc<types::SearchResponse>>> {
