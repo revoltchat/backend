@@ -1,8 +1,9 @@
 use std::net::{Ipv4Addr, SocketAddr};
 
-use axum::Router;
+use axum::{extract::FromRef, Router};
 
 use revolt_config::config;
+use revolt_database::{Database, DatabaseInfo};
 use tokio::net::TcpListener;
 use utoipa::{
     openapi::security::{Http, HttpAuthScheme, SecurityScheme},
@@ -10,8 +11,28 @@ use utoipa::{
 };
 use utoipa_scalar::{Scalar, Servable as ScalarServable};
 
+use crate::tenor::Tenor;
+
 mod api;
 mod tenor;
+
+#[derive(Clone)]
+struct AppState {
+    pub database: Database,
+    pub tenor: Tenor
+}
+
+impl FromRef<AppState> for Database {
+    fn from_ref(state: &AppState) -> Self {
+        state.database.clone()
+    }
+}
+
+impl FromRef<AppState> for Tenor {
+    fn from_ref(state: &AppState) -> Self {
+        state.tenor.clone()
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -48,13 +69,16 @@ async fn main() -> Result<(), std::io::Error> {
     }
 
     let config = config().await;
-    let tenor = tenor::Tenor::new(&config.api.security.tenor_key);
+    let state = AppState {
+        database: DatabaseInfo::Auto.connect().await.expect("Unable to connect to database"),
+        tenor: tenor::Tenor::new(&config.api.security.tenor_key)
+    };
 
     // Configure Axum and router
     let app = Router::new()
         .merge(Scalar::with_url("/scalar", ApiDoc::openapi()))
         .nest("/", api::router().await)
-        .with_state(tenor);
+        .with_state(state);
 
     // Configure TCP listener and bind
     tracing::info!("Listening on 0.0.0.0:14706");
