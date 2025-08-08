@@ -15,11 +15,12 @@ use crate::tenor::Tenor;
 
 mod api;
 mod tenor;
+mod types;
 
 #[derive(Clone)]
 struct AppState {
     pub database: Database,
-    pub tenor: Tenor
+    pub tenor: Tenor,
 }
 
 impl FromRef<AppState> for Database {
@@ -45,11 +46,15 @@ async fn main() -> Result<(), std::io::Error> {
         modifiers(&SecurityAddon),
         paths(
             api::root,
+            api::search,
         ),
         components(
             schemas(
                 revolt_result::Error,
                 revolt_result::ErrorType,
+                types::SearchResponse,
+                types::MediaObject,
+                types::MediaResult,
             )
         )
     )]
@@ -70,8 +75,11 @@ async fn main() -> Result<(), std::io::Error> {
 
     let config = config().await;
     let state = AppState {
-        database: DatabaseInfo::Auto.connect().await.expect("Unable to connect to database"),
-        tenor: tenor::Tenor::new(&config.api.security.tenor_key)
+        database: DatabaseInfo::Auto
+            .connect()
+            .await
+            .expect("Unable to connect to database"),
+        tenor: tenor::Tenor::new(&config.api.security.tenor_key),
     };
 
     // Configure Axum and router

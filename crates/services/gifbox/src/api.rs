@@ -1,12 +1,18 @@
-use std::sync::Arc;
-
-use axum::{extract::{Query, State}, routing::get, Json, Router};
+use axum::{
+    extract::{Query, State},
+    routing::get,
+    Json, Router,
+};
+use revolt_database::User;
 use revolt_result::{create_error, Result};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use revolt_database::User;
 
-use crate::{AppState, tenor::{Tenor, types}};
+use crate::{
+    tenor,
+    types,
+    AppState,
+};
 
 pub async fn router() -> Router<AppState> {
     Router::new()
@@ -43,7 +49,7 @@ async fn root() -> Json<RootResponse> {
 struct SearchQueryParams {
     pub query: String,
     pub locale: String,
-    pub position: Option<String>
+    pub position: Option<String>,
 }
 
 #[utoipa::path(
@@ -56,11 +62,13 @@ struct SearchQueryParams {
 async fn search(
     _user: User,
     Query(params): Query<SearchQueryParams>,
-    State(tenor): State<Tenor>,
-) -> Result<Json<Arc<types::SearchResponse>>> {
+    State(tenor): State<tenor::Tenor>,
+) -> Result<Json<types::SearchResponse>> {
     // Todo
-    tenor.search(&params.query, &params.locale, params.position.as_deref())
+    tenor
+        .search(&params.query, &params.locale, params.position.as_deref())
         .await
         .map_err(|_| create_error!(InternalError))
+        .map(|results| results.as_ref().clone().into())
         .map(Json)
 }
