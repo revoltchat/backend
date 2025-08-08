@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
-use serde::{Serialize, Deserialize};
-
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SearchResponse {
-    pub results: Vec<TenorResult>,
-    pub next: String
+    pub results: Vec<MediaResult>,
+    pub next: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -14,11 +13,11 @@ pub struct MediaObject {
     pub url: String,
     pub dims: Vec<u64>,
     pub duration: f64,
-    pub size: f64
+    pub size: f64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct TenorResult {
+pub struct MediaResult {
     pub created: f64,
     #[serde(default)]
     pub hasaudio: bool,
@@ -32,5 +31,5 @@ pub struct TenorResult {
     pub hascaption: bool,
     pub flags: Vec<String>,
     pub bg_color: Option<String>,
-    pub url: String
+    pub url: String,
 }
