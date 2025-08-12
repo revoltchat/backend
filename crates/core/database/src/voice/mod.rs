@@ -1,7 +1,12 @@
-
+use crate::{
+    events::client::EventV1,
+    models::{Channel, User},
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    Database, Server,
+};
 use livekit_protocol::ParticipantPermission;
-use redis_kiss::{get_connection as _get_connection, Conn, redis::Pipeline, AsyncCommands};
-use crate::{events::client::EventV1, models::{Channel, User}, util::{permissions::DatabasePermissionQuery, reference::Reference}, Database, Server};
+use redis_kiss::{get_connection as _get_connection, redis::Pipeline, AsyncCommands, Conn};
+use revolt_config::FeaturesLimits;
 use revolt_models::v0::{self, PartialUserVoiceState, UserVoiceState};
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission, PermissionValue};
 use revolt_result::{create_error, Result, ToRevoltError};
@@ -59,7 +64,35 @@ pub async fn get_user_voice_channels(user_id: &str) -> Result<Vec<String>> {
         .to_internal_error()
 }
 
-pub async fn set_user_moved_from_voice(old_channel: &str, new_channel: &str, user_id: &str) -> Result<()> {
+pub async fn set_user_moved_from_voice(
+    old_channel: &str,
+    new_channel: &str,
+    user_id: &str,
+) -> Result<()> {
+    get_connection()
+        .await?
+        .set_ex(
+            format!("moved_from:{user_id}:{old_channel}"),
+            new_channel,
+            10,
+        )
+        .await
+        .to_internal_error()
+}
+
+pub async fn get_user_moved_from_voice(channel_id: &str, user_id: &str) -> Result<Option<String>> {
+    get_connection()
+        .await?
+        .get(format!("moved_from:{user_id}:{channel_id}"))
+        .await
+        .to_internal_error()
+}
+
+pub async fn set_user_moved_to_voice(
+    new_channel: &str,
+    old_channel: &str,
+    user_id: &str,
+) -> Result<()> {
     get_connection()
         .await?
         .set_ex(format!("moved_to:{user_id}:{new_channel}"), old_channel, 10)
@@ -67,7 +100,7 @@ pub async fn set_user_moved_from_voice(old_channel: &str, new_channel: &str, use
         .to_internal_error()
 }
 
-pub async fn get_user_moved_from_voice(channel_id: &str, user_id: &str) -> Result<Option<String>> {
+pub async fn get_user_moved_to_voice(channel_id: &str, user_id: &str) -> Result<Option<String>> {
     get_connection()
         .await?
         .get(format!("moved_to:{user_id}:{channel_id}"))
@@ -78,7 +111,7 @@ pub async fn get_user_moved_from_voice(channel_id: &str, user_id: &str) -> Resul
 pub async fn is_in_voice_channel(user_id: &str, channel_id: &str) -> Result<bool> {
     get_connection()
         .await?
-        .sismember(format!("vc:{}", user_id), channel_id)
+        .sismember(format!("vc:{user_id}"), channel_id)
         .await
         .to_internal_error()
 }
@@ -89,21 +122,21 @@ pub async fn get_user_voice_channel_in_server(
 ) -> Result<Option<String>> {
     let mut conn = get_connection().await?;
 
-    let unique_key = format!("{}:{}", user_id, server_id);
+    let unique_key = format!("{user_id}:{server_id}");
 
     conn.get::<&str, Option<String>>(&unique_key)
         .await
         .to_internal_error()
 }
 
-pub fn get_allowed_sources(permissions: PermissionValue) -> Vec<&'static str> {
+pub fn get_allowed_sources(limits: &FeaturesLimits, permissions: PermissionValue) -> Vec<&'static str> {
     let mut allowed_sources = Vec::new();
 
     if permissions.has(ChannelPermission::Speak as u64) {
         allowed_sources.push("microphone")
     };
 
-    if permissions.has(ChannelPermission::Video as u64) {
+    if permissions.has(ChannelPermission::Video as u64) && limits.video {
         allowed_sources.extend(["camera", "screen_share", "screen_share_audio"]);
     };
 
@@ -238,14 +271,10 @@ pub async fn update_voice_state(
 pub async fn get_voice_channel_members(channel_id: &str) -> Result<Option<Vec<String>>> {
     get_connection()
         .await?
-        .smembers::<_, Option<Vec<String>>>(format!("vc_members:{}", channel_id))
+        .smembers::<_, Option<Vec<String>>>(format!("vc_members:{channel_id}"))
         .await
         .to_internal_error()
-        .map(|opt| opt.and_then(|v| if v.is_empty() {
-            None
-        } else {
-            Some(v)
-        }))
+        .map(|opt| opt.and_then(|v| if v.is_empty() { None } else { Some(v) }))
 }
 
 pub async fn get_voice_state(
@@ -294,13 +323,13 @@ pub async fn get_channel_voice_state(channel: &Channel) -> Result<Option<v0::Cha
             } else {
                 log::info!("Voice state not found but member in voice channel members, removing.");
 
-                delete_voice_state(channel.id(), server,  &user_id).await?;
+                delete_voice_state(channel.id(), server, &user_id).await?;
             }
         }
 
         Ok(Some(v0::ChannelVoiceState {
             id: channel.id().to_string(),
-            participants
+            participants,
         }))
     } else {
         Ok(None)
@@ -319,39 +348,71 @@ pub async fn move_user(user: &str, from: &str, to: &str) -> Result<()> {
         .to_internal_error()
 }
 
-pub async fn sync_voice_permissions(db: &Database, voice_client: &VoiceClient, channel: &Channel, server: Option<&Server>, role_id: Option<&str>) -> Result<()> {
+pub async fn sync_voice_permissions(
+    db: &Database,
+    voice_client: &VoiceClient,
+    channel: &Channel,
+    server: Option<&Server>,
+    role_id: Option<&str>,
+) -> Result<()> {
     let node = get_channel_node(channel.id()).await?.unwrap();
 
-    for user_id in get_voice_channel_members(channel.id()).await?.iter().flatten() {
-        let user = Reference::from_unchecked(user_id.clone()).as_user(db).await?;
+    for user_id in get_voice_channel_members(channel.id())
+        .await?
+        .iter()
+        .flatten()
+    {
+        let user = Reference::from_unchecked(user_id.clone())
+            .as_user(db)
+            .await?;
 
-        sync_user_voice_permissions(db, voice_client, &node, &user, channel, server, role_id).await?;
-    };
+        sync_user_voice_permissions(db, voice_client, &node, &user, channel, server, role_id)
+            .await?;
+    }
 
     Ok(())
 }
 
-pub async fn sync_user_voice_permissions(db: &Database, voice_client: &VoiceClient, node: &str, user: &User, channel: &Channel, server: Option<&Server>, role_id: Option<&str>) -> Result<()> {
+pub async fn sync_user_voice_permissions(
+    db: &Database,
+    voice_client: &VoiceClient,
+    node: &str,
+    user: &User,
+    channel: &Channel,
+    server: Option<&Server>,
+    role_id: Option<&str>,
+) -> Result<()> {
     let channel_id = channel.id();
     let server_id: Option<&str> = server.as_ref().map(|s| s.id.as_str());
 
     let member = match server_id {
-        Some(server_id) => Some(Reference::from_unchecked(user.id.clone()).as_member(db, server_id).await?),
-        None => None
+        Some(server_id) => Some(
+            Reference::from_unchecked(user.id.clone())
+                .as_member(db, server_id)
+                .await?,
+        ),
+        None => None,
     };
 
-    if role_id.is_none_or(|role_id| member.as_ref().is_none_or(|member| member.roles.iter().any(|r| r == role_id))) {
-        let voice_state = get_voice_state(channel_id, server_id, &user.id).await?.unwrap();
+    if role_id.is_none_or(|role_id| {
+        member
+            .as_ref()
+            .is_none_or(|member| member.roles.iter().any(|r| r == role_id))
+    }) {
+        let voice_state = get_voice_state(channel_id, server_id, &user.id)
+            .await?
+            .unwrap();
 
         let mut query = DatabasePermissionQuery::new(db, user)
             .channel(channel)
             .user(user);
 
         if let (Some(server), Some(member)) = (server, member.as_ref()) {
-                query = query.member(member).server(server)
+            query = query.member(member).server(server)
         }
 
         let permissions = calculate_channel_permissions(&mut query).await;
+        let limits = user.limits().await;
 
         let mut update_event = PartialUserVoiceState {
             id: Some(user.id.clone()),
@@ -360,7 +421,7 @@ pub async fn sync_user_voice_permissions(db: &Database, voice_client: &VoiceClie
 
         let before = update_event.clone();
 
-        let can_video = permissions.has_channel_permission(ChannelPermission::Video);
+        let can_video = limits.video && permissions.has_channel_permission(ChannelPermission::Video);
         let can_speak = permissions.has_channel_permission(ChannelPermission::Speak);
         let can_listen = permissions.has_channel_permission(ChannelPermission::Listen);
 
@@ -370,21 +431,49 @@ pub async fn sync_user_voice_permissions(db: &Database, voice_client: &VoiceClie
 
         update_voice_state(channel_id, server_id, &user.id, &update_event).await?;
 
-        voice_client.update_permissions(node, user, channel_id, ParticipantPermission {
-            can_subscribe: can_listen,
-            can_publish: can_speak,
-            can_publish_data: can_speak,
-            ..Default::default()
-        }).await?;
+        voice_client
+            .update_permissions(
+                node,
+                user,
+                channel_id,
+                ParticipantPermission {
+                    can_subscribe: can_listen,
+                    can_publish: can_speak,
+                    can_publish_data: can_speak,
+                    ..Default::default()
+                },
+            )
+            .await?;
 
         if update_event != before {
             EventV1::UserVoiceStateUpdate {
                 id: user.id.clone(),
                 channel_id: channel_id.to_string(),
-                data: update_event
-            }.p(channel_id.to_string()).await;
+                data: update_event,
+            }
+            .p(channel_id.to_string())
+            .await;
         };
     };
 
     Ok(())
+}
+
+pub async fn set_channel_call_started_system_message(
+    channel_id: &str,
+    message_id: &str,
+) -> Result<()> {
+    get_connection()
+        .await?
+        .set(format!("call_started_message:{channel_id}"), message_id)
+        .await
+        .to_internal_error()
+}
+
+pub async fn take_channel_call_started_system_message(channel_id: &str) -> Result<Option<String>> {
+    get_connection()
+        .await?
+        .get_del(format!("call_started_message:{channel_id}"))
+        .await
+        .to_internal_error()
 }

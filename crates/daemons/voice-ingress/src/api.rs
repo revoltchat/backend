@@ -1,0 +1,201 @@
+use livekit_api::{access_token::TokenVerifier, webhooks::WebhookReceiver};
+use livekit_protocol::TrackType;
+use revolt_database::{
+    events::client::EventV1,
+    iso8601_timestamp::Timestamp,
+    util::reference::Reference,
+    voice::{
+        create_voice_state, delete_voice_state, get_user_moved_from_voice, get_user_moved_to_voice,
+        get_voice_channel_members, take_channel_call_started_system_message,
+        update_voice_state_tracks, VoiceClient,
+    },
+    Database, PartialMessage, SystemMessage,
+};
+use revolt_result::{Result, ToRevoltError};
+use rocket::{post, State};
+use rocket_empty::EmptyResponse;
+
+use crate::guard::AuthHeader;
+
+#[post("/<node>", data = "<body>")]
+pub async fn ingress(
+    db: &State<Database>,
+    node: &str,
+    voice_client: &State<VoiceClient>,
+    auth_header: AuthHeader<'_>,
+    body: &str,
+) -> Result<EmptyResponse> {
+    log::debug!("received event: {body:?}");
+
+    let config = revolt_config::config().await;
+
+    let node_info = config
+        .api
+        .livekit
+        .nodes
+        .get(node)
+        .to_internal_error()
+        .inspect_err(|_| {
+            log::error!("Unknown node {node}, make sure livekit has the correct node name set and matches `hosts.livekit` and `api.livekit.nodes` in the Revolt config.")
+        })?;
+
+    let webhook_receiver = WebhookReceiver::new(TokenVerifier::with_api_key(
+        &node_info.key,
+        &node_info.secret,
+    ));
+
+    let event = webhook_receiver
+        .receive(body, &auth_header)
+        .to_internal_error()?;
+
+    let channel_id = event.room.as_ref().map(|r| &r.name);
+    let user_id = event.participant.as_ref().map(|r| &r.identity);
+
+    match event.event.as_str() {
+        // User joined a channel
+        "participant_joined" => {
+            let channel_id = channel_id.to_internal_error()?;
+            let user_id = user_id.to_internal_error()?;
+
+            let channel = Reference::from_unchecked(channel_id.clone())
+                .as_channel(db)
+                .await?;
+
+            let voice_state = create_voice_state(channel_id, channel.server(), user_id).await?;
+
+            // Only publish one event when a user is moved from one channel to another.
+            if let Some(moved_from) = get_user_moved_to_voice(channel_id, user_id).await? {
+                EventV1::VoiceChannelMove {
+                    user: user_id.clone(),
+                    from: moved_from,
+                    to: channel_id.clone(),
+                    state: voice_state,
+                }
+                .p(channel_id.clone())
+                .await;
+            } else {
+                EventV1::VoiceChannelJoin {
+                    id: channel_id.clone(),
+                    state: voice_state,
+                }
+                .p(channel_id.clone())
+                .await;
+            };
+        }
+        // User left a channel
+        "participant_left" => {
+            let channel_id = channel_id.to_internal_error()?;
+            let user_id = user_id.to_internal_error()?;
+
+            let channel = Reference::from_unchecked(channel_id.clone())
+                .as_channel(db)
+                .await?;
+
+            delete_voice_state(channel_id, channel.server(), user_id).await?;
+
+            // Dont send leave event when a user is moved
+            if get_user_moved_from_voice(channel_id, user_id)
+                .await?
+                .is_none()
+            {
+                EventV1::VoiceChannelLeave {
+                    id: channel_id.clone(),
+                    user: user_id.clone(),
+                }
+                .p(channel_id.clone())
+                .await;
+            };
+
+            // Update CallStarted system message if everyone has left with the end time
+            let members = get_voice_channel_members(channel_id).await?;
+
+            if members.is_none_or(|m| m.is_empty()) {
+                if let Some(system_message_id) =
+                    take_channel_call_started_system_message(channel_id).await?
+                {
+                    // Could have been deleted
+                    if let Ok(mut message) = Reference::from_unchecked(system_message_id)
+                        .as_message(db)
+                        .await
+                    {
+                        if let Some(SystemMessage::CallStarted { finished_at, .. }) =
+                            &mut message.system
+                        {
+                            *finished_at = Some(Timestamp::now_utc());
+
+                            message
+                                .update(
+                                    db,
+                                    PartialMessage {
+                                        system: message.system.clone(),
+                                        ..Default::default()
+                                    },
+                                    Vec::new(),
+                                )
+                                .await?;
+                        } else {
+                            log::error!("Broken State: Call started message ID ({}) does not contain a CallStarted system message.", &message.id)
+                        }
+                    };
+                };
+            }
+        }
+        // Audio/video track was started/stopped
+        "track_published" | "track_unpublished" => {
+            let channel_id = channel_id.to_internal_error()?;
+            let user_id = user_id.to_internal_error()?;
+            let track = event.track.as_ref().to_internal_error()?;
+
+            let channel = Reference::from_unchecked(channel_id.clone())
+                .as_channel(db)
+                .await?;
+
+            let user = Reference::from_unchecked(user_id.clone())
+                .as_user(db)
+                .await?;
+
+            let user_limits = user.limits().await;
+
+            // forbid any size which goes over the limit and also limit the aspect ratio to stop people from making too tall or too wide and bypassing the limit.
+            // TODO: figure out how to track audio stream quality
+
+            if event.event == "track_published"
+                && (track.r#type == TrackType::Data as i32
+                    || (track.r#type == TrackType::Video as i32
+                        && (user_limits.video_resolution[0] != 0
+                            && user_limits.video_resolution[1] != 0
+                            && track.width * track.height
+                                > user_limits.video_resolution[0]
+                                    * user_limits.video_resolution[1])
+                        || (user_limits.video_aspect_ratio[0]
+                            != user_limits.video_aspect_ratio[1]
+                            && !(user_limits.video_aspect_ratio[0]
+                                ..=user_limits.video_aspect_ratio[1])
+                                .contains(&(track.width as f32 / track.height as f32)))))
+            {
+                voice_client.remove_user(node, user_id, channel_id).await?;
+                delete_voice_state(channel_id, channel.server(), user_id).await?;
+            } else {
+                let partial = update_voice_state_tracks(
+                    channel_id,
+                    channel.server(),
+                    user_id,
+                    event.event == "track_published", // to avoid duplicating this entire case twice
+                    track.source,
+                )
+                .await?;
+
+                EventV1::UserVoiceStateUpdate {
+                    id: user_id.clone(),
+                    channel_id: channel_id.clone(),
+                    data: partial,
+                }
+                .p(channel_id.clone())
+                .await;
+            }
+        }
+        _ => {}
+    };
+
+    Ok(EmptyResponse)
+}

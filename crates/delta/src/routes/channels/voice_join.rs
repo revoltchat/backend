@@ -1,6 +1,6 @@
 use revolt_config::config;
 use revolt_models::v0;
-use revolt_database::{util::{permissions::perms, reference::Reference}, voice::{delete_voice_state, get_channel_node, get_user_voice_channels, raise_if_in_voice, VoiceClient}, Channel, Database, SystemMessage, User, AMQP};
+use revolt_database::{util::{permissions::perms, reference::Reference}, voice::{delete_voice_state, get_channel_node, get_user_voice_channels, raise_if_in_voice, set_channel_call_started_system_message, VoiceClient}, Channel, Database, SystemMessage, User, AMQP};
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
 
@@ -65,31 +65,30 @@ pub async fn call(
         raise_if_in_voice(&user, channel.id()).await?;
     }
 
-    let token = voice_client.create_token(&node, &user, current_permissions, &channel)?;
+    let token = voice_client.create_token(&node, &user, current_permissions, &channel).await?;
     let room = voice_client.create_room(&node, &channel).await?;
 
     log::debug!("Created room {}", room.name);
 
-    match &channel {
-        Channel::DirectMessage { .. } | Channel::Group { .. } => {
-            SystemMessage::CallStarted {
-                by: user.id.clone()
-            }
-            .into_message(channel.id().to_string())
-            .send(
-                db,
-                Some(amqp),
-                v0::MessageAuthor::System {
-                    username: &user.username,
-                    avatar: user.avatar.as_ref().map(|file| file.id.as_ref()),
-                },
-                None,
-                None,
-                &channel, false
-            ).await?;
-        }
-        _ => {}
-    };
+    let mut call_started_message = SystemMessage::CallStarted {
+        by: user.id.clone(),
+        finished_at: None
+    }
+    .into_message(channel.id().to_string());
+
+    set_channel_call_started_system_message(channel.id(), &call_started_message.id).await?;
+
+    call_started_message.send(
+        db,
+        Some(amqp),
+        v0::MessageAuthor::System {
+            username: &user.username,
+            avatar: user.avatar.as_ref().map(|file| file.id.as_ref()),
+        },
+        None,
+        None,
+        &channel, false
+    ).await?;
 
     Ok(Json(v0::CreateVoiceUserResponse { token, url: node_host.clone() }))
 }

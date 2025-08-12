@@ -133,7 +133,7 @@ auto_derived!(
         #[serde(rename = "message_unpinned")]
         MessageUnpinned { id: String, by: String },
         #[serde(rename = "call_started")]
-        CallStarted { by: String },
+        CallStarted { by: String, finished_at: Option<Timestamp> },
     }
 
     /// Name and / or avatar override information

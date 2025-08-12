@@ -2,7 +2,7 @@
 use std::{borrow::Cow, collections::HashMap};
 
 use revolt_config::config;
-use revolt_models::v0::{self, MessageAuthor, VoiceInformation};
+use revolt_models::v0::{self, MessageAuthor};
 use revolt_permissions::OverrideField;
 use revolt_result::Result;
 use serde::{Deserialize, Serialize};
@@ -141,6 +141,13 @@ auto_derived!(
             nsfw: bool,
         },
     }
+
+    #[derive(Default)]
+    pub struct VoiceInformation {
+        /// Maximium amount of users allowed in the voice channel at once
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub max_users: Option<u32>
+    }
 );
 
 auto_derived!(
@@ -167,7 +174,7 @@ auto_derived!(
         #[serde(skip_serializing_if = "Option::is_none")]
         pub last_message_id: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
-        pub voice: Option<VoiceInformation>
+        pub voice: Option<VoiceInformation>,
     }
 
     /// Optional fields on channel object
@@ -226,7 +233,7 @@ impl Channel {
                 default_permissions: None,
                 role_permissions: HashMap::new(),
                 nsfw: data.nsfw.unwrap_or(false),
-                voice: data.voice
+                voice: data.voice.map(|voice| voice.into())
             },
             v0::LegacyServerChannelType::Voice => Channel::TextChannel {
                 id: id.clone(),
@@ -238,7 +245,7 @@ impl Channel {
                 default_permissions: None,
                 role_permissions: HashMap::new(),
                 nsfw: data.nsfw.unwrap_or(false),
-                voice: Some(data.voice.unwrap_or_default())
+                voice: Some(data.voice.unwrap_or_default().into())
             },
         };
 
@@ -455,7 +462,7 @@ impl Channel {
     /// Gets this channel's voice information
     pub fn voice(&self) -> Option<Cow<VoiceInformation>> {
         match self {
-            Self::DirectMessage { .. } | Channel::VoiceChannel { .. } => Some(Cow::Owned(v0::VoiceInformation::default())),
+            Self::DirectMessage { .. } | Channel::VoiceChannel { .. } => Some(Cow::Owned(VoiceInformation::default())),
             Self::TextChannel { voice: Some(voice), .. } => Some(Cow::Borrowed(voice)),
             _ => None
         }

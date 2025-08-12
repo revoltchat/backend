@@ -38,6 +38,7 @@ pub async fn edit(
         && data.icon.is_none()
         && data.nsfw.is_none()
         && data.owner.is_none()
+        && data.voice.is_none()
         && data.remove.is_none()
     {
         return Ok(Json(channel.into()));
@@ -242,8 +243,8 @@ pub async fn edit(
             }
 
             if let Some(new_voice) = data.voice {
-                *voice = Some(new_voice.clone());
-                partial.voice = Some(new_voice);
+                *voice = Some(new_voice.clone().into());
+                partial.voice = Some(new_voice.into());
             }
         }
         _ => return Err(create_error!(InvalidOperation)),

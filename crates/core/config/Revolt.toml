@@ -233,6 +233,18 @@ message_attachments = 5
 # Maximum number of servers the user can create/join
 servers = 50
 
+# Maximum audio frequency (Hz) in voice calls
+voice_quality = 16000
+
+# Whether the user can use video streams in voice calls
+video = true
+
+# Mamimum resolution (width, height) of video streams in voice calls
+video_resolution = [1080, 720]
+
+# Minimum and maximum aspect ratio of video streams in voice calls
+video_aspect_ratio = [0.3, 2.5]
+
 [features.limits.new_user.file_upload_size_limit]
 # Maximum file size limits (in bytes)
 attachments = 20_000_000
@@ -259,6 +271,18 @@ message_attachments = 5
 
 # Maximum number of servers the user can create/join
 servers = 100
+
+# Maximum audio frequency (Hz) in voice calls
+voice_quality = 16000
+
+# Whether the user can use video streams in voice calls
+video = true
+
+# Mamimum resolution (width, height) of video streams in voice calls
+video_resolution = [1080, 720]
+
+# Minimum and maximum aspect ratio of video streams in voice calls
+video_aspect_ratio = [0.3, 2.5]
 
 [features.limits.default.file_upload_size_limit]
 # Maximum file size limits (in bytes)

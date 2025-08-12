@@ -158,6 +158,7 @@ auto_derived!(
     pub struct VoiceInformation {
         /// Maximium amount of users allowed in the voice channel at once
         #[cfg_attr(feature = "validator", validate(range(min = 1)))]
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub max_users: Option<u32>
     }
 
