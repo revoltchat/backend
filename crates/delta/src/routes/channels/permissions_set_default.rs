@@ -17,7 +17,7 @@ use rocket::{serde::json::Json, State};
 pub async fn set_default_channel_permissions(
     db: &State<Database>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     data: Json<v0::DataDefaultChannelPermissions>,
 ) -> Result<Json<v0::Channel>> {
     let data = data.into_inner();

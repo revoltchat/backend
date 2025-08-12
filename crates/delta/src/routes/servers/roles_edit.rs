@@ -16,7 +16,7 @@ use validator::Validate;
 pub async fn edit(
     db: &State<Database>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     role_id: String,
     data: Json<v0::DataEditRole>,
 ) -> Result<Json<v0::Role>> {

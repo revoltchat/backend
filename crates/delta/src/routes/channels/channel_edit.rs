@@ -17,7 +17,7 @@ pub async fn edit(
     db: &State<Database>,
     amqp: &State<AMQP>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     data: Json<v0::DataEditChannel>,
 ) -> Result<Json<v0::Channel>> {
     let data = data.into_inner();

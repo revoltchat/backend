@@ -17,7 +17,7 @@ use validator::Validate;
 pub async fn create(
     db: &State<Database>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     data: Json<v0::DataCreateRole>,
 ) -> Result<Json<v0::NewRoleResponse>> {
     let data = data.into_inner();

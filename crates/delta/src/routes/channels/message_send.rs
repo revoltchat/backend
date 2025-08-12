@@ -21,7 +21,7 @@ pub async fn message_send(
     db: &State<Database>,
     amqp: &State<AMQP>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     data: Json<v0::DataMessageSend>,
     idempotency: IdempotencyKey,
 ) -> Result<Json<v0::Message>> {
@@ -202,7 +202,7 @@ mod test {
         Member::create(&harness.db, &server, &user, Some(channels.clone()))
             .await
             .expect("Failed to create member");
-        let member = Reference::from_unchecked(user.id.clone())
+        let member = Reference::from_unchecked(&user.id)
             .as_member(&harness.db, &server.id)
             .await
             .expect("Failed to get member");
@@ -242,7 +242,7 @@ mod test {
         Member::create(&harness.db, &server, &second_user, Some(channels.clone()))
             .await
             .expect("Failed to create second member");
-        let mut second_member = Reference::from_unchecked(second_user.id.clone())
+        let mut second_member = Reference::from_unchecked(&second_user.id)
             .as_member(&harness.db, &server.id)
             .await
             .expect("Failed to get second member");

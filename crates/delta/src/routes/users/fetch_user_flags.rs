@@ -10,7 +10,7 @@ use rocket::{serde::json::Json, State};
 #[get("/<target>/flags")]
 pub async fn fetch_user_flags(
     db: &State<Database>,
-    target: Reference,
+    target: Reference<'_>,
 ) -> Result<Json<v0::FlagResponse>> {
     let flags = if let Ok(target) = target.as_user(db).await {
         target.flags.unwrap_or_default()

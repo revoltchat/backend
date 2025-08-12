@@ -15,8 +15,8 @@ use rocket_empty::EmptyResponse;
 pub async fn kick(
     db: &State<Database>,
     user: User,
-    target: Reference,
-    member: Reference,
+    target: Reference<'_>,
+    member: Reference<'_>,
 ) -> Result<EmptyResponse> {
     let server = target.as_server(db).await?;
 

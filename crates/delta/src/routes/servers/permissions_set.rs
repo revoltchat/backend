@@ -15,7 +15,7 @@ use rocket::{serde::json::Json, State};
 pub async fn set_role_permission(
     db: &State<Database>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     role_id: String,
     data: Json<v0::DataSetServerRolePermission>,
 ) -> Result<Json<v0::Server>> {

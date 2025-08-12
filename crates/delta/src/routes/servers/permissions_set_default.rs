@@ -17,7 +17,7 @@ use rocket::{serde::json::Json, State};
 pub async fn set_default_server_permissions(
     db: &State<Database>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     data: Json<DataPermissionsValue>,
 ) -> Result<Json<v0::Server>> {
     let data = data.into_inner();

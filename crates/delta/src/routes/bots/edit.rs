@@ -14,7 +14,7 @@ use validator::Validate;
 pub async fn edit_bot(
     db: &State<Database>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     data: Json<DataEditBot>,
 ) -> Result<Json<v0::BotWithUserResponse>> {
     let data = data.into_inner();

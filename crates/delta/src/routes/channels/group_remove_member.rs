@@ -14,8 +14,8 @@ pub async fn remove_member(
     db: &State<Database>,
     amqp: &State<AMQP>,
     user: User,
-    target: Reference,
-    member: Reference,
+    target: Reference<'_>,
+    member: Reference<'_>,
 ) -> Result<EmptyResponse> {
     if user.bot.is_some() {
         return Err(create_error!(IsBot));

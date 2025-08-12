@@ -16,7 +16,7 @@ use validator::Validate;
 pub async fn search(
     db: &State<Database>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     options: Json<v0::DataMessageSearch>,
 ) -> Result<Json<v0::BulkMessageResponse>> {
     if user.bot.is_some() {

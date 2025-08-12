@@ -15,7 +15,7 @@ use rocket_empty::EmptyResponse;
 pub async fn delete(
     db: &State<Database>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     role_id: String,
 ) -> Result<EmptyResponse> {
     let mut server = target.as_server(db).await?;

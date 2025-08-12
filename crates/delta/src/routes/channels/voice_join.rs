@@ -16,7 +16,7 @@ use rocket::{serde::json::Json, State};
 pub async fn call(
     db: &State<Database>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
 ) -> Result<Json<v0::LegacyCreateVoiceUserResponse>> {
     let channel = target.as_channel(db).await?;
     let mut query = DatabasePermissionQuery::new(db, &user).channel(&channel);

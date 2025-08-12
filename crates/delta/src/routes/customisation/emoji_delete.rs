@@ -16,7 +16,7 @@ use rocket_empty::EmptyResponse;
 pub async fn delete_emoji(
     db: &State<Database>,
     user: User,
-    emoji_id: Reference,
+    emoji_id: Reference<'_>,
 ) -> Result<EmptyResponse> {
     // Fetch the emoji
     let emoji = emoji_id.as_emoji(db).await?;
@@ -26,7 +26,7 @@ pub async fn delete_emoji(
         // Otherwise, validate we have permission to delete from parent
         match &emoji.parent {
             EmojiParent::Server { id } => {
-                let server = db.fetch_server(id).await?;
+                let server = db.fetch_server(id.as_str()).await?;
 
                 // Check for permission
                 let mut query = DatabasePermissionQuery::new(db, &user).server(&server);

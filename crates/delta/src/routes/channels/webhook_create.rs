@@ -19,7 +19,7 @@ use validator::Validate;
 pub async fn create_webhook(
     db: &State<Database>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     data: Json<v0::CreateWebhookBody>,
 ) -> Result<Json<v0::Webhook>> {
     let data = data.into_inner();

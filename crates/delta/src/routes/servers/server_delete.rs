@@ -13,11 +13,11 @@ use rocket_empty::EmptyResponse;
 pub async fn delete(
     db: &State<Database>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     options: v0::OptionsServerDelete,
 ) -> Result<EmptyResponse> {
     let server = target.as_server(db).await?;
-    let member = db.fetch_member(&target.id, &user.id).await?;
+    let member = db.fetch_member(target.id, &user.id).await?;
 
     if server.owner == user.id {
         server.delete(db).await
