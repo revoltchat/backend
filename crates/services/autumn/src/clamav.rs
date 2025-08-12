@@ -1,7 +1,7 @@
 use std::time::Duration;
 
-use revolt_config::{config, report_internal_error};
-use revolt_result::Result;
+use revolt_config::config;
+use revolt_result::{Result, ToRevoltError};
 
 /// Initialise ClamAV
 pub async fn init() {
@@ -38,12 +38,12 @@ pub async fn is_malware(buf: &[u8]) -> Result<bool> {
     if config.files.clamd_host.is_empty() {
         Ok(false)
     } else {
-        let scan_response = report_internal_error!(revolt_clamav_client::scan_buffer_tcp(
-            buf,
-            config.files.clamd_host,
-            None
-        ))?;
+        let scan_response =
+            revolt_clamav_client::scan_buffer_tcp(buf, config.files.clamd_host, None)
+                .to_internal_error()?;
 
-        report_internal_error!(revolt_clamav_client::clean(&scan_response)).map(|v| !v)
+        revolt_clamav_client::clean(&scan_response)
+            .to_internal_error()
+            .map(|v| !v)
     }
 }

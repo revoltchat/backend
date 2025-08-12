@@ -6,10 +6,9 @@ use reqwest::{
     header::{self, CONTENT_TYPE},
     redirect, Client, Response,
 };
-use revolt_config::report_internal_error;
 use revolt_files::{create_thumbnail, decode_image, image_size_vec, is_valid_image, video_size};
 use revolt_models::v0::{Embed, Image, ImageSize, Video};
-use revolt_result::{create_error, Error, Result};
+use revolt_result::{create_error, Error, Result, ToRevoltError};
 use std::{
     io::{Cursor, Write},
     time::Duration,
@@ -76,7 +75,7 @@ impl Request {
             let Request { response, mime } = Request::new(url).await?;
 
             if matches!(mime.type_(), mime::IMAGE | mime::VIDEO) {
-                let bytes = report_internal_error!(response.bytes().await);
+                let bytes = response.bytes().await.to_internal_error();
 
                 let result = match bytes {
                     Ok(bytes) => {
@@ -100,8 +99,8 @@ impl Request {
                                 ))
                             }
                         } else {
-                            let mut file = report_internal_error!(tempfile::NamedTempFile::new())?;
-                            report_internal_error!(file.write_all(&bytes))?;
+                            let mut file = tempfile::NamedTempFile::new().to_internal_error()?;
+                            file.write_all(&bytes).to_internal_error()?;
 
                             if video_size(&file).is_some() {
                                 Ok((mime.to_string(), bytes.to_vec()))
@@ -144,7 +143,7 @@ impl Request {
             };
 
             if let Some((width, height)) = image_size_vec(
-                &report_internal_error!(request.response.bytes().await)?,
+                &request.response.bytes().await.to_internal_error()?,
                 request.mime.as_ref(),
             ) {
                 Ok(Some(Image {
@@ -181,10 +180,9 @@ impl Request {
                 }
             };
 
-            let mut file = report_internal_error!(tempfile::NamedTempFile::new())?;
-            report_internal_error!(
-                file.write_all(&report_internal_error!(response.bytes().await)?)
-            )?;
+            let mut file = tempfile::NamedTempFile::new().to_internal_error()?;
+            file.write_all(&response.bytes().await.to_internal_error()?)
+                .to_internal_error()?;
 
             if let Some((width, height)) = video_size(&file) {
                 Ok(Some(Video {
@@ -230,7 +228,7 @@ impl Request {
                     let encoding =
                         Encoding::for_label(encoding_name.as_bytes()).unwrap_or(&UTF_8_INIT);
 
-                    let bytes = report_internal_error!(request.response.bytes().await)?;
+                    let bytes = request.response.bytes().await.to_internal_error()?;
                     let (text, _, _) = encoding.decode(&bytes);
 
                     crate::website_embed::create_website_embed(&url, &text)

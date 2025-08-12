@@ -55,13 +55,12 @@ pub async fn fetch_from_s3(bucket_id: &str, path: &str, nonce: &str) -> Result<V
 
     // Send a request for the file
     let mut obj =
-        report_internal_error!(client.get_object().bucket(bucket_id).key(path).send().await)?;
+        client.get_object().bucket(bucket_id).key(path).send().await.to_internal_error()?;
 
     // Read the file from remote
     let mut buf = vec![];
     while let Some(bytes) = obj.body.next().await {
-        let data = report_internal_error!(bytes)?;
-        report_internal_error!(buf.write_all(&data))?;
+        buf.write_all(&bytes.to_internal_error()?).to_internal_error()?;
         // is there a more efficient way to do this?
         // we just want the Vec<u8>
     }
@@ -100,15 +99,14 @@ pub async fn upload_to_s3(bucket_id: &str, path: &str, buf: &[u8]) -> Result<Str
         .to_internal_error()?;
 
     // Upload the file to remote
-    report_internal_error!(
-        client
-            .put_object()
-            .bucket(bucket_id)
-            .key(path)
-            .body(buf.into())
-            .send()
-            .await
-    )?;
+    client
+        .put_object()
+        .bucket(bucket_id)
+        .key(path)
+        .body(buf.into())
+        .send()
+        .await
+        .to_internal_error()?;
 
     Ok(BASE64_STANDARD.encode(nonce))
 }
@@ -118,14 +116,13 @@ pub async fn delete_from_s3(bucket_id: &str, path: &str) -> Result<()> {
     let config = config().await;
     let client = create_client(config.files.s3);
 
-    report_internal_error!(
-        client
-            .delete_object()
-            .bucket(bucket_id)
-            .key(path)
-            .send()
-            .await
-    )?;
+    client
+        .delete_object()
+        .bucket(bucket_id)
+        .key(path)
+        .send()
+        .await
+        .to_internal_error()?;
 
     Ok(())
 }
@@ -145,8 +142,7 @@ pub fn image_size(f: &NamedTempFile) -> Option<(usize, usize)> {
 pub fn image_size_vec(v: &[u8], mime: &str) -> Option<(usize, usize)> {
     match mime {
         "image/svg+xml" => {
-            let tree =
-                report_internal_error!(usvg::Tree::from_data(v, &Default::default())).ok()?;
+            let tree = usvg::Tree::from_data(v, &Default::default()).to_internal_error().ok()?;
 
             let size = tree.size();
             Some((size.width() as usize, size.height() as usize))
@@ -221,9 +217,9 @@ pub fn decode_image<R: Read + BufRead + Seek>(reader: &mut R, mime: &str) -> Res
         "image/svg+xml" => {
             // usvg doesn't support Read trait so copy to buffer
             let mut buf = Vec::new();
-            report_internal_error!(reader.read_to_end(&mut buf))?;
+            reader.read_to_end(&mut buf).to_internal_error()?;
 
-            let tree = report_internal_error!(usvg::Tree::from_data(&buf, &Default::default()))?;
+            let tree = usvg::Tree::from_data(&buf, &Default::default()).to_internal_error()?;
             let size = tree.size();
             let mut pixmap = Pixmap::new(size.width() as u32, size.height() as u32)
                 .ok_or_else(|| create_error!(ImageProcessingFailed))?;
@@ -241,10 +237,11 @@ pub fn decode_image<R: Read + BufRead + Seek>(reader: &mut R, mime: &str) -> Res
             ))
         }
         // Check if we can read using image-rs crate
-        _ => report_internal_error!(report_internal_error!(
-            image::ImageReader::new(reader).with_guessed_format()
-        )?
-        .decode()),
+        _ => image::ImageReader::new(reader)
+            .with_guessed_format()
+            .to_internal_error()?
+            .decode()
+            .to_internal_error()
     }
 }
 

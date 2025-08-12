@@ -12,12 +12,12 @@ use axum::{
 };
 use axum_typed_multipart::{FieldData, TryFromMultipart, TypedMultipart};
 use lazy_static::lazy_static;
-use revolt_config::{config, report_internal_error};
+use revolt_config::config;
 use revolt_database::{iso8601_timestamp::Timestamp, Database, FileHash, Metadata, User};
 use revolt_files::{
     create_thumbnail, decode_image, fetch_from_s3, upload_to_s3, AUTHENTICATION_TAG_SIZE_BYTES,
 };
-use revolt_result::{create_error, Error, Result};
+use revolt_result::{create_error, Error, Result, ToRevoltError};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use tempfile::NamedTempFile;
@@ -181,7 +181,7 @@ async fn upload_file(
 
     // Load file to memory
     let mut buf = Vec::<u8>::new();
-    report_internal_error!(file.contents.read_to_end(&mut buf))?;
+    file.contents.read_to_end(&mut buf).to_internal_error()?;
 
     // Take note of original file size
     let original_file_size = buf.len();

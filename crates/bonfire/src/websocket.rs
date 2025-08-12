@@ -14,7 +14,6 @@ use futures::{
     FutureExt, SinkExt, StreamExt, TryStreamExt,
 };
 use redis_kiss::{PayloadType, REDIS_PAYLOAD_TYPE, REDIS_URI};
-use revolt_config::report_internal_error;
 use revolt_database::{
     events::{client::EventV1, server::ClientMessage},
     iso8601_timestamp::Timestamp,
@@ -27,7 +26,7 @@ use async_std::{
     sync::{Mutex, RwLock},
     task::spawn,
 };
-use revolt_result::create_error;
+use revolt_result::{create_error, ToRevoltError};
 use sentry::Level;
 
 use crate::config::{ProtocolConfiguration, WebsocketHandshakeCallback};
@@ -110,21 +109,21 @@ pub async fn client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
     let user_id = state.cache.user_id.clone();
 
     // Notify socket we have authenticated.
-    if report_internal_error!(write.send(config.encode(&EventV1::Authenticated)).await).is_err() {
+    if write.send(config.encode(&EventV1::Authenticated)).await.to_internal_error().is_err() {
         return;
     }
 
     // Download required data to local cache and send Ready payload.
-    let ready_payload = match report_internal_error!(
-        state
+    let ready_payload = match state
             .generate_ready_payload(db, config.get_ready_payload_fields())
             .await
-    ) {
+            .to_internal_error()
+    {
         Ok(ready_payload) => ready_payload,
         Err(_) => return,
     };
 
-    if report_internal_error!(write.send(config.encode(&ready_payload)).await).is_err() {
+    if write.send(config.encode(&ready_payload)).await.to_internal_error().is_err() {
         return;
     }
 
@@ -219,14 +218,15 @@ async fn listener(
     write: &Mutex<WsWriter>,
 ) {
     let redis_config = RedisConfig::from_url(&REDIS_URI).unwrap();
-    let subscriber = match report_internal_error!(
-        fred::types::Builder::from_config(redis_config).build_subscriber_client()
-    ) {
+    let subscriber = match fred::types::Builder::from_config(redis_config)
+        .build_subscriber_client()
+        .to_internal_error()
+    {
         Ok(subscriber) => subscriber,
         Err(_) => return,
     };
 
-    if report_internal_error!(subscriber.init().await).is_err() {
+    if subscriber.init().await.to_internal_error().is_err() {
         return;
     }
 
@@ -249,13 +249,13 @@ async fn listener(
         // Check for state changes for subscriptions.
         match state.apply_state().await {
             SubscriptionStateChange::Reset => {
-                if report_internal_error!(subscriber.unsubscribe_all().await).is_err() {
+                if subscriber.unsubscribe_all().await.to_internal_error().is_err() {
                     break 'out;
                 }
 
                 let subscribed = state.subscribed.read().await;
                 for id in subscribed.iter() {
-                    if report_internal_error!(subscriber.subscribe(id).await).is_err() {
+                    if subscriber.subscribe(id).await.to_internal_error().is_err() {
                         break 'out;
                     }
                 }
@@ -268,7 +268,7 @@ async fn listener(
                     #[cfg(debug_assertions)]
                     info!("{addr:?} unsubscribing from {id}");
 
-                    if report_internal_error!(subscriber.unsubscribe(id).await).is_err() {
+                    if subscriber.unsubscribe(id).await.to_internal_error().is_err() {
                         break 'out;
                     }
                 }
@@ -277,7 +277,7 @@ async fn listener(
                     #[cfg(debug_assertions)]
                     info!("{addr:?} subscribing to {id}");
 
-                    if report_internal_error!(subscriber.subscribe(id).await).is_err() {
+                    if subscriber.subscribe(id).await.to_internal_error().is_err() {
                         break 'out;
                     }
                 }
@@ -302,7 +302,7 @@ async fn listener(
             _ = t2 => {},
             message = t1 => {
                 // Handle incoming events.
-                let message = match report_internal_error!(message) {
+                let message = match message.to_internal_error() {
                     Ok(message) => message,
                     Err(_) => break 'out
                 };
@@ -311,15 +311,15 @@ async fn listener(
                     PayloadType::Json => message
                         .value
                         .as_str()
-                        .and_then(|s| report_internal_error!(serde_json::from_str::<EventV1>(s.as_ref())).ok()),
+                        .and_then(|s| serde_json::from_str::<EventV1>(s.as_ref()).to_internal_error().ok()),
                     PayloadType::Msgpack => message
                         .value
                         .as_bytes()
-                        .and_then(|b| report_internal_error!(rmp_serde::from_slice::<EventV1>(b)).ok()),
+                        .and_then(|b| rmp_serde::from_slice::<EventV1>(b).to_internal_error().ok()),
                     PayloadType::Bincode => message
                         .value
                         .as_bytes()
-                        .and_then(|b| report_internal_error!(bincode::deserialize::<EventV1>(b)).ok()),
+                        .and_then(|b| bincode::deserialize::<EventV1>(b).to_internal_error().ok()),
                 };
 
                 let Some(mut event) = event else {
@@ -379,7 +379,7 @@ async fn listener(
         }
     }
 
-    report_internal_error!(subscriber.quit().await).ok();
+    subscriber.quit().await.to_internal_error().ok();
 }
 
 #[allow(clippy::too_many_arguments)]

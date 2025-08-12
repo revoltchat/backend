@@ -2,9 +2,8 @@ use std::io::{Cursor, Read};
 
 use exif::Reader;
 use image::{ImageFormat, ImageReader};
-use revolt_config::report_internal_error;
 use revolt_database::Metadata;
-use revolt_result::{create_error, Result};
+use revolt_result::{create_error, Result, ToRevoltError};
 use tempfile::NamedTempFile;
 use tokio::process::Command;
 
@@ -41,11 +40,11 @@ pub async fn strip_metadata(
                 let mut cursor = Cursor::new(buf);
 
                 // Decode the image
-                let image = report_internal_error!(report_internal_error!(ImageReader::new(
-                    &mut cursor
-                )
-                .with_guessed_format())?
-                .decode());
+                let image = ImageReader::new(&mut cursor)
+                    .with_guessed_format()
+                    .to_internal_error()?
+                    .decode()
+                    .to_internal_error()?;
 
                 // Reset read position
                 cursor.set_position(0);
@@ -66,15 +65,15 @@ pub async fn strip_metadata(
 
                 // Apply the EXIF rotation
                 // See https://jdhao.github.io/2019/07/31/image_rotation_exif_info/
-                report_internal_error!(match &rotation {
-                    2 => image?.fliph(),
-                    3 => image?.rotate180(),
-                    4 => image?.rotate180().fliph(),
-                    5 => image?.rotate90().fliph(),
-                    6 => image?.rotate90(),
-                    7 => image?.rotate270().fliph(),
-                    8 => image?.rotate270(),
-                    _ => image?,
+                match &rotation {
+                    2 => image.fliph(),
+                    3 => image.rotate180(),
+                    4 => image.rotate180().fliph(),
+                    5 => image.rotate90().fliph(),
+                    6 => image.rotate90(),
+                    7 => image.rotate270().fliph(),
+                    8 => image.rotate270(),
+                    _ => image,
                 }
                 .write_to(
                     &mut writer,
@@ -85,7 +84,7 @@ pub async fn strip_metadata(
                         "image/tiff" => ImageFormat::Tiff,
                         _ => todo!(),
                     },
-                ))?;
+                ).to_internal_error()?;
 
                 // Calculate dimensions after rotation.
                 let (width, height) = match &rotation {
@@ -113,44 +112,43 @@ pub async fn strip_metadata(
                 };
 
                 // Temporary output file
-                let mut out_file = report_internal_error!(NamedTempFile::new())?;
+                let mut out_file = NamedTempFile::new().to_internal_error()?;
 
                 // Process the file with ffmpeg
-                report_internal_error!(
-                    Command::new("ffmpeg")
-                        .args([
-                            // Overwrite the temporary file
-                            "-y",
-                            // Read original uploaded file
-                            "-i",
-                            file.path().to_str().ok_or(create_error!(InternalError))?,
-                            // Strip any metadata
-                            "-map_metadata",
-                            "-1",
-                            // Copy video / audio data to new file
-                            "-c:v",
-                            "copy",
-                            "-c:a",
-                            "copy",
-                            // Select correct file format
-                            "-f",
-                            ext,
-                            // Save to new temporary file
-                            out_file
-                                .path()
-                                .to_str()
-                                .ok_or(create_error!(InternalError))?,
-                        ])
-                        .output()
-                        .await
-                )?;
+                Command::new("ffmpeg")
+                    .args([
+                        // Overwrite the temporary file
+                        "-y",
+                        // Read original uploaded file
+                        "-i",
+                        file.path().to_str().ok_or(create_error!(InternalError))?,
+                        // Strip any metadata
+                        "-map_metadata",
+                        "-1",
+                        // Copy video / audio data to new file
+                        "-c:v",
+                        "copy",
+                        "-c:a",
+                        "copy",
+                        // Select correct file format
+                        "-f",
+                        ext,
+                        // Save to new temporary file
+                        out_file
+                            .path()
+                            .to_str()
+                            .ok_or(create_error!(InternalError))?,
+                    ])
+                    .output()
+                    .await
+                    .to_internal_error()?;
 
                 // Probe the file again
                 let metadata = crate::metadata::generate_metadata(&out_file, mime);
 
                 // Read the file from disk
                 let mut buf = Vec::<u8>::new();
-                report_internal_error!(out_file.read_to_end(&mut buf))?;
+                out_file.read_to_end(&mut buf).to_internal_error()?;
 
                 Ok((buf, metadata))
             }

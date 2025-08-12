@@ -1,7 +1,7 @@
 use bson::to_document;
 use bson::Document;
-use revolt_config::report_internal_error;
 use revolt_result::Result;
+use revolt_result::ToRevoltError;
 
 use crate::File;
 use crate::FileUsedFor;
@@ -106,7 +106,7 @@ impl AbstractAttachments for MongoDb {
                 },
                 doc! {
                     "$set": {
-                        "used_for": report_internal_error!(to_document(&used_for))?,
+                        "used_for": to_document(&used_for).to_internal_error()?,
                         "uploader_id": uploader_id
                     }
                 },
