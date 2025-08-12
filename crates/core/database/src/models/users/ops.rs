@@ -4,6 +4,7 @@ use revolt_result::Result;
 
 use crate::{FieldsUser, PartialUser, RelationshipStatus, User};
 
+#[cfg(feature = "mongodb")]
 mod mongodb;
 mod reference;
 

@@ -6291,7 +6291,6 @@ dependencies = [
  "bson",
  "deadqueue",
  "decancer",
- "fcm_v1",
  "futures",
  "indexmap 1.9.3",
  "isahc",
@@ -6311,7 +6310,6 @@ dependencies = [
  "revolt-permissions",
  "revolt-presence",
  "revolt-result",
- "revolt_a2",
  "revolt_okapi",
  "revolt_optional_struct",
  "revolt_rocket_okapi",
@@ -6323,7 +6321,6 @@ dependencies = [
  "unicode-segmentation",
  "url-escape",
  "validator 0.16.1",
- "web-push",
 ]
 
 [[package]]

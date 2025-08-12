@@ -2,6 +2,7 @@ use revolt_result::Result;
 
 use crate::{AppendMessage, FieldsMessage, Message, MessageQuery, PartialMessage};
 
+#[cfg(feature = "mongodb")]
 mod mongodb;
 mod reference;
 

@@ -1,5 +1,7 @@
 use crate::{revolt_result::Result, Channel, FieldsChannel, PartialChannel};
 use revolt_permissions::OverrideField;
+
+#[cfg(feature = "mongodb")]
 mod mongodb;
 mod reference;
 
