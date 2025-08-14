@@ -32,6 +32,7 @@ ulid = "0.4.1"
 nanoid = "0.4.0"
 
 # serde
+rmp-serde = "1.0.0"
 serde_json = "1.0.57"
 serde = { version = "1.0.115", features = ["derive"] }
 validator = { version = "0.16", features = ["derive"] }
@@ -65,10 +66,12 @@ revolt_rocket_okapi = { version = "0.10.0", features = ["swagger"] }
 
 # rabbit
 amqprs = { version = "1.7.0" }
+lapin = { version = "3.0.0" }
 
 # core
 authifier = "1.0.15"
 revolt-config = { path = "../core/config" }
+revolt-broker = { path = "../core/broker" }
 revolt-database = { path = "../core/database", features = [
     "rocket-impl",
     "redis-is-patched",
