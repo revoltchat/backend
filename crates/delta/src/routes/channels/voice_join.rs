@@ -1,6 +1,13 @@
 use revolt_config::config;
+use revolt_database::{
+    util::{permissions::perms, reference::Reference},
+    voice::{
+        delete_voice_state, get_channel_node, get_user_voice_channels, get_voice_channel_members,
+        raise_if_in_voice, VoiceClient,
+    },
+    Database, User,
+};
 use revolt_models::v0;
-use revolt_database::{util::{permissions::perms, reference::Reference}, voice::{delete_voice_state, get_channel_node, get_user_voice_channels, raise_if_in_voice, set_channel_call_started_system_message, VoiceClient}, Channel, Database, SystemMessage, User, AMQP};
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
 
@@ -10,43 +17,59 @@ use rocket::{serde::json::Json, State};
 ///
 /// Asks the voice server for a token to join the call.
 #[openapi(tag = "Voice")]
-#[post("/<target>/join_call", data="<data>")]
+#[post("/<target>/join_call", data = "<data>")]
 pub async fn call(
     db: &State<Database>,
-    amqp: &State<AMQP>,
     voice_client: &State<VoiceClient>,
     user: User,
     target: Reference,
-    data: Json<v0::DataJoinCall>
+    data: Json<v0::DataJoinCall>,
 ) -> Result<Json<v0::CreateVoiceUserResponse>> {
     if !voice_client.is_enabled() {
-        return Err(create_error!(LiveKitUnavailable))
+        return Err(create_error!(LiveKitUnavailable));
     }
 
     let v0::DataJoinCall {
         node,
-        force_disconnect
+        force_disconnect,
     } = data.into_inner();
 
     if user.bot.is_some() && force_disconnect == Some(true) {
-        return Err(create_error!(IsBot))
+        return Err(create_error!(IsBot));
     }
 
-    let config = config().await;
-
     let channel = target.as_channel(db).await?;
+
+    let Some(voice_info) = channel.voice() else {
+        return Err(create_error!(NotAVoiceChannel));
+    };
 
     let mut permissions = perms(db, &user).channel(&channel);
 
     let current_permissions = calculate_channel_permissions(&mut permissions).await;
     current_permissions.throw_if_lacking_channel_permission(ChannelPermission::Connect)?;
 
+    if get_voice_channel_members(channel.id())
+        .await?
+        .zip(voice_info.max_users)
+        .is_some_and(|(ms, max_users)| ms.len() >= max_users)
+        && !current_permissions.has(ChannelPermission::ManageChannel as u64)
+    {
+        return Err(create_error!(CannotJoinCall));
+    }
+
     let existing_node = get_channel_node(channel.id()).await?;
 
-    let node = existing_node.or(node)
+    let node = existing_node
+        .or(node)
         .ok_or_else(|| create_error!(UnknownNode))?;
 
-    let node_host = config.hosts.livekit.get(&node)
+    let config = config().await;
+
+    let node_host = config
+        .hosts
+        .livekit
+        .get(&node)
         .ok_or_else(|| create_error!(UnknownNode))?
         .clone();
 
@@ -56,39 +79,28 @@ pub async fn call(
 
         for channel_id in get_user_voice_channels(&user.id).await? {
             let node = get_channel_node(&channel_id).await?.unwrap();
-            let channel = Reference::from_unchecked(channel_id.clone()).as_channel(db).await?;
+            let channel = Reference::from_unchecked(channel_id.clone())
+                .as_channel(db)
+                .await?;
 
-            voice_client.remove_user(&node, &user.id, &channel_id).await?;
+            voice_client
+                .remove_user(&node, &user.id, &channel_id)
+                .await?;
             delete_voice_state(&channel_id, channel.server(), &user.id).await?;
         }
     } else {
         raise_if_in_voice(&user, channel.id()).await?;
     }
 
-    let token = voice_client.create_token(&node, &user, current_permissions, &channel).await?;
+    let token = voice_client
+        .create_token(&node, &user, current_permissions, &channel)
+        .await?;
     let room = voice_client.create_room(&node, &channel).await?;
 
     log::debug!("Created room {}", room.name);
 
-    let mut call_started_message = SystemMessage::CallStarted {
-        by: user.id.clone(),
-        finished_at: None
-    }
-    .into_message(channel.id().to_string());
-
-    set_channel_call_started_system_message(channel.id(), &call_started_message.id).await?;
-
-    call_started_message.send(
-        db,
-        Some(amqp),
-        v0::MessageAuthor::System {
-            username: &user.username,
-            avatar: user.avatar.as_ref().map(|file| file.id.as_ref()),
-        },
-        None,
-        None,
-        &channel, false
-    ).await?;
-
-    Ok(Json(v0::CreateVoiceUserResponse { token, url: node_host.clone() }))
+    Ok(Json(v0::CreateVoiceUserResponse {
+        token,
+        url: node_host.clone(),
+    }))
 }

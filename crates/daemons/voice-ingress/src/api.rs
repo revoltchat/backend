@@ -6,11 +6,12 @@ use revolt_database::{
     util::reference::Reference,
     voice::{
         create_voice_state, delete_voice_state, get_user_moved_from_voice, get_user_moved_to_voice,
-        get_voice_channel_members, take_channel_call_started_system_message,
-        update_voice_state_tracks, VoiceClient,
+        get_voice_channel_members, set_channel_call_started_system_message,
+        take_channel_call_started_system_message, update_voice_state_tracks, VoiceClient,
     },
-    Database, PartialMessage, SystemMessage,
+    Database, PartialMessage, SystemMessage, AMQP,
 };
+use revolt_models::v0;
 use revolt_result::{Result, ToRevoltError};
 use rocket::{post, State};
 use rocket_empty::EmptyResponse;
@@ -20,8 +21,9 @@ use crate::guard::AuthHeader;
 #[post("/<node>", data = "<body>")]
 pub async fn ingress(
     db: &State<Database>,
-    node: &str,
     voice_client: &State<VoiceClient>,
+    amqp: &State<AMQP>,
+    node: &str,
     auth_header: AuthHeader<'_>,
     body: &str,
 ) -> Result<EmptyResponse> {
@@ -81,6 +83,37 @@ pub async fn ingress(
                 .p(channel_id.clone())
                 .await;
             };
+
+            // First user who joined - send call started system message.
+            if event.room.as_ref().unwrap().num_participants == 1 {
+                let user = Reference::from_unchecked(user_id.clone())
+                    .as_user(db)
+                    .await?;
+
+                let mut call_started_message = SystemMessage::CallStarted {
+                    by: user_id.clone(),
+                    finished_at: None,
+                }
+                .into_message(channel.id().to_string());
+
+                set_channel_call_started_system_message(channel.id(), &call_started_message.id)
+                    .await?;
+
+                call_started_message
+                    .send(
+                        db,
+                        Some(amqp),
+                        v0::MessageAuthor::System {
+                            username: &user.username,
+                            avatar: user.avatar.as_ref().map(|file| file.id.as_ref()),
+                        },
+                        None,
+                        None,
+                        &channel,
+                        false,
+                    )
+                    .await?;
+            }
         }
         // User left a channel
         "participant_left" => {

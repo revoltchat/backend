@@ -107,7 +107,7 @@ auto_derived!(
 
             /// Voice Information for when this channel is also a voice channel
             #[serde(skip_serializing_if = "Option::is_none")]
-            voice: Option<VoiceInformation>
+            voice: Option<VoiceInformation>,
         },
         #[deprecated = "Use TextChannel { voice } instead"]
         VoiceChannel {
@@ -146,7 +146,7 @@ auto_derived!(
     pub struct VoiceInformation {
         /// Maximium amount of users allowed in the voice channel at once
         #[serde(skip_serializing_if = "Option::is_none")]
-        pub max_users: Option<u32>
+        pub max_users: Option<usize>,
     }
 );
 
@@ -233,7 +233,7 @@ impl Channel {
                 default_permissions: None,
                 role_permissions: HashMap::new(),
                 nsfw: data.nsfw.unwrap_or(false),
-                voice: data.voice.map(|voice| voice.into())
+                voice: data.voice.map(|voice| voice.into()),
             },
             v0::LegacyServerChannelType::Voice => Channel::TextChannel {
                 id: id.clone(),
@@ -245,7 +245,7 @@ impl Channel {
                 default_permissions: None,
                 role_permissions: HashMap::new(),
                 nsfw: data.nsfw.unwrap_or(false),
-                voice: Some(data.voice.unwrap_or_default().into())
+                voice: Some(data.voice.unwrap_or_default().into()),
             },
         };
 
@@ -454,17 +454,23 @@ impl Channel {
     /// Clone this channel's server id
     pub fn server(&self) -> Option<&str> {
         match self {
-            Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => Some(server),
-            _ => None
+            Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => {
+                Some(server)
+            }
+            _ => None,
         }
     }
 
     /// Gets this channel's voice information
     pub fn voice(&self) -> Option<Cow<VoiceInformation>> {
         match self {
-            Self::DirectMessage { .. } | Channel::VoiceChannel { .. } => Some(Cow::Owned(VoiceInformation::default())),
-            Self::TextChannel { voice: Some(voice), .. } => Some(Cow::Borrowed(voice)),
-            _ => None
+            Self::DirectMessage { .. } | Channel::VoiceChannel { .. } => {
+                Some(Cow::Owned(VoiceInformation::default()))
+            }
+            Self::TextChannel {
+                voice: Some(voice), ..
+            } => Some(Cow::Borrowed(voice)),
+            _ => None,
         }
     }
 
@@ -539,15 +545,13 @@ impl Channel {
     pub fn remove_field(&mut self, field: &FieldsChannel) {
         match field {
             FieldsChannel::Description => match self {
-                Self::Group { description, .. }
-                | Self::TextChannel { description, .. } => {
+                Self::Group { description, .. } | Self::TextChannel { description, .. } => {
                     description.take();
                 }
                 _ => {}
             },
             FieldsChannel::Icon => match self {
-                Self::Group { icon, .. }
-                | Self::TextChannel { icon, .. } => {
+                Self::Group { icon, .. } | Self::TextChannel { icon, .. } => {
                     icon.take();
                 }
                 _ => {}
@@ -651,7 +655,7 @@ impl Channel {
                 if let Some(v) = partial.voice {
                     voice.replace(v);
                 }
-            },
+            }
             Self::VoiceChannel { .. } => {}
         }
     }

@@ -111,7 +111,7 @@ auto_derived!(
 
             /// Voice Information for when this channel is also a voice channel
             #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-            voice: Option<VoiceInformation>
+            voice: Option<VoiceInformation>,
         },
         #[deprecated = "Use TextChannel { voice } instead"]
         VoiceChannel {
@@ -159,7 +159,7 @@ auto_derived!(
         /// Maximium amount of users allowed in the voice channel at once
         #[cfg_attr(feature = "validator", validate(range(min = 1)))]
         #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-        pub max_users: Option<u32>
+        pub max_users: Option<usize>,
     }
 
     /// Partial representation of a channel
@@ -283,7 +283,7 @@ auto_derived!(
 
         /// Voice Information for when this channel is also a voice channel
         #[serde(skip_serializing_if = "Option::is_none")]
-        pub voice: Option<VoiceInformation>
+        pub voice: Option<VoiceInformation>,
     }
 
     /// New default permissions
@@ -334,9 +334,8 @@ auto_derived!(
         /// Whether to force disconnect any other existing voice connections.
         ///
         /// useful for disconnecting on another device and joining on a new.
-        pub force_disconnect: Option<bool>
+        pub force_disconnect: Option<bool>,
     }
-
 );
 
 impl Channel {

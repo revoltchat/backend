@@ -6773,6 +6773,7 @@ dependencies = [
 name = "revolt-voice-ingress"
 version = "0.7.1"
 dependencies = [
+ "amqprs",
  "async-std",
  "futures",
  "livekit-api",
