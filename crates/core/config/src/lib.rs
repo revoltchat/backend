@@ -6,10 +6,12 @@ use futures_locks::RwLock;
 use once_cell::sync::Lazy;
 use serde::Deserialize;
 
+#[cfg(feature = "sentry")]
 pub use sentry::{capture_error, capture_message, Level};
+#[cfg(feature = "anyhow")]
 pub use sentry_anyhow::capture_anyhow;
 
-#[cfg(feature = "report-macros")]
+#[cfg(all(feature = "report-macros", feature = "sentry"))]
 #[macro_export]
 macro_rules! report_error {
     ( $expr: expr, $error: ident $( $tt:tt )? ) => {
@@ -24,7 +26,7 @@ macro_rules! report_error {
     };
 }
 
-#[cfg(feature = "report-macros")]
+#[cfg(all(feature = "report-macros", feature = "sentry"))]
 #[macro_export]
 macro_rules! capture_internal_error {
     ( $expr: expr ) => {
@@ -35,7 +37,7 @@ macro_rules! capture_internal_error {
     };
 }
 
-#[cfg(feature = "report-macros")]
+#[cfg(all(feature = "report-macros", feature = "sentry"))]
 #[macro_export]
 macro_rules! report_internal_error {
     ( $expr: expr ) => {
@@ -442,6 +444,7 @@ pub async fn config() -> Settings {
 }
 
 /// Configure logging and common Rust variables
+#[cfg(feature = "sentry")]
 pub async fn setup_logging(release: &'static str, dsn: String) -> Option<sentry::ClientInitGuard> {
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
@@ -467,6 +470,7 @@ pub async fn setup_logging(release: &'static str, dsn: String) -> Option<sentry:
     }
 }
 
+#[cfg(feature = "sentry")]
 #[macro_export]
 macro_rules! configure {
     ($application: ident) => {

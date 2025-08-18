@@ -1,9 +1,12 @@
-{ pkgs ? import <nixpkgs> {} }:
+{
+  pkgs ? import <nixpkgs> { },
+}:
 
 pkgs.mkShell rec {
   buildInputs = [
     # Tools
     pkgs.git
+    pkgs.just
 
     # Cargo
     pkgs.cargo

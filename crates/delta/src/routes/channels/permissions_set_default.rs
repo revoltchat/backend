@@ -13,11 +13,11 @@ use rocket::{serde::json::Json, State};
 /// Channel must be a `Group`, `TextChannel` or `VoiceChannel`.
 #[openapi(tag = "Channel Permissions")]
 #[put("/<target>/permissions/default", data = "<data>", rank = 1)]
-pub async fn set_default_permissions(
+pub async fn set_default_channel_permissions(
     db: &State<Database>,
     voice_client: &State<VoiceClient>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     data: Json<v0::DataDefaultChannelPermissions>,
 ) -> Result<Json<v0::Channel>> {
     let data = data.into_inner();
@@ -72,7 +72,7 @@ pub async fn set_default_permissions(
     }
 
     let server = match channel.server() {
-        Some(server_id) => Some(Reference::from_unchecked(server_id.to_string()).as_server(db).await?),
+        Some(server_id) => Some(Reference::from_unchecked(server_id).as_server(db).await?),
         None => None
     };
 

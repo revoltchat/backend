@@ -19,8 +19,8 @@ pub async fn ban(
     db: &State<Database>,
     voice_client: &State<VoiceClient>,
     user: User,
-    server: Reference,
-    target: Reference,
+    server: Reference<'_>,
+    target: Reference<'_>,
     data: Json<v0::DataBanCreate>,
 ) -> Result<Json<v0::ServerBan>> {
     let data = data.into_inner();
@@ -65,7 +65,7 @@ pub async fn ban(
         }
     }
 
-    ServerBan::create(db, &server, &target.id, data.reason)
+    ServerBan::create(db, &server, target.id, data.reason)
         .await
         .map(Into::into)
         .map(Json)

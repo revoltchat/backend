@@ -2,6 +2,7 @@ use revolt_result::Result;
 
 use crate::{FieldsRole, FieldsServer, PartialRole, PartialServer, Role, Server};
 
+#[cfg(feature = "mongodb")]
 mod mongodb;
 mod reference;
 

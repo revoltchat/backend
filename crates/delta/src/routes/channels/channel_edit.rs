@@ -17,7 +17,7 @@ pub async fn edit(
     db: &State<Database>,
     amqp: &State<AMQP>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     data: Json<v0::DataEditChannel>,
 ) -> Result<Json<v0::Channel>> {
     let data = data.into_inner();
@@ -39,7 +39,7 @@ pub async fn edit(
         && data.nsfw.is_none()
         && data.owner.is_none()
         && data.voice.is_none()
-        && data.remove.is_none()
+        && data.remove.is_empty()
     {
         return Ok(Json(channel.into()));
     }
@@ -97,23 +97,21 @@ pub async fn edit(
             nsfw,
             ..
         } => {
-            if let Some(fields) = &data.remove {
-                if fields.contains(&v0::FieldsChannel::Icon) {
-                    if let Some(icon) = &icon {
-                        db.mark_attachment_as_deleted(&icon.id).await?;
-                    }
+            if data.remove.contains(&v0::FieldsChannel::Icon) {
+                if let Some(icon) = &icon {
+                    db.mark_attachment_as_deleted(&icon.id).await?;
                 }
+            }
 
-                for field in fields {
-                    match field {
-                        v0::FieldsChannel::Description => {
-                            description.take();
-                        }
-                        v0::FieldsChannel::Icon => {
-                            icon.take();
-                        }
-                        _ => {}
+            for field in &data.remove {
+                match field {
+                    v0::FieldsChannel::Description => {
+                        description.take();
                     }
+                    v0::FieldsChannel::Icon => {
+                        icon.take();
+                    }
+                    _ => {}
                 }
             }
 
@@ -202,23 +200,21 @@ pub async fn edit(
             voice,
             ..
         } => {
-            if let Some(fields) = &data.remove {
-                if fields.contains(&v0::FieldsChannel::Icon) {
-                    if let Some(icon) = &icon {
-                        db.mark_attachment_as_deleted(&icon.id).await?;
-                    }
+            if data.remove.contains(&v0::FieldsChannel::Icon) {
+                if let Some(icon) = &icon {
+                    db.mark_attachment_as_deleted(&icon.id).await?;
                 }
+            }
 
-                for field in fields {
-                    match field {
-                        v0::FieldsChannel::Description => {
-                            description.take();
-                        }
-                        v0::FieldsChannel::Icon => {
-                            icon.take();
-                        }
-                        _ => {}
+            for field in &data.remove {
+                match field {
+                    v0::FieldsChannel::Description => {
+                        description.take();
                     }
+                    v0::FieldsChannel::Icon => {
+                        icon.take();
+                    }
+                    _ => {}
                 }
             }
 
@@ -255,7 +251,6 @@ pub async fn edit(
             db,
             partial,
             data.remove
-                .unwrap_or_default()
                 .into_iter()
                 .map(|f| f.into())
                 .collect(),

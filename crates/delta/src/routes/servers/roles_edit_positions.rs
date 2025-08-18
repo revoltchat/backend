@@ -15,7 +15,7 @@ use rocket::{serde::json::Json, State};
 pub async fn edit_role_ranks(
     db: &State<Database>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     data: Json<v0::DataEditRoleRanks>,
 ) -> Result<Json<v0::Server>> {
     let data = data.into_inner();

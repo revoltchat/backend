@@ -38,7 +38,10 @@ pub use servers::*;
 pub use user_settings::*;
 pub use users::*;
 
-use crate::{Database, MongoDb, ReferenceDb};
+use crate::{Database, ReferenceDb};
+
+#[cfg(feature = "mongodb")]
+use crate::MongoDb;
 
 pub trait AbstractDatabase:
     Sync
@@ -66,6 +69,8 @@ pub trait AbstractDatabase:
 }
 
 impl AbstractDatabase for ReferenceDb {}
+
+#[cfg(feature = "mongodb")]
 impl AbstractDatabase for MongoDb {}
 
 impl std::ops::Deref for Database {
@@ -74,6 +79,7 @@ impl std::ops::Deref for Database {
     fn deref(&self) -> &Self::Target {
         match &self {
             Database::Reference(dummy) => dummy,
+            #[cfg(feature = "mongodb")]
             Database::MongoDb(mongo) => mongo,
         }
     }

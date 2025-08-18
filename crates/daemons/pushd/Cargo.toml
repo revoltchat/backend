@@ -8,6 +8,7 @@ license = "AGPL-3.0-or-later"
 revolt-result = { version = "0.8.8", path = "../../core/result" }
 revolt-config = { version = "0.8.8", path = "../../core/config", features = [
     "report-macros",
+    "anyhow"
 ] }
 revolt-database = { version = "0.8.8", path = "../../core/database" }
 revolt-models = { version = "0.8.8", path = "../../core/models", features = [

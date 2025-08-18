@@ -18,8 +18,8 @@ use validator::Validate;
 pub async fn edit(
     db: &State<Database>,
     user: User,
-    target: Reference,
-    msg: Reference,
+    target: Reference<'_>,
+    msg: Reference<'_>,
     edit: Json<v0::DataEditMessage>,
 ) -> Result<Json<v0::Message>> {
     let edit = edit.into_inner();

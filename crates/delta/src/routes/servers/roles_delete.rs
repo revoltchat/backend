@@ -16,7 +16,7 @@ use rocket_empty::EmptyResponse;
 pub async fn delete(
     db: &State<Database>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     role_id: String,
     voice_client: &State<VoiceClient>
 ) -> Result<EmptyResponse> {
@@ -34,7 +34,7 @@ pub async fn delete(
         }
 
         for channel_id in &server.channels {
-            let channel = Reference::from_unchecked(channel_id.clone()).as_channel(db).await?;
+            let channel = Reference::from_unchecked(channel_id).as_channel(db).await?;
 
             sync_voice_permissions(db, voice_client, &channel, Some(&server), Some(&role_id)).await?;
         };

@@ -752,7 +752,7 @@ fn convert_event(data: &str, event_name: &str) -> Result<Event> {
 pub async fn webhook_execute_github(
     db: &State<Database>,
     amqp: &State<AMQP>,
-    webhook_id: Reference,
+    webhook_id: Reference<'_>,
     token: String,
     event: EventHeader<'_>,
     data: String,

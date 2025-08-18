@@ -1,16 +1,20 @@
-use ::mongodb::SessionCursor;
+#[cfg(feature = "mongodb")]
+use ::mongodb::{ClientSession, SessionCursor};
+
 use revolt_result::Result;
 
 use crate::{FieldsMember, Member, MemberCompositeKey, PartialMember};
 
+#[cfg(feature = "mongodb")]
 mod mongodb;
 mod reference;
 
 #[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum ChunkedServerMembersGenerator {
     #[cfg(feature = "mongodb")]
     MongoDb {
-        session: ::mongodb::ClientSession,
+        session: ClientSession,
         cursor: Option<SessionCursor<Member>>,
     },
 
@@ -22,7 +26,7 @@ pub enum ChunkedServerMembersGenerator {
 
 impl ChunkedServerMembersGenerator {
     #[cfg(feature = "mongodb")]
-    pub fn new_mongo(session: ::mongodb::ClientSession, cursor: SessionCursor<Member>) -> Self {
+    pub fn new_mongo(session: ClientSession, cursor: SessionCursor<Member>) -> Self {
         ChunkedServerMembersGenerator::MongoDb {
             session,
             cursor: Some(cursor),

@@ -11,7 +11,7 @@ use rocket_empty::EmptyResponse;
 pub async fn delete_bot(
     db: &State<Database>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
 ) -> Result<EmptyResponse> {
     let bot = target.as_bot(db).await?;
     if bot.owner != user.id {

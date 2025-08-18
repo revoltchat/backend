@@ -13,11 +13,11 @@ use rocket::{serde::json::Json, State};
 /// Sets permissions for the default role in this server.
 #[openapi(tag = "Server Permissions")]
 #[put("/<target>/permissions/default", data = "<data>", rank = 1)]
-pub async fn set_default_permissions(
+pub async fn set_default_server_permissions(
     db: &State<Database>,
     voice_client: &State<VoiceClient>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     data: Json<DataPermissionsValue>,
 ) -> Result<Json<v0::Server>> {
     let data = data.into_inner();
@@ -40,7 +40,7 @@ pub async fn set_default_permissions(
         .await?;
 
     for channel_id in &server.channels {
-        let channel = Reference::from_unchecked(channel_id.clone()).as_channel(db).await?;
+        let channel = Reference::from_unchecked(channel_id).as_channel(db).await?;
 
         sync_voice_permissions(db, voice_client, &channel, Some(&server), None).await?;
     };

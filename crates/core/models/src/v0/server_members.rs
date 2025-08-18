@@ -140,8 +140,7 @@ auto_derived!(
         /// voice channel to move to if already in a voice channel
         pub voice_channel: Option<String>,
         /// Fields to remove from channel object
-        #[cfg_attr(feature = "validator", validate(length(min = 1)))]
-        pub remove: Option<Vec<FieldsMember>>,
-
+        #[cfg_attr(feature = "serde", serde(default))]
+        pub remove: Vec<FieldsMember>,
     }
 );

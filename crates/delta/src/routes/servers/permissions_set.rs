@@ -15,7 +15,7 @@ pub async fn set_role_permission(
     db: &State<Database>,
     voice_client: &State<VoiceClient>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     role_id: String,
     data: Json<v0::DataSetServerRolePermission>,
 ) -> Result<Json<v0::Server>> {
@@ -41,7 +41,7 @@ pub async fn set_role_permission(
             .await?;
 
         for channel_id in &server.channels {
-            let channel = Reference::from_unchecked(channel_id.clone()).as_channel(db).await?;
+            let channel = Reference::from_unchecked(channel_id).as_channel(db).await?;
 
             sync_voice_permissions(db, voice_client, &channel, Some(&server), Some(&role_id)).await?;
         };

@@ -20,7 +20,7 @@ pub async fn invite_bot(
     db: &State<Database>,
     amqp: &State<AMQP>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     dest: Json<v0::InviteBotDestination>,
 ) -> Result<EmptyResponse> {
     if user.bot.is_some() {

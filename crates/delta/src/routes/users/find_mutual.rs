@@ -16,7 +16,7 @@ use rocket::State;
 pub async fn mutual(
     db: &State<Database>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
 ) -> Result<Json<v0::MutualResponse>> {
     if target.id == user.id {
         return Err(create_error!(InvalidOperation));

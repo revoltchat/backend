@@ -14,13 +14,15 @@ use validator::Validate;
 
 use crate::{
     events::client::EventV1,
-    tasks::{self, ack::AckEvent},
     util::{
         bulk_permissions::BulkDatabasePermissionQuery, idempotency::IdempotencyKey,
         permissions::DatabasePermissionQuery,
     },
     Channel, Database, Emoji, File, User, AMQP,
 };
+
+#[cfg(feature = "tasks")]
+use crate::tasks::{self, ack::AckEvent};
 
 auto_derived_partial!(
     /// Message
@@ -619,9 +621,11 @@ impl Message {
             .await;
 
         // Update last_message_id
+        #[cfg(feature = "tasks")]
         tasks::last_message_id::queue(self.channel.to_string(), self.id.to_string(), is_dm).await;
 
         // Add mentions for affected users
+        #[cfg(feature = "tasks")]
         if !mentions_elsewhere {
             if let Some(mentions) = &self.mentions {
                 tasks::ack::queue_message(
@@ -640,6 +644,7 @@ impl Message {
         }
 
         // Generate embeds
+        #[cfg(feature = "tasks")]
         if generate_embeds {
             if let Some(content) = &self.content {
                 tasks::process_embeds::queue(
@@ -676,10 +681,12 @@ impl Message {
         )
         .await?;
 
+
         if !self.has_suppressed_notifications()
             && (self.mentions.is_some() || self.contains_mass_push_mention())
         {
             // send Push notifications
+            #[cfg(feature = "tasks")]
             tasks::ack::queue_message(
                 self.channel.to_string(),
                 AckEvent::ProcessMessage {

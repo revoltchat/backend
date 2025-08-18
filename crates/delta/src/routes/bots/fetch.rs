@@ -11,7 +11,7 @@ use rocket::{serde::json::Json, State};
 pub async fn fetch_bot(
     db: &State<Database>,
     user: User,
-    bot: Reference,
+    bot: Reference<'_>,
 ) -> Result<Json<FetchBotResponse>> {
     if user.bot.is_some() {
         return Err(create_error!(IsBot));

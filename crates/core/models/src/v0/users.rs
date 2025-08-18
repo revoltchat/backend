@@ -245,8 +245,8 @@ auto_derived!(
         pub flags: Option<i32>,
 
         /// Fields to remove from user object
-        #[cfg_attr(feature = "validator", validate(length(min = 1)))]
-        pub remove: Option<Vec<FieldsUser>>,
+        #[cfg_attr(feature = "serde", serde(default))]
+        pub remove: Vec<FieldsUser>,
     }
 
     /// User flag reponse

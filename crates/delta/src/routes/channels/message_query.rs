@@ -16,7 +16,7 @@ use validator::Validate;
 pub async fn query(
     db: &State<Database>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     options: v0::OptionsQueryMessages,
 ) -> Result<Json<v0::BulkMessageResponse>> {
     options.validate().map_err(|error| {

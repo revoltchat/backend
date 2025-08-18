@@ -18,7 +18,7 @@ pub async fn edit(
     db: &State<Database>,
     voice_client: &State<VoiceClient>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     role_id: String,
     data: Json<v0::DataEditRole>,
 ) -> Result<Json<v0::Role>> {
@@ -63,14 +63,12 @@ pub async fn edit(
             &server.id,
             &role_id,
             partial,
-            remove
-                .map(|v| v.into_iter().map(Into::into).collect())
-                .unwrap_or_default(),
+            remove.into_iter().map(Into::into).collect(),
         )
         .await?;
 
         for channel_id in &server.channels {
-            let channel = Reference::from_unchecked(channel_id.clone()).as_channel(db).await?;
+            let channel = Reference::from_unchecked(channel_id).as_channel(db).await?;
 
             sync_voice_permissions(db, voice_client, &channel, Some(&server), Some(&role_id)).await?;
         };

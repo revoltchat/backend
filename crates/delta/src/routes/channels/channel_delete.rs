@@ -17,7 +17,7 @@ pub async fn delete(
     voice_client: &State<VoiceClient>,
     amqp: &State<AMQP>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     options: v0::OptionsChannelDelete,
 ) -> Result<EmptyResponse> {
     let mut channel = target.as_channel(db).await?;

@@ -217,7 +217,7 @@ auto_derived!(
     #[derive(Default)]
     #[cfg_attr(feature = "validator", derive(Validate))]
     pub struct SendableEmbed {
-        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
         pub icon_url: Option<String>,
         #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
         pub url: Option<String>,

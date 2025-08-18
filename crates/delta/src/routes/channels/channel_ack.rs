@@ -15,8 +15,8 @@ use rocket_empty::EmptyResponse;
 pub async fn ack(
     db: &State<Database>,
     user: User,
-    target: Reference,
-    message: Reference,
+    target: Reference<'_>,
+    message: Reference<'_>,
 ) -> Result<EmptyResponse> {
     if user.bot.is_some() {
         return Err(create_error!(IsBot));
@@ -29,7 +29,7 @@ pub async fn ack(
         .throw_if_lacking_channel_permission(ChannelPermission::ViewChannel)?;
 
     channel
-        .ack(&user.id, &message.id)
+        .ack(&user.id, message.id)
         .await
         .map(|_| EmptyResponse)
 }

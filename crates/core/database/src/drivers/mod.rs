@@ -1,3 +1,4 @@
+#[cfg(feature = "mongodb")]
 mod mongodb;
 mod reference;
 
@@ -13,6 +14,7 @@ use authifier::Authifier;
 use rand::Rng;
 use revolt_config::config;
 
+#[cfg(feature = "mongodb")]
 pub use self::mongodb::*;
 pub use self::reference::*;
 
@@ -25,8 +27,10 @@ pub enum DatabaseInfo {
     /// Use the mock database
     Reference,
     /// Connect to MongoDB
+    #[cfg(feature = "mongodb")]
     MongoDb { uri: String, database_name: String },
     /// Use existing MongoDB connection
+    #[cfg(feature = "mongodb")]
     MongoDbFromClient(::mongodb::Client, String),
 }
 
@@ -36,6 +40,7 @@ pub enum Database {
     /// Mock database
     Reference(ReferenceDb),
     /// MongoDB database
+    #[cfg(feature = "mongodb")]
     MongoDb(MongoDb),
 }
 
@@ -45,7 +50,7 @@ impl DatabaseInfo {
     pub async fn connect(self) -> Result<Database, String> {
         let config = config().await;
 
-        Ok(match self {
+        match self {
             DatabaseInfo::Auto => {
                 if std::env::var("TEST_DB").is_ok() {
                     DatabaseInfo::Test(format!(
@@ -53,16 +58,20 @@ impl DatabaseInfo {
                         rand::thread_rng().gen_range(1_000_000..10_000_000)
                     ))
                     .connect()
-                    .await?
+                    .await
                 } else if !config.database.mongodb.is_empty() {
-                    DatabaseInfo::MongoDb {
+                    #[cfg(feature = "mongodb")]
+                    return DatabaseInfo::MongoDb {
                         uri: config.database.mongodb,
                         database_name: "revolt".to_string(),
                     }
                     .connect()
-                    .await?
+                    .await;
+
+                    #[cfg(not(feature = "mongodb"))]
+                    return Err("MongoDB not enabled.".to_string())
                 } else {
-                    DatabaseInfo::Reference.connect().await?
+                    DatabaseInfo::Reference.connect().await
                 }
             }
             DatabaseInfo::Test(database_name) => {
@@ -70,30 +79,36 @@ impl DatabaseInfo {
                     .expect("`TEST_DB` environment variable should be set to REFERENCE or MONGODB")
                     .as_str()
                 {
-                    "REFERENCE" => DatabaseInfo::Reference.connect().await?,
+                    "REFERENCE" => DatabaseInfo::Reference.connect().await,
                     "MONGODB" => {
-                        DatabaseInfo::MongoDb {
+                        #[cfg(feature = "mongodb")]
+                        return DatabaseInfo::MongoDb {
                             uri: config.database.mongodb,
                             database_name,
                         }
                         .connect()
-                        .await?
+                        .await;
+
+                        #[cfg(not(feature = "mongodb"))]
+                        return Err("MongoDB not enabled.".to_string())
                     }
                     _ => unreachable!("must specify REFERENCE or MONGODB"),
                 }
             }
-            DatabaseInfo::Reference => Database::Reference(Default::default()),
+            DatabaseInfo::Reference => Ok(Database::Reference(Default::default())),
+            #[cfg(feature = "mongodb")]
             DatabaseInfo::MongoDb { uri, database_name } => {
                 let client = ::mongodb::Client::with_uri_str(uri)
                     .await
                     .map_err(|_| "Failed to init db connection.".to_string())?;
 
-                Database::MongoDb(MongoDb(client, database_name))
+                Ok(Database::MongoDb(MongoDb(client, database_name)))
             }
+            #[cfg(feature = "mongodb")]
             DatabaseInfo::MongoDbFromClient(client, database_name) => {
-                Database::MongoDb(MongoDb(client, database_name))
+                Ok(Database::MongoDb(MongoDb(client, database_name)))
             }
-        })
+        }
     }
 }
 
@@ -219,12 +234,16 @@ impl Database {
         Authifier {
             database: match self {
                 Database::Reference(_) => Default::default(),
+                #[cfg(feature = "mongodb")]
                 Database::MongoDb(MongoDb(client, _)) => authifier::Database::MongoDb(
                     authifier::database::MongoDb(client.database("revolt")),
                 ),
             },
             config: auth_config,
+            #[cfg(feature = "tasks")]
             event_channel: Some(crate::tasks::authifier_relay::sender()),
+            #[cfg(not(feature = "tasks"))]
+            event_channel: None,
         }
     }
 }

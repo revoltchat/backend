@@ -22,7 +22,7 @@ use validator::Validate;
 pub async fn bulk_delete_messages(
     db: &State<Database>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     options: Json<v0::OptionsBulkDelete>,
 ) -> Result<EmptyResponse> {
     let options = options.into_inner();
@@ -51,7 +51,7 @@ pub async fn bulk_delete_messages(
         .await
         .throw_if_lacking_channel_permission(ChannelPermission::ManageMessages)?;
 
-    Message::bulk_delete(db, &target.id, options.ids)
+    Message::bulk_delete(db, target.id, options.ids)
         .await
         .map(|_| EmptyResponse)
 }

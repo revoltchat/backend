@@ -18,7 +18,7 @@ use validator::Validate;
 pub async fn webhook_execute(
     db: &State<Database>,
     amqp: &State<AMQP>,
-    webhook_id: Reference,
+    webhook_id: Reference<'_>,
     token: String,
     data: Json<v0::DataMessageSend>,
     idempotency: IdempotencyKey,

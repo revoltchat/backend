@@ -31,8 +31,8 @@ pub async fn edit(
     db: &State<Database>,
     voice_client: &State<VoiceClient>,
     user: User,
-    server: Reference,
-    member: Reference,
+    server: Reference<'_>,
+    member: Reference<'_>,
     data: Json<v0::DataMemberEdit>,
 ) -> Result<Json<v0::Member>> {
     let data = data.into_inner();
@@ -52,13 +52,7 @@ pub async fn edit(
     let permissions = calculate_server_permissions(&mut query).await;
 
     // Check permissions in server
-    if data.nickname.is_some()
-        || data
-            .remove
-            .as_ref()
-            .map(|x| x.contains(&v0::FieldsMember::Nickname))
-            .unwrap_or_default()
-    {
+    if data.nickname.is_some() || data.remove.contains(&v0::FieldsMember::Nickname) {
         if user.id == member.id.user {
             permissions.throw_if_lacking_channel_permission(ChannelPermission::ChangeNickname)?;
         } else {
@@ -66,13 +60,7 @@ pub async fn edit(
         }
     }
 
-    if data.avatar.is_some()
-        || data
-            .remove
-            .as_ref()
-            .map(|x| x.contains(&v0::FieldsMember::Avatar))
-            .unwrap_or_default()
-    {
+    if data.avatar.is_some() || data.remove.contains(&v0::FieldsMember::Avatar) {
         if user.id == member.id.user {
             permissions.throw_if_lacking_channel_permission(ChannelPermission::ChangeAvatar)?;
         } else {
@@ -80,23 +68,11 @@ pub async fn edit(
         }
     }
 
-    if data.roles.is_some()
-        || data
-            .remove
-            .as_ref()
-            .map(|x| x.contains(&v0::FieldsMember::Roles))
-            .unwrap_or_default()
-    {
+    if data.roles.is_some() || data.remove.contains(&v0::FieldsMember::Roles) {
         permissions.throw_if_lacking_channel_permission(ChannelPermission::AssignRoles)?;
     }
 
-    if data.timeout.is_some()
-        || data
-            .remove
-            .as_ref()
-            .map(|x| x.contains(&v0::FieldsMember::Timeout))
-            .unwrap_or_default()
-    {
+    if data.timeout.is_some() || data.remove.contains(&v0::FieldsMember::Timeout) {
         if data.timeout.is_some() && member.id.user == user.id {
             return Err(create_error!(CannotTimeoutYourself));
         }
@@ -121,7 +97,7 @@ pub async fn edit(
 
         // ensure the channel we are moving them to is in the server and is a voice channel
 
-        let channel = Reference::from_unchecked(new_channel.clone())
+        let channel = Reference::from_unchecked(new_channel)
             .as_channel(db)
             .await
             .map_err(|_| create_error!(UnknownChannel))?;
@@ -192,11 +168,9 @@ pub async fn edit(
     };
 
     // 1. Remove fields from object
-    if let Some(fields) = &remove {
-        if fields.contains(&v0::FieldsMember::Avatar) {
-            if let Some(avatar) = &member.avatar {
-                db.mark_attachment_as_deleted(&avatar.id).await?;
-            }
+    if remove.contains(&v0::FieldsMember::Avatar) {
+        if let Some(avatar) = &member.avatar {
+            db.mark_attachment_as_deleted(&avatar.id).await?;
         }
     }
 
@@ -205,19 +179,10 @@ pub async fn edit(
         partial.avatar = Some(File::use_user_avatar(db, &avatar, &user.id, &user.id).await?);
     }
 
-    let remove_contains_voice = remove
-        .as_ref()
-        .map(|r| r.contains(FieldsMember::CanPublish) || r.contains(FieldsMember::CanReceive))
-        .unwrap_or_default();
+    let remove_contains_voice = remove.contains(FieldsMember::CanPublish) || remove.contains(FieldsMember::CanReceive);
 
     member
-        .update(
-            db,
-            partial,
-            remove
-                .map(|v| v.into_iter().map(Into::into).collect())
-                .unwrap_or_default(),
-        )
+        .update(db, partial, remove.into_iter().map(Into::into).collect())
         .await?;
 
     if let Some(new_voice_channel) = new_voice_channel {
@@ -261,7 +226,7 @@ pub async fn edit(
         if let Some(channel) = get_user_voice_channel_in_server(&target_user.id, &server.id).await?
         {
             let node = get_channel_node(&channel).await?.unwrap();
-            let channel = Reference::from_unchecked(channel).as_channel(db).await?;
+            let channel = Reference::from_unchecked(&channel).as_channel(db).await?;
 
             sync_user_voice_permissions(
                 db,

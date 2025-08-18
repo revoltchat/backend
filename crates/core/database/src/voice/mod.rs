@@ -362,7 +362,7 @@ pub async fn sync_voice_permissions(
         .iter()
         .flatten()
     {
-        let user = Reference::from_unchecked(user_id.clone())
+        let user = Reference::from_unchecked(&user_id)
             .as_user(db)
             .await?;
 
@@ -387,7 +387,7 @@ pub async fn sync_user_voice_permissions(
 
     let member = match server_id {
         Some(server_id) => Some(
-            Reference::from_unchecked(user.id.clone())
+            Reference::from_unchecked(&user.id)
                 .as_member(db, server_id)
                 .await?,
         ),

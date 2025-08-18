@@ -59,7 +59,7 @@ pub async fn ingress(
             let channel_id = channel_id.to_internal_error()?;
             let user_id = user_id.to_internal_error()?;
 
-            let channel = Reference::from_unchecked(channel_id.clone())
+            let channel = Reference::from_unchecked(&channel_id)
                 .as_channel(db)
                 .await?;
 
@@ -68,30 +68,30 @@ pub async fn ingress(
             // Only publish one event when a user is moved from one channel to another.
             if let Some(moved_from) = get_user_moved_to_voice(channel_id, user_id).await? {
                 EventV1::VoiceChannelMove {
-                    user: user_id.clone(),
+                    user: user_id.to_string(),
                     from: moved_from,
-                    to: channel_id.clone(),
+                    to: channel_id.to_string(),
                     state: voice_state,
                 }
-                .p(channel_id.clone())
+                .p(channel_id.to_string())
                 .await;
             } else {
                 EventV1::VoiceChannelJoin {
-                    id: channel_id.clone(),
+                    id: channel_id.to_string(),
                     state: voice_state,
                 }
-                .p(channel_id.clone())
+                .p(channel_id.to_string())
                 .await;
             };
 
             // First user who joined - send call started system message.
             if event.room.as_ref().unwrap().num_participants == 1 {
-                let user = Reference::from_unchecked(user_id.clone())
+                let user = Reference::from_unchecked(&user_id)
                     .as_user(db)
                     .await?;
 
                 let mut call_started_message = SystemMessage::CallStarted {
-                    by: user_id.clone(),
+                    by: user_id.to_string(),
                     finished_at: None,
                 }
                 .into_message(channel.id().to_string());
@@ -120,7 +120,7 @@ pub async fn ingress(
             let channel_id = channel_id.to_internal_error()?;
             let user_id = user_id.to_internal_error()?;
 
-            let channel = Reference::from_unchecked(channel_id.clone())
+            let channel = Reference::from_unchecked(&channel_id)
                 .as_channel(db)
                 .await?;
 
@@ -147,7 +147,7 @@ pub async fn ingress(
                     take_channel_call_started_system_message(channel_id).await?
                 {
                     // Could have been deleted
-                    if let Ok(mut message) = Reference::from_unchecked(system_message_id)
+                    if let Ok(mut message) = Reference::from_unchecked(&system_message_id)
                         .as_message(db)
                         .await
                     {
@@ -179,11 +179,11 @@ pub async fn ingress(
             let user_id = user_id.to_internal_error()?;
             let track = event.track.as_ref().to_internal_error()?;
 
-            let channel = Reference::from_unchecked(channel_id.clone())
+            let channel = Reference::from_unchecked(&channel_id)
                 .as_channel(db)
                 .await?;
 
-            let user = Reference::from_unchecked(user_id.clone())
+            let user = Reference::from_unchecked(&user_id)
                 .as_user(db)
                 .await?;
 

@@ -9,9 +9,12 @@ use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 
 use crate::{
-    events::client::EventV1, tasks::ack::AckEvent, Database, File, IntoDocumentPath, PartialServer,
+    events::client::EventV1, Database, File, PartialServer,
     Server, SystemMessage, User, AMQP,
 };
+
+#[cfg(feature = "mongodb")]
+use crate::IntoDocumentPath;
 
 auto_derived!(
     #[serde(tag = "channel_type")]
@@ -670,10 +673,11 @@ impl Channel {
         .private(user.to_string())
         .await;
 
+        #[cfg(feature = "tasks")]
         crate::tasks::ack::queue_ack(
             self.id().to_string(),
             user.to_string(),
-            AckEvent::AckMessage {
+            crate::tasks::ack::AckEvent::AckMessage {
                 id: message.to_string(),
             },
         )
@@ -790,6 +794,7 @@ impl Channel {
     }
 }
 
+#[cfg(feature = "mongodb")]
 impl IntoDocumentPath for FieldsChannel {
     fn as_path(&self) -> Option<&'static str> {
         Some(match self {

@@ -11,8 +11,9 @@ description = "Revolt Backend: Configuration"
 [features]
 anyhow = ["dep:sentry-anyhow"]
 report-macros = ["revolt-result"]
+sentry = ["dep:sentry"]
 test = ["async-std"]
-default = ["test", "anyhow"]
+default = ["test", "sentry"]
 
 [dependencies]
 # Utility
@@ -32,7 +33,7 @@ log = "0.4.14"
 pretty_env_logger = "0.4.0"
 
 # Sentry
-sentry = "0.31.5"
+sentry = { version = "0.31.5", optional = true }
 sentry-anyhow = { version = "0.38.1", optional = true }
 
 # Core

@@ -22,7 +22,7 @@ pub async fn call(
     db: &State<Database>,
     voice_client: &State<VoiceClient>,
     user: User,
-    target: Reference,
+    target: Reference<'_>,
     data: Json<v0::DataJoinCall>,
 ) -> Result<Json<v0::CreateVoiceUserResponse>> {
     if !voice_client.is_enabled() {
@@ -79,7 +79,7 @@ pub async fn call(
 
         for channel_id in get_user_voice_channels(&user.id).await? {
             let node = get_channel_node(&channel_id).await?.unwrap();
-            let channel = Reference::from_unchecked(channel_id.clone())
+            let channel = Reference::from_unchecked(&channel_id)
                 .as_channel(db)
                 .await?;
 

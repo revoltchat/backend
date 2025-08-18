@@ -212,16 +212,34 @@ impl AbstractUsers for MongoDb {
         partial: &PartialUser,
         remove: Vec<FieldsUser>,
     ) -> Result<()> {
-        query!(
-            self,
-            update_one_by_id,
-            COL,
-            id,
-            partial,
-            remove.iter().map(|x| x as &dyn IntoDocumentPath).collect(),
-            None
-        )
-        .map(|_| ())
+        if remove.contains(&FieldsUser::StatusText) && partial.status.is_some() {
+            // stupid-ass workaround to fix mongo conflicting the same item
+            let _: Result<()> = query!(
+                self,
+                update_one_by_id,
+                COL,
+                id,
+                PartialUser {
+                    ..Default::default()
+                },
+                remove.iter().map(|x| x as &dyn IntoDocumentPath).collect(),
+                None
+            )
+            .map(|_| ());
+
+            query!(self, update_one_by_id, COL, id, partial, vec![], None).map(|_| ())
+        } else {
+            query!(
+                self,
+                update_one_by_id,
+                COL,
+                id,
+                partial,
+                remove.iter().map(|x| x as &dyn IntoDocumentPath).collect(),
+                None
+            )
+            .map(|_| ())
+        }
     }
 
     /// Set relationship with another user

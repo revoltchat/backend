@@ -25,6 +25,9 @@ pub use mongodb;
 #[macro_use]
 extern crate bson;
 
+#[cfg(not(feature = "async-std-runtime"))]
+compile_error!("async-std-runtime feature must be enabled.");
+
 #[macro_export]
 #[cfg(debug_assertions)]
 macro_rules! query {
@@ -103,6 +106,7 @@ pub mod util;
 pub use models::*;
 
 pub mod events;
+#[cfg(feature = "tasks")]
 pub mod tasks;
 
 mod amqp;
