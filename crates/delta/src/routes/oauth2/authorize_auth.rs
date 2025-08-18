@@ -21,7 +21,7 @@ pub async fn auth(
         return Err(create_error!(IsBot));
     };
 
-    let bot = Reference::from_unchecked(info.client_id.clone())
+    let bot = Reference::from_unchecked(&info.client_id)
         .as_bot(db)
         .await?;
 

@@ -20,7 +20,7 @@ pub async fn token(
     db: &State<Database>,
     info: Form<v0::OAuth2TokenExchangeForm>,
 ) -> Result<Json<v0::OAuth2TokenExchangeResponse>> {
-    let bot = Reference::from_unchecked(info.client_id.clone())
+    let bot = Reference::from_unchecked(&info.client_id)
         .as_bot(db)
         .await?;
 

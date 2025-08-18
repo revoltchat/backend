@@ -38,7 +38,7 @@ pub async fn edit_bot(
         && data.analytics.is_none()
         && data.interactions_url.is_none()
         && data.oauth2.is_none()
-        && data.remove.is_none()
+        && data.remove.is_empty()
     {
         return Ok(Json(v0::BotWithUserResponse {
             bot: bot.into(),
