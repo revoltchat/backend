@@ -95,15 +95,10 @@ impl VoiceClient {
     pub async fn create_room(&self, node: &str, channel: &Channel) -> Result<Room> {
         let room = self.get_node(node)?;
 
-        let voice = channel
-            .voice()
-            .ok_or_else(|| create_error!(NotAVoiceChannel))?;
-
         room.client
             .create_room(
                 channel.id(),
                 CreateRoomOptions {
-                    max_participants: voice.max_users.unwrap_or(0) as u32,
                     empty_timeout: 5 * 60, // 5 minutes,
                     ..Default::default()
                 },
