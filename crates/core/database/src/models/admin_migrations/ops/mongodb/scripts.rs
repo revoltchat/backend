@@ -25,7 +25,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 44; // MUST BE +1 to last migration
+pub const LATEST_REVISION: i32 = 48; // MUST BE +1 to last migration
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -1261,7 +1261,7 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
                 }
             )
             .await
-            .expect("Failed to update voice channels");
+            .expect("Failed to update default_permissions");
     };
 
     // Reminder to update LATEST_REVISION when adding new migrations.
