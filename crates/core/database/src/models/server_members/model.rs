@@ -94,7 +94,7 @@ impl Member {
             return Err(create_error!(AlreadyInServer));
         }
 
-        let member = Member {
+        let mut member = Member {
             id: MemberCompositeKey {
                 server: server.id.to_string(),
                 user: user.id.to_string(),
@@ -103,6 +103,9 @@ impl Member {
         };
 
         db.insert_or_merge_member(&member).await?;
+
+        // To know if we have a timeout applied we need to do an extra query to fetch the merged value from the db.
+        member = db.fetch_member(&member.id.server, &member.id.user).await?;
 
         let should_fetch = channels.is_none();
         let mut channels = channels.unwrap_or_default();
@@ -277,7 +280,7 @@ mod tests {
     async fn muted_member_rejoin() {
         database_test!(|db| async move {
             match db {
-                crate::Database::Reference(reference_db) => return (),
+                crate::Database::Reference(_) => return,
                 crate::Database::MongoDb(_) => (),
             }
             let owner = User::create(&db, "Server Owner".to_string(), None, None)

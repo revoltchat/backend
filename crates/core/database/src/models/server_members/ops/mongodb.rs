@@ -315,7 +315,7 @@ impl AbstractServerMembers for MongoDb {
 
     async fn remove_dangling_members(&self) -> Result<()> {
         let now = Timestamp::now_utc();
-        let date = format!("{}", now.format_short()); // I hate this library
+        let date = bson::to_bson(&now).expect("Failed to serialize timestamp");
 
         self.col::<Document>(COL)
             .delete_many(doc! {
