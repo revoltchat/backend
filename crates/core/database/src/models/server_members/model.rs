@@ -102,10 +102,9 @@ impl Member {
             ..Default::default()
         };
 
-        db.insert_or_merge_member(&member).await?;
-
-        // To know if we have a timeout applied we need to do an extra query to fetch the merged value from the db.
-        member = db.fetch_member(&member.id.server, &member.id.user).await?;
+        if let Some(updated) = db.insert_or_merge_member(&member).await? {
+            member = updated;
+        }
 
         let should_fetch = channels.is_none();
         let mut channels = channels.unwrap_or_default();

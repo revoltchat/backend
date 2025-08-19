@@ -14,7 +14,7 @@ static COL: &str = "server_members";
 #[async_trait]
 impl AbstractServerMembers for MongoDb {
     /// Insert a new server member (or use the existing member if one is found)
-    async fn insert_or_merge_member(&self, member: &Member) -> Result<()> {
+    async fn insert_or_merge_member(&self, member: &Member) -> Result<Option<Member>> {
         let existing: Result<Option<Document>> = query!(
             self,
             find_one,
@@ -27,8 +27,8 @@ impl AbstractServerMembers for MongoDb {
         );
         // Update the existing record if it exist, otherwise make a new record
         if existing.is_ok_and(|x| x.is_some()) {
-            self.col::<Document>(COL)
-                .update_one(
+            self.col::<Member>(COL)
+                .find_one_and_update(
                     doc! {
                         "_id.server": &member.id.server,
                         "_id.user": &member.id.user,
@@ -42,11 +42,12 @@ impl AbstractServerMembers for MongoDb {
                         }
                     },
                 )
+                .return_document(mongodb::options::ReturnDocument::After)
                 .await
-                .map(|_| ())
                 .map_err(|_| create_database_error!("update_one", COL))
         } else {
-            query!(self, insert_one, COL, &member).map(|_| ())
+            query!(self, insert_one, COL, &member).map(|_| ())?;
+            Ok(None)
         }
     }
 

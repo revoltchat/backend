@@ -8,13 +8,13 @@ use super::{AbstractServerMembers, ChunkedServerMembersGenerator};
 #[async_trait]
 impl AbstractServerMembers for ReferenceDb {
     /// Insert a new server member into the database
-    async fn insert_or_merge_member(&self, member: &Member) -> Result<()> {
+    async fn insert_or_merge_member(&self, member: &Member) -> Result<Option<Member>> {
         let mut server_members = self.server_members.lock().await;
         if server_members.contains_key(&member.id) {
             Err(create_database_error!("insert", "member"))
         } else {
             server_members.insert(member.id.clone(), member.clone());
-            Ok(())
+            Ok(None)
         }
     }
 
