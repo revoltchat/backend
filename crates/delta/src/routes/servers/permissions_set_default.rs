@@ -1,5 +1,5 @@
 use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference}, voice::{sync_voice_permissions, VoiceClient}, Database, PartialServer, Server, User
+    util::{permissions::DatabasePermissionQuery, reference::Reference}, voice::{sync_voice_permissions, VoiceClient}, Database, PartialServer, User
 };
 use revolt_models::v0;
 use revolt_permissions::{

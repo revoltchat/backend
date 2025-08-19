@@ -159,9 +159,7 @@ impl<'z> BulkDatabasePermissionQuery<'z> {
                 Channel::DirectMessage { .. } => ChannelType::DirectMessage,
                 Channel::Group { .. } => ChannelType::Group,
                 Channel::SavedMessages { .. } => ChannelType::SavedMessages,
-                Channel::TextChannel { .. } | Channel::VoiceChannel { .. } => {
-                    ChannelType::ServerChannel
-                }
+                Channel::TextChannel { .. } => ChannelType::ServerChannel,
             }
         } else {
             ChannelType::Unknown

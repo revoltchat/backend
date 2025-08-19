@@ -129,14 +129,19 @@ pub async fn get_user_voice_channel_in_server(
         .to_internal_error()
 }
 
-pub fn get_allowed_sources(limits: &FeaturesLimits, permissions: PermissionValue) -> Vec<&'static str> {
+pub fn get_allowed_sources(
+    limits: &FeaturesLimits,
+    permissions: PermissionValue,
+) -> Vec<&'static str> {
     let mut allowed_sources = Vec::new();
 
     if permissions.has(ChannelPermission::Speak as u64) {
+        println!("can speak");
         allowed_sources.push("microphone")
     };
 
     if permissions.has(ChannelPermission::Video as u64) && limits.video {
+        println!("can video");
         allowed_sources.extend(["camera", "screen_share", "screen_share_audio"]);
     };
 
@@ -362,9 +367,7 @@ pub async fn sync_voice_permissions(
         .iter()
         .flatten()
     {
-        let user = Reference::from_unchecked(&user_id)
-            .as_user(db)
-            .await?;
+        let user = Reference::from_unchecked(user_id).as_user(db).await?;
 
         sync_user_voice_permissions(db, voice_client, &node, &user, channel, server, role_id)
             .await?;

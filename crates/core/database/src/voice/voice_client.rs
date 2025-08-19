@@ -1,4 +1,4 @@
-use crate::models::{Channel, User};
+use crate::{models::{Channel, User}, Database};
 use livekit_api::{
     access_token::{AccessToken, VideoGrants},
     services::room::{CreateRoomOptions, RoomClient as InnerRoomClient, UpdateParticipantOptions},
@@ -63,6 +63,7 @@ impl VoiceClient {
     pub async fn create_token(
         &self,
         node: &str,
+        db: &Database,
         user: &User,
         permissions: PermissionValue,
         channel: &Channel,
@@ -75,11 +76,12 @@ impl VoiceClient {
         AccessToken::with_api_key(&room.node.key, &room.node.secret)
             .with_name(&format!("{}#{}", user.username, user.discriminator))
             .with_identity(&user.id)
-            .with_metadata(&serde_json::to_string(&user).to_internal_error()?)
+            .with_metadata(&serde_json::to_string(&user.clone().into(db, None).await).to_internal_error()?)
             .with_ttl(Duration::from_secs(10))
             .with_grants(VideoGrants {
                 room_join: true,
                 can_publish: true,
+                can_publish_data: false,
                 can_publish_sources: allowed_sources
                     .into_iter()
                     .map(ToString::to_string)

@@ -93,7 +93,7 @@ pub async fn call(
     }
 
     let token = voice_client
-        .create_token(&node, &user, current_permissions, &channel)
+        .create_token(&node, db, &user, current_permissions, &channel)
         .await?;
     let room = voice_client.create_room(&node, &channel).await?;
 

@@ -31,7 +31,7 @@ impl FcmOutboundConsumer {
         match &notification.channel {
             Channel::DirectMessage { .. } => notification.author.clone(),
             Channel::Group { name, .. } => format!("{}, #{}", notification.author, name),
-            Channel::TextChannel { name, .. } | Channel::VoiceChannel { name, .. } => {
+            Channel::TextChannel { name, .. } => {
                 format!("{} in #{}", notification.author, name)
             }
             _ => "Unknown".to_string(),

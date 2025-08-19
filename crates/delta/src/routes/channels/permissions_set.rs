@@ -1,5 +1,5 @@
 use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference}, voice::{sync_voice_permissions, VoiceClient}, Channel, Database, User
+    util::{permissions::DatabasePermissionQuery, reference::Reference}, voice::{sync_voice_permissions, VoiceClient}, Database, User
 };
 use revolt_models::v0;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission, Override};
@@ -10,7 +10,7 @@ use rocket::{serde::json::Json, State};
 ///
 /// Sets permissions for the specified role in this channel.
 ///
-/// Channel must be a `TextChannel` or `VoiceChannel`.
+/// Channel must be a `TextChannel`.
 #[openapi(tag = "Channel Permissions")]
 #[put("/<target>/permissions/<role_id>", data = "<data>", rank = 2)]
 pub async fn set_role_permissions(

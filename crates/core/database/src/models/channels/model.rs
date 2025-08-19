@@ -9,8 +9,7 @@ use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 
 use crate::{
-    events::client::EventV1, Database, File, PartialServer,
-    Server, SystemMessage, User, AMQP,
+    events::client::EventV1, Database, File, PartialServer, Server, SystemMessage, User, AMQP,
 };
 
 #[cfg(feature = "mongodb")]
@@ -111,37 +110,6 @@ auto_derived!(
             /// Voice Information for when this channel is also a voice channel
             #[serde(skip_serializing_if = "Option::is_none")]
             voice: Option<VoiceInformation>,
-        },
-        #[deprecated = "Use TextChannel { voice } instead"]
-        VoiceChannel {
-            /// Unique Id
-            #[serde(rename = "_id")]
-            id: String,
-            /// Id of the server this channel belongs to
-            server: String,
-
-            /// Display name of the channel
-            name: String,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            /// Channel description
-            description: Option<String>,
-            /// Custom icon attachment
-            #[serde(skip_serializing_if = "Option::is_none")]
-            icon: Option<File>,
-
-            /// Default permissions assigned to users in this channel
-            #[serde(skip_serializing_if = "Option::is_none")]
-            default_permissions: Option<OverrideField>,
-            /// Permissions assigned based on role to this channel
-            #[serde(
-                default = "HashMap::<String, OverrideField>::new",
-                skip_serializing_if = "HashMap::<String, OverrideField>::is_empty"
-            )]
-            role_permissions: HashMap<String, OverrideField>,
-
-            /// Whether this channel is marked as not safe for work
-            #[serde(skip_serializing_if = "crate::if_false", default)]
-            nsfw: bool,
         },
     }
 
@@ -449,15 +417,14 @@ impl Channel {
             Channel::DirectMessage { id, .. }
             | Channel::Group { id, .. }
             | Channel::SavedMessages { id, .. }
-            | Channel::TextChannel { id, .. }
-            | Channel::VoiceChannel { id, .. } => id,
+            | Channel::TextChannel { id, .. } => id,
         }
     }
 
     /// Clone this channel's server id
     pub fn server(&self) -> Option<&str> {
         match self {
-            Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => {
+            Channel::TextChannel { server, .. } => {
                 Some(server)
             }
             _ => None,
@@ -467,7 +434,7 @@ impl Channel {
     /// Gets this channel's voice information
     pub fn voice(&self) -> Option<Cow<VoiceInformation>> {
         match self {
-            Self::DirectMessage { .. } | Channel::VoiceChannel { .. } => {
+            Self::DirectMessage { .. } | Self::Group { .. } => {
                 Some(Cow::Owned(VoiceInformation::default()))
             }
             Self::TextChannel {
@@ -659,7 +626,6 @@ impl Channel {
                     voice.replace(v);
                 }
             }
-            Self::VoiceChannel { .. } => {}
         }
     }
 

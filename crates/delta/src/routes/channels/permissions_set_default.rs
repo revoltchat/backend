@@ -10,7 +10,7 @@ use rocket::{serde::json::Json, State};
 ///
 /// Sets permissions for the default role in this channel.
 ///
-/// Channel must be a `Group`, `TextChannel` or `VoiceChannel`.
+/// Channel must be a `Group` or `TextChannel`.
 #[openapi(tag = "Channel Permissions")]
 #[put("/<target>/permissions/default", data = "<data>", rank = 1)]
 pub async fn set_default_channel_permissions(

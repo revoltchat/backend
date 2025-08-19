@@ -1,4 +1,4 @@
-use revolt_database::{util::reference::Reference, voice::{delete_voice_state, get_channel_node, is_in_voice_channel, raise_if_in_voice, VoiceClient}, Channel, Database, User, AMQP};
+use revolt_database::{util::reference::Reference, voice::{delete_voice_state, get_channel_node, is_in_voice_channel, VoiceClient}, Channel, Database, User, AMQP};
 use revolt_permissions::ChannelPermission;
 use revolt_result::{create_error, Result};
 

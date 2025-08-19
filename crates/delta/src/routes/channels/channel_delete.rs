@@ -1,5 +1,10 @@
 use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference}, voice::{delete_voice_state, get_channel_node, get_voice_channel_members, is_in_voice_channel, VoiceClient}, Channel, Database, PartialChannel, User, AMQP
+    util::{permissions::DatabasePermissionQuery, reference::Reference},
+    voice::{
+        delete_voice_state, get_channel_node, get_voice_channel_members, is_in_voice_channel,
+        VoiceClient,
+    },
+    Channel, Database, PartialChannel, User, AMQP,
 };
 use revolt_models::v0;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
@@ -29,16 +34,18 @@ pub async fn delete(
     #[allow(deprecated)]
     match &channel {
         Channel::SavedMessages { .. } => Err(create_error!(NoEffect))?,
-        Channel::DirectMessage { .. } => channel
-            .update(
-                db,
-                PartialChannel {
-                    active: Some(false),
-                    ..Default::default()
-                },
-                vec![],
-            )
-            .await?,
+        Channel::DirectMessage { .. } => {
+            channel
+                .update(
+                    db,
+                    PartialChannel {
+                        active: Some(false),
+                        ..Default::default()
+                    },
+                    vec![],
+                )
+                .await?
+        }
         Channel::Group { .. } => {
             channel
                 .remove_user_from_group(
@@ -53,11 +60,13 @@ pub async fn delete(
             if is_in_voice_channel(&user.id, channel.id()).await? {
                 let node = get_channel_node(channel.id()).await?.unwrap();
 
-                voice_client.remove_user(&node, &user.id, channel.id()).await?;
+                voice_client
+                    .remove_user(&node, &user.id, channel.id())
+                    .await?;
                 delete_voice_state(channel.id(), None, &user.id).await?;
             };
-        },
-        Channel::TextChannel { .. } | Channel::VoiceChannel { .. } => {
+        }
+        Channel::TextChannel { .. } => {
             permissions.throw_if_lacking_channel_permission(ChannelPermission::ManageChannel)?;
             channel.delete(db).await?;
 

@@ -63,6 +63,7 @@ pub async fn calculate_server_permissions<P: PermissionQuery>(query: &mut P) -> 
 
     if !query.do_we_have_publish_overwrites().await {
         permissions.revoke(ChannelPermission::Speak as u64);
+        permissions.revoke(ChannelPermission::Video as u64);
     }
 
     if !query.do_we_have_receive_overwrites().await {

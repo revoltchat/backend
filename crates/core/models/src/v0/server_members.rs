@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use super::{File, Role, User};
-use crate::if_false;
 
 use iso8601_timestamp::Timestamp;
 use once_cell::sync::Lazy;
@@ -32,6 +31,14 @@ pub static RE_COLOUR: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"(?i)^(?:[a-z ]+|var\(--[a-z\d-]+\)|rgba?\([\d, ]+\)|#[a-f0-9]+|(repeating-)?(linear|conic|radial)-gradient\(([a-z ]+|var\(--[a-z\d-]+\)|rgba?\([\d, ]+\)|#[a-f0-9]+|\d+deg)([ ]+(\d{1,3}%|0))?(,[ ]*([a-z ]+|var\(--[a-z\d-]+\)|rgba?\([\d, ]+\)|#[a-f0-9]+)([ ]+(\d{1,3}%|0))?)+\))$").unwrap()
 });
 
+fn default_true() -> bool {
+    true
+}
+
+fn is_true(x: &bool) -> bool {
+    *x
+}
+
 auto_derived_partial!(
     /// Server Member
     pub struct Member {
@@ -60,11 +67,11 @@ auto_derived_partial!(
         pub timeout: Option<Timestamp>,
 
         /// Whether the member is server-wide voice muted
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub can_publish: Option<bool>,
+        #[serde(skip_serializing_if = "is_true", default = "default_true")]
+        pub can_publish: bool,
         /// Whether the member is server-wide voice deafened
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub can_receive: Option<bool>,
+        #[serde(skip_serializing_if = "is_true", default = "default_true")]
+        pub can_receive: bool,
     },
     "PartialMember"
 );

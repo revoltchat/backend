@@ -4,7 +4,7 @@ use futures::future::join_all;
 use revolt_database::{
     events::client::{EventV1, ReadyPayloadFields},
     util::permissions::DatabasePermissionQuery,
-    voice::{delete_voice_state, get_voice_channel_members, get_voice_state, get_channel_voice_state},
+    voice::get_channel_voice_state,
     Channel, Database, Member, MemberCompositeKey, Presence, RelationshipStatus,
 };
 use revolt_models::v0;
@@ -21,7 +21,7 @@ impl Cache {
     pub async fn can_view_channel(&self, db: &Database, channel: &Channel) -> bool {
         #[allow(deprecated)]
         match &channel {
-            Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => {
+            Channel::TextChannel { server, .. } => {
                 let member = self.members.get(server);
                 let server = self.servers.get(server);
                 let mut query =
@@ -298,20 +298,14 @@ impl State {
 
             let id = &id.to_string();
             for (channel_id, channel) in &self.cache.channels {
-                #[allow(deprecated)]
-                match channel {
-                    Channel::TextChannel { server, .. } | Channel::VoiceChannel { server, .. } => {
-                        if server == id {
-                            channel_ids.insert(channel_id.clone());
+                if channel.server() == Some(id) {
+                    channel_ids.insert(channel_id.clone());
 
-                            if self.cache.can_view_channel(db, channel).await {
-                                added_channels.push(channel_id.clone());
-                            } else {
-                                removed_channels.push(channel_id.clone());
-                            }
-                        }
+                    if self.cache.can_view_channel(db, channel).await {
+                        added_channels.push(channel_id.clone());
+                    } else {
+                        removed_channels.push(channel_id.clone());
                     }
-                    _ => {}
                 }
             }
 

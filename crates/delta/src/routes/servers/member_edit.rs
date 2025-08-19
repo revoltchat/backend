@@ -44,7 +44,7 @@ pub async fn edit(
 
     // Fetch server and member
     let mut server = server.as_server(db).await?;
-    let target_user = member.as_user(&db).await?;
+    let target_user = member.as_user(db).await?;
     let mut member = member.as_member(db, &server.id).await?;
 
     // Fetch our currrent permissions
@@ -208,7 +208,7 @@ pub async fn edit(
                 .create_room(&new_node, &new_voice_channel)
                 .await?;
             let token = voice_client
-                .create_token(&new_node, &target_user, permissions, &new_voice_channel)
+                .create_token(&new_node, db, &target_user, permissions, &new_voice_channel)
                 .await?;
 
             voice_client

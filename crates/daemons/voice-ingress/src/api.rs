@@ -59,7 +59,7 @@ pub async fn ingress(
             let channel_id = channel_id.to_internal_error()?;
             let user_id = user_id.to_internal_error()?;
 
-            let channel = Reference::from_unchecked(&channel_id)
+            let channel = Reference::from_unchecked(channel_id)
                 .as_channel(db)
                 .await?;
 
@@ -86,7 +86,7 @@ pub async fn ingress(
 
             // First user who joined - send call started system message.
             if event.room.as_ref().unwrap().num_participants == 1 {
-                let user = Reference::from_unchecked(&user_id)
+                let user = Reference::from_unchecked(user_id)
                     .as_user(db)
                     .await?;
 
@@ -120,7 +120,7 @@ pub async fn ingress(
             let channel_id = channel_id.to_internal_error()?;
             let user_id = user_id.to_internal_error()?;
 
-            let channel = Reference::from_unchecked(&channel_id)
+            let channel = Reference::from_unchecked(channel_id)
                 .as_channel(db)
                 .await?;
 
@@ -179,11 +179,11 @@ pub async fn ingress(
             let user_id = user_id.to_internal_error()?;
             let track = event.track.as_ref().to_internal_error()?;
 
-            let channel = Reference::from_unchecked(&channel_id)
+            let channel = Reference::from_unchecked(channel_id)
                 .as_channel(db)
                 .await?;
 
-            let user = Reference::from_unchecked(&user_id)
+            let user = Reference::from_unchecked(user_id)
                 .as_user(db)
                 .await?;
 

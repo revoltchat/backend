@@ -202,25 +202,6 @@ impl From<crate::Channel> for Channel {
                 nsfw,
                 voice: voice.map(|voice| voice.into()),
             },
-            crate::Channel::VoiceChannel {
-                id,
-                server,
-                name,
-                description,
-                icon,
-                default_permissions,
-                role_permissions,
-                nsfw,
-            } => Channel::VoiceChannel {
-                id,
-                server,
-                name,
-                description,
-                icon: icon.map(|file| file.into()),
-                default_permissions,
-                role_permissions,
-                nsfw,
-            },
         }
     }
 }
@@ -284,25 +265,6 @@ impl From<Channel> for crate::Channel {
                 role_permissions,
                 nsfw,
                 voice: voice.map(|voice| voice.into()),
-            },
-            Channel::VoiceChannel {
-                id,
-                server,
-                name,
-                description,
-                icon,
-                default_permissions,
-                role_permissions,
-                nsfw,
-            } => crate::Channel::VoiceChannel {
-                id,
-                server,
-                name,
-                description,
-                icon: icon.map(|file| file.into()),
-                default_permissions,
-                role_permissions,
-                nsfw,
             },
         }
     }

@@ -187,17 +187,17 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
 
     async fn do_we_have_publish_overwrites(&mut self) -> bool {
         if let Some(member) = &self.member {
-            member.can_publish.unwrap_or(false)
+            member.can_publish
         } else {
-            false
+            true
         }
     }
 
     async fn do_we_have_receive_overwrites(&mut self) -> bool {
         if let Some(member) = &self.member {
-            member.can_receive.unwrap_or(false)
+            member.can_receive
         } else {
-            false
+            true
         }
     }
 
@@ -216,9 +216,7 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
                 Cow::Borrowed(Channel::SavedMessages { .. })
                 | Cow::Owned(Channel::SavedMessages { .. }) => ChannelType::SavedMessages,
                 Cow::Borrowed(Channel::TextChannel { .. })
-                | Cow::Owned(Channel::TextChannel { .. })
-                | Cow::Borrowed(Channel::VoiceChannel { .. })
-                | Cow::Owned(Channel::VoiceChannel { .. }) => ChannelType::ServerChannel,
+                | Cow::Owned(Channel::TextChannel { .. }) => ChannelType::ServerChannel,
             }
         } else {
             ChannelType::Unknown
@@ -349,9 +347,7 @@ impl PermissionQuery for DatabasePermissionQuery<'_> {
             #[allow(deprecated)]
             match channel {
                 Cow::Borrowed(Channel::TextChannel { server, .. })
-                | Cow::Owned(Channel::TextChannel { server, .. })
-                | Cow::Borrowed(Channel::VoiceChannel { server, .. })
-                | Cow::Owned(Channel::VoiceChannel { server, .. }) => {
+                | Cow::Owned(Channel::TextChannel { server, .. }) => {
                     if let Some(known_server) =
                         // I'm not sure why I can't just pattern match both at once here?
                         // It throws some weird error and the provided fix doesn't work :/

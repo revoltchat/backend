@@ -113,43 +113,6 @@ auto_derived!(
             #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
             voice: Option<VoiceInformation>,
         },
-        #[deprecated = "Use TextChannel { voice } instead"]
-        VoiceChannel {
-            /// Unique Id
-            #[cfg_attr(feature = "serde", serde(rename = "_id"))]
-            id: String,
-            /// Id of the server this channel belongs to
-            server: String,
-
-            /// Display name of the channel
-            name: String,
-            #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-            /// Channel description
-            description: Option<String>,
-            /// Custom icon attachment
-            #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-            icon: Option<File>,
-
-            /// Default permissions assigned to users in this channel
-            #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-            default_permissions: Option<OverrideField>,
-            /// Permissions assigned based on role to this channel
-            #[cfg_attr(
-                feature = "serde",
-                serde(
-                    default = "HashMap::<String, OverrideField>::new",
-                    skip_serializing_if = "HashMap::<String, OverrideField>::is_empty"
-                )
-            )]
-            role_permissions: HashMap<String, OverrideField>,
-
-            /// Whether this channel is marked as not safe for work
-            #[cfg_attr(
-                feature = "serde",
-                serde(skip_serializing_if = "crate::if_false", default)
-            )]
-            nsfw: bool,
-        },
     }
 
     /// Voice information for a channel
@@ -294,7 +257,7 @@ auto_derived!(
             permissions: u64,
         },
         Field {
-            /// Allow / deny values to set for members in this `TextChannel` or `VoiceChannel`
+            /// Allow / deny values to set for members in this server channel
             permissions: Override,
         },
     }
@@ -345,8 +308,7 @@ impl Channel {
             Channel::DirectMessage { id, .. }
             | Channel::Group { id, .. }
             | Channel::SavedMessages { id, .. }
-            | Channel::TextChannel { id, .. }
-            | Channel::VoiceChannel { id, .. } => id,
+            | Channel::TextChannel { id, .. } => id,
         }
     }
 
@@ -358,9 +320,7 @@ impl Channel {
         match self {
             Channel::DirectMessage { .. } => None,
             Channel::SavedMessages { .. } => Some("Saved Messages"),
-            Channel::TextChannel { name, .. }
-            | Channel::Group { name, .. }
-            | Channel::VoiceChannel { name, .. } => Some(name),
+            Channel::TextChannel { name, .. } | Channel::Group { name, .. } => Some(name),
         }
     }
 }

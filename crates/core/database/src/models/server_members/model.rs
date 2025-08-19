@@ -4,9 +4,17 @@ use revolt_result::{create_error, Result};
 use crate::voice::get_channel_voice_state;
 
 use crate::{
-    events::client::EventV1, if_false, util::permissions::DatabasePermissionQuery, Channel,
+    events::client::EventV1, util::permissions::DatabasePermissionQuery, Channel,
     Database, File, Server, SystemMessage, User,
 };
+
+fn default_true() -> bool {
+    true
+}
+
+fn is_true(x: &bool) -> bool {
+    *x
+}
 
 auto_derived_partial!(
     /// Server Member
@@ -33,11 +41,11 @@ auto_derived_partial!(
         pub timeout: Option<Timestamp>,
 
         /// Whether the member is server-wide voice muted
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub can_publish: Option<bool>,
+        #[serde(skip_serializing_if = "is_true", default = "default_true")]
+        pub can_publish: bool,
         /// Whether the member is server-wide voice deafened
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub can_receive: Option<bool>,
+        #[serde(skip_serializing_if = "is_true", default = "default_true")]
+        pub can_receive: bool,
     },
     "PartialMember"
 );
@@ -79,8 +87,8 @@ impl Default for Member {
             avatar: None,
             roles: vec![],
             timeout: None,
-            can_publish: None,
-            can_receive: None,
+            can_publish: true,
+            can_receive: true,
         }
     }
 }
@@ -211,8 +219,8 @@ impl Member {
             FieldsMember::Nickname => self.nickname = None,
             FieldsMember::Roles => self.roles.clear(),
             FieldsMember::Timeout => self.timeout = None,
-            FieldsMember::CanReceive => self.can_receive = None,
-            FieldsMember::CanPublish => self.can_publish = None,
+            FieldsMember::CanReceive => self.can_receive = true,
+            FieldsMember::CanPublish => self.can_publish = true,
         }
     }
 
