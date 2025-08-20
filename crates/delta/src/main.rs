@@ -24,6 +24,7 @@ use amqprs::{
 use async_std::channel::unbounded;
 use authifier::AuthifierEvent;
 use rocket::data::ToByteUnit;
+use revolt_database::voice::VoiceClient;
 
 pub async fn web() -> Rocket<Build> {
     // Get settings
@@ -34,6 +35,7 @@ pub async fn web() -> Rocket<Build> {
 
     // Setup database
     let db = revolt_database::DatabaseInfo::Auto.connect().await.unwrap();
+    log::info!("database_here {db:?}");
     db.migrate_database().await.unwrap();
 
     // Setup Authifier event channel
@@ -89,6 +91,16 @@ pub async fn web() -> Rocket<Build> {
     )
     .into();
 
+    let swagger_0_8 = revolt_rocket_okapi::swagger_ui::make_swagger_ui(
+        &revolt_rocket_okapi::swagger_ui::SwaggerUIConfig {
+            url: "/0.8/openapi.json".to_owned(),
+            ..Default::default()
+        },
+    )
+    .into();
+
+    // Voice handler
+    let voice_client = VoiceClient::new(config.api.livekit.nodes.clone());
     // Configure Rabbit
     let connection = Connection::open(&OpenConnectionArguments::new(
         &config.rabbit.host,
@@ -133,6 +145,7 @@ pub async fn web() -> Rocket<Build> {
         .manage(db)
         .manage(amqp)
         .manage(cors.clone())
+        .manage(voice_client)
         .attach(util::ratelimiter::RatelimitFairing)
         .attach(cors)
         .configure(rocket::Config {
