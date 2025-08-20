@@ -18,12 +18,12 @@ async fn get_connection() -> Result<Conn> {
     _get_connection().await.to_internal_error()
 }
 
-pub async fn raise_if_in_voice(user: &User, target: &str) -> Result<()> {
+pub async fn raise_if_in_voice(user: &User, channel_id: &str) -> Result<()> {
     let mut conn = get_connection().await?;
 
     if user.bot.is_some()
     // bots can be in as many voice channels as it wants so we just check if its already connected to the one its trying to connect to
-        && conn.sismember(format!("vc:{}", &user.id), target)
+        && conn.sismember(format!("vc:{}", &user.id), channel_id)
             .await
             .to_internal_error()?
     {
@@ -83,7 +83,7 @@ pub async fn set_user_moved_from_voice(
 pub async fn get_user_moved_from_voice(channel_id: &str, user_id: &str) -> Result<Option<String>> {
     get_connection()
         .await?
-        .get(format!("moved_from:{user_id}:{channel_id}"))
+        .get_del(format!("moved_from:{user_id}:{channel_id}"))
         .await
         .to_internal_error()
 }
@@ -103,7 +103,7 @@ pub async fn set_user_moved_to_voice(
 pub async fn get_user_moved_to_voice(channel_id: &str, user_id: &str) -> Result<Option<String>> {
     get_connection()
         .await?
-        .get(format!("moved_to:{user_id}:{channel_id}"))
+        .get_del(format!("moved_to:{user_id}:{channel_id}"))
         .await
         .to_internal_error()
 }
@@ -124,7 +124,7 @@ pub async fn get_user_voice_channel_in_server(
 
     let unique_key = format!("{user_id}:{server_id}");
 
-    conn.get::<&str, Option<String>>(&unique_key)
+    conn.get(&unique_key)
         .await
         .to_internal_error()
 }
@@ -136,12 +136,10 @@ pub fn get_allowed_sources(
     let mut allowed_sources = Vec::new();
 
     if permissions.has(ChannelPermission::Speak as u64) {
-        println!("can speak");
         allowed_sources.push("microphone")
     };
 
     if permissions.has(ChannelPermission::Video as u64) && limits.video {
-        println!("can video");
         allowed_sources.extend(["camera", "screen_share", "screen_share_audio"]);
     };
 
@@ -291,7 +289,7 @@ pub async fn get_voice_state(
 
     let (is_publishing, is_receiving, screensharing, camera) = get_connection()
         .await?
-        .mget::<_, (Option<bool>, Option<bool>, Option<bool>, Option<bool>)>(&[
+        .mget(&[
             format!("is_publishing:{unique_key}"),
             format!("is_receiving:{unique_key}"),
             format!("screensharing:{unique_key}"),
@@ -386,7 +384,7 @@ pub async fn sync_user_voice_permissions(
     role_id: Option<&str>,
 ) -> Result<()> {
     let channel_id = channel.id();
-    let server_id: Option<&str> = server.as_ref().map(|s| s.id.as_str());
+    let server_id = server.as_ref().map(|s| s.id.as_str());
 
     let member = match server_id {
         Some(server_id) => Some(

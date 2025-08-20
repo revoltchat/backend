@@ -124,9 +124,7 @@ impl VoiceClient {
                 &user.id,
                 UpdateParticipantOptions {
                     permission: Some(new_permissions),
-                    attributes: HashMap::new(),
-                    name: "".to_string(),
-                    metadata: "".to_string(),
+                    ..Default::default()
                 },
             )
             .await
