@@ -31,7 +31,7 @@ impl AbstractServerMembers for MongoDb {
     }
 
     /// Fetch all members in a server
-    async fn fetch_all_members<'a>(&self, server_id: &str) -> Result<Vec<Member>> {
+    async fn fetch_all_members(&self, server_id: &str) -> Result<Vec<Member>> {
         Ok(self
             .col::<Member>(COL)
             .find(doc! {
@@ -139,7 +139,7 @@ impl AbstractServerMembers for MongoDb {
     }
 
     /// Fetch all memberships for a user
-    async fn fetch_all_memberships<'a>(&self, user_id: &str) -> Result<Vec<Member>> {
+    async fn fetch_all_memberships(&self, user_id: &str) -> Result<Vec<Member>> {
         Ok(self
             .col::<Member>(COL)
             .find(doc! {
@@ -159,7 +159,7 @@ impl AbstractServerMembers for MongoDb {
     }
 
     /// Fetch multiple members by their ids
-    async fn fetch_members<'a>(&self, server_id: &str, ids: &'a [String]) -> Result<Vec<Member>> {
+    async fn fetch_members(&self, server_id: &str, ids: &[String]) -> Result<Vec<Member>> {
         Ok(self
             .col::<Member>(COL)
             .find(doc! {

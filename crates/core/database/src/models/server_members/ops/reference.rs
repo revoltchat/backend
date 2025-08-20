@@ -31,7 +31,7 @@ impl AbstractServerMembers for ReferenceDb {
     }
 
     /// Fetch all members in a server
-    async fn fetch_all_members<'a>(&self, server_id: &str) -> Result<Vec<Member>> {
+    async fn fetch_all_members(&self, server_id: &str) -> Result<Vec<Member>> {
         let server_members = self.server_members.lock().await;
         Ok(server_members
             .values()
@@ -105,7 +105,7 @@ impl AbstractServerMembers for ReferenceDb {
     }
 
     /// Fetch all memberships for a user
-    async fn fetch_all_memberships<'a>(&self, user_id: &str) -> Result<Vec<Member>> {
+    async fn fetch_all_memberships(&self, user_id: &str) -> Result<Vec<Member>> {
         let server_members = self.server_members.lock().await;
         Ok(server_members
             .values()
@@ -115,7 +115,7 @@ impl AbstractServerMembers for ReferenceDb {
     }
 
     /// Fetch multiple members by their ids
-    async fn fetch_members<'a>(&self, server_id: &str, ids: &'a [String]) -> Result<Vec<Member>> {
+    async fn fetch_members(&self, server_id: &str, ids: &[String]) -> Result<Vec<Member>> {
         let server_members = self.server_members.lock().await;
         Ok(ids
             .iter()

@@ -79,7 +79,7 @@ pub trait AbstractServerMembers: Sync + Send {
     async fn fetch_member(&self, server_id: &str, user_id: &str) -> Result<Member>;
 
     /// Fetch all members in a server
-    async fn fetch_all_members<'a>(&self, server_id: &str) -> Result<Vec<Member>>;
+    async fn fetch_all_members(&self, server_id: &str) -> Result<Vec<Member>>;
 
     /// Fetch all members in a server as an iterator
     async fn fetch_all_members_chunked(
@@ -100,10 +100,10 @@ pub trait AbstractServerMembers: Sync + Send {
     ) -> Result<ChunkedServerMembersGenerator>;
 
     /// Fetch all memberships for a user
-    async fn fetch_all_memberships<'a>(&self, user_id: &str) -> Result<Vec<Member>>;
+    async fn fetch_all_memberships(&self, user_id: &str) -> Result<Vec<Member>>;
 
     /// Fetch multiple members by their ids
-    async fn fetch_members<'a>(&self, server_id: &str, ids: &'a [String]) -> Result<Vec<Member>>;
+    async fn fetch_members(&self, server_id: &str, ids: &[String]) -> Result<Vec<Member>>;
 
     /// Fetch member count of a server
     async fn fetch_member_count(&self, server_id: &str) -> Result<usize>;
