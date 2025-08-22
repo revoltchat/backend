@@ -80,12 +80,93 @@ pub async fn edit(
         }
     }
 
+    // 4. Handle attachment removal
+    if let Some(remove_attachments) = &edit.remove_attachments {
+        // Validate that all attachment IDs exist in the message
+        if let Some(ref attachments) = message.attachments {
+            for attachment_id in remove_attachments {
+                if !attachments.iter().any(|file| &file.id == attachment_id) {
+                    return Err(create_error!(InvalidOperation));
+                }
+            }
+
+            // Remove specified attachments
+            let mut updated_attachments = attachments.clone();
+            let removed_files: Vec<_> = attachments
+                .iter()
+                .filter(|file| remove_attachments.contains(&file.id))
+                .cloned()
+                .collect();
+
+            updated_attachments.retain(|file| !remove_attachments.contains(&file.id));
+            partial.attachments = Some(updated_attachments);
+
+            // Mark removed files for cleanup
+            for file in removed_files {
+                // TODO: Implement proper file cleanup task
+                // For now we'll just log the removal
+                println!("File {} removed from message {}", file.id, message.id);
+            }
+        } else if !remove_attachments.is_empty() {
+            return Err(create_error!(InvalidOperation));
+        }
+    }
+
+    if edit.remove_all_attachments == Some(true) {
+        // Queue all attachments for deletion
+        if let Some(ref attachments) = message.attachments {
+            for file in attachments {
+                // Queue file for deletion via background task
+                // TODO: Implement proper file deletion queue/task
+                println!(
+                    "Attachment {} queued for deletion from message {}",
+                    file.id, message.id
+                );
+            }
+        }
+        partial.attachments = Some(vec![]);
+    }
+
+    // 5. Handle embed suppression
+    if let Some(suppress_embeds) = &edit.suppress_embeds {
+        // Validate embed indices against original message embeds
+        if let Some(ref original_embeds) = message.embeds {
+            for &index in suppress_embeds {
+                if index >= original_embeds.len() {
+                    return Err(create_error!(InvalidOperation));
+                }
+            }
+        } else if !suppress_embeds.is_empty() {
+            return Err(create_error!(InvalidOperation));
+        }
+
+        // For suppression we need to work with the original embeds and filter out the suppressed ones
+        if let Some(ref original_embeds) = message.embeds {
+            let mut filtered_embeds = Vec::new();
+            for (i, embed) in original_embeds.iter().enumerate() {
+                if !suppress_embeds.contains(&i) {
+                    // Keep ALL embed types that aren't being suppressed, not just Text embeds
+                    filtered_embeds.push(embed.clone());
+                }
+            }
+            new_embeds = filtered_embeds;
+        }
+    }
+
+    if edit.suppress_all_embeds == Some(true) {
+        new_embeds.clear();
+    }
+
     partial.embeds = Some(new_embeds);
 
     message.update(db, partial, vec![]).await?;
 
     // Queue up a task for processing embeds if the we have sufficient permissions
-    if permissions.has_channel_permission(ChannelPermission::SendEmbeds) {
+    // BUT only if we're not suppressing embeds
+    if permissions.has_channel_permission(ChannelPermission::SendEmbeds)
+        && edit.suppress_embeds.is_none()
+        && edit.suppress_all_embeds != Some(true)
+    {
         if let Some(content) = edit.content {
             tasks::process_embeds::queue(
                 message.channel.to_string(),

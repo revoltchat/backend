@@ -342,6 +342,16 @@ auto_derived!(
         /// Embeds to include in the message
         #[cfg_attr(feature = "validator", validate(length(min = 0, max = 10)))]
         pub embeds: Option<Vec<SendableEmbed>>,
+        /// Remove specific attachments by their IDs
+        #[cfg_attr(feature = "validator", validate(length(min = 0, max = 10)))]
+        pub remove_attachments: Option<Vec<String>>,
+        /// Suppress specific embeds by their index
+        #[cfg_attr(feature = "validator", validate(length(min = 0, max = 10)))]
+        pub suppress_embeds: Option<Vec<usize>>,
+        /// Remove all attachments
+        pub remove_all_attachments: Option<bool>,
+        /// Suppress all embeds
+        pub suppress_all_embeds: Option<bool>,
     }
 
     /// Options for bulk deleting messages
