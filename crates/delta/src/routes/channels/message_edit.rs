@@ -86,7 +86,7 @@ pub async fn edit(
         if let Some(ref attachments) = message.attachments {
             for attachment_id in remove_attachments {
                 if !attachments.iter().any(|file| &file.id == attachment_id) {
-                    return Err(create_error!(InvalidOperation));
+                    return Err(create_error!(NotFound));
                 }
             }
 
@@ -103,9 +103,7 @@ pub async fn edit(
 
             // Mark removed files for cleanup
             for file in removed_files {
-                // TODO: Implement proper file cleanup task
-                // For now we'll just log the removal
-                println!("File {} removed from message {}", file.id, message.id);
+                db.mark_attachment_as_deleted(&file.id).await?;
             }
         } else if !remove_attachments.is_empty() {
             return Err(create_error!(InvalidOperation));
@@ -115,13 +113,9 @@ pub async fn edit(
     if edit.remove_all_attachments == Some(true) {
         // Queue all attachments for deletion
         if let Some(ref attachments) = message.attachments {
-            for file in attachments {
-                // Queue file for deletion via background task
-                // TODO: Implement proper file deletion queue/task
-                println!(
-                    "Attachment {} queued for deletion from message {}",
-                    file.id, message.id
-                );
+            let file_ids: Vec<String> = attachments.iter().map(|f| f.id.clone()).collect();
+            if !file_ids.is_empty() {
+                db.mark_attachments_as_deleted(&file_ids).await?;
             }
         }
         partial.attachments = Some(vec![]);
@@ -145,7 +139,7 @@ pub async fn edit(
             let mut filtered_embeds = Vec::new();
             for (i, embed) in original_embeds.iter().enumerate() {
                 if !suppress_embeds.contains(&i) {
-                    // Keep ALL embed types that aren't being suppressed, not just Text embeds
+                    // Keep all embed types that aren't being suppressed
                     filtered_embeds.push(embed.clone());
                 }
             }
