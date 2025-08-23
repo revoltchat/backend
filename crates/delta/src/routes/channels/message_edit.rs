@@ -4,7 +4,7 @@ use revolt_database::{
     util::{permissions::DatabasePermissionQuery, reference::Reference},
     Database, Message, PartialMessage, User,
 };
-use revolt_models::v0::{self, Embed};
+use revolt_models::v0::{self, Embed, MessageFlags};
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_result::{create_error, Result};
 use rocket::{serde::json::Json, State};
@@ -47,6 +47,11 @@ pub async fn edit(
         return Err(create_error!(CannotEditMessage));
     }
 
+    // Check if embeds are suppressed
+    let current_flags = message.flags.unwrap_or(0);
+    let embeds_suppressed = current_flags & MessageFlags::SuppressEmbeds as u32 != 0;
+    
+
     message.edited = Some(Timestamp::now_utc());
     let mut partial = PartialMessage {
         edited: message.edited,
@@ -76,7 +81,9 @@ pub async fn edit(
         new_embeds.clear();
 
         for embed in embeds {
-            new_embeds.push(message.create_embed(db, embed).await?);
+            new_embeds.push(
+                message.create_embed(db, embed).await?
+            );
         }
     }
 
@@ -110,43 +117,12 @@ pub async fn edit(
         }
     }
 
-
-    // 5. Handle embed suppression
-    if let Some(suppress_embeds) = &edit.suppress_embeds {
-        // Validate embed indices against original message embeds
-        if let Some(ref original_embeds) = message.embeds {
-            for &index in suppress_embeds {
-                if index >= original_embeds.len() {
-                    return Err(create_error!(InvalidOperation));
-                }
-            }
-        } else if !suppress_embeds.is_empty() {
-            return Err(create_error!(InvalidOperation));
-        }
-
-        // For suppression we need to work with the original embeds and filter out the suppressed ones
-        if let Some(ref original_embeds) = message.embeds {
-            let mut filtered_embeds = Vec::new();
-            for (i, embed) in original_embeds.iter().enumerate() {
-                if !suppress_embeds.contains(&i) {
-                    // Keep all embed types that aren't being suppressed
-                    filtered_embeds.push(embed.clone());
-                }
-            }
-            new_embeds = filtered_embeds;
-        }
-    }
-
-
     partial.embeds = Some(new_embeds);
 
     message.update(db, partial, vec![]).await?;
 
-    // Queue up a task for processing embeds if the we have sufficient permissions
-    // BUT only if we're not suppressing embeds
-    if permissions.has_channel_permission(ChannelPermission::SendEmbeds)
-        && edit.suppress_embeds.is_none()
-    {
+    // Queue up a task for processing embeds if sufficient permissions and embeds aren't suppressed
+    if permissions.has_channel_permission(ChannelPermission::SendEmbeds) && !embeds_suppressed {
         if let Some(content) = edit.content {
             tasks::process_embeds::queue(
                 message.channel.to_string(),
