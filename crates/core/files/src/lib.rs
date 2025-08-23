@@ -80,6 +80,9 @@ pub async fn fetch_from_s3(bucket_id: &str, path: &str, nonce: &str) -> Result<V
         .decrypt_in_place(nonce, b"", &mut buf)
         .map_err(|_| create_error!(InternalError))?;
 
+    // Remove the authentication tag bytes that were added during encryption
+    buf.truncate(buf.len() - AUTHENTICATION_TAG_SIZE_BYTES);
+
     Ok(buf)
 }
 
