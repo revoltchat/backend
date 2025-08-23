@@ -110,16 +110,6 @@ pub async fn edit(
         }
     }
 
-    if edit.remove_all_attachments == Some(true) {
-        // Queue all attachments for deletion
-        if let Some(ref attachments) = message.attachments {
-            let file_ids: Vec<String> = attachments.iter().map(|f| f.id.clone()).collect();
-            if !file_ids.is_empty() {
-                db.mark_attachments_as_deleted(&file_ids).await?;
-            }
-        }
-        partial.attachments = Some(vec![]);
-    }
 
     // 5. Handle embed suppression
     if let Some(suppress_embeds) = &edit.suppress_embeds {
@@ -147,9 +137,6 @@ pub async fn edit(
         }
     }
 
-    if edit.suppress_all_embeds == Some(true) {
-        new_embeds.clear();
-    }
 
     partial.embeds = Some(new_embeds);
 
@@ -159,7 +146,6 @@ pub async fn edit(
     // BUT only if we're not suppressing embeds
     if permissions.has_channel_permission(ChannelPermission::SendEmbeds)
         && edit.suppress_embeds.is_none()
-        && edit.suppress_all_embeds != Some(true)
     {
         if let Some(content) = edit.content {
             tasks::process_embeds::queue(
