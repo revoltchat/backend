@@ -124,6 +124,7 @@ impl Member {
         EventV1::ServerMemberJoin {
             id: server.id.clone(),
             user: user.id.clone(),
+            member: member.clone().into(),
         }
         .p(server.id.clone())
         .await;
