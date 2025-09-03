@@ -1,2 +1,0 @@
-[profile.default]
-slow-timeout = { period = "5s", terminate-after = 10 }

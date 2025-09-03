@@ -1,8 +1,0 @@
-Your account has been suspended, for one or more reasons:
-{{list}}
-
-This email is intended for {{email}}
-
-This email has no association with Revolt or Revolt Platforms Ltd.
-Learn more about third party instances here:
-https://developers.revolt.chat/faq.html
