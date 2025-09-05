@@ -63,10 +63,11 @@ impl ApnsOutboundConsumer {
         // in a dm it should just be "Sendername".
         // not sure how feasible all those are given the PushNotification object as it currently stands.
 
+        #[allow(deprecated)]
         match &notification.channel {
             Channel::DirectMessage { .. } => notification.author.clone(),
             Channel::Group { name, .. } => format!("{}, #{}", notification.author, name),
-            Channel::TextChannel { name, .. } | Channel::VoiceChannel { name, .. } => {
+            Channel::TextChannel { name, .. } => {
                 format!("{} in #{}", notification.author, name)
             }
             _ => "Unknown".to_string(),
