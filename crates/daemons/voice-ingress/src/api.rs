@@ -59,9 +59,7 @@ pub async fn ingress(
             let channel_id = channel_id.to_internal_error()?;
             let user_id = user_id.to_internal_error()?;
 
-            let channel = Reference::from_unchecked(channel_id)
-                .as_channel(db)
-                .await?;
+            let channel = Reference::from_unchecked(channel_id).as_channel(db).await?;
 
             let voice_state = create_voice_state(channel_id, channel.server(), user_id).await?;
 
@@ -86,9 +84,7 @@ pub async fn ingress(
 
             // First user who joined - send call started system message.
             if event.room.as_ref().unwrap().num_participants == 1 {
-                let user = Reference::from_unchecked(user_id)
-                    .as_user(db)
-                    .await?;
+                let user = Reference::from_unchecked(user_id).as_user(db).await?;
 
                 let mut call_started_message = SystemMessage::CallStarted {
                     by: user_id.to_string(),
@@ -120,9 +116,7 @@ pub async fn ingress(
             let channel_id = channel_id.to_internal_error()?;
             let user_id = user_id.to_internal_error()?;
 
-            let channel = Reference::from_unchecked(channel_id)
-                .as_channel(db)
-                .await?;
+            let channel = Reference::from_unchecked(channel_id).as_channel(db).await?;
 
             delete_voice_state(channel_id, channel.server(), user_id).await?;
 
@@ -143,6 +137,14 @@ pub async fn ingress(
             let members = get_voice_channel_members(channel_id).await?;
 
             if members.is_none_or(|m| m.is_empty()) {
+                // The channel is empty so send out an "end" message for ringing
+                if let Err(e) = amqp
+                    .dm_call_updated(&user_id, &channel_id, None, true, None)
+                    .await
+                {
+                    revolt_config::capture_internal_error!(&e);
+                }
+
                 if let Some(system_message_id) =
                     take_channel_call_started_system_message(channel_id).await?
                 {
@@ -179,13 +181,9 @@ pub async fn ingress(
             let user_id = user_id.to_internal_error()?;
             let track = event.track.as_ref().to_internal_error()?;
 
-            let channel = Reference::from_unchecked(channel_id)
-                .as_channel(db)
-                .await?;
+            let channel = Reference::from_unchecked(channel_id).as_channel(db).await?;
 
-            let user = Reference::from_unchecked(user_id)
-                .as_user(db)
-                .await?;
+            let user = Reference::from_unchecked(user_id).as_user(db).await?;
 
             let user_limits = user.limits().await;
 

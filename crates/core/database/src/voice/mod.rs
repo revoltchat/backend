@@ -424,7 +424,8 @@ pub async fn sync_user_voice_permissions(
 
         let before = update_event.clone();
 
-        let can_video = limits.video && permissions.has_channel_permission(ChannelPermission::Video);
+        let can_video =
+            limits.video && permissions.has_channel_permission(ChannelPermission::Video);
         let can_speak = permissions.has_channel_permission(ChannelPermission::Speak);
         let can_listen = permissions.has_channel_permission(ChannelPermission::Listen);
 

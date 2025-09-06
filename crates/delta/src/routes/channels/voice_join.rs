@@ -5,7 +5,7 @@ use revolt_database::{
         delete_voice_state, get_channel_node, get_user_voice_channels, get_voice_channel_members,
         raise_if_in_voice, VoiceClient,
     },
-    Database, User,
+    Channel, Database, SystemMessage, User, AMQP,
 };
 use revolt_models::v0;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
@@ -20,6 +20,7 @@ use rocket::{serde::json::Json, State};
 #[post("/<target>/join_call", data = "<data>")]
 pub async fn call(
     db: &State<Database>,
+    amqp: &State<AMQP>,
     voice_client: &State<VoiceClient>,
     user: User,
     target: Reference<'_>,
@@ -98,6 +99,42 @@ pub async fn call(
     let room = voice_client.create_room(&node, &channel).await?;
 
     log::debug!("Created room {}", room.name);
+
+    match &channel {
+        Channel::DirectMessage { .. } | Channel::Group { .. } => {
+            let mut msg = SystemMessage::CallStarted {
+                by: user.id.clone(),
+                finished_at: None,
+            }
+            .into_message(channel.id().to_string());
+
+            msg.send(
+                db,
+                Some(amqp),
+                v0::MessageAuthor::System {
+                    username: &user.username,
+                    avatar: user.avatar.as_ref().map(|file| file.id.as_ref()),
+                },
+                None,
+                None,
+                &channel,
+                false,
+            )
+            .await?;
+
+            let now = iso8601_timestamp::Timestamp::now_utc()
+                .format_short()
+                .to_string();
+
+            if let Err(e) = amqp
+                .dm_call_updated(&user.id, channel.id(), Some(&now), false, None)
+                .await
+            {
+                revolt_config::capture_error(&e);
+            }
+        }
+        _ => {}
+    };
 
     Ok(Json(v0::CreateVoiceUserResponse {
         token,

@@ -125,7 +125,7 @@ pub struct Hosts {
     pub events: String,
     pub autumn: String,
     pub january: String,
-    pub livekit: HashMap<String, String>
+    pub livekit: HashMap<String, String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -198,7 +198,8 @@ pub struct ApiWorkers {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct ApiLiveKit {
-    pub nodes: HashMap<String, LiveKitNode>
+    pub call_ring_duration: usize,
+    pub nodes: HashMap<String, LiveKitNode>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -238,6 +239,7 @@ pub struct Pushd {
     // Queues
     pub message_queue: String,
     pub mass_mention_queue: String,
+    pub dm_call_queue: String,
     pub fr_accepted_queue: String,
     pub fr_received_queue: String,
     pub generic_queue: String,
@@ -266,6 +268,10 @@ impl Pushd {
 
     pub fn get_mass_mention_routing_key(&self) -> String {
         self.get_routing_key(self.mass_mention_queue.clone())
+    }
+
+    pub fn get_dm_call_routing_key(&self) -> String {
+        self.get_routing_key(self.dm_call_queue.clone())
     }
 
     pub fn get_fr_accepted_routing_key(&self) -> String {

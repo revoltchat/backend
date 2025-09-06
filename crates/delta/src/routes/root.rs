@@ -27,7 +27,7 @@ pub struct VoiceNode {
     pub name: String,
     pub lat: f64,
     pub lon: f64,
-    pub public_url: String
+    pub public_url: String,
 }
 
 /// # Voice Server Configuration
@@ -115,18 +115,24 @@ pub async fn root() -> Result<Json<RevoltConfig>> {
             },
             livekit: VoiceFeature {
                 enabled: !config.hosts.livekit.is_empty(),
-                nodes: config.api.livekit.nodes
+                nodes: config
+                    .api
+                    .livekit
+                    .nodes
                     .iter()
                     .filter(|(_, node)| !node.private)
-                    .map(|(name, value)| {
-                        VoiceNode {
-                            name: name.clone(),
-                            lat: value.lat,
-                            lon: value.lon,
-                            public_url: config.hosts.livekit.get(name).expect("Missing corresponding host for voice node").clone()
-                        }
+                    .map(|(name, value)| VoiceNode {
+                        name: name.clone(),
+                        lat: value.lat,
+                        lon: value.lon,
+                        public_url: config
+                            .hosts
+                            .livekit
+                            .get(name)
+                            .expect("Missing corresponding host for voice node")
+                            .clone(),
                     })
-                    .collect()
+                    .collect(),
             },
         },
         ws: config.hosts.events,
