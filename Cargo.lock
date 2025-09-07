@@ -6772,6 +6772,7 @@ version = "0.7.1"
 dependencies = [
  "amqprs",
  "async-std",
+ "chrono",
  "futures",
  "livekit-api",
  "livekit-protocol",

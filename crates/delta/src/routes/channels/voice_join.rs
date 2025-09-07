@@ -3,9 +3,9 @@ use revolt_database::{
     util::{permissions::perms, reference::Reference},
     voice::{
         delete_voice_state, get_channel_node, get_user_voice_channels, get_voice_channel_members,
-        raise_if_in_voice, VoiceClient,
+        raise_if_in_voice, set_call_notification_recipients, VoiceClient,
     },
-    Channel, Database, SystemMessage, User, AMQP,
+    Database, User,
 };
 use revolt_models::v0;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
@@ -20,7 +20,6 @@ use rocket::{serde::json::Json, State};
 #[post("/<target>/join_call", data = "<data>")]
 pub async fn call(
     db: &State<Database>,
-    amqp: &State<AMQP>,
     voice_client: &State<VoiceClient>,
     user: User,
     target: Reference<'_>,
@@ -33,6 +32,7 @@ pub async fn call(
     let v0::DataJoinCall {
         node,
         force_disconnect,
+        recipients,
     } = data.into_inner();
 
     if user.bot.is_some() && force_disconnect == Some(true) {
@@ -96,45 +96,16 @@ pub async fn call(
     let token = voice_client
         .create_token(&node, db, &user, current_permissions, &channel)
         .await?;
+
     let room = voice_client.create_room(&node, &channel).await?;
 
     log::debug!("Created room {}", room.name);
 
-    match &channel {
-        Channel::DirectMessage { .. } | Channel::Group { .. } => {
-            let mut msg = SystemMessage::CallStarted {
-                by: user.id.clone(),
-                finished_at: None,
-            }
-            .into_message(channel.id().to_string());
-
-            msg.send(
-                db,
-                Some(amqp),
-                v0::MessageAuthor::System {
-                    username: &user.username,
-                    avatar: user.avatar.as_ref().map(|file| file.id.as_ref()),
-                },
-                None,
-                None,
-                &channel,
-                false,
-            )
-            .await?;
-
-            let now = iso8601_timestamp::Timestamp::now_utc()
-                .format_short()
-                .to_string();
-
-            if let Err(e) = amqp
-                .dm_call_updated(&user.id, channel.id(), Some(&now), false, None)
-                .await
-            {
-                revolt_config::capture_error(&e);
-            }
+    if let Some(recipients) = recipients {
+        if room.num_participants == 0 {
+            set_call_notification_recipients(channel.id(), &user.id, &recipients).await?;
         }
-        _ => {}
-    };
+    }
 
     Ok(Json(v0::CreateVoiceUserResponse {
         token,

@@ -294,10 +294,14 @@ auto_derived!(
     pub struct DataJoinCall {
         /// Name of the node to join
         pub node: Option<String>,
-        /// Whether to force disconnect any other existing voice connections.
+        /// Whether to force disconnect any other existing voice connections
         ///
-        /// useful for disconnecting on another device and joining on a new.
+        /// Useful for disconnecting on another device and joining on a new.
         pub force_disconnect: Option<bool>,
+        /// Users which should be notified of the call starting
+        ///
+        /// Only used when the user is the first one connected.
+        pub recipients: Option<Vec<String>>,
     }
 );
 

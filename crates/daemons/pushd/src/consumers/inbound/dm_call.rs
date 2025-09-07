@@ -69,24 +69,30 @@ impl DmCallConsumer {
 
         debug!("Received dm call start/stop event");
 
-        let call_recipients: Vec<String> = if let Some(recipients) = _p.recipients {
-            recipients
-        } else {
-            match self.db.fetch_channel(&payload.channel_id).await? {
-                revolt_database::Channel::DirectMessage { recipients, .. }
-                | revolt_database::Channel::Group { recipients, .. } => recipients
-                    .into_iter()
-                    .filter(|r| *r != payload.initiator_id)
-                    .collect(),
-                _ => {
-                    warn!(
-                        "Discarding dm call start/stop event for non-dm/group channel {}",
-                        payload.channel_id
-                    );
-                    return Ok(());
-                }
-            }
+        let (revolt_database::Channel::DirectMessage { recipients, .. }
+        | revolt_database::Channel::Group { recipients, .. }) =
+            self.db.fetch_channel(&payload.channel_id).await?
+        else {
+            warn!(
+                "Discarding dm call start/stop event for non-dm/group channel {}",
+                payload.channel_id
+            );
+
+            return Ok(());
         };
+
+        let call_recipients = if let Some(user_recipients) = _p.recipients {
+            user_recipients
+                .into_iter()
+                .filter(|user_id| recipients.contains(user_id) && user_id != &payload.initiator_id)
+                .collect()
+        } else {
+            recipients
+                .into_iter()
+                .filter(|user_id| user_id != &payload.initiator_id)
+                .collect::<Vec<_>>()
+        };
+
         let config = revolt_config::config().await;
 
         for user_id in call_recipients {

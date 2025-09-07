@@ -124,9 +124,7 @@ pub async fn get_user_voice_channel_in_server(
 
     let unique_key = format!("{user_id}:{server_id}");
 
-    conn.get(&unique_key)
-        .await
-        .to_internal_error()
+    conn.get(&unique_key).await.to_internal_error()
 }
 
 pub fn get_allowed_sources(
@@ -476,6 +474,35 @@ pub async fn take_channel_call_started_system_message(channel_id: &str) -> Resul
     get_connection()
         .await?
         .get_del(format!("call_started_message:{channel_id}"))
+        .await
+        .to_internal_error()
+}
+
+pub async fn set_call_notification_recipients(
+    channel_id: &str,
+    user_id: &str,
+    recipients: &[String],
+) -> Result<()> {
+    get_connection()
+        .await?
+        .set_ex(
+            format!("call_notification_recipients:{channel_id}-{user_id}"),
+            recipients,
+            10,
+        )
+        .await
+        .to_internal_error()
+}
+
+pub async fn get_call_notification_recipients(
+    channel_id: &str,
+    user_id: &str,
+) -> Result<Option<Vec<String>>> {
+    get_connection()
+        .await?
+        .get_del(format!(
+            "call_notification_recipients:{channel_id}-{user_id}"
+        ))
         .await
         .to_internal_error()
 }

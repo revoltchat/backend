@@ -1,3 +1,4 @@
+use chrono::DateTime;
 use livekit_api::{access_token::TokenVerifier, webhooks::WebhookReceiver};
 use livekit_protocol::TrackType;
 use revolt_database::{
@@ -5,9 +6,10 @@ use revolt_database::{
     iso8601_timestamp::Timestamp,
     util::reference::Reference,
     voice::{
-        create_voice_state, delete_voice_state, get_user_moved_from_voice, get_user_moved_to_voice,
-        get_voice_channel_members, set_channel_call_started_system_message,
-        take_channel_call_started_system_message, update_voice_state_tracks, VoiceClient,
+        create_voice_state, delete_voice_state, get_call_notification_recipients,
+        get_user_moved_from_voice, get_user_moved_to_voice, get_voice_channel_members,
+        set_channel_call_started_system_message, take_channel_call_started_system_message,
+        update_voice_state_tracks, VoiceClient,
     },
     Database, PartialMessage, SystemMessage, AMQP,
 };
@@ -15,6 +17,7 @@ use revolt_models::v0;
 use revolt_result::{Result, ToRevoltError};
 use rocket::{post, State};
 use rocket_empty::EmptyResponse;
+use ulid::Ulid;
 
 use crate::guard::AuthHeader;
 
@@ -86,11 +89,24 @@ pub async fn ingress(
             if event.room.as_ref().unwrap().num_participants == 1 {
                 let user = Reference::from_unchecked(user_id).as_user(db).await?;
 
+                let started_at = Timestamp::now_utc();
+                let message_id = Ulid::from_datetime(
+                    DateTime::from_timestamp_millis(
+                        started_at
+                            .duration_since(Timestamp::UNIX_EPOCH)
+                            .whole_milliseconds() as i64,
+                    )
+                    .unwrap(),
+                )
+                .to_string();
+
                 let mut call_started_message = SystemMessage::CallStarted {
                     by: user_id.to_string(),
                     finished_at: None,
                 }
                 .into_message(channel.id().to_string());
+
+                call_started_message.id = message_id;
 
                 set_channel_call_started_system_message(channel.id(), &call_started_message.id)
                     .await?;
@@ -109,6 +125,16 @@ pub async fn ingress(
                         false,
                     )
                     .await?;
+
+                let recipients = get_call_notification_recipients(&channel_id, &user_id).await?;
+                let now = started_at.format_short().to_string();
+
+                if let Err(e) = amqp
+                    .dm_call_updated(&user.id, channel.id(), Some(&now), false, recipients)
+                    .await
+                {
+                    revolt_config::capture_error(&e);
+                }
             }
         }
         // User left a channel
