@@ -707,6 +707,7 @@ impl From<crate::FieldsMember> for FieldsMember {
             crate::FieldsMember::Nickname => FieldsMember::Nickname,
             crate::FieldsMember::Roles => FieldsMember::Roles,
             crate::FieldsMember::Timeout => FieldsMember::Timeout,
+            crate::FieldsMember::JoinedAt => FieldsMember::JoinedAt,
         }
     }
 }
@@ -718,6 +719,7 @@ impl From<FieldsMember> for crate::FieldsMember {
             FieldsMember::Nickname => crate::FieldsMember::Nickname,
             FieldsMember::Roles => crate::FieldsMember::Roles,
             FieldsMember::Timeout => crate::FieldsMember::Timeout,
+            FieldsMember::JoinedAt => crate::FieldsMember::JoinedAt,
         }
     }
 }

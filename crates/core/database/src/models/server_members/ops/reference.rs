@@ -8,13 +8,13 @@ use super::{AbstractServerMembers, ChunkedServerMembersGenerator};
 #[async_trait]
 impl AbstractServerMembers for ReferenceDb {
     /// Insert a new server member into the database
-    async fn insert_member(&self, member: &Member) -> Result<()> {
+    async fn insert_or_merge_member(&self, member: &Member) -> Result<Option<Member>> {
         let mut server_members = self.server_members.lock().await;
         if server_members.contains_key(&member.id) {
             Err(create_database_error!("insert", "member"))
         } else {
             server_members.insert(member.id.clone(), member.clone());
-            Ok(())
+            Ok(None)
         }
     }
 
@@ -169,13 +169,35 @@ impl AbstractServerMembers for ReferenceDb {
         }
     }
 
+    /// Soft delete a member
+    async fn soft_delete_member(&self, id: &MemberCompositeKey) -> Result<()> {
+        let mut server_members = self.server_members.lock().await;
+
+        let member = server_members.get_mut(id);
+        if let Some(member) = member {
+            if member.in_timeout() {
+                panic!("Soft deletion is not implemented.")
+            } else if server_members.remove(id).is_some() {
+                Ok(())
+            } else {
+                Err(create_error!(NotFound))
+            }
+        } else {
+            Err(create_error!(NotFound))
+        }
+    }
+
     /// Delete a server member by their id
-    async fn delete_member(&self, id: &MemberCompositeKey) -> Result<()> {
+    async fn force_delete_member(&self, id: &MemberCompositeKey) -> Result<()> {
         let mut server_members = self.server_members.lock().await;
         if server_members.remove(id).is_some() {
             Ok(())
         } else {
             Err(create_error!(NotFound))
         }
+    }
+
+    async fn remove_dangling_members(&self) -> Result<()> {
+        todo!()
     }
 }
