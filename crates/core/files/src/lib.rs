@@ -81,7 +81,7 @@ pub async fn fetch_from_s3(bucket_id: &str, path: &str, nonce: &str) -> Result<V
         .map_err(|_| create_error!(InternalError))?;
 
     // The decryption process adds 16 trailing bytes to the end of the file, so we remove them
-    Ok(buf[..buf.len() - 16])
+    Ok(buf[..buf.len() - 16].to_vec())
 }
 
 /// Encrypt and upload a file to S3 (returning its nonce/IV)
