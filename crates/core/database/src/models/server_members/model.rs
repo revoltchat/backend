@@ -46,6 +46,10 @@ auto_derived_partial!(
         /// Whether the member is server-wide voice deafened
         #[serde(skip_serializing_if = "is_true", default = "default_true")]
         pub can_receive: bool,
+        
+        // This value only exists in the database, not the models.
+        // If it is not-None, the database layer should return None to member fetching queries.
+        // pub pending_deletion_at: Option<Timestamp>
     },
     "PartialMember"
 );
@@ -68,6 +72,7 @@ auto_derived!(
         Timeout,
         CanReceive,
         CanPublish,
+        JoinedAt,
     }
 
     /// Member removal intention
@@ -110,7 +115,7 @@ impl Member {
             return Err(create_error!(AlreadyInServer));
         }
 
-        let member = Member {
+        let mut member = Member {
             id: MemberCompositeKey {
                 server: server.id.to_string(),
                 user: user.id.to_string(),
@@ -118,7 +123,9 @@ impl Member {
             ..Default::default()
         };
 
-        db.insert_member(&member).await?;
+        if let Some(updated) = db.insert_or_merge_member(&member).await? {
+            member = updated;
+        }
 
         let should_fetch = channels.is_none();
         let mut channels = channels.unwrap_or_default();
@@ -152,6 +159,7 @@ impl Member {
         EventV1::ServerMemberJoin {
             id: server.id.clone(),
             user: user.id.clone(),
+            member: member.clone().into(),
         }
         .p(server.id.clone())
         .await;
@@ -215,6 +223,7 @@ impl Member {
 
     pub fn remove_field(&mut self, field: &FieldsMember) {
         match field {
+            FieldsMember::JoinedAt => (),
             FieldsMember::Avatar => self.avatar = None,
             FieldsMember::Nickname => self.nickname = None,
             FieldsMember::Roles => self.roles.clear(),
@@ -255,7 +264,7 @@ impl Member {
         intention: RemovalIntention,
         silent: bool,
     ) -> Result<()> {
-        db.delete_member(&self.id).await?;
+        db.soft_delete_member(&self.id).await?;
 
         EventV1::ServerMemberLeave {
             id: self.id.server.to_string(),
@@ -289,5 +298,76 @@ impl Member {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use iso8601_timestamp::{Duration, Timestamp};
+    use revolt_models::v0::DataCreateServer;
+
+    use crate::{Member, PartialMember, RemovalIntention, Server, User};
+
+    #[async_std::test]
+    async fn muted_member_rejoin() {
+        database_test!(|db| async move {
+            match db {
+                crate::Database::Reference(_) => return,
+                crate::Database::MongoDb(_) => (),
+            }
+            let owner = User::create(&db, "Server Owner".to_string(), None, None)
+                .await
+                .unwrap();
+
+            let kickable_user = User::create(&db, "Member".to_string(), None, None)
+                .await
+                .unwrap();
+
+            let server = Server::create(
+                &db,
+                DataCreateServer {
+                    name: "Server".to_string(),
+                    description: None,
+                    nsfw: None,
+                },
+                &owner,
+                false,
+            )
+            .await
+            .unwrap()
+            .0;
+
+            Member::create(&db, &server, &owner, None).await.unwrap();
+            let mut kickable_member = Member::create(&db, &server, &kickable_user, None)
+                .await
+                .unwrap()
+                .0;
+
+            kickable_member
+                .update(
+                    &db,
+                    PartialMember {
+                        timeout: Some(Timestamp::now_utc() + Duration::minutes(5)),
+                        ..Default::default()
+                    },
+                    vec![],
+                )
+                .await
+                .unwrap();
+
+            assert!(kickable_member.in_timeout());
+
+            kickable_member
+                .remove(&db, &server, RemovalIntention::Kick, false)
+                .await
+                .unwrap();
+
+            let kickable_member = Member::create(&db, &server, &kickable_user, None)
+                .await
+                .unwrap()
+                .0;
+
+            assert!(kickable_member.in_timeout())
+        });
     }
 }

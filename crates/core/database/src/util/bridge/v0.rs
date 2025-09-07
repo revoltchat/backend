@@ -688,6 +688,7 @@ impl From<crate::FieldsMember> for FieldsMember {
             crate::FieldsMember::Timeout => FieldsMember::Timeout,
             crate::FieldsMember::CanReceive => FieldsMember::CanReceive,
             crate::FieldsMember::CanPublish => FieldsMember::CanPublish,
+            crate::FieldsMember::JoinedAt => FieldsMember::JoinedAt,
         }
     }
 }
@@ -701,6 +702,7 @@ impl From<FieldsMember> for crate::FieldsMember {
             FieldsMember::Timeout => crate::FieldsMember::Timeout,
             FieldsMember::CanReceive => crate::FieldsMember::CanReceive,
             FieldsMember::CanPublish => crate::FieldsMember::CanPublish,
+            FieldsMember::JoinedAt => crate::FieldsMember::JoinedAt,
         }
     }
 }

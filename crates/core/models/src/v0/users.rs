@@ -255,12 +255,14 @@ auto_derived!(
         pub flags: i32,
     }
 
-    /// Mutual friends and servers response
+    /// Mutual friends, servers, groups and DMs response
     pub struct MutualResponse {
         /// Array of mutual user IDs that both users are friends with
         pub users: Vec<String>,
         /// Array of mutual server IDs that both users are in
         pub servers: Vec<String>,
+        /// Array of mutual group and dm IDs that both users are in
+        pub channels: Vec<String>,
     }
 
     /// Bot information for if the user is a bot

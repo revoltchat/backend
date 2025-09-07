@@ -168,8 +168,8 @@ mod test {
             .await;
 
         match event {
-            EventV1::ServerMemberJoin { user, .. } => {
-                assert_eq!(bot.id, user);
+            EventV1::ServerMemberJoin { member, .. } => {
+                assert_eq!(bot.id, member.id.user);
             }
             _ => unreachable!(),
         }

@@ -94,6 +94,7 @@ auto_derived!(
         Timeout,
         CanReceive,
         CanPublish,
+        JoinedAt,
     }
 
     /// Member removal intention

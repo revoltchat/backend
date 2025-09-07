@@ -145,7 +145,13 @@ pub enum EventV1 {
     },
 
     /// User joins server
-    ServerMemberJoin { id: String, user: String },
+    ServerMemberJoin {
+        id: String,
+        // Deprecated: use member.id.user
+        #[deprecated = "Use member.id.user instead"]
+        user: String,
+        member: Member,
+    },
 
     /// User left server
     ServerMemberLeave {

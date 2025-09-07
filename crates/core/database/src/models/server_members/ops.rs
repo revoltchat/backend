@@ -73,13 +73,13 @@ impl ChunkedServerMembersGenerator {
 #[async_trait]
 pub trait AbstractServerMembers: Sync + Send {
     /// Insert a new server member into the database
-    async fn insert_member(&self, member: &Member) -> Result<()>;
+    async fn insert_or_merge_member(&self, member: &Member) -> Result<Option<Member>>;
 
     /// Fetch a server member by their id
     async fn fetch_member(&self, server_id: &str, user_id: &str) -> Result<Member>;
 
     /// Fetch all members in a server
-    async fn fetch_all_members<'a>(&self, server_id: &str) -> Result<Vec<Member>>;
+    async fn fetch_all_members(&self, server_id: &str) -> Result<Vec<Member>>;
 
     /// Fetch all members in a server as an iterator
     async fn fetch_all_members_chunked(
@@ -100,10 +100,10 @@ pub trait AbstractServerMembers: Sync + Send {
     ) -> Result<ChunkedServerMembersGenerator>;
 
     /// Fetch all memberships for a user
-    async fn fetch_all_memberships<'a>(&self, user_id: &str) -> Result<Vec<Member>>;
+    async fn fetch_all_memberships(&self, user_id: &str) -> Result<Vec<Member>>;
 
     /// Fetch multiple members by their ids
-    async fn fetch_members<'a>(&self, server_id: &str, ids: &'a [String]) -> Result<Vec<Member>>;
+    async fn fetch_members(&self, server_id: &str, ids: &[String]) -> Result<Vec<Member>>;
 
     /// Fetch member count of a server
     async fn fetch_member_count(&self, server_id: &str) -> Result<usize>;
@@ -119,6 +119,14 @@ pub trait AbstractServerMembers: Sync + Send {
         remove: Vec<FieldsMember>,
     ) -> Result<()>;
 
-    /// Delete a server member by their id
-    async fn delete_member(&self, id: &MemberCompositeKey) -> Result<()>;
+    /// Marks a user as no longer a member of a server, while retaining the database value.
+    /// This is used to keep information such as timeouts in place, but will remove information such as join date and applied roles.
+    async fn soft_delete_member(&self, id: &MemberCompositeKey) -> Result<()>;
+
+    /// Forcibly delete a server member by their id.
+    /// This will cancel any pending timeouts or other longer term actions, and they will not be reapplied on rejoin.
+    async fn force_delete_member(&self, id: &MemberCompositeKey) -> Result<()>;
+
+    /// Fetch all members who have been marked for deletion.
+    async fn remove_dangling_members(&self) -> Result<()>;
 }
