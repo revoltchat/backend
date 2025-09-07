@@ -28,6 +28,20 @@ port = 5672
 username = "rabbituser"
 password = "rabbitpass"
 
+[rabbit.event_stream]
+# Configuration for event brokerage
+# Using default/direct exchange
+exchange = ""
+queue = "revolt.events"
+# Number of channels that can be opened per single TCP connection
+channels_per_conn = 128
+# Maximum size of the stream
+stream_max_length_bytes = 5_000_000_000
+# Size of the Bloom filter
+filter_size_bytes = 26
+# Number of messages to prefetch
+qos_prefetch = 100
+
 [api]
 
 [api.registration]

@@ -1,4 +1,5 @@
 use authifier::AuthifierEvent;
+use revolt_broker::event_stream;
 use revolt_result::Error;
 use serde::{Deserialize, Serialize};
 
@@ -259,14 +260,16 @@ pub enum EventV1 {
 impl EventV1 {
     /// Publish helper wrapper
     pub async fn p(self, channel: String) {
-        #[cfg(not(debug_assertions))]
-        redis_kiss::p(channel, self).await;
-
         #[cfg(debug_assertions)]
         info!("Publishing event to {channel}: {self:?}");
 
+        let result = event_stream::publish_event(&channel, &self).await;
+
+        #[cfg(not(debug_assertions))]
+        result.ok();
+
         #[cfg(debug_assertions)]
-        redis_kiss::publish(channel, self).await.unwrap();
+        result.unwrap();
     }
 
     /// Publish user event

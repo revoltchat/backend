@@ -1,10 +1,13 @@
+use std::collections::HashMap;
+
 use authifier::{
     models::{Account, EmailVerification, Session},
     Authifier,
 };
 use futures::StreamExt;
+use lapin::types::AMQPValue;
 use rand::Rng;
-use redis_kiss::redis::aio::PubSub;
+use revolt_broker::event_stream;
 use revolt_database::{
     events::client::EventV1, Channel, Database, Member, Message, Server, User, AMQP,
 };
@@ -19,7 +22,7 @@ pub struct TestHarness {
     authifier: Authifier,
     pub db: Database,
     pub amqp: AMQP,
-    sub: PubSub,
+    consumer: lapin::Consumer,
     event_buffer: Vec<(String, EventV1)>,
 }
 
@@ -31,11 +34,19 @@ impl TestHarness {
             .await
             .expect("valid rocket instance");
 
-        let mut sub = redis_kiss::open_pubsub_connection()
-            .await
-            .expect("`PubSub`");
+        let tag: String = rand::thread_rng()
+            .sample_iter::<char, _>(&rand::distributions::Standard)
+            .take(32)
+            .collect();
 
-        sub.psubscribe("*").await.unwrap();
+        static QUEUE_NAME: &str = "revolt.events";
+        let conn = event_stream::get_connection().await;
+
+        let consumer = event_stream::create_channel(&conn, config.rabbit.event_stream)
+            .await
+            .basic_consume(QUEUE_NAME, &tag, Default::default(), Default::default())
+            .await
+            .unwrap();
 
         let db = client
             .rocket()
@@ -68,7 +79,7 @@ impl TestHarness {
             authifier,
             db,
             amqp,
-            sub,
+            consumer,
             event_buffer: vec![],
         }
     }
@@ -227,16 +238,33 @@ impl TestHarness {
             }
         }
 
-        let mut stream = self.sub.on_message();
-        while let Some(item) = stream.next().await {
-            let msg_topic = item.get_channel_name();
-            let payload: EventV1 = redis_kiss::decode_payload(&item).unwrap();
+        while let Some(Ok(delivery)) = self.consumer.next().await {
+            let headers: HashMap<String, AMQPValue> = delivery
+                .properties
+                .headers()
+                .as_ref()
+                .map(|table| {
+                    table
+                        .into_iter()
+                        .map(|(k, v)| (k.to_string(), v.clone()))
+                        .collect()
+                })
+                .unwrap_or_default();
 
-            if topic == msg_topic && predicate(&payload) {
+            let filter_value = headers
+                .get("x-stream-filter-value")
+                .expect("`x-stream-filter-value` not present in message!")
+                .as_long_string()
+                .unwrap()
+                .to_string();
+
+            let payload: EventV1 = rmp_serde::from_slice(&delivery.data).unwrap();
+
+            if topic == filter_value && predicate(&payload) {
                 return payload;
             }
 
-            self.event_buffer.push((msg_topic.to_string(), payload));
+            self.event_buffer.push((filter_value, payload));
         }
 
         // WARNING: if predicate is never satisfied, this will never return
