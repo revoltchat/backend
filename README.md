@@ -203,7 +203,7 @@ If you have bumped the crate versions, proceed to [GitHub releases](https://gith
 First, start the required services:
 
 ```sh
-docker compose -f docker-compose.db.yml up -d
+docker compose -f compose.yml up -d
 ```
 
 Now run tests for whichever database:
