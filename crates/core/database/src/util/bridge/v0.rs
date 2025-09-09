@@ -986,18 +986,27 @@ impl crate::User {
             if perspective.id == self.id {
                 (RelationshipStatus::User, true)
             } else {
+                let raw_relationship = perspective
+                    .relations
+                    .as_ref()
+                    .map(|relations| {
+                        relations
+                            .iter()
+                            .find(|relationship| relationship.id == self.id)
+                            .map(|relationship| relationship.status.clone().into())
+                            .unwrap_or_default()
+                    })
+                    .unwrap_or_default();
+
+                // Masquerade BlockedOther as User to keep users from knowing they've been blocked.
+                let relationship = if raw_relationship == RelationshipStatus::BlockedOther {
+                    RelationshipStatus::User
+                } else {
+                    raw_relationship
+                };
+
                 (
-                    perspective
-                        .relations
-                        .as_ref()
-                        .map(|relations| {
-                            relations
-                                .iter()
-                                .find(|relationship| relationship.id == self.id)
-                                .map(|relationship| relationship.status.clone().into())
-                                .unwrap_or_default()
-                        })
-                        .unwrap_or_default(),
+                    relationship,
                     calculate_user_permissions(&mut query)
                         .await
                         .has_user_permission(UserPermission::ViewProfile),
@@ -1064,7 +1073,7 @@ impl crate::User {
             if perspective.id == self.id {
                 (RelationshipStatus::User, true)
             } else {
-                let relationship = perspective
+                let raw_relationship = perspective
                     .relations
                     .as_ref()
                     .map(|relations| {
@@ -1076,7 +1085,15 @@ impl crate::User {
                     })
                     .unwrap_or_default();
 
-                let can_see_profile = relationship != RelationshipStatus::BlockedOther;
+                let can_see_profile = raw_relationship != RelationshipStatus::BlockedOther;
+                
+                // Masquerade BlockedOther as User to hide blocking information
+                let relationship = if raw_relationship == RelationshipStatus::BlockedOther {
+                    RelationshipStatus::User
+                } else {
+                    raw_relationship
+                };
+                
                 (relationship, can_see_profile)
             }
         } else {
@@ -1155,7 +1172,18 @@ impl crate::User {
                 .map(|relationships| {
                     relationships
                         .into_iter()
-                        .map(|relationship| relationship.into())
+                        .map(|relationship| {
+                            if relationship.status == crate::RelationshipStatus::BlockedOther {
+                                // Change BlockedOther as User to hide blocking information
+                                // while also not breaking the UI :)
+                                Relationship {
+                                    user_id: relationship.id,
+                                    status: RelationshipStatus::User,
+                                }
+                            } else {
+                                relationship.into()
+                            }
+                        })
                         .collect()
                 })
                 .unwrap_or_default(),
@@ -1385,5 +1413,247 @@ impl From<FieldsMessage> for crate::FieldsMessage {
         match value {
             FieldsMessage::Pinned => crate::FieldsMessage::Pinned,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[async_std::test]
+    async fn test_into_self_masquerades_blocked_other_as_user() {
+        let user = crate::User {
+            id: "test_user".to_string(),
+            username: "testuser".to_string(),
+            discriminator: "0001".to_string(),
+            display_name: None,
+            avatar: None,
+            relations: Some(vec![
+                crate::Relationship {
+                    id: "friend_user".to_string(),
+                    status: crate::RelationshipStatus::Friend,
+                },
+                crate::Relationship {
+                    id: "blocked_user".to_string(),
+                    status: crate::RelationshipStatus::Blocked,
+                },
+                crate::Relationship {
+                    id: "user_who_blocked_me".to_string(),
+                    status: crate::RelationshipStatus::BlockedOther,
+                },
+                crate::Relationship {
+                    id: "outgoing_request".to_string(),
+                    status: crate::RelationshipStatus::Outgoing,
+                },
+            ]),
+            badges: None,
+            status: None,
+            profile: None,
+            flags: None,
+            privileged: false,
+            bot: None,
+            suspended_until: None,
+            last_acknowledged_policy_change: iso8601_timestamp::Timestamp::from_unix_timestamp(0),
+        };
+
+        let api_user = user.into_self(false).await;
+
+        assert_eq!(api_user.relations.len(), 4);
+
+        let relation_map: std::collections::HashMap<&str, RelationshipStatus> = api_user
+            .relations
+            .iter()
+            .map(|r| (r.user_id.as_str(), r.status.clone()))
+            .collect();
+
+        assert_eq!(relation_map.get("friend_user"), Some(&RelationshipStatus::Friend));
+        assert_eq!(relation_map.get("blocked_user"), Some(&RelationshipStatus::Blocked));
+        assert_eq!(relation_map.get("outgoing_request"), Some(&RelationshipStatus::Outgoing));
+        
+        assert_eq!(relation_map.get("user_who_blocked_me"), Some(&RelationshipStatus::User));
+        
+        assert!(!api_user.relations.iter().any(|r| r.status == RelationshipStatus::BlockedOther));
+    }
+
+    #[async_std::test]
+    async fn test_into_self_with_no_relations() {
+        let user = crate::User {
+            id: "test_user".to_string(),
+            username: "testuser".to_string(),
+            discriminator: "0001".to_string(),
+            display_name: None,
+            avatar: None,
+            relations: None,
+            badges: None,
+            status: None,
+            profile: None,
+            flags: None,
+            privileged: false,
+            bot: None,
+            suspended_until: None,
+            last_acknowledged_policy_change: iso8601_timestamp::Timestamp::from_unix_timestamp(0),
+        };
+
+        let api_user = user.into_self(false).await;
+        assert_eq!(api_user.relations.len(), 0);
+    }
+
+    #[async_std::test]
+    async fn test_into_self_with_only_blocked_other_relations() {
+        let user = crate::User {
+            id: "test_user".to_string(),
+            username: "testuser".to_string(),
+            discriminator: "0001".to_string(),
+            display_name: None,
+            avatar: None,
+            relations: Some(vec![
+                crate::Relationship {
+                    id: "user_who_blocked_me_1".to_string(),
+                    status: crate::RelationshipStatus::BlockedOther,
+                },
+                crate::Relationship {
+                    id: "user_who_blocked_me_2".to_string(),
+                    status: crate::RelationshipStatus::BlockedOther,
+                },
+            ]),
+            badges: None,
+            status: None,
+            profile: None,
+            flags: None,
+            privileged: false,
+            bot: None,
+            suspended_until: None,
+            last_acknowledged_policy_change: iso8601_timestamp::Timestamp::from_unix_timestamp(0),
+        };
+
+        let api_user = user.into_self(false).await;
+        
+        assert_eq!(api_user.relations.len(), 2);
+        
+        for relation in &api_user.relations {
+            assert_eq!(relation.status, RelationshipStatus::User);
+        }
+        
+        let relation_ids: Vec<&str> = api_user.relations.iter().map(|r| r.user_id.as_str()).collect();
+        assert!(relation_ids.contains(&"user_who_blocked_me_1"));
+        assert!(relation_ids.contains(&"user_who_blocked_me_2"));
+        
+        assert!(!api_user.relations.iter().any(|r| r.status == RelationshipStatus::BlockedOther));
+    }
+
+    #[async_std::test]
+    async fn test_into_self_preserves_other_relationship_types() {
+        let user = crate::User {
+            id: "test_user".to_string(),
+            username: "testuser".to_string(),
+            discriminator: "0001".to_string(),
+            display_name: None,
+            avatar: None,
+            relations: Some(vec![
+                crate::Relationship {
+                    id: "friend".to_string(),
+                    status: crate::RelationshipStatus::Friend,
+                },
+                crate::Relationship {
+                    id: "blocked".to_string(),
+                    status: crate::RelationshipStatus::Blocked,
+                },
+                crate::Relationship {
+                    id: "incoming".to_string(),
+                    status: crate::RelationshipStatus::Incoming,
+                },
+                crate::Relationship {
+                    id: "outgoing".to_string(),
+                    status: crate::RelationshipStatus::Outgoing,
+                },
+                crate::Relationship {
+                    id: "user".to_string(),
+                    status: crate::RelationshipStatus::User,
+                },
+            ]),
+            badges: None,
+            status: None,
+            profile: None,
+            flags: None,
+            privileged: false,
+            bot: None,
+            suspended_until: None,
+            last_acknowledged_policy_change: iso8601_timestamp::Timestamp::from_unix_timestamp(0),
+        };
+
+        let api_user = user.into_self(false).await;
+        
+        assert_eq!(api_user.relations.len(), 5);
+        
+        let relation_map: std::collections::HashMap<&str, RelationshipStatus> = api_user
+            .relations
+            .iter()
+            .map(|r| (r.user_id.as_str(), r.status.clone()))
+            .collect();
+
+        assert_eq!(relation_map.get("friend"), Some(&RelationshipStatus::Friend));
+        assert_eq!(relation_map.get("blocked"), Some(&RelationshipStatus::Blocked));
+        assert_eq!(relation_map.get("incoming"), Some(&RelationshipStatus::Incoming));
+        assert_eq!(relation_map.get("outgoing"), Some(&RelationshipStatus::Outgoing));
+        assert_eq!(relation_map.get("user"), Some(&RelationshipStatus::User));
+    }
+
+    #[async_std::test]
+    async fn test_profile_visibility_with_blocked_other() {
+        let blocked_user = crate::User {
+            id: "blocked_user".to_string(),
+            username: "blocked_user".to_string(),
+            discriminator: "0001".to_string(),
+            display_name: Some("Blocked User".to_string()),
+            avatar: None,
+            relations: None,
+            badges: None,
+            status: Some(crate::UserStatus {
+                text: Some("This should not be visible".to_string()),
+                presence: Some(crate::Presence::Online),
+            }),
+            profile: Some(crate::UserProfile {
+                content: Some("This profile content should not be visible".to_string()),
+                background: None,
+            }),
+            flags: None,
+            privileged: false,
+            bot: None,
+            suspended_until: None,
+            last_acknowledged_policy_change: iso8601_timestamp::Timestamp::UNIX_EPOCH,
+        };
+
+        let perspective_user = crate::User {
+            id: "perspective_user".to_string(),
+            username: "perspective_user".to_string(),
+            discriminator: "0002".to_string(),
+            display_name: None,
+            avatar: None,
+            relations: Some(vec![
+                crate::Relationship {
+                    id: "blocked_user".to_string(),
+                    status: crate::RelationshipStatus::BlockedOther,
+                },
+            ]),
+            badges: None,
+            status: None,
+            profile: None,
+            flags: None,
+            privileged: false,
+            bot: None,
+            suspended_until: None,
+            last_acknowledged_policy_change: iso8601_timestamp::Timestamp::UNIX_EPOCH,
+        };
+
+        let api_user = blocked_user.into_known(&perspective_user, true).await;
+
+        assert_eq!(api_user.relationship, RelationshipStatus::User);
+        
+        assert_eq!(api_user.status, None, "Status should be hidden when viewing someone who blocked you");
+        
+        assert_eq!(api_user.online, false, "Online status should be hidden when viewing someone who blocked you");
+        
+        assert_eq!(api_user.username, "blocked_user");
+        assert_eq!(api_user.display_name, Some("Blocked User".to_string()));
     }
 }

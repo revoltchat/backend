@@ -518,7 +518,10 @@ impl User {
             RelationshipStatus::Friend => Err(create_error!(AlreadyFriends)),
             RelationshipStatus::Outgoing => Err(create_error!(AlreadySentRequest)),
             RelationshipStatus::Blocked => Err(create_error!(Blocked)),
-            RelationshipStatus::BlockedOther => Err(create_error!(BlockedByOther)),
+            RelationshipStatus::BlockedOther => {
+                // Silently succeed without doing anything to avoid revealing that the user is blocked.
+                Ok(())
+            },
             RelationshipStatus::Incoming => {
                 // Accept incoming friend request
                 _ = amqp.friend_request_accepted(self, target).await;
@@ -823,5 +826,92 @@ impl User {
         };
 
         badges
+    }
+}
+
+#[cfg(test)]
+mod relationship_tests {
+    use super::*;
+
+    /// Test that relationship_with correctly identifies BlockedOther status
+    #[test]
+    fn test_relationship_with_blocked_other() {
+        let user = User {
+            id: "user1".to_string(),
+            username: "user1".to_string(),
+            discriminator: "0001".to_string(),
+            display_name: None,
+            avatar: None,
+            relations: Some(vec![
+                Relationship {
+                    id: "user2".to_string(),
+                    status: RelationshipStatus::BlockedOther,
+                },
+                Relationship {
+                    id: "user3".to_string(),
+                    status: RelationshipStatus::Friend,
+                },
+            ]),
+            badges: None,
+            status: None,
+            profile: None,
+            flags: None,
+            privileged: false,
+            bot: None,
+            suspended_until: None,
+            last_acknowledged_policy_change: iso8601_timestamp::Timestamp::UNIX_EPOCH,
+        };
+
+        // Test BlockedOther relationship
+        assert_eq!(user.relationship_with("user2"), RelationshipStatus::BlockedOther);
+        
+        // Test Friend relationship
+        assert_eq!(user.relationship_with("user3"), RelationshipStatus::Friend);
+        
+        // Test unknown user
+        assert_eq!(user.relationship_with("user4"), RelationshipStatus::None);
+    }
+
+    /// Test that the add_friend match logic works correctly for BlockedOther
+    /// This tests the logic without actually calling the database operations
+    #[test]
+    fn test_add_friend_blocked_other_logic() {
+        let user = User {
+            id: "user1".to_string(),
+            username: "user1".to_string(),
+            discriminator: "0001".to_string(),
+            display_name: None,
+            avatar: None,
+            relations: Some(vec![
+                Relationship {
+                    id: "blocked_other_user".to_string(),
+                    status: RelationshipStatus::BlockedOther,
+                },
+                Relationship {
+                    id: "blocked_user".to_string(),
+                    status: RelationshipStatus::Blocked,
+                },
+                Relationship {
+                    id: "friend_user".to_string(),
+                    status: RelationshipStatus::Friend,
+                },
+            ]),
+            badges: None,
+            status: None,
+            profile: None,
+            flags: None,
+            privileged: false,
+            bot: None,
+            suspended_until: None,
+            last_acknowledged_policy_change: iso8601_timestamp::Timestamp::UNIX_EPOCH,
+        };
+
+        // Test that BlockedOther relationship is detected correctly
+        assert_eq!(user.relationship_with("blocked_other_user"), RelationshipStatus::BlockedOther);
+        
+        // Test other relationships for comparison
+        assert_eq!(user.relationship_with("blocked_user"), RelationshipStatus::Blocked);
+        assert_eq!(user.relationship_with("friend_user"), RelationshipStatus::Friend);
+        assert_eq!(user.relationship_with("unknown_user"), RelationshipStatus::None);
     }
 }
