@@ -6,14 +6,14 @@ use revolt_config::config;
 use revolt_database::{Database, DatabaseInfo};
 use tokio::net::TcpListener;
 use utoipa::{
-    openapi::security::{Http, HttpAuthScheme, SecurityScheme},
+    openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
     Modify, OpenApi,
 };
 use utoipa_scalar::{Scalar, Servable as ScalarServable};
 
 use crate::tenor::Tenor;
 
-mod api;
+mod routes;
 mod tenor;
 mod types;
 
@@ -35,6 +35,26 @@ impl FromRef<AppState> for Tenor {
     }
 }
 
+struct TokenAddon;
+
+impl Modify for TokenAddon {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        let components = openapi.components.get_or_insert_default();
+
+        components.add_security_scheme(
+            "User Token",
+            SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new(
+                "X-Session-Token".to_string(),
+            ))),
+        );
+
+        components.add_security_scheme(
+            "Bot Token",
+            SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("X-Bot-Token".to_string()))),
+        );
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
     // Configure logging and environment
@@ -43,35 +63,27 @@ async fn main() -> Result<(), std::io::Error> {
     // Configure API schema
     #[derive(OpenApi)]
     #[openapi(
-        modifiers(&SecurityAddon),
+        modifiers(&TokenAddon),
         paths(
-            api::root,
-            api::search,
+            routes::categories::categories,
+            routes::root::root,
+            routes::search::search,
+            routes::trending::trending,
+        ),
+        tags(
+            (name = "Misc", description = "Misc routes for microservice."),
+            (name = "GIFs", description = "All routes for requesting GIFs from tenor.")
         ),
         components(
             schemas(
                 revolt_result::Error,
                 revolt_result::ErrorType,
-                types::SearchResponse,
-                types::MediaObject,
                 types::MediaResult,
+                types::MediaObject,
             )
-        )
+        ),
     )]
     struct ApiDoc;
-
-    struct SecurityAddon;
-
-    impl Modify for SecurityAddon {
-        fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
-            if let Some(components) = openapi.components.as_mut() {
-                components.add_security_scheme(
-                    "api_key",
-                    SecurityScheme::Http(Http::new(HttpAuthScheme::Bearer)),
-                )
-            }
-        }
-    }
 
     let config = config().await;
     let state = AppState {
@@ -85,7 +97,7 @@ async fn main() -> Result<(), std::io::Error> {
     // Configure Axum and router
     let app = Router::new()
         .merge(Scalar::with_url("/scalar", ApiDoc::openapi()))
-        .nest("/", api::router().await)
+        .nest("/", routes::router())
         .with_state(state);
 
     // Configure TCP listener and bind

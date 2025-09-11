@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SearchResponse {
-    pub results: Vec<MediaResult>,
+pub struct PaginatedMediaResponse {
+    pub results: Vec<MediaResponse>,
     pub next: String,
 }
 
@@ -17,7 +17,7 @@ pub struct MediaObject {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct MediaResult {
+pub struct MediaResponse {
     pub created: f64,
     #[serde(default)]
     pub hasaudio: bool,
@@ -32,4 +32,18 @@ pub struct MediaResult {
     pub flags: Vec<String>,
     pub bg_color: Option<String>,
     pub url: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CategoriesResponse {
+    pub locale: String,
+    pub tags: Vec<CategoryResponse>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CategoryResponse {
+    pub searchterm: String,
+    pub path: String,
+    pub image: String,
+    pub name: String,
 }
