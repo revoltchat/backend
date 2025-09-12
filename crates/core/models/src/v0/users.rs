@@ -279,6 +279,18 @@ auto_derived!(
     }
 );
 
+auto_derived_partial!(
+    /// Voice State information for a user
+    pub struct UserVoiceState {
+        pub id: String,
+        pub is_receiving: bool,
+        pub is_publishing: bool,
+        pub screensharing: bool,
+        pub camera: bool,
+    },
+    "PartialUserVoiceState"
+);
+
 pub trait CheckRelationship {
     fn with(&self, user: &str) -> RelationshipStatus;
 }

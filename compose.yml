@@ -40,7 +40,7 @@ services:
 
   # Rabbit
   rabbit:
-    image: rabbitmq:3-management
+    image: rabbitmq:4-management
     environment:
       RABBITMQ_DEFAULT_USER: rabbituser
       RABBITMQ_DEFAULT_PASS: rabbitpass
