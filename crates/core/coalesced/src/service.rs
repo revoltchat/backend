@@ -1,6 +1,9 @@
-use std::{collections::{HashMap}, fmt::Debug, hash::Hash, sync::Arc, future::Future};
+use std::{any::Any, collections::HashMap, fmt::Debug, future::Future, hash::Hash, sync::Arc};
 
-use tokio::{sync::{watch::{channel as watch_channel, Receiver}, RwLock, Mutex}};
+use tokio::sync::{
+    watch::{channel as watch_channel, Receiver},
+    RwLock,
+};
 
 #[cfg(feature = "cache")]
 use lru::LruCache;
@@ -10,20 +13,23 @@ use indexmap::IndexMap;
 
 use crate::{CoalescionServiceConfig, Error};
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone)]
 #[allow(clippy::type_complexity)]
-pub struct CoalescionService<Id: Hash + Eq, Value> {
+/// # Coalescion service
+///
+/// See module description for example usage.
+pub struct CoalescionService<Id: Hash + Clone + Eq> {
     config: Arc<CoalescionServiceConfig>,
-    watchers: Arc<RwLock<HashMap<Id, Receiver<Option<Result<Arc<Value>, Error>>>>>>,
+    watchers: Arc<RwLock<HashMap<Id, Receiver<Option<Result<Arc<dyn Any + Send + Sync>, Error>>>>>>,
     #[cfg(feature = "queue")]
-    queue: Arc<RwLock<IndexMap<Id, Receiver<Option<Result<Arc<Value>, Error>>>>>>,
+    queue: Arc<RwLock<IndexMap<Id, Receiver<Option<Result<Arc<dyn Any + Send + Sync>, Error>>>>>>,
     #[cfg(feature = "cache")]
-    cache: Option<Arc<Mutex<LruCache<Id, Arc<Value>>>>>,
+    cache: Option<Arc<tokio::sync::Mutex<LruCache<Id, Arc<dyn Any + Send + Sync>>>>>,
 }
 
-impl<Id: Hash + PartialEq + Eq + Clone + Ord, Value> CoalescionService<Id, Value> {
+impl<Id: Hash + Clone + Eq> CoalescionService<Id> {
     pub fn new() -> Self {
-        Self::default()
+        Default::default()
     }
 
     pub fn from_config(config: CoalescionServiceConfig) -> Self {
@@ -38,22 +44,37 @@ impl<Id: Hash + PartialEq + Eq + Clone + Ord, Value> CoalescionService<Id, Value
     }
 
     #[cfg(feature = "cache")]
-    pub fn from_cache(config: CoalescionServiceConfig, cache: LruCache<Id, Arc<Value>>) -> Self {
+    pub fn from_cache(
+        config: CoalescionServiceConfig,
+        cache: LruCache<Id, Arc<dyn Any + Send + Sync>>,
+    ) -> Self {
         Self {
             cache: Some(Arc::new(Mutex::new(cache))),
             ..Self::from_config(config)
         }
     }
 
-    async fn wait_for(&self, mut receiver: Receiver<Option<Result<Arc<Value>, Error>>>) -> Result<Arc<Value>, Error> {
+    async fn wait_for<Value: Any + Send + Sync>(
+        &self,
+        mut receiver: Receiver<Option<Result<Arc<dyn Any + Send + Sync>, Error>>>,
+    ) -> Result<Arc<Value>, Error> {
         receiver
             .wait_for(|v| v.is_some())
             .await
             .map_err(|_| Error::RecvError)
             .and_then(|r| r.clone().unwrap())
+            .and_then(|arc| Arc::downcast(arc).map_err(|_| Error::DowncastError))
     }
 
-    async fn insert_and_execute<F: FnOnce() -> Fut, Fut: Future<Output = Value>>(&self, id: Id, func: F) -> Result<Arc<Value>, Error> {
+    async fn insert_and_execute<
+        Value: Send + Sync + 'static,
+        F: FnOnce() -> Fut,
+        Fut: Future<Output = Value>,
+    >(
+        &self,
+        id: Id,
+        func: F,
+    ) -> Result<Arc<Value>, Error> {
         let (send, recv) = watch_channel(None);
 
         self.watchers.write().await.insert(id.clone(), recv);
@@ -61,7 +82,7 @@ impl<Id: Hash + PartialEq + Eq + Clone + Ord, Value> CoalescionService<Id, Value
         let value = Ok(Arc::new(func().await));
 
         send.send_modify(|opt| {
-            opt.replace(value.clone());
+            opt.replace(value.clone().map(|v| v as Arc<dyn Any + Send + Sync>));
         });
 
         #[cfg(feature = "cache")]
@@ -76,11 +97,21 @@ impl<Id: Hash + PartialEq + Eq + Clone + Ord, Value> CoalescionService<Id, Value
         value
     }
 
-    pub async fn execute<F: FnOnce() -> Fut, Fut: Future<Output = Value>>(&self, id: Id, func: F) -> Result<Arc<Value>, Error> {
+    /// Coalesces an function, the actual function may not run if one with the same id is already running,
+    /// queued to be ran, or cached, the id should be globally unique for this specific action.
+    pub async fn execute<
+        Value: Send + Sync + 'static,
+        F: FnOnce() -> Fut,
+        Fut: Future<Output = Value>,
+    >(
+        &self,
+        id: Id,
+        func: F,
+    ) -> Result<Arc<Value>, Error> {
         #[cfg(feature = "cache")]
         if let Some(cache) = self.cache.as_ref() {
             if let Some(value) = cache.lock().await.get(&id) {
-                return Ok(value.clone())
+                return Arc::downcast::<Value>(value.clone()).map_err(|_| Error::DowncastError);
             }
         };
 
@@ -105,10 +136,14 @@ impl<Id: Hash + PartialEq + Eq + Clone + Ord, Value> CoalescionService<Id, Value
                         };
 
                         if let Some(receiver) = receiver {
-                            return self.wait_for(receiver).await
+                            return self.wait_for(receiver).await;
                         } else {
-                            if self.config.max_queue.is_some_and(|max_queue| max_queue >= length) {
-                                return Err(Error::MaxQueue)
+                            if self
+                                .config
+                                .max_queue
+                                .is_some_and(|max_queue| max_queue >= length)
+                            {
+                                return Err(Error::MaxQueue);
                             };
 
                             let (send, recv) = watch_channel(None);
@@ -130,10 +165,14 @@ impl<Id: Hash + PartialEq + Eq + Clone + Ord, Value> CoalescionService<Id, Value
                                         let response = self.insert_and_execute(id, func).await;
 
                                         send.send_modify(|opt| {
-                                            opt.replace(response.clone());
+                                            opt.replace(
+                                                response
+                                                    .clone()
+                                                    .map(|v| v as Arc<dyn Any + Send + Sync>),
+                                            );
                                         });
 
-                                        return response
+                                        return response;
                                     }
                                 }
                             }
@@ -145,23 +184,24 @@ impl<Id: Hash + PartialEq + Eq + Clone + Ord, Value> CoalescionService<Id, Value
                     #[cfg(not(feature = "queue"))]
                     Err(Error::MaxConcurrent)
                 }
-                _ => {
-                    self.insert_and_execute(id, func).await
-                }
+                _ => self.insert_and_execute(id, func).await,
             }
         }
     }
 
+    /// Fetches the amount of currently running tasks
     pub async fn current_task_count(&self) -> usize {
         self.watchers.read().await.len()
     }
 
+    #[cfg(feature = "queue")]
+    /// Fetches the current length of the queue
     pub async fn current_queue_len(&self) -> usize {
         self.queue.read().await.len()
     }
 }
 
-impl<Id: Hash + PartialEq + Eq + Clone + Ord, Value> Default for CoalescionService<Id, Value> {
+impl<Id: Hash + Clone + Eq> Default for CoalescionService<Id> {
     fn default() -> Self {
         Self::from_config(CoalescionServiceConfig::default())
     }

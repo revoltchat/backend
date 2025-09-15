@@ -11,7 +11,7 @@ tokio = ["dep:tokio"]
 queue = ["dep:indexmap"]
 cache = ["dep:lru"]
 
-default = ["tokio", "queue", "cache"]
+default = ["tokio"]
 
 [dependencies]
 tokio = { version = "1.47.0", features = ["sync"], optional = true }

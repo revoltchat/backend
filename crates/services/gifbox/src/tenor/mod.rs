@@ -1,3 +1,5 @@
+//! Interal Tenor API wrapper
+
 use std::{sync::Arc, time::Duration};
 
 use lru_time_cache::LruCache;
@@ -20,18 +22,11 @@ pub enum TenorError {
 pub struct Tenor {
     pub key: Arc<str>,
     pub client: Client,
-
+    pub coalescion: CoalescionService<String>,
     pub cache: Arc<RwLock<LruCache<String, Arc<types::PaginatedMediaResponse>>>>,
-    pub cache_coalescion:
-        CoalescionService<String, Result<Arc<types::PaginatedMediaResponse>, TenorError>>,
 
     pub categories: Arc<RwLock<LruCache<String, Arc<types::CategoriesResponse>>>>,
-    pub categories_coalescion:
-        CoalescionService<String, Result<Arc<types::CategoriesResponse>, TenorError>>,
-
     pub featured: Arc<RwLock<LruCache<String, Arc<types::PaginatedMediaResponse>>>>,
-    pub featured_coalescion:
-        CoalescionService<String, Result<Arc<types::PaginatedMediaResponse>, TenorError>>,
 }
 
 impl Tenor {
@@ -39,39 +34,29 @@ impl Tenor {
         Self {
             key: Arc::from(key),
             client: Client::new(),
+            coalescion: CoalescionService::from_config(CoalescionServiceConfig {
+                max_concurrent: Some(100),
+                queue_requests: true,
+                max_queue: None,
+            }),
 
             // 1 hour, 1k requests
             cache: Arc::new(RwLock::new(LruCache::with_expiry_duration_and_capacity(
                 Duration::from_secs(60 * 60),
                 1000,
             ))),
-            cache_coalescion: CoalescionService::from_config(CoalescionServiceConfig {
-                max_concurrent: Some(100),
-                queue_requests: true,
-                max_queue: None,
-            }),
 
             // 1 day, 1k requests
             categories: Arc::new(RwLock::new(LruCache::with_expiry_duration_and_capacity(
                 Duration::from_secs(60 * 60 * 24),
                 1000,
             ))),
-            categories_coalescion: CoalescionService::from_config(CoalescionServiceConfig {
-                max_concurrent: Some(100),
-                queue_requests: true,
-                max_queue: None,
-            }),
 
             // 1 day, 1k requests
             featured: Arc::new(RwLock::new(LruCache::with_expiry_duration_and_capacity(
                 Duration::from_secs(60 * 60 * 24),
                 1000,
             ))),
-            featured_coalescion: CoalescionService::from_config(CoalescionServiceConfig {
-                max_concurrent: Some(100),
-                queue_requests: true,
-                max_queue: None,
-            }),
         }
     }
 
@@ -110,7 +95,7 @@ impl Tenor {
             }
         }
 
-        let res = self.cache_coalescion.execute(unique_key.clone(), || {
+        let res = self.coalescion.execute(unique_key.clone(), || {
             let mut path = format!(
                 "/search?key={}&q={}&client_key=Gifbox&media_filter=webm,tinywebm&locale={}&contentfilter=high&limit={limit}",
                 &self.key,
@@ -127,7 +112,7 @@ impl Tenor {
                 path.push_str("&component=categories");
             }
 
-            self.request(path)
+            self.request::<types::PaginatedMediaResponse>(path)
         })
         .await
         .unwrap();
@@ -152,7 +137,7 @@ impl Tenor {
         }
 
         let res = self
-            .categories_coalescion
+            .coalescion
             .execute(unique_key.clone(), || {
                 let path = format!(
                     "/categories?key={}&client_key=Gifbox&locale={}&contentfilter=high",
@@ -160,7 +145,7 @@ impl Tenor {
                     url_encode(locale),
                 );
 
-                self.request(path)
+                self.request::<types::CategoriesResponse>(path)
             })
             .await
             .unwrap();
@@ -189,7 +174,7 @@ impl Tenor {
             }
         }
 
-        let res = self.featured_coalescion.execute(unique_key.clone(), || {
+        let res = self.coalescion.execute(unique_key.clone(), || {
             let mut path = format!(
                 "/featured?key={}&client_key=Gifbox&media_filter=webm,tinywebm&locale={}&contentfilter=high&limit={limit}",
                 &self.key,
@@ -201,16 +186,13 @@ impl Tenor {
                 path.push_str(position);
             };
 
-            self.request(path)
+            self.request::<types::PaginatedMediaResponse>(path)
         })
         .await
         .unwrap();
 
         if let Ok(resp) = &*res {
-            self.featured
-                .write()
-                .await
-                .insert(unique_key, resp.clone());
+            self.featured.write().await.insert(unique_key, resp.clone());
         }
 
         (*res).clone()

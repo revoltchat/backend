@@ -4,20 +4,20 @@ use axum::{
 };
 use revolt_database::User;
 use revolt_result::{create_error, Result};
-use serde::{Deserialize};
-use utoipa::{IntoParams};
+use serde::Deserialize;
+use utoipa::IntoParams;
 
-use crate::{
-    tenor,
-    types,
-};
+use crate::{tenor, types};
 
 #[derive(Deserialize, IntoParams)]
 pub struct TrendingQueryParams {
     #[param(example = "en_US")]
+    /// Users locale
     pub locale: String,
+    /// Amount of results to respond with
     pub limit: Option<u32>,
-    pub position: Option<String>
+    /// Value of `next` for getting the next page of results of featured gifs
+    pub position: Option<String>,
 }
 
 /// Trending GIFs
@@ -37,7 +37,11 @@ pub async fn trending(
     State(tenor): State<tenor::Tenor>,
 ) -> Result<Json<types::PaginatedMediaResponse>> {
     tenor
-        .featured(&params.locale, params.limit.unwrap_or(50), params.position.as_deref().unwrap_or_default())
+        .featured(
+            &params.locale,
+            params.limit.unwrap_or(50),
+            params.position.as_deref().unwrap_or_default(),
+        )
         .await
         .map_err(|_| create_error!(InternalError))
         .map(|results| results.as_ref().clone().into())

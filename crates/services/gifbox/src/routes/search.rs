@@ -11,12 +11,17 @@ use crate::{tenor, types};
 
 #[derive(Deserialize, IntoParams)]
 pub struct SearchQueryParams {
+    /// Search query
     #[param(example = "Wave")]
     pub query: String,
+    /// Users locale
     #[param(example = "en_US")]
     pub locale: String,
+    /// Amount of results to respond with
     pub limit: Option<u32>,
+    /// Flag for if searching in a gif category
     pub is_category: Option<bool>,
+    /// Value of `next` for getting the next page of results with the current search query
     pub position: Option<String>,
 }
 

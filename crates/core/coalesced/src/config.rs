@@ -1,4 +1,5 @@
 #[derive(Clone, PartialEq, Eq, Debug)]
+/// Config values for [`CoalescionService`].
 pub struct CoalescionServiceConfig {
     /// How many tasks are running at once
     pub max_concurrent: Option<usize>,

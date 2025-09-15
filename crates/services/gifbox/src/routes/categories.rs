@@ -11,6 +11,7 @@ use crate::{tenor, types};
 
 #[derive(Deserialize, IntoParams)]
 pub struct CategoriesQueryParams {
+    /// Users locale
     #[param(example = "en_US")]
     pub locale: String,
 }
