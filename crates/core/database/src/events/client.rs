@@ -28,7 +28,8 @@ pub struct ReadyPayloadFields {
     pub members: bool,
     pub emojis: bool,
     pub user_settings: Vec<String>,
-    pub channel_unreads: bool
+    pub channel_unreads: bool,
+    pub policy_changes: bool,
 }
 
 impl Default for ReadyPayloadFields {
@@ -40,7 +41,8 @@ impl Default for ReadyPayloadFields {
             members: true,
             emojis: true,
             user_settings: Vec::new(),
-            channel_unreads: false
+            channel_unreads: false,
+            policy_changes: true,
         }
     }
 }
@@ -76,7 +78,8 @@ pub enum EventV1 {
         #[serde(skip_serializing_if = "Option::is_none")]
         channel_unreads: Option<Vec<ChannelUnread>>,
 
-        policy_changes: Vec<PolicyChange>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        policy_changes: Option<Vec<PolicyChange>>,
     },
 
     /// Ping response

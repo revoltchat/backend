@@ -1,13 +1,14 @@
 use async_tungstenite::tungstenite::{handshake, Message};
 use futures::channel::oneshot::Sender;
 use once_cell::sync::Lazy;
+use regex::Regex;
 use revolt_database::events::client::ReadyPayloadFields;
 use revolt_result::{create_error, Result};
 use serde::{Deserialize, Serialize};
-use regex::Regex;
 
 /// matches either a single word ie "users" or a key and value ie "settings[notifications]"
-static READY_PAYLOAD_FIELD_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r#"^(\w+)(?:\[(\w+)\])?$"#).unwrap());
+static READY_PAYLOAD_FIELD_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"^(\w+)(?:\[(\w+)\])?$"#).unwrap());
 
 /// Enumeration of supported protocol formats
 #[derive(Debug)]
@@ -22,7 +23,7 @@ pub struct ProtocolConfiguration {
     protocol_version: i32,
     format: ProtocolFormat,
     session_token: Option<String>,
-    ready_payload_fields: ReadyPayloadFields
+    ready_payload_fields: ReadyPayloadFields,
 }
 
 impl ProtocolConfiguration {
@@ -31,13 +32,13 @@ impl ProtocolConfiguration {
         protocol_version: i32,
         format: ProtocolFormat,
         session_token: Option<String>,
-        ready_payload_fields: ReadyPayloadFields
+        ready_payload_fields: ReadyPayloadFields,
     ) -> Self {
         Self {
             protocol_version,
             format,
             session_token,
-            ready_payload_fields
+            ready_payload_fields,
         }
     }
 
@@ -126,7 +127,22 @@ impl handshake::server::Callback for WebsocketHandshakeCallback {
         let mut protocol_version = 1;
         let mut format = ProtocolFormat::Json;
         let mut session_token = None;
-        let mut ready_payload_fields = ReadyPayloadFields::default();
+        let mut ready_payload_fields = if params.iter().any(|(k, _)| *k == "ready") {
+            // If they pass the ready field, set all fields to false
+
+            ReadyPayloadFields {
+                users: false,
+                servers: false,
+                channels: false,
+                members: false,
+                emojis: false,
+                user_settings: Vec::new(),
+                channel_unreads: false,
+                policy_changes: false,
+            }
+        } else {
+            ReadyPayloadFields::default()
+        };
 
         // Parse and map parameters from key-value to known variables.
         for (key, value) in params {
@@ -143,6 +159,7 @@ impl handshake::server::Callback for WebsocketHandshakeCallback {
                 },
                 "token" => session_token = Some(value.into()),
                 "ready" => {
+                    // Re-enable all the fields the client specifies
                     if let Some(captures) = READY_PAYLOAD_FIELD_REGEX.captures(value) {
                         if let Some(field) = captures.get(0) {
                             match field.as_str() {
@@ -154,9 +171,12 @@ impl handshake::server::Callback for WebsocketHandshakeCallback {
                                 "channel_unreads" => ready_payload_fields.channel_unreads = true,
                                 "user_settings" => {
                                     if let Some(subkey) = captures.get(1) {
-                                        ready_payload_fields.user_settings.push(subkey.as_str().to_string());
+                                        ready_payload_fields
+                                            .user_settings
+                                            .push(subkey.as_str().to_string());
                                     }
-                                },
+                                }
+                                "policy_changes" => ready_payload_fields.policy_changes = true,
                                 _ => {}
                             }
                         }
@@ -174,7 +194,7 @@ impl handshake::server::Callback for WebsocketHandshakeCallback {
                 protocol_version,
                 format,
                 session_token,
-                ready_payload_fields
+                ready_payload_fields,
             })
             .is_ok()
         {
