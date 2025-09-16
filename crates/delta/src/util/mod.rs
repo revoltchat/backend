@@ -1,2 +1,2 @@
-pub mod ratelimiter;
+pub mod ratelimits;
 pub mod test;

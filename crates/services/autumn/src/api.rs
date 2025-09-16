@@ -25,10 +25,10 @@ use tokio::time::Instant;
 use tower_http::cors::{AllowHeaders, Any, CorsLayer};
 use utoipa::ToSchema;
 
-use crate::{exif::strip_metadata, metadata::generate_metadata, mime_type::determine_mime_type};
+use crate::{exif::strip_metadata, metadata::generate_metadata, mime_type::determine_mime_type, AppState};
 
 /// Build the API router
-pub async fn router() -> Router<Database> {
+pub async fn router() -> Router<AppState> {
     let config = config().await;
 
     let cors = CorsLayer::new()
