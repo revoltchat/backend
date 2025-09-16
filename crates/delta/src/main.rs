@@ -11,6 +11,7 @@ pub mod util;
 use revolt_config::config;
 use revolt_database::events::client::EventV1;
 use revolt_database::AMQP;
+use revolt_ratelimits::rocket as ratelimiter;
 use rocket::{Build, Rocket};
 use rocket_cors::{AllowedOrigins, CorsOptions};
 use rocket_prometheus::PrometheusMetrics;
@@ -122,18 +123,22 @@ pub async fn web() -> Rocket<Build> {
     let rocket = rocket::build();
     let prometheus = PrometheusMetrics::new();
 
+    // Ratelimits
+    let ratelimits = ratelimiter::RatelimitStorage::new(util::ratelimits::DeltaRatelimits);
+
     routes::mount(config, rocket)
         .attach(prometheus.clone())
         .mount("/metrics", prometheus)
         .mount("/", rocket_cors::catch_all_options_routes())
-        .mount("/", util::ratelimiter::routes())
+        .mount("/", ratelimiter::routes())
         .mount("/swagger/", swagger)
         .mount("/0.8/swagger/", swagger_0_8)
         .manage(authifier)
         .manage(db)
         .manage(amqp)
         .manage(cors.clone())
-        .attach(util::ratelimiter::RatelimitFairing)
+        .manage(ratelimits)
+        .attach(ratelimiter::RatelimitFairing)
         .attach(cors)
         .configure(rocket::Config {
             limits: rocket::data::Limits::default().limit("string", 5.megabytes()),
