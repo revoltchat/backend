@@ -101,15 +101,17 @@ impl State {
         self.cache.is_bot = user.bot.is_some();
 
         // Fetch pending policy changes.
-        let policy_changes = if user.bot.is_some() {
-            vec![]
+        let policy_changes = if user.bot.is_some() || !fields.policy_changes {
+            None
         } else {
-            db.fetch_policy_changes()
-                .await?
-                .into_iter()
-                .filter(|policy| policy.created_time > user.last_acknowledged_policy_change)
-                .map(Into::into)
-                .collect()
+            Some(
+                db.fetch_policy_changes()
+                    .await?
+                    .into_iter()
+                    .filter(|policy| policy.created_time > user.last_acknowledged_policy_change)
+                    .map(Into::into)
+                    .collect(),
+            )
         };
 
         // Find all relationships to the user.
@@ -176,7 +178,10 @@ impl State {
                         .map(|x| x.id.to_string())
                         .collect::<Vec<String>>(),
                 )
-                .await?,
+                .await?
+                .into_iter()
+                .map(|emoji| emoji.into())
+                .collect(),
             )
         } else {
             None
@@ -184,14 +189,23 @@ impl State {
 
         // Fetch user settings
         let user_settings = if !fields.user_settings.is_empty() {
-            Some(db.fetch_user_settings(&user.id, &fields.user_settings).await?)
+            Some(
+                db.fetch_user_settings(&user.id, &fields.user_settings)
+                    .await?,
+            )
         } else {
             None
         };
 
         // Fetch channel unreads
         let channel_unreads = if fields.channel_unreads {
-            Some(db.fetch_unreads(&user.id).await?)
+            Some(
+                db.fetch_unreads(&user.id)
+                    .await?
+                    .into_iter()
+                    .map(|unread| unread.into())
+                    .collect(),
+            )
         } else {
             None
         };
@@ -238,11 +252,7 @@ impl State {
         }
 
         Ok(EventV1::Ready {
-            users: if fields.users {
-                Some(users)
-            } else {
-                None
-            },
+            users: if fields.users { Some(users) } else { None },
             servers: if fields.servers {
                 Some(servers.into_iter().map(Into::into).collect())
             } else {
@@ -258,10 +268,9 @@ impl State {
             } else {
                 None
             },
-            emojis: emojis.map(|vec| vec.into_iter().map(Into::into).collect()),
-
+            emojis,
             user_settings,
-            channel_unreads: channel_unreads.map(|vec| vec.into_iter().map(Into::into).collect()),
+            channel_unreads,
 
             policy_changes,
         })
