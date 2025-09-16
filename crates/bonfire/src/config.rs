@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 /// matches either a single word ie "users" or a key and value ie "settings[notifications]"
 static READY_PAYLOAD_FIELD_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r#"^(\w+)(?:\[(\w+)\])?$"#).unwrap());
+    Lazy::new(|| Regex::new(r#"^(\w+)(?:\[(\S+)\])?$"#).unwrap());
 
 /// Enumeration of supported protocol formats
 #[derive(Debug)]
