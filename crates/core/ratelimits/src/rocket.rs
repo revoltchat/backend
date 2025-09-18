@@ -6,6 +6,7 @@ use rocket::http::{Method, Status};
 use rocket::request::{FromRequest, Outcome};
 use rocket::serde::json::Json;
 use rocket::{Data, Request, Response, State};
+use revolt_config::config;
 
 use revolt_rocket_okapi::r#gen::OpenApiGenerator;
 use revolt_rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
@@ -33,8 +34,8 @@ fn to_ip(request: &'_ rocket::Request<'_>) -> String {
 }
 
 /// Find the actual IP of the client
-fn to_real_ip(request: &'_ rocket::Request<'_>) -> String {
-    if let Ok(true) = std::env::var("TRUST_CLOUDFLARE").map(|x| x == "1") {
+async fn to_real_ip(request: &'_ rocket::Request<'_>) -> String {
+    if config().await.api.security.trust_cloudflare {
         request
             .headers()
             .get_one("CF-Connecting-IP")
@@ -60,7 +61,7 @@ impl<'r> FromRequest<'r> for Ratelimiter {
                 {
                     session.id
                 } else {
-                    to_real_ip(request)
+                    to_real_ip(request).await
                 };
 
                 let (bucket, resource) = storage.resolver.resolve_bucket(request);
@@ -105,7 +106,7 @@ impl Fairing for RatelimitFairing {
             info!(
                 "User rate-limited on route {}! (IP = {:?})",
                 request.uri(),
-                to_real_ip(request)
+                to_real_ip(request).await
             );
 
             request.set_method(Method::Get);

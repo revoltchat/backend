@@ -6574,6 +6574,7 @@ dependencies = [
  "axum",
  "dashmap",
  "log",
+ "revolt-config",
  "revolt-database",
  "revolt-result",
  "revolt_rocket_okapi",
