@@ -6519,6 +6519,7 @@ dependencies = [
  "revolt-config",
  "revolt-database",
  "revolt-models",
+ "revolt-ratelimits",
  "revolt-result",
  "serde",
  "serde_json",

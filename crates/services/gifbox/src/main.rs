@@ -1,9 +1,10 @@
 use std::net::{Ipv4Addr, SocketAddr};
 
-use axum::{extract::FromRef, Router};
+use axum::{extract::FromRef, middleware::from_fn_with_state, Router};
 
 use revolt_config::config;
 use revolt_database::{Database, DatabaseInfo};
+use revolt_ratelimits::axum as ratelimiter;
 use tokio::net::TcpListener;
 use utoipa::{
     openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
@@ -13,31 +14,21 @@ use utoipa_scalar::{Scalar, Servable as ScalarServable};
 
 use crate::tenor::Tenor;
 
+mod ratelimits;
 mod routes;
 mod tenor;
 mod types;
 
-#[derive(Clone)]
+#[derive(Clone, FromRef)]
 struct AppState {
     pub database: Database,
     pub tenor: Tenor,
+    pub ratelimit_storage: ratelimiter::RatelimitStorage,
 }
 
-impl FromRef<AppState> for Database {
-    fn from_ref(state: &AppState) -> Self {
-        state.database.clone()
-    }
-}
+struct SecurityAddon;
 
-impl FromRef<AppState> for Tenor {
-    fn from_ref(state: &AppState) -> Self {
-        state.tenor.clone()
-    }
-}
-
-struct TokenAddon;
-
-impl Modify for TokenAddon {
+impl Modify for SecurityAddon {
     fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
         let components = openapi.components.get_or_insert_default();
 
@@ -63,7 +54,7 @@ async fn main() -> Result<(), std::io::Error> {
     // Configure API schema
     #[derive(OpenApi)]
     #[openapi(
-        modifiers(&TokenAddon),
+        modifiers(&SecurityAddon),
         paths(
             routes::categories::categories,
             routes::root::root,
@@ -86,18 +77,30 @@ async fn main() -> Result<(), std::io::Error> {
     struct ApiDoc;
 
     let config = config().await;
+
+    let database = DatabaseInfo::Auto
+        .connect()
+        .await
+        .expect("Unable to connect to database");
+
+    let tenor = tenor::Tenor::new(&config.api.security.tenor_key);
+
+    let ratelimit_storage = ratelimiter::RatelimitStorage::new(ratelimits::GifboxRatelimits);
+
     let state = AppState {
-        database: DatabaseInfo::Auto
-            .connect()
-            .await
-            .expect("Unable to connect to database"),
-        tenor: tenor::Tenor::new(&config.api.security.tenor_key),
+        database,
+        tenor,
+        ratelimit_storage,
     };
 
     // Configure Axum and router
     let app = Router::new()
         .merge(Scalar::with_url("/scalar", ApiDoc::openapi()))
         .nest("/", routes::router())
+        .layer(from_fn_with_state(
+            state.clone(),
+            ratelimiter::ratelimit_middleware,
+        ))
         .with_state(state);
 
     // Configure TCP listener and bind
