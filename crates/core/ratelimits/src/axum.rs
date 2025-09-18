@@ -11,6 +11,7 @@ use axum::{
     routing::get,
 };
 use revolt_database::{Database, User};
+use revolt_config::config;
 
 use crate::ratelimiter::{RatelimitInformation, Ratelimiter, RequestKind};
 
@@ -31,8 +32,8 @@ fn to_ip(parts: &Parts) -> String {
         .unwrap_or_default()
 }
 
-fn to_real_ip(parts: &Parts) -> String {
-    if let Ok(true) = std::env::var("TRUST_CLOUDFLARE").map(|x| x == "1") {
+async fn to_real_ip(parts: &Parts) -> String {
+    if config().await.api.security.trust_cloudflare {
         parts
             .headers
             .get("CF-Connecting-IP")
@@ -62,7 +63,7 @@ where
             let identifier = if let Ok(user) = parts.extract_with_state::<User, _>(state).await {
                 user.id
             } else {
-                to_real_ip(parts)
+                to_real_ip(parts).await
             };
 
             let (bucket, resource) = storage.resolver.resolve_bucket(parts);
