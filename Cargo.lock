@@ -6525,7 +6525,6 @@ dependencies = [
  "serde_json",
  "tokio 1.47.1",
  "tracing",
- "urlencoding",
  "utoipa",
  "utoipa-scalar",
 ]

@@ -1,4 +1,4 @@
-//! Interal Tenor API wrapper
+//! Internal Tenor API wrapper
 
 use std::{sync::Arc, time::Duration};
 
@@ -7,7 +7,6 @@ use reqwest::Client;
 use revolt_coalesced::{CoalescionService, CoalescionServiceConfig};
 use serde::de::DeserializeOwned;
 use tokio::sync::RwLock;
-use urlencoding::encode as url_encode;
 
 pub mod types;
 
@@ -60,10 +59,11 @@ impl Tenor {
         }
     }
 
-    pub async fn request<T: DeserializeOwned>(&self, path: String) -> Result<Arc<T>, TenorError> {
+    pub async fn request<T: DeserializeOwned>(&self, path: &str, query: &[Option<(&str, &str)>]) -> Result<Arc<T>, TenorError> {
         let response = self
             .client
             .get(format!("{TENOR_API_BASE_URL}{path}"))
+            .query(query)
             .send()
             .await
             .inspect_err(|e| {
@@ -72,7 +72,7 @@ impl Tenor {
             .map_err(|_| TenorError::HttpError)?;
 
         let text = response.text().await.map_err(|e| {
-            println!("{e:?}");
+            revolt_config::capture_error(&e);
             TenorError::HttpError
         })?;
 
@@ -95,24 +95,21 @@ impl Tenor {
             }
         }
 
-        let res = self.coalescion.execute(unique_key.clone(), || {
-            let mut path = format!(
-                "/search?key={}&q={}&client_key=Gifbox&media_filter=webm,tinywebm&locale={}&contentfilter=high&limit={limit}",
-                &self.key,
-                url_encode(query),
-                url_encode(locale),
-            );
-
-            if !position.is_empty() {
-                path.push_str("&pos=");
-                path.push_str(position);
-            };
-
-            if is_category {
-                path.push_str("&component=categories");
-            }
-
-            self.request::<types::PaginatedMediaResponse>(path)
+        let res = self.coalescion.execute(unique_key.clone(), || async move {
+            self.request::<types::PaginatedMediaResponse>(
+                "/search",
+                &[
+                    Some(("key", &self.key)),
+                    Some(("q", query)),
+                    Some(("client_key", "Gifbox")),
+                    Some(("media_filter", "webm,tinywebm")),
+                    Some(("locale", locale)),
+                    Some(("contentfilter", "high")),
+                    Some(("limit", &limit.to_string())),
+                    position.is_empty().then_some(("pos", position)),
+                    is_category.then_some(("component", "categories"))
+                ]
+            ).await
         })
         .await
         .unwrap();
@@ -138,14 +135,16 @@ impl Tenor {
 
         let res = self
             .coalescion
-            .execute(unique_key.clone(), || {
-                let path = format!(
-                    "/categories?key={}&client_key=Gifbox&locale={}&contentfilter=high",
-                    &self.key,
-                    url_encode(locale),
-                );
-
-                self.request::<types::CategoriesResponse>(path)
+            .execute(unique_key.clone(), || async move {
+                self.request::<types::CategoriesResponse>(
+                    "/categories",
+                    &[
+                        Some(("key", &self.key)),
+                        Some(("client_key", "Gifbox")),
+                        Some(("locale", locale)),
+                        Some(("contentfilter", "high")),
+                    ]
+                ).await
             })
             .await
             .unwrap();
@@ -174,19 +173,19 @@ impl Tenor {
             }
         }
 
-        let res = self.coalescion.execute(unique_key.clone(), || {
-            let mut path = format!(
-                "/featured?key={}&client_key=Gifbox&media_filter=webm,tinywebm&locale={}&contentfilter=high&limit={limit}",
-                &self.key,
-                url_encode(locale),
-            );
-
-            if !position.is_empty() {
-                path.push_str("&pos=");
-                path.push_str(position);
-            };
-
-            self.request::<types::PaginatedMediaResponse>(path)
+        let res = self.coalescion.execute(unique_key.clone(), || async move {
+            self.request::<types::PaginatedMediaResponse>(
+                "/featured",
+                &[
+                    Some(("key", &self.key)),
+                    Some(("client_key", "Gifbox")),
+                    Some(("media_filter", "webm,tinywebm")),
+                    Some(("locale", locale)),
+                    Some(("contentfilter", "high")),
+                    Some(("limit", &limit.to_string())),
+                    position.is_empty().then_some(("pos", position)),
+                ]
+            ).await
         })
         .await
         .unwrap();
