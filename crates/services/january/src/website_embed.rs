@@ -312,7 +312,7 @@ pub async fn populate_special(original_url: String, metadata: &mut WebsiteMetada
         Some(Special::GIF)
     } else {
         RE_APPLE_MUSIC
-            .captures_iter(url)
+            .captures_iter(&original_url)
             .next()
             .map(|captures| Special::AppleMusic {
                 album_id: captures[1].to_string(),
