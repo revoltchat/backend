@@ -1,4 +1,8 @@
-use revolt_database::{util::reference::Reference, Database, RemovalIntention, User};
+use revolt_database::{
+    util::reference::Reference,
+    voice::{delete_channel_voice_state, delete_voice_state, get_channel_node, get_user_voice_channel_in_server, get_voice_channel_members, VoiceClient},
+    Database, RemovalIntention, User,
+};
 use revolt_models::v0;
 use revolt_result::Result;
 use rocket::State;
@@ -12,6 +16,7 @@ use rocket_empty::EmptyResponse;
 #[delete("/<target>?<options..>")]
 pub async fn delete(
     db: &State<Database>,
+    voice_client: &State<VoiceClient>,
     user: User,
     target: Reference<'_>,
     options: v0::OptionsServerDelete,
@@ -20,8 +25,28 @@ pub async fn delete(
     let member = db.fetch_member(target.id, &user.id).await?;
 
     if server.owner == user.id {
+        for channel_id in &server.channels {
+            if let Some(users) = get_voice_channel_members(channel_id).await? {
+                let node = get_channel_node(channel_id).await?.unwrap();
+
+                voice_client.delete_room(&node, channel_id).await?;
+
+                delete_channel_voice_state(channel_id, Some(&server.id), &users).await?;
+            };
+        }
+
         server.delete(db).await
     } else {
+        if let Some(channel_id) = get_user_voice_channel_in_server(&user.id, &server.id).await? {
+            if server.channels.iter().any(|c| c == &channel_id) {
+                let node = get_channel_node(&channel_id).await?.unwrap();
+
+                voice_client.remove_user(&node, &user.id, &channel_id).await?;
+
+                delete_voice_state(&channel_id, Some(&server.id), &user.id).await?;
+            }
+        };
+
         member
             .remove(
                 db,

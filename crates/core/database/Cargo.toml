@@ -96,3 +96,8 @@ authifier = { version = "1.0.15" }
 
 # RabbitMQ
 amqprs = { version = "1.7.0" }
+
+# Voice
+livekit-api = "0.4.4"
+livekit-protocol = "0.4.0"
+livekit-runtime = { version = "0.3.1", features = ["tokio"] }
