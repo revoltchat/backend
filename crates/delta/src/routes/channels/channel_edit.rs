@@ -1,6 +1,5 @@
 use revolt_database::{
-    util::{permissions::DatabasePermissionQuery, reference::Reference},
-    Channel, Database, File, PartialChannel, SystemMessage, User, AMQP,
+    util::{permissions::DatabasePermissionQuery, reference::Reference}, voice::{delete_channel_voice_state, get_channel_node, get_voice_channel_members, VoiceClient}, Channel, Database, File, PartialChannel, SystemMessage, User, AMQP
 };
 use revolt_models::v0;
 use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
@@ -15,6 +14,7 @@ use validator::Validate;
 #[patch("/<target>", data = "<data>")]
 pub async fn edit(
     db: &State<Database>,
+    voice_client: &State<VoiceClient>,
     amqp: &State<AMQP>,
     user: User,
     target: Reference<'_>,
@@ -214,6 +214,9 @@ pub async fn edit(
                     v0::FieldsChannel::Icon => {
                         icon.take();
                     }
+                    v0::FieldsChannel::Voice => {
+                        voice.take();
+                    }
                     _ => {}
                 }
             }
@@ -256,6 +259,16 @@ pub async fn edit(
                 .collect(),
         )
         .await?;
+
+    if channel.voice().is_none() {
+        if let Some(users) = get_voice_channel_members(channel.id()).await? {
+            let node = get_channel_node(channel.id()).await?.unwrap();
+
+            voice_client.delete_room(&node, channel.id()).await?;
+
+            delete_channel_voice_state(channel.id(), channel.server(), &users).await?;
+        };
+    }
 
     Ok(Json(channel.into()))
 }

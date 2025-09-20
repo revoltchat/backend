@@ -42,15 +42,17 @@ pub async fn kick(
         return Err(create_error!(NotElevated));
     }
 
+    member
+        .remove(db, &server, RemovalIntention::Kick, false)
+        .await?;
+
     if let Some(channel_id) = get_user_voice_channel_in_server(&user.id, &server.id).await? {
         let node = get_channel_node(&channel_id).await?.unwrap();
 
         voice_client.remove_user(&node, &user.id, &channel_id).await?;
-        delete_voice_state(&channel_id, Some(&server.id), &user.id).await?;
-    }
 
-    member
-        .remove(db, &server, RemovalIntention::Kick, false)
-        .await
-        .map(|_| EmptyResponse)
+        delete_voice_state(&channel_id, Some(&server.id), &user.id).await?;
+    };
+
+    Ok(EmptyResponse)
 }

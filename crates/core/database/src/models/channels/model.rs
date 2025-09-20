@@ -153,6 +153,7 @@ auto_derived!(
         Description,
         Icon,
         DefaultPermissions,
+        Voice,
     }
 );
 
@@ -424,9 +425,7 @@ impl Channel {
     /// Clone this channel's server id
     pub fn server(&self) -> Option<&str> {
         match self {
-            Channel::TextChannel { server, .. } => {
-                Some(server)
-            }
+            Channel::TextChannel { server, .. } => Some(server),
             _ => None,
         }
     }
@@ -532,6 +531,12 @@ impl Channel {
                     ..
                 } => {
                     default_permissions.take();
+                }
+                _ => {}
+            },
+            FieldsChannel::Voice => match self {
+                Self::TextChannel { voice, .. } => {
+                    voice.take();
                 }
                 _ => {}
             },
@@ -767,6 +772,7 @@ impl IntoDocumentPath for FieldsChannel {
             FieldsChannel::Description => "description",
             FieldsChannel::Icon => "icon",
             FieldsChannel::DefaultPermissions => "default_permissions",
+            FieldsChannel::Voice => "voice",
         })
     }
 }

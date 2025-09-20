@@ -87,6 +87,7 @@ pub async fn call(
             voice_client
                 .remove_user(&node, &user.id, &channel_id)
                 .await?;
+
             delete_voice_state(&channel_id, channel.server(), &user.id).await?;
         }
     } else {

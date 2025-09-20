@@ -39,12 +39,6 @@ pub async fn set_default_server_permissions(
         )
         .await?;
 
-    for channel_id in &server.channels {
-        let channel = Reference::from_unchecked(channel_id).as_channel(db).await?;
-
-        sync_voice_permissions(db, voice_client, &channel, Some(&server), None).await?;
-    };
-
     server
         .update(
             db,
@@ -55,6 +49,12 @@ pub async fn set_default_server_permissions(
             vec![],
         )
         .await?;
+
+    for channel_id in &server.channels {
+        let channel = Reference::from_unchecked(channel_id).as_channel(db).await?;
+
+        sync_voice_permissions(db, voice_client, &channel, Some(&server), None).await?;
+    };
 
     Ok(Json(server.into()))
 }

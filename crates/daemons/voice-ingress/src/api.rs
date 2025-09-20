@@ -3,7 +3,7 @@ use livekit_api::{access_token::TokenVerifier, webhooks::WebhookReceiver};
 use livekit_protocol::TrackType;
 use revolt_database::{
     events::client::EventV1,
-    iso8601_timestamp::Timestamp,
+    iso8601_timestamp::{Duration, Timestamp},
     util::reference::Reference,
     voice::{
         create_voice_state, delete_voice_state, get_call_notification_recipients,
@@ -64,7 +64,12 @@ pub async fn ingress(
 
             let channel = Reference::from_unchecked(channel_id).as_channel(db).await?;
 
-            let voice_state = create_voice_state(channel_id, channel.server(), user_id).await?;
+            let joined_at = Timestamp::UNIX_EPOCH
+                .checked_add(Duration::seconds(event.created_at))
+                .unwrap();
+
+            let voice_state =
+                create_voice_state(channel_id, channel.server(), user_id, joined_at).await?;
 
             // Only publish one event when a user is moved from one channel to another.
             if let Some(moved_from) = get_user_moved_to_voice(channel_id, user_id).await? {
@@ -89,16 +94,9 @@ pub async fn ingress(
             if event.room.as_ref().unwrap().num_participants == 1 {
                 let user = Reference::from_unchecked(user_id).as_user(db).await?;
 
-                let started_at = Timestamp::now_utc();
-                let message_id = Ulid::from_datetime(
-                    DateTime::from_timestamp_millis(
-                        started_at
-                            .duration_since(Timestamp::UNIX_EPOCH)
-                            .whole_milliseconds() as i64,
-                    )
-                    .unwrap(),
-                )
-                .to_string();
+                let message_id =
+                    Ulid::from_datetime(DateTime::from_timestamp_secs(event.created_at).unwrap())
+                        .to_string();
 
                 let mut call_started_message = SystemMessage::CallStarted {
                     by: user_id.to_string(),
@@ -127,7 +125,7 @@ pub async fn ingress(
                     .await?;
 
                 let recipients = get_call_notification_recipients(&channel_id, &user_id).await?;
-                let now = started_at.format_short().to_string();
+                let now = joined_at.format_short().to_string();
 
                 if let Err(e) = amqp
                     .dm_call_updated(&user.id, channel.id(), Some(&now), false, recipients)
@@ -165,7 +163,7 @@ pub async fn ingress(
             if members.is_none_or(|m| m.is_empty()) {
                 // The channel is empty so send out an "end" message for ringing
                 if let Err(e) = amqp
-                    .dm_call_updated(&user_id, &channel_id, None, true, None)
+                    .dm_call_updated(user_id, channel_id, None, true, None)
                     .await
                 {
                     revolt_config::capture_internal_error!(&e);

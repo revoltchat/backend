@@ -4,6 +4,7 @@ use crate::{
     util::{permissions::DatabasePermissionQuery, reference::Reference},
     Database, Server,
 };
+use iso8601_timestamp::{Duration, Timestamp};
 use livekit_protocol::ParticipantPermission;
 use redis_kiss::{get_connection as _get_connection, redis::Pipeline, AsyncCommands, Conn};
 use revolt_config::FeaturesLimits;
@@ -148,10 +149,12 @@ pub async fn create_voice_state(
     channel_id: &str,
     server_id: Option<&str>,
     user_id: &str,
+    joined_at: Timestamp,
 ) -> Result<UserVoiceState> {
     let unique_key = format!("{}:{}", &user_id, server_id.unwrap_or(channel_id));
 
     let voice_state = UserVoiceState {
+        joined_at,
         id: user_id.to_string(),
         is_receiving: true,
         is_publishing: false,
@@ -163,6 +166,12 @@ pub async fn create_voice_state(
         .sadd(format!("vc_members:{channel_id}"), user_id)
         .sadd(format!("vc:{user_id}"), channel_id)
         .set(&unique_key, channel_id)
+        .set(
+            format!("joined_at:{unique_key}"),
+            joined_at
+                .duration_since(Timestamp::UNIX_EPOCH)
+                .whole_milliseconds() as i64,
+        )
         .set(
             format!("is_publishing:{unique_key}"),
             voice_state.is_publishing,
@@ -194,12 +203,42 @@ pub async fn delete_voice_state(
         .srem(format!("vc_members:{channel_id}"), user_id)
         .srem(format!("vc:{user_id}"), channel_id)
         .del(&[
+            format!("joined_at:{unique_key}"),
             format!("is_publishing:{unique_key}"),
             format!("is_receiving:{unique_key}"),
             format!("screensharing:{unique_key}"),
             format!("camera:{unique_key}"),
             unique_key.clone(),
         ])
+        .query_async(&mut get_connection().await?.into_inner())
+        .await
+        .to_internal_error()
+}
+
+pub async fn delete_channel_voice_state(
+    channel_id: &str,
+    server_id: Option<&str>,
+    user_ids: &[String],
+) -> Result<()> {
+    let parent_id = server_id.unwrap_or(channel_id);
+
+    let mut pipeline = Pipeline::new();
+    pipeline.del(format!("vc_members:{channel_id}"));
+
+    for user_id in user_ids {
+        let unique_key = format!("{user_id}:{parent_id}");
+
+        pipeline.srem(format!("vc:{user_id}"), channel_id).del(&[
+            format!("joined_at:{unique_key}"),
+            format!("is_publishing:{unique_key}"),
+            format!("is_receiving:{unique_key}"),
+            format!("screensharing:{unique_key}"),
+            format!("camera:{unique_key}"),
+            unique_key.clone(),
+        ]);
+    }
+
+    pipeline
         .query_async(&mut get_connection().await?.into_inner())
         .await
         .to_internal_error()
@@ -285,9 +324,10 @@ pub async fn get_voice_state(
 ) -> Result<Option<UserVoiceState>> {
     let unique_key = format!("{}:{}", user_id, server_id.unwrap_or(channel_id));
 
-    let (is_publishing, is_receiving, screensharing, camera) = get_connection()
+    let (joined_at, is_publishing, is_receiving, screensharing, camera) = get_connection()
         .await?
         .mget(&[
+            format!("joined_at:{unique_key}"),
             format!("is_publishing:{unique_key}"),
             format!("is_receiving:{unique_key}"),
             format!("screensharing:{unique_key}"),
@@ -296,16 +336,29 @@ pub async fn get_voice_state(
         .await
         .to_internal_error()?;
 
-    match (is_publishing, is_receiving, screensharing, camera) {
-        (Some(is_publishing), Some(is_receiving), Some(screensharing), Some(camera)) => {
-            Ok(Some(v0::UserVoiceState {
-                id: user_id.to_string(),
-                is_receiving,
-                is_publishing,
-                screensharing,
-                camera,
-            }))
-        }
+    match (
+        joined_at,
+        is_publishing,
+        is_receiving,
+        screensharing,
+        camera,
+    ) {
+        (
+            Some(joined_at),
+            Some(is_publishing),
+            Some(is_receiving),
+            Some(screensharing),
+            Some(camera),
+        ) => Ok(Some(v0::UserVoiceState {
+            joined_at: Timestamp::UNIX_EPOCH
+                .checked_add(Duration::milliseconds(joined_at))
+                .unwrap(),
+            id: user_id.to_string(),
+            is_receiving,
+            is_publishing,
+            screensharing,
+            camera,
+        })),
         _ => Ok(None),
     }
 }

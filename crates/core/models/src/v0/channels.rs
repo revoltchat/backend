@@ -157,6 +157,7 @@ auto_derived!(
         Description,
         Icon,
         DefaultPermissions,
+        Voice,
     }
 
     /// New webhook information

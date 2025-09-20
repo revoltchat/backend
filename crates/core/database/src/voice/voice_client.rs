@@ -1,4 +1,7 @@
-use crate::{models::{Channel, User}, Database};
+use crate::{
+    models::{Channel, User},
+    Database,
+};
 use livekit_api::{
     access_token::{AccessToken, VideoGrants},
     services::room::{CreateRoomOptions, RoomClient as InnerRoomClient, UpdateParticipantOptions},
@@ -76,7 +79,9 @@ impl VoiceClient {
         AccessToken::with_api_key(&room.node.key, &room.node.secret)
             .with_name(&format!("{}#{}", user.username, user.discriminator))
             .with_identity(&user.id)
-            .with_metadata(&serde_json::to_string(&user.clone().into(db, None).await).to_internal_error()?)
+            .with_metadata(
+                &serde_json::to_string(&user.clone().into(db, None).await).to_internal_error()?,
+            )
             .with_ttl(Duration::from_secs(10))
             .with_grants(VideoGrants {
                 room_join: true,
@@ -136,6 +141,15 @@ impl VoiceClient {
 
         room.client
             .remove_participant(channel_id, user_id)
+            .await
+            .to_internal_error()
+    }
+
+    pub async fn delete_room(&self, node: &str, channel_id: &str) -> Result<()> {
+        let room = self.get_node(node)?;
+
+        room.client
+            .delete_room(channel_id)
             .await
             .to_internal_error()
     }

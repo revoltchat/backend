@@ -12,7 +12,6 @@ use revolt_permissions::{calculate_channel_permissions, ChannelPermission};
 use revolt_presence::filter_online;
 use revolt_result::Result;
 
-
 use super::state::{Cache, State};
 
 /// Cache Manager
@@ -217,7 +216,14 @@ impl State {
             // fetch voice states for all the channels we can see
             let mut voice_states = Vec::new();
 
-            for channel in &channels {
+            for channel in channels.iter().filter(|c| {
+                matches!(
+                    c,
+                    Channel::DirectMessage { .. }
+                        | Channel::Group { .. }
+                        | Channel::TextChannel { voice: Some(_), .. }
+                )
+            }) {
                 if let Ok(Some(voice_state)) = get_channel_voice_state(channel).await {
                     voice_states.push(voice_state)
                 }
