@@ -328,6 +328,9 @@ pub async fn get_channel_voice_state(channel: &Channel) -> Result<Option<v0::Cha
             }
         }
 
+        // In case a user voice state failed to be fetched, the vec's capacity will be larger than the length, shrink it
+        participants.shrink_to_fit();
+
         Ok(Some(v0::ChannelVoiceState {
             id: channel.id().to_string(),
             participants,

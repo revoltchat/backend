@@ -152,6 +152,26 @@ jobs:
             BASE_IMAGE=ghcr.io/${{ github.repository_owner }}/base:latest
           labels: ${{ steps.meta-january.outputs.labels }}
 
+      # revoltchat/gifbox
+      - name: Docker meta
+        id: meta-gifbox
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            docker.io/revoltchat/gifbox
+            ghcr.io/revoltchat/gifbox
+      - name: Publish
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          file: crates/services/gifbox/Dockerfile
+          tags: ${{ steps.meta-gifbox.outputs.tags }}
+          build-args: |
+            BASE_IMAGE=ghcr.io/${{ github.repository_owner }}/base:latest
+          labels: ${{ steps.meta-gifbox.outputs.labels }}
+
       # revoltchat/crond
       - name: Docker meta
         id: meta-crond

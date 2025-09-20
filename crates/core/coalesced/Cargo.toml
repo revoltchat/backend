@@ -1,0 +1,22 @@
+[package]
+name = "revolt-coalesced"
+version = "0.8.8"
+edition = "2021"
+license = "MIT"
+authors = ["Paul Makles <me@insrt.uk>", "Zomatree <me@zomatree.live>"]
+description = "Revolt Backend: Coalescion service"
+
+[features]
+tokio = ["dep:tokio"]
+queue = ["dep:indexmap"]
+cache = ["dep:lru"]
+
+default = ["tokio"]
+
+[dependencies]
+tokio = { version = "1.47.0", features = ["sync"], optional = true }
+indexmap = { version = "*", optional = true }
+lru = { version = "*", optional = true }
+
+[dev-dependencies]
+tokio = { version = "1.47.0", features = ["rt", "rt-multi-thread", "macros", "time"] }

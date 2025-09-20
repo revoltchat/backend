@@ -98,21 +98,23 @@ impl State {
     pub async fn generate_ready_payload(
         &mut self,
         db: &Database,
-        fields: Vec<ReadyPayloadFields>,
+        fields: &ReadyPayloadFields,
     ) -> Result<EventV1> {
         let user = self.clone_user();
         self.cache.is_bot = user.bot.is_some();
 
         // Fetch pending policy changes.
-        let policy_changes = if user.bot.is_some() {
-            vec![]
+        let policy_changes = if user.bot.is_some() || !fields.policy_changes {
+            None
         } else {
-            db.fetch_policy_changes()
-                .await?
-                .into_iter()
-                .filter(|policy| policy.created_time > user.last_acknowledged_policy_change)
-                .map(Into::into)
-                .collect()
+            Some(
+                db.fetch_policy_changes()
+                    .await?
+                    .into_iter()
+                    .filter(|policy| policy.created_time > user.last_acknowledged_policy_change)
+                    .map(Into::into)
+                    .collect(),
+            )
         };
 
         // Find all relationships to the user.
@@ -171,7 +173,7 @@ impl State {
             .await?;
 
         // Fetch customisations.
-        let emojis = if fields.contains(&ReadyPayloadFields::Emoji) {
+        let emojis = if fields.emojis {
             Some(
                 db.fetch_emoji_by_parent_ids(
                     &servers
@@ -179,25 +181,49 @@ impl State {
                         .map(|x| x.id.to_string())
                         .collect::<Vec<String>>(),
                 )
-                .await?,
+                .await?
+                .into_iter()
+                .map(|emoji| emoji.into())
+                .collect(),
             )
         } else {
             None
         };
 
         // Fetch user settings
-        let user_settings = if let Some(ReadyPayloadFields::UserSettings(keys)) = fields
-            .iter()
-            .find(|e| matches!(e, ReadyPayloadFields::UserSettings(_)))
-        {
-            Some(db.fetch_user_settings(&user.id, keys).await?)
+        let user_settings = if !fields.user_settings.is_empty() {
+            Some(
+                db.fetch_user_settings(&user.id, &fields.user_settings)
+                    .await?,
+            )
         } else {
             None
         };
 
         // Fetch channel unreads
-        let channel_unreads = if fields.contains(&ReadyPayloadFields::ChannelUnreads) {
-            Some(db.fetch_unreads(&user.id).await?)
+        let channel_unreads = if fields.channel_unreads {
+            Some(
+                db.fetch_unreads(&user.id)
+                    .await?
+                    .into_iter()
+                    .map(|unread| unread.into())
+                    .collect(),
+            )
+        } else {
+            None
+        };
+
+        let voice_states = if fields.voice_states {
+            // fetch voice states for all the channels we can see
+            let mut voice_states = Vec::new();
+
+            for channel in &channels {
+                if let Ok(Some(voice_state)) = get_channel_voice_state(channel).await {
+                    voice_states.push(voice_state)
+                }
+            }
+
+            Some(voice_states)
         } else {
             None
         };
@@ -243,47 +269,28 @@ impl State {
             self.insert_subscription(channel.id().to_string()).await;
         }
 
-        let voice_states = if fields.contains(&ReadyPayloadFields::VoiceStates) {
-            // fetch voice states for all the channels we can see
-            let mut voice_states = Vec::new();
-
-            for channel in &channels {
-                if let Ok(Some(voice_state)) = get_channel_voice_state(channel).await {
-                    voice_states.push(voice_state)
-                }
-            }
-
-            Some(voice_states)
-        } else {
-            None
-        };
-
         Ok(EventV1::Ready {
-            users: if fields.contains(&ReadyPayloadFields::Users) {
-                Some(users)
-            } else {
-                None
-            },
-            servers: if fields.contains(&ReadyPayloadFields::Servers) {
+            users: if fields.users { Some(users) } else { None },
+            servers: if fields.servers {
                 Some(servers.into_iter().map(Into::into).collect())
             } else {
                 None
             },
-            channels: if fields.contains(&ReadyPayloadFields::Channels) {
+            channels: if fields.channels {
                 Some(channels.into_iter().map(Into::into).collect())
             } else {
                 None
             },
-            members: if fields.contains(&ReadyPayloadFields::Members) {
+            members: if fields.members {
                 Some(members.into_iter().map(Into::into).collect())
             } else {
                 None
             },
-            emojis: emojis.map(|vec| vec.into_iter().map(Into::into).collect()),
             voice_states,
 
+            emojis,
             user_settings,
-            channel_unreads: channel_unreads.map(|vec| vec.into_iter().map(Into::into).collect()),
+            channel_unreads,
 
             policy_changes,
         })

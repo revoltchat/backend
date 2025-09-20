@@ -32,8 +32,10 @@ deps() {
     crates/core/permissions/src \
     crates/core/presence/src \
     crates/core/result/src \
+    crates/core/coalesced/src \
     crates/services/autumn/src \
     crates/services/january/src \
+    crates/services/gifbox/src \
     crates/daemons/crond/src \
     crates/daemons/pushd/src \
     crates/daemons/voice-ingress/src
@@ -42,6 +44,7 @@ deps() {
     tee crates/delta/src/main.rs |
     tee crates/services/autumn/src/main.rs |
     tee crates/services/january/src/main.rs |
+    tee crates/services/gifbox/src/main.rs |
     tee crates/daemons/crond/src/main.rs |
     tee crates/daemons/pushd/src/main.rs |
     tee crates/daemons/voice-ingress/src/main.rs
@@ -53,7 +56,8 @@ deps() {
     tee crates/core/parser/src/lib.rs |
     tee crates/core/permissions/src/lib.rs |
     tee crates/core/presence/src/lib.rs |
-    tee crates/core/result/src/lib.rs
+    tee crates/core/result/src/lib.rs |
+    tee crates/core/coalesced/src/lib.rs
   
   if [ -z "$TARGETARCH" ]; then
     cargo build -j 10 --locked --release
@@ -75,7 +79,8 @@ apps() {
     crates/core/parser/src/lib.rs \
     crates/core/permissions/src/lib.rs \
     crates/core/presence/src/lib.rs \
-    crates/core/result/src/lib.rs
+    crates/core/result/src/lib.rs \
+    crates/core/coalesced/src/lib .rs
   
   if [ -z "$TARGETARCH" ]; then
     cargo build -j 10 --locked --release

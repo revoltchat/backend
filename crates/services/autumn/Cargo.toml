@@ -52,6 +52,7 @@ revolt-result = { version = "0.8.8", path = "../../core/result", features = [
     "utoipa",
     "axum",
 ] }
+revolt-ratelimits = { version = "0.8.8", path = "../../core/ratelimits", features = ["axum"] }
 
 # Axum / web server
 tempfile = "3.12.0"
