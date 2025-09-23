@@ -11,6 +11,7 @@ pkgs.mkShell rec {
     # Cargo
     pkgs.cargo
     pkgs.cargo-nextest
+    pkgs.cargo-release
 
     # Rust
     pkgs.rustc
