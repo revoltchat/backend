@@ -49,4 +49,23 @@ impl AbstractChannelInvites for ReferenceDb {
             Err(create_error!(NotFound))
         }
     }
+
+    /// Count one use against an invite
+    async fn increment_invite_uses(&self, code: &str) -> Result<()> {
+        let mut invites = self.channel_invites.lock().await;
+        match invites.get_mut(code) {
+            Some(Invite::Server { uses, .. }) => {
+                *uses += 1;
+                Ok(())
+            }
+            Some(_) => Ok(()),
+            None => Err(create_error!(NotFound)),
+        }
+    }
+
+    /// No authifier store exists in the reference database, so there is nothing
+    /// to mirror or to remove.
+    async fn delete_authifier_invite_mirror(&self, _code: &str) -> Result<()> {
+        Ok(())
+    }
 }

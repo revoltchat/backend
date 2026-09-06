@@ -62,6 +62,11 @@ impl<'a> Reference<'a> {
                     .into_iter()
                     .next()
                     .ok_or(create_error!(NotFound))?,
+                // A synthetic invite for a discoverable server: it is not
+                // stored, so it has no label and no limit.
+                label: None,
+                max_uses: None,
+                uses: 0,
             })
         } else {
             db.fetch_invite(self.id).await

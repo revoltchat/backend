@@ -73,11 +73,17 @@ impl From<crate::Invite> for Invite {
                 server,
                 creator,
                 channel,
+                label,
+                max_uses,
+                uses,
             } => Invite::Server {
                 code,
                 server,
                 creator,
                 channel,
+                label,
+                max_uses,
+                uses,
             },
         }
     }
@@ -716,6 +722,12 @@ impl From<Member> for crate::Member {
             timeout: value.timeout,
             can_publish: value.can_publish,
             can_receive: value.can_receive,
+            // `invited_by` / `invite_code` exist only in the database, never in
+            // the wire model, so there is nothing to convert back. None here
+            // means "not carried", and because PartialMember skips None on
+            // serialize it can never blank an existing value on an update.
+            invited_by: None,
+            invite_code: None,
         }
     }
 }
@@ -746,6 +758,10 @@ impl From<PartialMember> for crate::PartialMember {
             timeout: value.timeout,
             can_publish: value.can_publish,
             can_receive: value.can_receive,
+            // Not in the wire model. None is skipped on serialize, so a partial
+            // built from an API edit can never blank an existing attribution.
+            invited_by: None,
+            invite_code: None,
         }
     }
 }

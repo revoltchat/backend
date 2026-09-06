@@ -123,6 +123,12 @@ pub enum ErrorType {
     },
     AlreadyInServer,
     CannotTimeoutYourself,
+    /// The invite code has reached its use limit.
+    ///
+    /// Deliberately NOT NotFound: a spent invite and a code that never existed
+    /// look identical to a member otherwise, and "this link is broken" sends
+    /// them to an admin for the wrong reason.
+    InviteExhausted,
 
     // ? Bot related errors
     ReachedMaximumBots,

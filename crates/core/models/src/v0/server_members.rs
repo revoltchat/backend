@@ -77,6 +77,25 @@ auto_derived_partial!(
 );
 
 auto_derived!(
+    /// How one member came to be in the server.
+    ///
+    /// Deliberately a SEPARATE response from `Member`, not extra fields on it.
+    /// `Member` is broadcast to everyone in the server, and who vouched for
+    /// whom is not everyone's business - in this community particularly. This
+    /// is served only to someone holding ManageServer.
+    pub struct MemberAttribution {
+        /// Id of the member
+        pub user: String,
+        /// Id of the user whose invite was used, when known
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub invited_by: Option<String>,
+        /// The invite code used, when known
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub invite_code: Option<String>,
+    }
+);
+
+auto_derived!(
     /// Composite primary key consisting of server and user id
     #[derive(Hash, Default)]
     pub struct MemberCompositeKey {

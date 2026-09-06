@@ -964,6 +964,11 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
                     server,
                     creator,
                     channel,
+                    // Invites that predate use limits are unlimited, which is
+                    // what a missing max_uses means everywhere else too.
+                    label: None,
+                    max_uses: None,
+                    uses: 0,
                 },
                 OldInvite::Group {
                     code,
@@ -1085,7 +1090,7 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
         enum Channel {
             Group { owner: String },
             TextChannel { server: String },
-            VoiceChannel { server: String }
+            VoiceChannel { server: String },
         }
 
         let webhooks = db
@@ -1099,7 +1104,12 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             .await;
 
         for webhook in webhooks {
-            match db.col::<Channel>("channels").find_one(doc! { "_id": &webhook.channel_id }).await.unwrap() {
+            match db
+                .col::<Channel>("channels")
+                .find_one(doc! { "_id": &webhook.channel_id })
+                .await
+                .unwrap()
+            {
                 Some(channel) => {
                     let creator_id = match channel {
                         Channel::Group { owner, .. } => owner,
@@ -1240,7 +1250,7 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
                         "channel_type": "TextChannel",
                         "voice": {}
                     }
-                }
+                },
             )
             .await
             .expect("Failed to update voice channels");
@@ -1292,10 +1302,7 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             let mut doc = doc! {};
 
             for id in server.roles.keys() {
-                doc.insert(
-                    format!("roles.{id}._id"),
-                    id,
-                );
+                doc.insert(format!("roles.{id}._id"), id);
             }
 
             db.db()

@@ -115,13 +115,18 @@ pub use amqp::amqp::AMQP;
 #[cfg(feature = "voice")]
 pub mod voice;
 
-
 /// Utility function to check if a boolean value is false
 pub fn if_false(t: &bool) -> bool {
     !t
 }
 
 /// Utility function to check if an option doesnt contain true
+/// Skip serializing a counter that is still zero, so an invite created before
+/// use limits existed and one created after look the same on the wire.
+pub fn if_zero_u32(t: &u32) -> bool {
+    t == &0
+}
+
 pub fn if_option_false(t: &Option<bool>) -> bool {
     t != &Some(true)
 }

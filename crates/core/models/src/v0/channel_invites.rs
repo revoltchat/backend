@@ -15,6 +15,18 @@ auto_derived!(
             creator: String,
             /// Id of the server channel this invite points to
             channel: String,
+            /// Human-readable label, so an admin can tell codes apart
+            #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+            label: Option<String>,
+            /// How many times this code may be used; absent means unlimited
+            #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+            max_uses: Option<u32>,
+            /// How many times this code has been used
+            #[cfg_attr(
+                feature = "serde",
+                serde(skip_serializing_if = "crate::if_zero_u32", default)
+            )]
+            uses: u32,
         },
         /// Invite to a group channel
         Group {
@@ -26,6 +38,26 @@ auto_derived!(
             /// Id of the group channel this invite points to
             channel: String,
         },
+    }
+
+    /// Options when creating an invite
+    #[derive(Default)]
+    pub struct DataCreateInvite {
+        /// Human-readable label so an admin can tell codes apart, e.g.
+        /// "website", "Facebook post September", "migration".
+        /// Requires ManageServer.
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub label: Option<String>,
+        /// How many times the code may be used. Requires ManageServer.
+        /// Omitted means one use.
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub max_uses: Option<u32>,
+        /// Explicitly unlimited. Requires ManageServer.
+        ///
+        /// A separate flag rather than "max_uses omitted", so forgetting the
+        /// field and meaning unlimited cannot look the same.
+        #[cfg_attr(feature = "serde", serde(default))]
+        pub unlimited: bool,
     }
 
     /// Public invite response

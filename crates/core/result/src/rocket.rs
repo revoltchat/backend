@@ -50,6 +50,7 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::UnknownServer => Status::NotFound,
             ErrorType::InvalidRole => Status::NotFound,
             ErrorType::Banned => Status::Forbidden,
+            ErrorType::InviteExhausted => Status::Gone,
             ErrorType::AlreadyInServer => Status::Conflict,
             ErrorType::CannotTimeoutYourself => Status::BadRequest,
 

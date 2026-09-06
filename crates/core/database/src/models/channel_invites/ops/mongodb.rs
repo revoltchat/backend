@@ -44,4 +44,24 @@ impl AbstractChannelInvites for MongoDb {
     async fn delete_invite(&self, code: &str) -> Result<()> {
         query!(self, delete_one_by_id, COL, code).map(|_| ())
     }
+
+    /// Count one use against an invite
+    async fn increment_invite_uses(&self, code: &str) -> Result<()> {
+        self.col::<bson::Document>(COL)
+            .update_one(doc! { "_id": code }, doc! { "$inc": { "uses": 1 } })
+            .await
+            .map(|_| ())
+            .map_err(|_| create_database_error!("update_one", COL))
+    }
+
+    /// Remove an invite code from authifier's own invite store
+    async fn delete_authifier_invite_mirror(&self, code: &str) -> Result<()> {
+        // `invites` is authifier's collection, not ours - see the trait for why
+        // we touch it at all.
+        self.col::<bson::Document>("invites")
+            .delete_one(doc! { "_id": code })
+            .await
+            .map(|_| ())
+            .map_err(|_| create_database_error!("delete_one", "invites"))
+    }
 }
