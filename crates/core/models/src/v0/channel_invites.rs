@@ -1,3 +1,4 @@
+use iso8601_timestamp::Timestamp;
 use super::{Channel, File, Server, User};
 
 auto_derived!(
@@ -15,6 +16,14 @@ auto_derived!(
             creator: String,
             /// Id of the server channel this invite points to
             channel: String,
+            /// Maximum number of times this invite can be used
+            #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+            max_uses: Option<u32>,
+            /// Number of times this invite has been used
+            uses: u32,
+            /// Timestamp at which this invite expires
+            #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+            expires: Option<Timestamp>,
         },
         /// Invite to a group channel
         Group {
@@ -25,7 +34,25 @@ auto_derived!(
             creator: String,
             /// Id of the group channel this invite points to
             channel: String,
+            /// Maximum number of times this invite can be used
+            #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+            max_uses: Option<u32>,
+            /// Number of times this invite has been used
+            uses: u32,
+            /// Timestamp at which this invite expires
+            #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+            expires: Option<Timestamp>,
         },
+    }
+
+    /// Create Invite
+    pub struct DataCreateInvite {
+        /// Maximum number of times this invite can be used
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub max_uses: Option<u32>,
+        /// Number of seconds until this invite expires
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub expires: Option<Timestamp>,
     }
 
     /// Public invite response
