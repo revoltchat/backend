@@ -18,9 +18,9 @@ auto_derived!(
             channel: String,
             /// Maximum number of times this invite can be used
             #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-            max_uses: Option<u32>,
+            max_uses: Option<u64>,
             /// Number of times this invite has been used
-            uses: u32,
+            uses: u64,
             /// Timestamp at which this invite expires
             #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
             expires: Option<Timestamp>,
@@ -36,9 +36,9 @@ auto_derived!(
             channel: String,
             /// Maximum number of times this invite can be used
             #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-            max_uses: Option<u32>,
+            max_uses: Option<u64>,
             /// Number of times this invite has been used
-            uses: u32,
+            uses: u64,
             /// Timestamp at which this invite expires
             #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
             expires: Option<Timestamp>,
@@ -46,12 +46,12 @@ auto_derived!(
     }
 
     /// Create Invite
+    #[cfg_attr(feature = "validator", derive(validator::Validate))]
     pub struct DataCreateInvite {
         /// Maximum number of times this invite can be used
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub max_uses: Option<u32>,
+        #[cfg_attr(feature = "validator", validate(range(min = 1, max = 100)))]
+        pub max_uses: Option<u64>,
         /// Number of seconds until this invite expires
-        #[serde(skip_serializing_if = "Option::is_none")]
         pub expires: Option<Timestamp>,
     }
 

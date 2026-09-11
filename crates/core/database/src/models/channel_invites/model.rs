@@ -25,9 +25,9 @@ auto_derived!(
             /// Id of the server channel this invite points to
             channel: String,
             #[serde(skip_serializing_if = "Option::is_none")]
-            max_uses: Option<u32>,
+            max_uses: Option<u64>,
             #[serde(default)]
-            uses: u32,
+            uses: u64,
             #[serde(skip_serializing_if = "Option::is_none")]
             expires: Option<Timestamp>,
         },
@@ -42,10 +42,10 @@ auto_derived!(
             channel: String,
             /// Maximum number of times this invite can be used
             #[serde(skip_serializing_if = "Option::is_none")]
-            max_uses: Option<u32>,
+            max_uses: Option<u64>,
             /// The amount of times this invite is used
             #[serde(default)]
-            uses: u32,
+            uses: u64,
             /// Timestamp of when this invite expires
             #[serde(skip_serializing_if = "Option::is_none")]
             expires: Option<Timestamp>,
@@ -77,7 +77,7 @@ impl Invite {
         db: &Database,
         creator: &User,
         channel: &Channel,
-        max_uses: Option<u32>,
+        max_uses: Option<u64>,
         expires: Option<Timestamp>,
     ) -> Result<Invite> {
         let code = nanoid::nanoid!(8, &ALPHABET);

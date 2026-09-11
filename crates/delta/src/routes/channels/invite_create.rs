@@ -31,12 +31,6 @@ pub async fn create_invite(
         return Err(create_error!(IsBot));
     }
 
-    if let Some(max_uses) = data.max_uses {
-        if max_uses == 0 {
-            return Err(create_error!(InvalidOperation));
-        }
-    }
-
     const MAX_INVITE_LIFETIME: Duration = Duration::days(30);
 
     if let Some(expires) = data.expires {
