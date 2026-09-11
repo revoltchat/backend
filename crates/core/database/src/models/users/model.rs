@@ -178,6 +178,13 @@ static BLOCKED_USERNAME_PATTERNS: Lazy<Regex> = Lazy::new(|| {
         .unwrap()
 });
 
+static USERNAME_CODEPOINT_REGEX: Lazy<Regex> = Lazy::new(|| {
+    RegexBuilder::new("^(\\p{L}|[\\d_.-])+$")
+        .case_insensitive(true)
+        .build()
+        .unwrap()
+});
+
 #[allow(clippy::derivable_impls)]
 impl Default for User {
     fn default() -> Self {
@@ -300,6 +307,12 @@ impl User {
     ///
     /// This will check if the username is a blocked name or contains a blocked pattern.
     fn validate_username(username: &str) -> Result<()> {
+        if !USERNAME_CODEPOINT_REGEX.is_match(username)
+            || !validator::validate_length(username, Some(2), Some(32), None)
+        {
+            return Err(create_error!(InvalidUsername));
+        }
+
         let username_lowercase = username.to_lowercase();
 
         const BLOCKED_USERNAMES: &[&str] = &["admin", "revolt", "stoat"];

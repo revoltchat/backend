@@ -26,7 +26,7 @@ pub mod okapi;
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 /// Error information
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[derive(Debug, Clone)]
@@ -46,6 +46,35 @@ impl Display for Error {
 }
 
 impl std::error::Error for Error {}
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for Error {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        #[derive(Serialize)]
+        struct Body<'a> {
+            #[serde(flatten)]
+            error_type: &'a ErrorType,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            location: Option<&'a str>,
+        }
+
+        let location = match self.error_type {
+            ErrorType::InvalidCredentials
+                | ErrorType::InvalidSession
+                | ErrorType::InvalidToken
+                | ErrorType::UnverifiedAccount
+                | ErrorType::LockedOut
+                | ErrorType::DisallowedMFAMethod => None,
+            _ => Some(self.location.as_str()),
+        };
+
+        Body {
+            error_type: &self.error_type,
+            location,
+        }
+        .serialize(serializer)
+    }
+}
 
 /// Possible error types
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
