@@ -1,7 +1,11 @@
 use super::AbstractChannels;
-use crate::{AbstractServers, Channel, FieldsChannel, IntoDocumentPath, MongoDb, PartialChannel};
+use crate::{
+    util::ChunkedDatabaseGenerator, AbstractServers, Channel, FieldsChannel, IntoDocumentPath,
+    MongoDb, PartialChannel,
+};
 use bson::{Bson, Document};
 use futures::StreamExt;
+use mongodb::options::ReadConcern;
 use revolt_permissions::OverrideField;
 use revolt_result::Result;
 
@@ -67,6 +71,36 @@ impl AbstractChannels for MongoDb {
                 ]
             }
         )
+    }
+
+    // Fetch all group dms for a user
+    async fn find_group_message_channels(
+        &self,
+        user_id: &str,
+    ) -> Result<ChunkedDatabaseGenerator<Channel>> {
+        let mut session = self
+            .start_session()
+            .await
+            .map_err(|_| create_database_error!("start_session", COL))?;
+
+        session
+            .start_transaction()
+            .read_concern(ReadConcern::snapshot())
+            .await
+            .map_err(|_| create_database_error!("start_transaction", COL))?;
+
+        let cursor = self
+            .col(COL)
+            .find(doc! {
+                "channel_type": "Group",
+                "recipients": user_id
+            })
+            .session(&mut session)
+            .batch_size(100)
+            .await
+            .map_err(|_| create_database_error!("find", COL))?;
+
+        Ok(ChunkedDatabaseGenerator::new_mongo(session, cursor))
     }
 
     // Fetch saved messages channel
@@ -180,13 +214,29 @@ impl AbstractChannels for MongoDb {
             .map_err(|_| create_database_error!("update_one", "channels"))
     }
 
+    // Remove a user from all specified groups
+    async fn remove_user_from_groups(&self, channel_ids: Vec<String>, user_id: &str) -> Result<()> {
+        self.col::<Document>(COL)
+            .update_many(
+                doc! {
+                    "_id": { "$in": channel_ids },
+                },
+                doc! {
+                    "$pull": {
+                        "recipients": user_id
+                    }
+                },
+            )
+            .await
+            .map(|_| ())
+            .map_err(|_| create_database_error!("update_many", COL))
+    }
+
     // Delete a channel
     async fn delete_channel(&self, channel: &Channel) -> Result<()> {
         let id = channel.id().to_string();
         let server_id = match channel {
-            Channel::TextChannel { server, .. } => {
-                Some(server)
-            }
+            Channel::TextChannel { server, .. } => Some(server),
             _ => None,
         };
 
@@ -260,6 +310,42 @@ impl AbstractChannels for MongoDb {
 
         // Delete the channel itself
         query!(self, delete_one_by_id, COL, channel.id()).map(|_| ())
+    }
+
+    async fn fetch_last_message(&self, channel_id: &str) -> Result<Option<String>> {
+        self.col::<Document>("messages")
+            .find_one(doc! {"channel": channel_id})
+            .sort(doc! {"_id": -1})
+            .projection(doc! {"_id": 1})
+            .await
+            .map(|doc| doc.map(|d| String::from(d.get_str("_id").expect("failed to get _id"))))
+            .map_err(|_| create_database_error!("find_one", "messages"))
+    }
+
+    async fn update_last_messsage_id(
+        &self,
+        channel_id: &str,
+        message_id: Option<&str>,
+    ) -> Result<()> {
+        if let Some(message_id) = message_id {
+            self.col::<Document>(COL)
+                .update_one(
+                    doc! {"_id": channel_id},
+                    doc! {"$set": {"last_message_id": message_id}},
+                )
+                .await
+                .map(|_| ())
+                .map_err(|_| create_database_error!("update_one", "channels"))
+        } else {
+            self.col::<Document>(COL)
+                .update_one(
+                    doc! {"_id": channel_id},
+                    doc! {"$unset": {"last_message_id": ""}},
+                )
+                .await
+                .map(|_| ())
+                .map_err(|_| create_database_error!("update_one", "channels"))
+        }
     }
 }
 

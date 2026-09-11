@@ -19,6 +19,7 @@ pub mod exif;
 pub mod metadata;
 pub mod mime_type;
 mod ratelimits;
+mod utils;
 
 #[derive(FromRef, Clone)]
 struct AppState {
@@ -117,7 +118,11 @@ async fn main() -> Result<(), std::io::Error> {
 
     let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 14704));
     let listener = TcpListener::bind(&address).await?;
-    axum::serve(listener, app.into_make_service()).await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
 
     if let Err(e) = logger_provider.shutdown() {
         panic!("logger provider failed to shut down");

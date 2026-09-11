@@ -2,6 +2,7 @@ use anyhow::Result;
 use image::{AnimationDecoder, DynamicImage, ImageBuffer, ImageReader};
 use jxl_oxide::integration::JxlDecoder;
 use revolt_config::report_internal_error;
+use usvg::Transform;
 use std::io::{BufRead, Read, Seek};
 use tempfile::NamedTempFile;
 use tiny_skia::Pixmap;
@@ -104,18 +105,25 @@ impl MediaRepository for MediaImpl {
                     .map_err(|e| MediaError::from(anyhow::anyhow!(e)))?;
 
                 let size = tree.size();
-                let mut pixmap = Pixmap::new(size.width() as u32, size.height() as u32)
+
+                // scale down svg to a max of 500x500
+                let scale = (500. / size.width()).min(500. / size.height()).min(1.);
+
+                let width = size.width() * scale;
+                let height = size.height() * scale;
+
+                let mut pixmap = Pixmap::new(width as u32, height as u32)
                     .ok_or_else(|| MediaError::ImageProcessingFailed {
                         cause: "failed to create Pixmap, likely zero sized".to_string(),
                     })?;
 
                 let mut pixmap_mut = pixmap.as_mut();
-                resvg::render(&tree, Default::default(), &mut pixmap_mut);
+                resvg::render(&tree, Transform::from_scale(scale, scale), &mut pixmap_mut);
 
                 Ok(DynamicImage::ImageRgba8(
                     ImageBuffer::from_vec(
-                        size.width() as u32,
-                        size.height() as u32,
+                        width as u32,
+                        height as u32,
                         pixmap.data().to_vec(),
                     )
                     .ok_or_else(|| MediaError::ImageProcessingFailed {

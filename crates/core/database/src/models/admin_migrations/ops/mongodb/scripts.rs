@@ -17,6 +17,7 @@ use iso8601_timestamp::Timestamp;
 use rand::seq::SliceRandom;
 use revolt_permissions::{ChannelPermission, DEFAULT_WEBHOOK_PERMISSIONS};
 use serde::{Deserialize, Serialize};
+use ulid::Ulid;
 use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Serialize, Deserialize)]
@@ -25,7 +26,7 @@ struct MigrationInfo {
     revision: i32,
 }
 
-pub const LATEST_REVISION: i32 = 50; // MUST BE +1 to last migration
+pub const LATEST_REVISION: i32 = 54; // MUST BE +1 to last migration
 
 pub async fn migrate_database(db: &MongoDb) {
     let migrations = db.col::<Document>("migrations");
@@ -451,7 +452,7 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
         warn!("This is a destructive operation and will wipe existing permission data (excl. defaults for SendMessage).");
         warn!("Taking a backup is advised.");
         warn!("Continuing in 10 seconds...");
-        async_std::task::sleep(Duration::from_secs(10)).await;
+        tokio::time::sleep(Duration::from_secs(10)).await;
 
         let servers = db.col::<Document>("servers");
         let mut cursor = servers.find(doc! {}).await.unwrap();
@@ -573,20 +574,145 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
     if revision <= 15 {
         info!("Running migration [revision 15 / 04-06-2022]: Migrate Authifier to latest version.");
 
-        let db = authifier::Database::MongoDb(authifier::database::MongoDb(db.db()));
-        db.run_migration(authifier::Migration::M2022_06_03EnsureUpToSpec)
+        if !db
+            .db()
+            .collection::<Document>("mfa_tickets")
+            .list_index_names()
             .await
-            .unwrap();
+            .unwrap_or_default()
+            .contains(&"token".to_owned())
+        {
+            // Make sure all collections exist
+            let list = db.db().list_collection_names().await.unwrap();
+            let collections = ["accounts", "sessions", "invites", "mfa_tickets"];
+
+            for name in collections {
+                if !list.contains(&name.to_string()) {
+                    db.db().create_collection(name).await.unwrap();
+                }
+            }
+
+            // Setup index for `accounts`
+            let col = db.db().collection::<Document>("accounts");
+            col.drop_indexes().await.unwrap();
+
+            db.db()
+                .run_command(doc! {
+                    "createIndexes": "accounts",
+                    "indexes": [
+                        {
+                            "key": {
+                                "email": 1
+                            },
+                            "name": "email",
+                            "unique": true,
+                            "collation": {
+                                "locale": "en",
+                                "strength": 2
+                            }
+                        },
+                        {
+                            "key": {
+                                "email_normalised": 1
+                            },
+                            "name": "email_normalised",
+                            "unique": true,
+                            "collation": {
+                                "locale": "en",
+                                "strength": 2
+                            }
+                        },
+                        {
+                            "key": {
+                                "verification.token": 1
+                            },
+                            "name": "email_verification"
+                        },
+                        {
+                            "key": {
+                                "password_reset.token": 1
+                            },
+                            "name": "password_reset"
+                        }
+                    ]
+                })
+                .await
+                .unwrap();
+
+            // Setup index for `sessions`
+            let col = db.db().collection::<Document>("sessions");
+            col.drop_indexes().await.unwrap();
+
+            db.db()
+                .run_command(doc! {
+                    "createIndexes": "sessions",
+                    "indexes": [
+                        {
+                            "key": {
+                                "token": 1
+                            },
+                            "name": "token",
+                            "unique": true
+                        },
+                        {
+                            "key": {
+                                "user_id": 1
+                            },
+                            "name": "user_id"
+                        }
+                    ]
+                })
+                .await
+                .unwrap();
+
+            // Setup index for `mfa_tickets`
+            let col = db.db().collection::<Document>("mfa_tickets");
+            col.drop_indexes().await.unwrap();
+
+            db.db()
+                .run_command(doc! {
+                    "createIndexes": "mfa_tickets",
+                    "indexes": [
+                        {
+                            "key": {
+                                "token": 1
+                            },
+                            "name": "token",
+                            "unique": true
+                        }
+                    ]
+                })
+                .await
+                .unwrap();
+        }
     }
 
     if revision <= 16 {
         info!("Running migration [revision 16 / 07-07-2022]: Add `emojis` collection and Authifier migration.");
 
-        let authifier_db = authifier::Database::MongoDb(authifier::database::MongoDb(db.db()));
-        authifier_db
-            .run_migration(authifier::Migration::M2022_06_09AddIndexForDeletion)
+        if !db
+            .db()
+            .collection::<Document>("accounts")
+            .list_index_names()
             .await
-            .unwrap();
+            .expect("list of index names")
+            .contains(&"account_deletion".to_owned())
+        {
+            db.db()
+                .run_command(doc! {
+                    "createIndexes": "accounts",
+                    "indexes": [
+                        {
+                            "key": {
+                                "deletion.token": 1
+                            },
+                            "name": "account_deletion"
+                        }
+                    ]
+                })
+                .await
+                .unwrap();
+        }
 
         db.db()
             .create_collection("emojis")
@@ -1085,7 +1211,7 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
         enum Channel {
             Group { owner: String },
             TextChannel { server: String },
-            VoiceChannel { server: String }
+            VoiceChannel { server: String },
         }
 
         let webhooks = db
@@ -1099,7 +1225,12 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             .await;
 
         for webhook in webhooks {
-            match db.col::<Channel>("channels").find_one(doc! { "_id": &webhook.channel_id }).await.unwrap() {
+            match db
+                .col::<Channel>("channels")
+                .find_one(doc! { "_id": &webhook.channel_id })
+                .await
+                .unwrap()
+            {
                 Some(channel) => {
                     let creator_id = match channel {
                         Channel::Group { owner, .. } => owner,
@@ -1141,10 +1272,53 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             "Running migration [revision 32 / 12-05-2025]: (Authifier) Add last_seen to sessions."
         );
 
-        let db = authifier::Database::MongoDb(authifier::database::MongoDb(db.db()));
-        db.run_migration(authifier::Migration::M2025_02_20AddLastSeenToSession)
-            .await
-            .unwrap();
+        loop {
+            #[derive(Deserialize)]
+            struct SessionId {
+                _id: String,
+            }
+
+            let sessions: Vec<SessionId> = db
+                .db()
+                .collection("sessions")
+                .find(doc! {
+                    "$or": [
+                        { "last_seen": { "$exists": false } },
+                        { "last_seen": "1970-01-01T00:00:00.000Z" }
+                    ]
+                })
+                .limit(50_000) // about 400 batches for 2 million
+                .await
+                .expect("Failed to create cursor for sessions!")
+                .map(|doc| doc.expect("id and username"))
+                .collect()
+                .await;
+
+            if sessions.is_empty() {
+                break;
+            }
+
+            for session in sessions {
+                let timestamp = iso8601_timestamp::Timestamp::from(
+                    Ulid::from_string(&session._id).unwrap().datetime(),
+                );
+
+                db.db()
+                    .collection::<Document>("sessions")
+                    .update_one(
+                        doc! {
+                            "_id": &session._id.to_string(),
+                        },
+                        doc! {
+                            "$set": {
+                                "last_seen": timestamp.format().to_string()
+                            }
+                        },
+                    )
+                    .await
+                    .expect("Failed to update a session.");
+            }
+        }
     }
 
     if revision <= 40 {
@@ -1240,7 +1414,7 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
                         "channel_type": "TextChannel",
                         "voice": {}
                     }
-                }
+                },
             )
             .await
             .expect("Failed to update voice channels");
@@ -1292,10 +1466,7 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
             let mut doc = doc! {};
 
             for id in server.roles.keys() {
-                doc.insert(
-                    format!("roles.{id}._id"),
-                    id,
-                );
+                doc.insert(format!("roles.{id}._id"), id);
             }
 
             db.db()
@@ -1305,6 +1476,106 @@ pub async fn run_migrations(db: &MongoDb, revision: i32) -> i32 {
                 .unwrap();
         }
     };
+
+    if revision <= 50 {
+        info!("Running migration [revision 50 / 13-04-2026]: Rename invites collection to account_invites");
+
+        let result = db
+            .db()
+            .client()
+            .database("admin")
+            .run_command(doc! {
+                "renameCollection": "revolt.invites",
+                "to": "revolt.account_invites",
+                "dropTarget": true
+            })
+            .await;
+
+        if let Err(e) = result {
+            // NamespaceNotFound (26) = source collection doesn't exist, safe to ignore
+            if !matches!(e.kind.as_ref(), mongodb::error::ErrorKind::Command(ce) if ce.code == 26) {
+                panic!("Failed to rename invites collection: {e}");
+            }
+        }
+    }
+
+    if revision <= 51 {
+        info!("Running migration [revision 51 / 28-11-2025]: Add audit logs collection");
+
+        db.db()
+            .create_collection("audit_logs")
+            .await
+            .expect("Failed to create audit_logs collection");
+
+        db.db()
+            .run_command(doc! {
+                "createIndexes": "audit_logs",
+                "indexes": [
+                    {
+                        "key": {
+                            "expires_at": 1_i32,
+                        },
+                        "name": "expires_at_ttl",
+                        "expireAfterSeconds": 0
+                    },
+                    {
+                        "key": {
+                            "server": 1_i32,
+                            "user": 1_i32,
+                            "action.type": 1_i32,
+                        },
+                        "name": "audit_log_filters",
+                    },
+                ]
+            })
+            .await
+            .expect("Failed to create audit_logs index");
+    };
+
+    if revision <= 52 {
+        let config = revolt_config::config().await;
+        if config.production {
+            info!("Running migration [revision 52 / 20-08-2026]: Discover endpoints");
+            db.db()
+                .create_collection("discover_requests")
+                .await
+                .expect("Failed to create discover_requests collection");
+
+            db.db()
+                .run_command(doc! {
+                    "createIndexes": "discover_requests",
+                    "indexes": [
+                        {
+                            "key": {
+                                "request_type": 1,
+                                "request_id": 1
+                            },
+                            "name": "request_type_id"
+                        }
+                    ]
+                })
+                .await
+                .expect("Failed to create index");
+        } else {
+            info!("Skipping migration [revision 52 / 20-08-2026]: Discover endpoints");
+        }
+    }
+
+    if revision <= 53 {
+        info!(
+            "Running migration [revision 53 / 30-08-2026]: [FIX] clean bad last_channel_id values"
+        );
+        db.db()
+            .collection::<Document>("channels")
+            .update_many(
+                doc! {"last_message_id": {"$regex": "\""}},
+                vec![
+                    doc! {"$set": {"last_message_id": {"$trim": {"input": "$last_message_id", "chars": "\""}}}},
+                ],
+            )
+            .await
+            .expect("Failed to clean up channels");
+    }
 
     // Reminder to update LATEST_REVISION when adding new migrations.
     LATEST_REVISION.max(revision)

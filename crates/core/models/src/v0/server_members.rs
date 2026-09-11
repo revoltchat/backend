@@ -23,12 +23,13 @@ use rocket::FromForm;
 /// ```regex
 /// VALUE = [a-z ]+|var\(--[a-z\d-]+\)|rgba?\([\d, ]+\)|#[a-f0-9]+
 /// ADDITIONAL_VALUE = \d+deg
+/// COLOUR_SPACE = in [a-z-]+([ ]+(shorter|longer|increasing|decreasing)[ ]+hue)?
 /// STOP = ([ ]+(\d{1,3}%|0))?
 ///
-/// ^(?:VALUE|(repeating-)?(linear|conic|radial)-gradient\((VALUE|ADDITIONAL_VALUE)STOP(,[ ]*(VALUE)STOP)+\))$
+/// ^(?:VALUE|(repeating-)?(linear|conic|radial)-gradient\((VALUE|ADDITIONAL_VALUE)(COLOUR_SPACE)?STOP(,[ ]*(VALUE)STOP)+\))$
 /// ```
 pub static RE_COLOUR: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"(?i)^(?:[a-z ]+|var\(--[a-z\d-]+\)|rgba?\([\d, ]+\)|#[a-f0-9]+|(repeating-)?(linear|conic|radial)-gradient\(([a-z ]+|var\(--[a-z\d-]+\)|rgba?\([\d, ]+\)|#[a-f0-9]+|\d+deg)([ ]+(\d{1,3}%|0))?(,[ ]*([a-z ]+|var\(--[a-z\d-]+\)|rgba?\([\d, ]+\)|#[a-f0-9]+)([ ]+(\d{1,3}%|0))?)+\))$").unwrap()
+    Regex::new(r"(?i)^(?:[a-z ]+|var\(--[a-z\d-]+\)|rgba?\([\d, ]+\)|#[a-f0-9]+|(repeating-)?(linear|conic|radial)-gradient\(([a-z ]+|var\(--[a-z\d-]+\)|rgba?\([\d, ]+\)|#[a-f0-9]+|\d+deg)([ ]+in[ ]+[a-z-]+([ ]+(shorter|longer|increasing|decreasing)[ ]+hue)?)?([ ]+(\d{1,3}%|0))?(,[ ]*([a-z ]+|var\(--[a-z\d-]+\)|rgba?\([\d, ]+\)|#[a-f0-9]+)([ ]+(\d{1,3}%|0))?)+\))$").unwrap()
 });
 
 fn default_true() -> bool {
@@ -52,6 +53,9 @@ auto_derived_partial!(
         /// Member's nickname
         #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub nickname: Option<String>,
+        /// Member's pronouns
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub pronouns: Option<String>,
         /// Avatar attachment
         #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         pub avatar: Option<File>,
@@ -89,6 +93,7 @@ auto_derived!(
     /// Optional fields on server member object
     pub enum FieldsMember {
         Nickname,
+        Pronouns,
         Avatar,
         Roles,
         Timeout,
@@ -136,6 +141,9 @@ auto_derived!(
         /// Member nickname
         #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
         pub nickname: Option<String>,
+        /// Member pronouns
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 24)))]
+        pub pronouns: Option<String>,
         /// Attachment Id to set for avatar
         pub avatar: Option<String>,
         /// Array of role ids

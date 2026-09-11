@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::str::FromStr;
 
 use once_cell::sync::Lazy;
+use revolt_models::v0;
 use revolt_result::Result;
 use ulid::Ulid;
 
@@ -11,11 +12,11 @@ use crate::Database;
 static PERMISSIBLE_EMOJIS: Lazy<HashSet<String>> = Lazy::new(|| {
     include_str!("unicode_emoji.txt")
         .split('\n')
-        .map(|x| x.into())
+        .map(|x| x.replace('\u{FE0F}', ""))
         .collect()
 });
 
-auto_derived!(
+auto_derived_partial!(
     /// Emoji
     pub struct Emoji {
         /// Unique Id
@@ -33,8 +34,11 @@ auto_derived!(
         /// Whether the emoji is marked as nsfw
         #[serde(skip_serializing_if = "crate::if_false", default)]
         pub nsfw: bool,
-    }
+    },
+    "PartialEmoji"
+);
 
+auto_derived!(
     /// Parent Id of the emoji
     #[serde(tag = "type")]
     pub enum EmojiParent {
@@ -65,14 +69,34 @@ impl Emoji {
     }
 
     /// Delete an emoji
-    pub async fn delete(self, db: &Database) -> Result<()> {
+    pub async fn delete(&self, db: &Database) -> Result<()> {
         EventV1::EmojiDelete {
             id: self.id.to_string(),
         }
         .p(self.parent().to_string())
         .await;
 
-        db.detach_emoji(&self).await
+        db.detach_emoji(self).await
+    }
+
+    /// Update an emoji
+    pub async fn update(&mut self, db: &Database, partial: PartialEmoji) -> Result<()> {
+        if let Some(name) = partial.name.clone() {
+            self.name = name;
+        }
+
+        db.update_emoji(&self.id, &partial).await?;
+
+        EventV1::EmojiUpdate {
+            id: self.id.clone(),
+            data: v0::PartialEmoji {
+                name: partial.name.clone(),
+            },
+        }
+        .p(self.parent().to_string())
+        .await;
+
+        Ok(())
     }
 
     /// Check whether we can use a given emoji
@@ -81,7 +105,22 @@ impl Emoji {
             db.fetch_emoji(emoji).await?;
             Ok(true)
         } else {
-            Ok(PERMISSIBLE_EMOJIS.contains(emoji))
+            let sanitized_emoji = emoji.replace('\u{FE0F}', "");
+            Ok(PERMISSIBLE_EMOJIS.contains(&sanitized_emoji))
         }
+    }
+
+    /// Generates a PartialEmoji containing the data which has changed in an update
+    pub fn generate_diff(&self, partial: &PartialEmoji) -> PartialEmoji {
+        let mut before = PartialEmoji::default();
+
+        generate_diff!(
+            self, before, partial, remove,
+            (
+                name,
+            )
+        );
+
+        before
     }
 }

@@ -760,8 +760,7 @@ impl Message {
     /// Whether this message has suppressed notifications
     pub fn has_suppressed_notifications(&self) -> bool {
         if let Some(flags) = self.flags {
-            flags & MessageFlags::SuppressNotifications as u32
-                == MessageFlags::SuppressNotifications as u32
+            MessageFlagsValue(flags).has(MessageFlags::SuppressNotifications)
         } else {
             false
         }
@@ -769,8 +768,7 @@ impl Message {
 
     pub fn contains_mass_push_mention(&self) -> bool {
         let ping = if let Some(flags) = self.flags {
-            let flags = MessageFlagsValue(flags);
-            flags.has(MessageFlags::MentionsEveryone)
+            MessageFlagsValue(flags).has(MessageFlags::MentionsEveryone)
         } else {
             false
         };
@@ -998,11 +996,13 @@ impl Message {
     }
 
     /// Delete a message
-    pub async fn delete(self, db: &Database) -> Result<()> {
-        let file_ids: Vec<String> = self
+    pub async fn delete(&self, db: &Database) -> Result<()> {
+        let file_ids = self
             .attachments
-            .map(|files| files.iter().map(|file| file.id.to_string()).collect())
-            .unwrap_or_default();
+            .iter()
+            .flatten()
+            .map(|file| file.id.clone())
+            .collect::<Vec<_>>();
 
         if !file_ids.is_empty() {
             db.mark_attachments_as_deleted(&file_ids).await?;
@@ -1010,11 +1010,47 @@ impl Message {
 
         db.delete_message(&self.id).await?;
 
+        if let Ok(mut channel) = db.fetch_channel(&self.channel).await {
+            match &channel {
+                Channel::DirectMessage {
+                    last_message_id, ..
+                }
+                | Channel::Group {
+                    last_message_id, ..
+                }
+                | Channel::TextChannel {
+                    last_message_id, ..
+                } => {
+                    if last_message_id.is_some() && last_message_id.as_ref().unwrap() == &self.id {
+                        let new_last_message_id =
+                            db.fetch_last_message(channel.id()).await.unwrap();
+
+                        db.update_last_messsage_id(channel.id(), new_last_message_id.as_deref())
+                            .await?;
+
+                        if new_last_message_id.is_some() {
+                            EventV1::ChannelUpdate {
+                                id: channel.id().to_string(),
+                                data: revolt_models::v0::PartialChannel {
+                                    last_message_id: new_last_message_id,
+                                    ..Default::default()
+                                },
+                                clear: vec![],
+                            }
+                            .p(channel.id().to_string())
+                            .await;
+                        }
+                    }
+                }
+                _ => (),
+            }
+        }
+
         EventV1::MessageDelete {
-            id: self.id,
+            id: self.id.clone(),
             channel: self.channel.clone(),
         }
-        .p(self.channel)
+        .p(self.channel.clone())
         .await;
         Ok(())
     }

@@ -1,4 +1,6 @@
-use crate::{revolt_result::Result, Channel, FieldsChannel, PartialChannel};
+use crate::{
+    revolt_result::Result, util::ChunkedDatabaseGenerator, Channel, FieldsChannel, PartialChannel,
+};
 use revolt_permissions::OverrideField;
 
 #[cfg(feature = "mongodb")]
@@ -18,6 +20,12 @@ pub trait AbstractChannels: Sync + Send {
 
     /// Fetch all direct messages for a user
     async fn find_direct_messages(&self, user_id: &str) -> Result<Vec<Channel>>;
+
+    // Fetch all group dms for a user
+    async fn find_group_message_channels(
+        &self,
+        user_id: &str,
+    ) -> Result<ChunkedDatabaseGenerator<Channel>>;
 
     // Fetch saved messages channel
     async fn find_saved_messages_channel(&self, user_id: &str) -> Result<Channel>;
@@ -47,6 +55,21 @@ pub trait AbstractChannels: Sync + Send {
     // Remove a user from a group
     async fn remove_user_from_group(&self, channel_id: &str, user_id: &str) -> Result<()>;
 
+    // Remove a user from all specified groups
+    async fn remove_user_from_groups(&self, channel_ids: Vec<String>, user_id: &str) -> Result<()>;
+
     // Delete a channel
     async fn delete_channel(&self, channel_id: &Channel) -> Result<()>;
+
+    // Fetch the last message in the channel
+    // Used to update the last_message_id when the current last_message_id is deleted.
+    async fn fetch_last_message(&self, channel_id: &str) -> Result<Option<String>>;
+
+    // Update the last_message_id on the channel
+    // Setting this to None will remove the last_message_id
+    async fn update_last_messsage_id(
+        &self,
+        channel_id: &str,
+        message_id: Option<&str>,
+    ) -> Result<()>;
 }

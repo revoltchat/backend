@@ -1,9 +1,10 @@
-use std::{collections::HashMap, path::Path};
+#[cfg(feature = "test")]
+use std::sync::OnceLock;
+use std::{collections::HashMap, path::Path, sync::LazyLock};
 
 use cached::proc_macro::cached;
 use config::{Config, Environment, File, FileFormat};
 use futures_locks::RwLock;
-use once_cell::sync::Lazy;
 use serde::Deserialize;
 
 #[cfg(feature = "sentry")]
@@ -66,12 +67,27 @@ static CONFIG_SEARCH_PATHS: [&str; 3] = [
 static TEST_OVERRIDE_PATH: &str = "Revolt.test-overrides.toml";
 
 /// Configuration builder
-static CONFIG_BUILDER: Lazy<RwLock<Config>> = Lazy::new(|| {
+static CONFIG_BUILDER: LazyLock<RwLock<Config>> = LazyLock::new(|| {
     RwLock::new({
         let mut builder = Config::builder().add_source(File::from_str(
             include_str!("../Revolt.toml"),
             FileFormat::Toml,
         ));
+
+        let cwd = std::env::current_dir().unwrap();
+        let mut cwd: Option<&Path> = Some(&cwd);
+
+        while let Some(path) = cwd {
+            for config_path in CONFIG_SEARCH_PATHS {
+                let config_path = path.join(config_path);
+                if config_path.exists() {
+                    builder = builder
+                        .add_source(File::new(config_path.to_str().unwrap(), FileFormat::Toml));
+                }
+            }
+
+            cwd = path.parent();
+        }
 
         if std::env::var("TEST_DB").is_ok() {
             builder = builder.add_source(File::from_str(
@@ -94,21 +110,6 @@ static CONFIG_BUILDER: Lazy<RwLock<Config>> = Lazy::new(|| {
             }
         }
 
-        let cwd = std::env::current_dir().unwrap();
-        let mut cwd: Option<&Path> = Some(&cwd);
-
-        while let Some(path) = cwd {
-            for config_path in CONFIG_SEARCH_PATHS {
-                let config_path = path.join(config_path);
-                if config_path.exists() {
-                    builder = builder
-                        .add_source(File::new(config_path.to_str().unwrap(), FileFormat::Toml));
-                }
-            }
-
-            cwd = path.parent();
-        }
-
         builder = builder.add_source(Environment::with_prefix("REVOLT").separator("__"));
 
         builder.build().unwrap()
@@ -123,11 +124,18 @@ pub struct Database {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+pub struct RabbitQueues {
+    pub acks: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct Rabbit {
     pub host: String,
     pub port: u16,
     pub username: String,
     pub password: String,
+    pub default_exchange: String,
+    pub queues: RabbitQueues,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -155,6 +163,18 @@ pub struct ApiSmtp {
     pub port: Option<i32>,
     pub use_tls: Option<bool>,
     pub use_starttls: Option<bool>,
+    pub expiry: EmailExpiry,
+}
+
+/// Email expiration config
+#[derive(Deserialize, Debug, Clone)]
+pub struct EmailExpiry {
+    /// How long email verification codes should last for (in seconds)
+    pub expire_verification: i64,
+    /// How long password reset codes should last for (in seconds)
+    pub expire_password_reset: i64,
+    /// How long account deletion codes should last for (in seconds)
+    pub expire_account_deletion: i64,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -195,13 +215,19 @@ pub struct ApiSecurityCaptcha {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+pub struct ApiSecurityShield {
+    pub host: String,
+    pub key: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct ApiSecurity {
-    pub authifier_shield_key: String,
-    pub voso_legacy_token: String,
+    pub shield: ApiSecurityShield,
     pub captcha: ApiSecurityCaptcha,
     pub trust_cloudflare: bool,
     pub easypwned: String,
     pub tenor_key: String,
+    pub admin_keys: Vec<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -231,6 +257,13 @@ pub struct LiveKitNode {
 #[derive(Deserialize, Debug, Clone)]
 pub struct ApiUsers {
     pub early_adopter_cutoff: Option<u64>,
+    pub min_username_length: usize,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct ApiAuditLogs {
+    /// How long audit log entries last before being removed, in seconds
+    pub expires_after: u64,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -241,6 +274,7 @@ pub struct Api {
     pub workers: ApiWorkers,
     pub livekit: ApiLiveKit,
     pub users: ApiUsers,
+    pub audit_logs: ApiAuditLogs,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -299,6 +333,11 @@ impl Pushd {
     pub fn get_generic_routing_key(&self) -> String {
         self.get_routing_key(self.generic_queue.clone())
     }
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct January {
+    pub blocked_domains: Vec<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -377,15 +416,28 @@ pub struct FeaturesLimitsCollection {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+pub struct LegalLinks {
+    /// Terms of Service URL
+    pub terms_of_service: String,
+    /// Privacy Policy URL
+    pub privacy_policy: String,
+    /// Guidelines URL
+    pub guidelines: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct FeaturesAdvanced {
     #[serde(default)]
     pub process_message_delay_limit: u16,
+    #[serde(default)]
+    pub seen_events_cache_size: u32,
 }
 
 impl Default for FeaturesAdvanced {
     fn default() -> Self {
         Self {
             process_message_delay_limit: 5,
+            seen_events_cache_size: 20,
         }
     }
 }
@@ -393,6 +445,7 @@ impl Default for FeaturesAdvanced {
 #[derive(Deserialize, Debug, Clone)]
 pub struct Features {
     pub limits: FeaturesLimitsCollection,
+    pub legal_links: LegalLinks,
     pub webhooks_enabled: bool,
     pub mass_mentions_send_notifications: bool,
     pub mass_mentions_enabled: bool,
@@ -420,10 +473,12 @@ pub struct Settings {
     pub hosts: Hosts,
     pub api: Api,
     pub pushd: Pushd,
+    pub january: January,
     pub files: Files,
     pub features: Features,
     pub sentry: Sentry,
     pub production: bool,
+    pub environment: String,
     pub disable_events_dont_use: bool,
 }
 
@@ -450,8 +505,7 @@ pub async fn read() -> Config {
     CONFIG_BUILDER.read().await.clone()
 }
 
-#[cached(time = 30)]
-pub async fn config() -> Settings {
+pub async fn config_no_cache() -> Settings {
     let mut config = read().await.try_deserialize::<Settings>().unwrap();
 
     // inject REDIS_URI for redis-kiss library
@@ -467,6 +521,34 @@ pub async fn config() -> Settings {
     }
 
     config
+}
+
+#[cached(time = 30)]
+pub async fn config() -> Settings {
+    #[cfg(feature = "test")]
+    if let Some(overwrites) = CONFIG_OVERWRITES.get() {
+        return overwrites.clone();
+    }
+
+    config_no_cache().await
+}
+
+#[cfg(feature = "test")]
+static CONFIG_OVERWRITES: OnceLock<Settings> = OnceLock::new();
+
+/// Modify the config values for a test, this can only be called once
+///
+/// This will also fail if two or more tests are running in the same process and both try to modify the config,
+/// This could happen if tests where run under `cargo test` instead of `nextest`.
+#[cfg(feature = "test")]
+pub async fn overwrite_config(f: impl FnOnce(&mut Settings)) {
+    let mut config = config_no_cache().await;
+
+    f(&mut config);
+
+    CONFIG_OVERWRITES.set(config).expect(
+        "Cannot overwrite config multiple times, make sure you are running tests through nextest.",
+    );
 }
 
 /// Configure logging and common Rust variables
@@ -513,7 +595,7 @@ macro_rules! configure {
 mod tests {
     use crate::init;
 
-    #[async_std::test]
+    #[tokio::test]
     async fn it_works() {
         init().await;
     }

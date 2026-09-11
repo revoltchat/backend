@@ -7,7 +7,7 @@ gh = "2.25.0"
 rust = "1.92.0"
 "cargo:cargo-nextest" = "0.9.122"
 
-"github:git-town/git-town" = "22.4.0"
+"github:git-town/git-town" = "22.7.1"
 
 [settings]
 experimental = true
@@ -16,4 +16,14 @@ idiomatic_version_file_enable_tools = ["rust"]
 [tasks.start]
 description = "Run all services"
 depends = ["docker:start", "build"]
+wait_for = ["docker:start", "build"]
 run = [{ task = "service:*" }]
+
+[env]
+BUILDER = "cargo"
+SYSTEM_DEPS_DAV1D_BUILD_INTERNAL = "auto" # enable building dav1d iff the system doesn't have a new enough version
+DOCKER_NETWORK_NAME = "stoatchat_default"
+DATABASE_PORT = "27017"
+RABBIT_PORT = "5672"
+REDIS_PORT = "6379"
+_.file = { path = ".env", tools = true }

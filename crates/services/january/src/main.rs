@@ -11,6 +11,7 @@ use utoipa_scalar::{Scalar, Servable as ScalarServable};
 
 mod api;
 pub mod requests;
+pub mod specialty;
 pub mod website_embed;
 
 #[tokio::main]
@@ -21,32 +22,26 @@ async fn main() -> Result<(), std::io::Error> {
     // Configure API schema
     #[derive(OpenApi)]
     #[openapi(
-        modifiers(&SecurityAddon),
-        paths(
-            api::root,
-            api::proxy,
-            api::embed
-        ),
-        components(
-            schemas(
-                api::RootResponse,
-                revolt_result::Error,
-                revolt_result::ErrorType,
-                revolt_models::v0::ImageSize,
-                revolt_models::v0::Image,
-                revolt_models::v0::Video,
-                revolt_models::v0::TwitchType,
-                revolt_models::v0::LightspeedType,
-                revolt_models::v0::BandcampType,
-                revolt_models::v0::Special,
-                revolt_models::v0::WebsiteMetadata,
-                revolt_models::v0::Text,
-                revolt_models::v0::Embed
-            )
-        )
+        paths(api::root, api::proxy, api::embed),
+        components(schemas(
+            api::RootResponse,
+            revolt_result::Error,
+            revolt_result::ErrorType,
+            revolt_models::v0::ImageSize,
+            revolt_models::v0::Image,
+            revolt_models::v0::Video,
+            revolt_models::v0::TwitchType,
+            revolt_models::v0::LightspeedType,
+            revolt_models::v0::BandcampType,
+            revolt_models::v0::Special,
+            revolt_models::v0::WebsiteMetadata,
+            revolt_models::v0::Text,
+            revolt_models::v0::Embed
+        ))
     )]
     struct ApiDoc;
 
+    #[allow(dead_code)]
     struct SecurityAddon;
 
     impl Modify for SecurityAddon {
@@ -70,5 +65,5 @@ async fn main() -> Result<(), std::io::Error> {
     tracing::info!("Play around with the API: http://localhost:14705/scalar");
     let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 14705));
     let listener = TcpListener::bind(&address).await?;
-    axum::serve(listener, app.into_make_service()).await
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await
 }

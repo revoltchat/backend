@@ -1,5 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
+use redis_kiss::{
+    get_connection,
+    redis::{SetExpiry, SetOptions},
+    AsyncCommands,
+};
 use revolt_models::v0::{self, DataCreateServerChannel};
 use revolt_permissions::{OverrideField, DEFAULT_PERMISSION_SERVER};
 use revolt_result::Result;
@@ -86,6 +91,9 @@ auto_derived_partial!(
         /// Ranking of this role
         #[serde(default)]
         pub rank: i64,
+        /// Custom icon attachment
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub icon: Option<File>,
     },
     "PartialRole"
 );
@@ -129,6 +137,7 @@ auto_derived!(
     /// Optional fields on server object
     pub enum FieldsRole {
         Colour,
+        Icon,
     }
 );
 
@@ -231,6 +240,31 @@ impl Server {
         }
     }
 
+    /// Generates a PartialServer containing the data which has changed in an update
+    pub fn generate_diff(&self, partial: &PartialServer, remove: &[FieldsServer]) -> PartialServer {
+        let mut before = PartialServer::default();
+
+        generate_diff!(
+            self, before, partial, remove,
+            (
+                owner,
+                name,
+                (FieldsServer::Description) description,
+                (FieldsServer::Categories) categories,
+                (FieldsServer::SystemMessages) system_messages,
+                roles,
+                default_permissions,
+                (FieldsServer::Icon) icon,
+                (FieldsServer::Banner) banner,
+                nsfw,
+                analytics,
+                discoverable,
+            )
+        );
+
+        before
+    }
+
     /// Ordered roles list
     pub fn ordered_roles(&self) -> Vec<(String, Role)> {
         let mut ordered_roles = self.roles.clone().into_iter().collect::<Vec<_>>();
@@ -293,6 +327,30 @@ impl Server {
 
         Ok(())
     }
+
+    /// Gets a approximate count of the members in this server
+    ///
+    /// this value is cached for one hour
+    pub async fn get_approximate_member_count(&self, db: &Database) -> usize {
+        let Ok(mut redis) = get_connection().await else {
+            return 0;
+        };
+        let key = format!("member_count:{}", &self.id);
+
+        if let Some(count) = redis.get::<_, Option<usize>>(&key).await.ok().flatten() {
+            count
+        } else {
+            let count = db.fetch_member_count(&self.id).await.unwrap_or(0);
+            let _ = redis
+                .set_options::<_, _, ()>(
+                    &key,
+                    count,
+                    SetOptions::default().with_expiration(SetExpiry::EX(60 * 60)),
+                )
+                .await;
+            count
+        }
+    }
 }
 
 impl Role {
@@ -305,6 +363,7 @@ impl Role {
             colour: self.colour,
             hoist: Some(self.hoist),
             rank: Some(self.rank),
+            icon: self.icon,
         }
     }
 
@@ -318,6 +377,7 @@ impl Role {
             colour: None,
             hoist: false,
             permissions: Default::default(),
+            icon: None,
         };
 
         db.insert_role(&server.id, &role).await?;
@@ -367,11 +427,31 @@ impl Role {
     pub fn remove_field(&mut self, field: &FieldsRole) {
         match field {
             FieldsRole::Colour => self.colour = None,
+            FieldsRole::Icon => self.icon = None,
         }
     }
 
+    /// Generates a PartialRole containing the data which has changed in an update
+    pub fn generate_diff(&self, partial: &PartialRole, remove: &[FieldsRole]) -> PartialRole {
+        let mut before = PartialRole::default();
+
+        generate_diff!(
+            self, before, partial, remove,
+            (
+                name,
+                permissions,
+                (FieldsRole::Colour) colour,
+                hoist,
+                rank,
+                (FieldsRole::Icon) icon,
+            )
+        );
+
+        before
+    }
+
     /// Delete a role
-    pub async fn delete(self, db: &Database, server_id: &str) -> Result<()> {
+    pub async fn delete(&self, db: &Database, server_id: &str) -> Result<()> {
         EventV1::ServerRoleDelete {
             id: server_id.to_string(),
             role_id: self.id.clone(),
@@ -413,7 +493,7 @@ mod tests {
 
     use crate::{fixture, util::permissions::DatabasePermissionQuery};
 
-    #[async_std::test]
+    #[tokio::test]
     async fn permissions() {
         database_test!(|db| async move {
             fixture!(db, "server_with_roles",

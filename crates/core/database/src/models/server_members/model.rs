@@ -28,6 +28,9 @@ auto_derived_partial!(
         /// Member's nickname
         #[serde(skip_serializing_if = "Option::is_none")]
         pub nickname: Option<String>,
+        /// Member's pronouns
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub pronouns: Option<String>,
         /// Avatar attachment
         #[serde(skip_serializing_if = "Option::is_none")]
         pub avatar: Option<File>,
@@ -65,6 +68,7 @@ auto_derived!(
     /// Optional fields on server member object
     pub enum FieldsMember {
         Nickname,
+        Pronouns,
         Avatar,
         Roles,
         Timeout,
@@ -88,6 +92,7 @@ impl Default for Member {
             id: Default::default(),
             joined_at: Timestamp::now_utc(),
             nickname: None,
+            pronouns: None,
             avatar: None,
             roles: vec![],
             timeout: None,
@@ -171,7 +176,7 @@ impl Member {
 
         EventV1::ServerCreate {
             id: server.id.clone(),
-            server: server.clone().into(),
+            server: server.clone().into(db).await,
             channels: channels
                 .clone()
                 .into_iter()
@@ -231,12 +236,33 @@ impl Member {
             FieldsMember::JoinedAt => {}
             FieldsMember::Avatar => self.avatar = None,
             FieldsMember::Nickname => self.nickname = None,
+            FieldsMember::Pronouns => self.pronouns = None,
             FieldsMember::Roles => self.roles.clear(),
             FieldsMember::Timeout => self.timeout = None,
             FieldsMember::CanReceive => self.can_receive = true,
             FieldsMember::CanPublish => self.can_publish = true,
             FieldsMember::VoiceChannel => {}
         }
+    }
+
+    /// Generates a PartialMember containing the data which has changed in an update
+    pub fn generate_diff(&self, partial: &PartialMember, remove: &[FieldsMember]) -> PartialMember {
+        let mut before = PartialMember::default();
+
+        generate_diff!(
+            self, before, partial, remove,
+            (
+                (FieldsMember::Nickname) nickname,
+                (FieldsMember::Avatar) avatar,
+                (FieldsMember::Timeout) timeout,
+                (FieldsMember::Pronouns) pronouns,
+                ((default) FieldsMember::Roles) roles,
+                ((default) FieldsMember::CanPublish) can_publish,
+                ((default) FieldsMember::CanReceive) can_receive,
+            )
+        );
+
+        before
     }
 
     /// Get this user's current ranking
@@ -264,7 +290,7 @@ impl Member {
 
     /// Remove member from server
     pub async fn remove(
-        self,
+        &self,
         db: &Database,
         server: &Server,
         intention: RemovalIntention,
@@ -291,9 +317,15 @@ impl Member {
                 })
             {
                 match intention {
-                    RemovalIntention::Leave => SystemMessage::UserLeft { id: self.id.user },
-                    RemovalIntention::Kick => SystemMessage::UserKicked { id: self.id.user },
-                    RemovalIntention::Ban => SystemMessage::UserBanned { id: self.id.user },
+                    RemovalIntention::Leave => SystemMessage::UserLeft {
+                        id: self.id.user.clone(),
+                    },
+                    RemovalIntention::Kick => SystemMessage::UserKicked {
+                        id: self.id.user.clone(),
+                    },
+                    RemovalIntention::Ban => SystemMessage::UserBanned {
+                        id: self.id.user.clone(),
+                    },
                 }
                 .into_message(id.to_string())
                 // TODO: support notifications here in the future?
@@ -314,7 +346,7 @@ mod tests {
 
     use crate::{Member, PartialMember, RemovalIntention, Server, User};
 
-    #[async_std::test]
+    #[tokio::test]
     async fn muted_member_rejoin() {
         database_test!(|db| async move {
             match db {
