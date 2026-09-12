@@ -104,8 +104,10 @@ mod tests {
         drop(res);
 
         pubsub
-            .wait_for_event(|e| matches!(e, EventV1::CreateAccount { .. }))
-            .await;
+            .wait_for_event(|event| match event {
+                EventV1::CreateAccount { account } => account.email == "success@validemail.com",
+                _ => false,
+            }).await;
     }
 
     #[rocket::async_test]
