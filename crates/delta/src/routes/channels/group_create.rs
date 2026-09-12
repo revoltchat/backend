@@ -49,7 +49,7 @@ mod test {
 
     #[rocket::async_test]
     async fn create_group() {
-        let mut harness = TestHarness::new().await;
+        let harness = TestHarness::new().await;
         let (_, session, user) = harness.new_user().await;
         let mut pubsub = PubSubTestHelper::new(&format!("{}!", user.id)).await;
 

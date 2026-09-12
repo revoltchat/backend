@@ -73,7 +73,7 @@ mod test {
 
     #[rocket::async_test]
     async fn invite_bot_to_group() {
-        let mut harness = TestHarness::new().await;
+        let harness = TestHarness::new().await;
         let (_, session, user) = harness.new_user().await;
 
         let (bot, _) = Bot::create(&harness.db, TestHarness::rand_string(), &user, None)
@@ -126,7 +126,7 @@ mod test {
 
     #[rocket::async_test]
     async fn invite_bot_to_server() {
-        let mut harness = TestHarness::new().await;
+        let harness = TestHarness::new().await;
         let (_, session, user) = harness.new_user().await;
 
         let (bot, _) = Bot::create(&harness.db, TestHarness::rand_string(), &user, None)

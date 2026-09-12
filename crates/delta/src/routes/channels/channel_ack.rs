@@ -45,7 +45,7 @@ mod test {
 
     #[rocket::async_test]
     async fn success_ack_channel() {
-        let mut harness = TestHarness::new().await;
+        let harness = TestHarness::new().await;
         let (_, session, user) = harness.new_user().await;
         let mut pubsub = PubSubTestHelper::new(&format!("{}!", user.id)).await;
 

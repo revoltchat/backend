@@ -73,7 +73,7 @@ mod test {
 
     #[rocket::async_test]
     async fn success_remove_member() {
-        let mut harness = TestHarness::new().await;
+        let harness = TestHarness::new().await;
         let (_, session, mut user) = harness.new_user().await;
         let (_, _, mut other_user) = harness.new_user().await;
         let mut other_user_pubsub = PubSubTestHelper::new(&format!("{}!", other_user.id)).await;

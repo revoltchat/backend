@@ -94,7 +94,7 @@ mod test {
 
     #[rocket::async_test]
     async fn success_delete_group() {
-        let mut harness = TestHarness::new().await;
+        let harness = TestHarness::new().await;
         let (_, session, user) = harness.new_user().await;
 
         let group = Channel::create_group(
@@ -133,7 +133,7 @@ mod test {
 
     #[rocket::async_test]
     async fn success_delete_channel() {
-        let mut harness = TestHarness::new().await;
+        let harness = TestHarness::new().await;
         let (_, session, user) = harness.new_user().await;
         let (_, channels) = harness.new_server(&user).await;
         let mut pubsub = PubSubTestHelper::new(channels[0].id()).await;

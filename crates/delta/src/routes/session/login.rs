@@ -171,7 +171,7 @@ mod tests {
 
     #[rocket::async_test]
     async fn success() {
-        let mut harness = TestHarness::new().await;
+        let harness = TestHarness::new().await;
         let mut pubsub = PubSubTestHelper::new("global").await;
 
         Account::new(

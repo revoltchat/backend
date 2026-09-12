@@ -39,7 +39,7 @@ mod test {
 
     #[rocket::async_test]
     async fn delete_bot() {
-        let mut harness = TestHarness::new().await;
+        let harness = TestHarness::new().await;
         let (_, session, user) = harness.new_user().await;
 
         let (bot, _) = Bot::create(&harness.db, TestHarness::rand_string(), &user, None)

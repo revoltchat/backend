@@ -101,7 +101,7 @@ mod test {
 
     #[rocket::async_test]
     async fn pin_message() {
-        let mut harness = TestHarness::new().await;
+        let harness = TestHarness::new().await;
         let (_, session, user) = harness.new_user().await;
 
         let (server, channels) = Server::create(
