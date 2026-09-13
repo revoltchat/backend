@@ -173,7 +173,7 @@ mod tests {
 
             let (bot, _) = Bot::create(
                 &db,
-                "Bot Name".to_string(),
+                "Bot-Name".to_string(),
                 &owner,
                 PartialBot {
                     token: Some("my token".to_string()),
